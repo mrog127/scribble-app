@@ -14,10 +14,21 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('star')
   const [toolbarType, setToolbarType] = useState('list')
   const [inputFocused, setInputFocused] = useState(false)
+  const [toolbarFadedIn, setToolbarFadedIn] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [hideCompleted, setHideCompleted] = useState(false)
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
+
+  // Delay faded-in by one frame so CSS transition fires correctly
+  useEffect(() => {
+    if (inputFocused) {
+      const raf = requestAnimationFrame(() => setToolbarFadedIn(true))
+      return () => cancelAnimationFrame(raf)
+    } else {
+      setToolbarFadedIn(false)
+    }
+  }, [inputFocused])
 
   const inputRef = useRef(null)
   const tabBarRef = useRef(null)
@@ -209,7 +220,7 @@ export default function App() {
 
           <div className="tab-area">
             {/* Input toolbar */}
-            <div className={`input-toolbar${inputFocused ? ' visible' : ''}${inputFocused ? ' faded-in' : ''}`}>
+            <div className={`input-toolbar${inputFocused ? ' visible' : ''}${toolbarFadedIn ? ' faded-in' : ''}`}>
               <div className="toolbar-left">
                 <button className="toolbar-source-btn">
                   <svg width="16" height="16" viewBox="0 0 12 12" fill="none">

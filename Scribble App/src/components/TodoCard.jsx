@@ -109,23 +109,52 @@ function useDragReorder(containerRef, items, onReorder) {
       }).filter(Boolean)
       const dragIdx = snapshots.findIndex(s => s.id === id)
       if (dragIdx < 0) return false
+
+      // Count unchecked items (they come first in sorted order)
+      const uncheckedCount = snapshots.filter(snap =>
+        !itemsRef.current.find(it => it.id === snap.id)?.checked
+      ).length
+
+      // Prevent dragging checked items
+      if (dragIdx >= uncheckedCount) return false
+
       const dragged = snapshots[dragIdx]
       const appEl = document.getElementById('app')
       const portal = document.getElementById('animation-portal')
       if (!appEl || !portal) return false
       const appRect = appEl.getBoundingClientRect()
-      const clone = dragged.el.cloneNode(true)
-      const cloneTop = dragged.rect.top - appRect.top
+      const origTop = dragged.rect.top - appRect.top
+      const cloneTop = origTop - 4
+
+      const cloneInner = dragged.el.cloneNode(true)
+      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
+      const clone = document.createElement('div')
       clone.style.cssText = [
-        'position:absolute', `left:${dragged.rect.left - appRect.left}px`, `top:${cloneTop}px`,
-        `width:${dragged.rect.width}px`, 'pointer-events:none',
-        'box-shadow:0 8px 24px rgba(0,0,0,0.18)', 'border-radius:4px', 'background:#F7F6F3', 'z-index:999',
+        'position:absolute',
+        `left:${dragged.rect.left - appRect.left - 4}px`,
+        `top:${cloneTop}px`,
+        `width:${dragged.rect.width + 8}px`,
+        'padding:4px 0',
+        'pointer-events:none',
+        'box-shadow:0 4px 20px rgba(0,0,0,0.10)',
+        'border-radius:8px',
+        'border:1px solid #C2C1BF',
+        'background:#F7F6F3',
+        'overflow:hidden',
+        'z-index:999',
       ].join(';')
+      clone.appendChild(cloneInner)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
+      // Boundary positions for clamping clone movement (app-relative)
+      const topBound = snapshots[0].rect.top - appRect.top
+      const lastUnchecked = snapshots[uncheckedCount - 1]
+      const bottomBound = (lastUnchecked.rect.top + lastUnchecked.rect.height) - appRect.top - dragged.wrapper.getBoundingClientRect().height
+
       dragRef.current = {
         clone, snapshots, dragIdx, currentIdx: dragIdx,
         cloneTop, startY: clientY, draggedH: dragged.wrapper.getBoundingClientRect().height,
+        uncheckedCount, topBound, bottomBound,
       }
       return true
     }
@@ -139,7 +168,7 @@ function useDragReorder(containerRef, items, onReorder) {
         const s = dragRef.current
         if (s) {
           s.clone.style.transition = 'box-shadow 120ms ease'
-          s.clone.style.boxShadow = '0 14px 36px rgba(0,0,0,0.26)'
+          s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'
           setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120)
         }
       }
@@ -147,9 +176,10 @@ function useDragReorder(containerRef, items, onReorder) {
 
     longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY, true) }, 250)
 
-    const applyShifts = (snapshots, dragIdx, newIdx, draggedH) => {
+    const applyShifts = (snapshots, dragIdx, newIdx, draggedH, uncheckedCount) => {
       snapshots.forEach((snap, i) => {
         if (i === dragIdx) return
+        if (i >= uncheckedCount) return  // never shift checked items
         let dy = 0
         if (newIdx < dragIdx && i >= newIdx && i < dragIdx) dy = draggedH
         if (newIdx > dragIdx && i > dragIdx && i <= newIdx) dy = -draggedH
@@ -168,14 +198,17 @@ function useDragReorder(containerRef, items, onReorder) {
       }
       const s = dragRef.current
       if (!s) return
-      s.clone.style.top = (s.cloneTop + (e2.clientY - s.startY)) + 'px'
-      const nonDragged = s.snapshots.filter((_, i) => i !== s.dragIdx)
+      const rawTop = s.cloneTop + (e2.clientY - s.startY)
+      s.clone.style.top = Math.max(s.topBound, Math.min(s.bottomBound, rawTop)) + 'px'
+      // Only use unchecked items as drop targets — checked items are off-limits
+      const uncheckedSnaps = s.snapshots.slice(0, s.uncheckedCount)
+      const nonDragged = uncheckedSnaps.filter((_, i) => i !== s.dragIdx)
       let insertAt = nonDragged.length
       for (let j = 0; j < nonDragged.length; j++) {
         if (e2.clientY < nonDragged[j].rect.top + nonDragged[j].rect.height / 2) { insertAt = j; break }
       }
-      const newIdx = Math.min(insertAt, s.snapshots.length - 1)
-      if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH) }
+      const newIdx = Math.min(insertAt, s.uncheckedCount - 1)
+      if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH, s.uncheckedCount) }
     }
 
     const onUp = () => {
@@ -248,12 +281,44 @@ function ActiveTagIcon() {
 }
 
 export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onReorder, onToggleHideCompleted }) {
-  const { onPointerDown } = useSwipe(onDelete, () => {})
+  const containerRef = useRef(null)
+  const handleDelete = useCallback((id) => {
+    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+    const wrapper = swipeRow?.parentElement
+    if (!wrapper) { onDelete(id); return }
+    // Flash red, then collapse
+    wrapper.animate(
+      [
+        { background: 'rgba(178,74,74,0)' },
+        { background: 'rgba(178,74,74,0.20)', offset: 0.4 },
+        { background: 'rgba(178,74,74,0)' },
+      ],
+      { duration: 280, fill: 'none' }
+    )
+    setTimeout(() => {
+      const height = wrapper.getBoundingClientRect().height
+      wrapper.style.height = height + 'px'
+      wrapper.style.overflow = 'hidden'
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
+          wrapper.style.height = '0'
+          wrapper.style.opacity = '0'
+        })
+      })
+      setTimeout(() => onDelete(id), 250)
+    }, 180)
+  }, [onDelete])
+  const { onPointerDown } = useSwipe(handleDelete, () => {})
   const checkTimers = useRef({})
   const cardRef = useRef(null)
-  const containerRef = useRef(null)
   const { onDragPointerDown } = useDragReorder(containerRef, todos, onReorder)
   const toggleFlipRef = useRef(null)
+  const btnRef = useRef(null)
+  const showingRef = useRef(false)
+
+  // Compute before early return so hooks can use it
+  const hasChecked = todos.some(t => t.checked)
 
   useLayoutEffect(() => {
     const card = cardRef.current
@@ -279,43 +344,150 @@ export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onR
     })
   }, [todos])
 
+  // Animate checked items sliding in after "Show Completed"
+  useLayoutEffect(() => {
+    if (!showingRef.current) return
+    showingRef.current = false
+    const container = containerRef.current
+    if (!container) return
+    const wrappers = todos.filter(t => t.checked).map(t =>
+      container.querySelector(`[data-swipe-id="${t.id}"]`)?.parentElement
+    ).filter(Boolean)
+    if (!wrappers.length) return
+    wrappers.forEach(el => {
+      el.style.overflow = 'hidden'
+      el.style.maxHeight = '0'
+      el.style.opacity = '0'
+      el.style.transition = 'none'
+    })
+    document.body.offsetHeight
+    requestAnimationFrame(() => {
+      wrappers.forEach(el => {
+        el.style.transition = 'max-height 220ms ease, opacity 180ms ease'
+        el.style.maxHeight = el.scrollHeight + 'px'
+        el.style.opacity = '1'
+      })
+      setTimeout(() => wrappers.forEach(el => {
+        el.style.maxHeight = ''
+        el.style.overflow = ''
+        el.style.transition = ''
+        el.style.opacity = ''
+      }), 220)
+    })
+  }, [hideCompleted, todos])
+
+  // Animate the Hide/Show button in and out
+  useEffect(() => {
+    const btn = btnRef.current
+    if (!btn) return
+    if (hasChecked) {
+      btn.style.display = 'block'
+      requestAnimationFrame(() => { btn.classList.add('visible') })
+    } else {
+      btn.classList.remove('visible')
+      setTimeout(() => { if (btnRef.current) btnRef.current.style.display = '' }, 210)
+    }
+  }, [hasChecked])
+
   if (todos.length === 0) return null
 
   const sorted = hideCompleted
     ? todos.filter(t => !t.checked)
     : [...todos.filter(t => !t.checked), ...todos.filter(t => t.checked)]
 
-  const hasChecked = todos.some(t => t.checked)
-
   const handleCheckboxDown = (e, id) => {
     e.stopPropagation()
-    checkTimers.current[id] = setTimeout(() => {
-      // long press — no-op for now
-    }, 300)
+    const checkboxEl = e.currentTarget.querySelector('.checkbox')
+    if (checkboxEl) {
+      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.animate(
+        [{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }],
+        { duration: 100, fill: 'forwards' }
+      )
+    }
+    checkTimers.current[id] = setTimeout(() => {}, 300)
   }
 
   const handleCheckboxUp = (e, id) => {
     e.stopPropagation()
     clearTimeout(checkTimers.current[id])
 
-    // Trigger bounce animation on the checkbox
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
-    if (checkboxEl) {
-      const isChecked = todos.find(t => t.id === id)?.checked
-      checkboxEl.classList.remove('animating-check', 'animating-uncheck')
-      void checkboxEl.offsetWidth
-      checkboxEl.classList.add(isChecked ? 'animating-uncheck' : 'animating-check')
-      setTimeout(() => checkboxEl.classList.remove('animating-check', 'animating-uncheck'), 400)
-    }
+    if (!checkboxEl) { onToggle(id); return }
 
-    // Snapshot row positions so we can FLIP-animate the reorder
-    if (containerRef.current) {
-      toggleFlipRef.current = [...containerRef.current.children].map(el => ({
-        el, top: el.getBoundingClientRect().top,
-      }))
-    }
+    const isChecked = todos.find(t => t.id === id)?.checked
 
-    onToggle(id)
+    // Cancel press, start pop animation
+    checkboxEl.getAnimations().forEach(a => a.cancel())
+    checkboxEl.animate(
+      [{ transform: 'scale(0.82)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
+      { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'none' }
+    )
+
+    if (!isChecked) {
+      // Apply checked visual immediately so color/checkmark appear during the pop
+      checkboxEl.classList.add('checked')
+      e.currentTarget.closest('.todo-row')?.classList.add('checked')
+
+      // Blue row flash
+      e.currentTarget.closest('.todo-row')?.animate(
+        [
+          { background: 'rgba(105,147,254,0)' },
+          { background: 'rgba(105,147,254,0.18)', offset: 0.2 },
+          { background: 'rgba(105,147,254,0)' },
+        ],
+        { duration: 500, easing: 'ease', fill: 'none' }
+      )
+
+      // After flash completes, snapshot + trigger reorder
+      setTimeout(() => {
+        if (containerRef.current) {
+          toggleFlipRef.current = [...containerRef.current.children].map(el => ({
+            el, top: el.getBoundingClientRect().top,
+          }))
+        }
+        onToggle(id)
+      }, 500)
+    } else {
+      // Unchecking: snapshot then animate up
+      if (containerRef.current) {
+        toggleFlipRef.current = [...containerRef.current.children].map(el => ({
+          el, top: el.getBoundingClientRect().top,
+        }))
+      }
+      onToggle(id)
+    }
+  }
+
+  const handleToggleHideCompleted = () => {
+    if (!hideCompleted) {
+      // Animate checked rows out, then hide
+      const container = containerRef.current
+      const wrappers = todos.filter(t => t.checked).map(t =>
+        container?.querySelector(`[data-swipe-id="${t.id}"]`)?.parentElement
+      ).filter(Boolean)
+      wrappers.forEach(el => {
+        el.style.overflow = 'hidden'
+        el.style.maxHeight = el.getBoundingClientRect().height + 'px'
+        el.offsetHeight
+        el.style.transition = 'max-height 200ms ease, opacity 150ms ease'
+        el.style.maxHeight = '0'
+        el.style.opacity = '0'
+      })
+      setTimeout(() => {
+        wrappers.forEach(el => {
+          el.style.maxHeight = ''
+          el.style.overflow = ''
+          el.style.transition = ''
+          el.style.opacity = ''
+        })
+        onToggleHideCompleted()
+      }, 210)
+    } else {
+      // Mark that we want to animate items in after re-render
+      showingRef.current = true
+      onToggleHideCompleted()
+    }
   }
 
   return (
@@ -344,7 +516,7 @@ export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onR
                 <ActiveTagIcon/>
                 <span className="swipe-action-label active-tag">Active</span>
               </button>
-              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); onDelete(t.id) }}>
+              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id) }}>
                 <TrashIcon/>
                 <span className="swipe-action-label delete">Delete</span>
               </button>
@@ -358,7 +530,10 @@ export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onR
                     className="checkbox-wrap"
                     onMouseDown={e => handleCheckboxDown(e, t.id)}
                     onMouseUp={e => handleCheckboxUp(e, t.id)}
-                    onMouseLeave={e => clearTimeout(checkTimers.current[t.id])}
+                    onMouseLeave={e => {
+                      clearTimeout(checkTimers.current[t.id])
+                      e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                    }}
                     onTouchStart={e => handleCheckboxDown(e, t.id)}
                     onTouchEnd={e => handleCheckboxUp(e, t.id)}
                   >
@@ -382,15 +557,13 @@ export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onR
         ))}
       </div>
 
-      {hasChecked && (
-        <button
-          className="hide-completed-btn visible"
-          onClick={onToggleHideCompleted}
-          style={{ display: 'block' }}
-        >
-          {hideCompleted ? 'Show Completed' : 'Hide Completed'}
-        </button>
-      )}
+      <button
+        ref={btnRef}
+        className="hide-completed-btn"
+        onClick={handleToggleHideCompleted}
+      >
+        {hideCompleted ? 'Show Completed' : 'Hide Completed'}
+      </button>
     </div>
   )
 }

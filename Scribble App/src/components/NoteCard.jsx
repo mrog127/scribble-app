@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import UnderlineSvg from '../assets/Underline.svg?react'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -52,13 +54,27 @@ function useDragReorder(containerRef, items, onReorder) {
       const portal = document.getElementById('animation-portal')
       if (!appEl || !portal) return false
       const appRect = appEl.getBoundingClientRect()
-      const clone = dragged.el.cloneNode(true)
-      const cloneTop = dragged.rect.top - appRect.top
+      const origTop = dragged.rect.top - appRect.top
+      const cloneTop = origTop - 4
+
+      const cloneInner = dragged.el.cloneNode(true)
+      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
+      const clone = document.createElement('div')
       clone.style.cssText = [
-        'position:absolute', `left:${dragged.rect.left - appRect.left}px`, `top:${cloneTop}px`,
-        `width:${dragged.rect.width}px`, 'pointer-events:none',
-        'box-shadow:0 8px 24px rgba(0,0,0,0.18)', 'border-radius:4px', 'background:#F7F6F3', 'z-index:999',
+        'position:absolute',
+        `left:${dragged.rect.left - appRect.left - 4}px`,
+        `top:${cloneTop}px`,
+        `width:${dragged.rect.width + 8}px`,
+        'padding:4px 0',
+        'pointer-events:none',
+        'box-shadow:0 4px 20px rgba(0,0,0,0.10)',
+        'border-radius:8px',
+        'border:1px solid #C2C1BF',
+        'background:#F7F6F3',
+        'overflow:hidden',
+        'z-index:999',
       ].join(';')
+      clone.appendChild(cloneInner)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
       dragRef.current = {
@@ -76,7 +92,7 @@ function useDragReorder(containerRef, items, onReorder) {
         const s = dragRef.current
         if (s) {
           s.clone.style.transition = 'box-shadow 120ms ease'
-          s.clone.style.boxShadow = '0 14px 36px rgba(0,0,0,0.26)'
+          s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'
           setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120)
         }
       }
@@ -162,9 +178,19 @@ function StarIcon() {
 function NoteDetailPage({ note, onClose, onSave }) {
   const [editing, setEditing] = useState(false)
   const [currentStyle, setCurrentStyle] = useState('body')
+  const [isOpen, setIsOpen] = useState(false)
   const contentRef = useRef(null)
   const styleBarRef = useRef(null)
   const indicatorRef = useRef(null)
+  const pageRef = useRef(null)
+  const editorRef = useRef(null)
+  const scrollTitleRef = useRef(null)
+  const underlineRef = useRef(null)
+
+  // Slide in on mount
+  useEffect(() => {
+    requestAnimationFrame(() => setIsOpen(true))
+  }, [])
 
   useEffect(() => {
     if (contentRef.current) {
@@ -172,16 +198,79 @@ function NoteDetailPage({ note, onClose, onSave }) {
     }
   }, [note])
 
+  // Scroll title visibility + underline fade
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    const check = () => {
+      const content = contentRef.current
+      const titleEl = scrollTitleRef.current
+      const underlineEl = underlineRef.current
+      const editorTop = editor.getBoundingClientRect().top
+
+      // Scroll title: fade + float
+      if (content && titleEl) {
+        const firstPara = content.querySelector('.note-para')
+        if (firstPara) {
+          const paraBottom = firstPara.getBoundingClientRect().bottom
+          const shouldShow = paraBottom <= editorTop + 32
+          titleEl.style.opacity = shouldShow ? '1' : '0'
+          titleEl.style.transform = shouldShow ? 'translateY(0)' : 'translateY(8px)'
+          if (shouldShow) titleEl.textContent = firstPara.textContent.trim()
+        }
+      }
+
+      // Underline SVG: fade as it scrolls from natural position to bounding box top
+      if (underlineEl) {
+        const rect = underlineEl.getBoundingClientRect()
+        const bottomRelative = rect.bottom - editorTop
+        const opacity = Math.max(0, Math.min(1, (bottomRelative - 32) / rect.height))
+        underlineEl.style.opacity = opacity
+      }
+    }
+    editor.addEventListener('scroll', check, { passive: true })
+    return () => editor.removeEventListener('scroll', check)
+  }, [])
+
   const updateStyleIndicator = useCallback((style) => {
     const btn = document.querySelector(`.note-style-btn[data-style="${style}"]`)
+    const span = btn?.querySelector('span')
     const ind = indicatorRef.current
-    const bar = styleBarRef.current
-    if (btn && ind && bar) {
+    if (btn && span && ind) {
+      // Center indicator on the text label, extending 12px on each side
+      const textLeft = btn.offsetLeft + span.offsetLeft
       ind.style.transition = 'left 100ms ease, width 100ms ease'
-      ind.style.left = btn.offsetLeft + 'px'
-      ind.style.width = btn.offsetWidth + 'px'
+      ind.style.left = (textLeft - 12) + 'px'
+      ind.style.width = (span.offsetWidth + 24) + 'px'
     }
   }, [])
+
+  // Detect the paragraph style at the current cursor position
+  const detectCursorStyle = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    let el = sel.anchorNode
+    while (el && el !== content) {
+      if (el.nodeType === 1 && el.classList && el.classList.contains('note-para')) {
+        const match = el.className.match(/style-(\w+)/)
+        if (match) {
+          setCurrentStyle(match[1])
+          updateStyleIndicator(match[1])
+        }
+        return
+      }
+      el = el.parentNode
+    }
+  }, [updateStyleIndicator])
+
+  // Update style indicator whenever selection changes (cursor moves)
+  useEffect(() => {
+    if (!editing) return
+    document.addEventListener('selectionchange', detectCursorStyle)
+    return () => document.removeEventListener('selectionchange', detectCursorStyle)
+  }, [editing, detectCursorStyle])
 
   const selectStyle = useCallback((style) => {
     setCurrentStyle(style)
@@ -189,38 +278,74 @@ function NoteDetailPage({ note, onClose, onSave }) {
     const content = contentRef.current
     if (!content || content.contentEditable !== 'true') return
     const sel = window.getSelection()
-    if (!sel || sel.rangeCount === 0) return
-    const range = sel.getRangeAt(0)
-    const paras = content.querySelectorAll('.note-para')
-    let applied = false
-    paras.forEach(p => {
-      if (range.intersectsNode(p)) { p.className = 'note-para style-' + style; applied = true }
-    })
-    if (!applied) {
+    let target = null
+    if (sel) {
       let el = sel.anchorNode
       while (el && el !== content) {
-        if (el.classList && el.classList.contains('note-para')) {
-          el.className = 'note-para style-' + style; break
-        }
-        el = el.parentElement
+        if (el.nodeType === 1 && el.classList?.contains('note-para')) { target = el; break }
+        el = el.parentNode
       }
     }
+    if (!target) target = content.querySelector('.note-para:last-of-type')
+    if (target) target.className = 'note-para style-' + style
   }, [updateStyleIndicator])
 
-  const handleEnterEdit = useCallback(() => {
+  const enterEdit = useCallback((savedRange) => {
     setEditing(true)
-    setTimeout(() => {
-      const content = contentRef.current
-      if (content) {
-        content.contentEditable = 'true'
-        content.focus()
-        if (styleBarRef.current) styleBarRef.current.classList.add('visible')
-        updateStyleIndicator('body')
-      }
-    }, 50)
-  }, [updateStyleIndicator])
+    const content = contentRef.current
+    if (!content) return
+    content.contentEditable = 'true'
+    content.focus()
+    if (savedRange) {
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(savedRange)
+    }
+    if (styleBarRef.current) styleBarRef.current.classList.add('visible')
+    // Detect style at cursor (or init to body if no cursor)
+    setTimeout(detectCursorStyle, 0)
+  }, [detectCursorStyle])
 
-  const handleDone = useCallback(() => {
+  // Click on the text content — capture caret position then enter edit mode
+  const handleContentClick = useCallback((e) => {
+    if (editing) return
+    let savedRange = null
+    if (document.caretRangeFromPoint) {
+      savedRange = document.caretRangeFromPoint(e.clientX, e.clientY)
+    } else if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(e.clientX, e.clientY)
+      if (pos) {
+        savedRange = document.createRange()
+        savedRange.setStart(pos.offsetNode, pos.offset)
+        savedRange.collapse(true)
+      }
+    }
+    enterEdit(savedRange)
+  }, [editing, enterEdit])
+
+  // Click on empty area below text — place cursor at end
+  const handleEmptyAreaClick = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+    if (!editing) {
+      enterEdit(null)
+    }
+    // Move cursor to end of content
+    requestAnimationFrame(() => {
+      if (!content) return
+      content.focus()
+      const range = document.createRange()
+      range.selectNodeContents(content)
+      range.collapse(false)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+      detectCursorStyle()
+    })
+  }, [editing, enterEdit, detectCursorStyle])
+
+  // Save exits edit mode but keeps note open; Done closes the note
+  const handleButtonClick = useCallback(() => {
     if (editing) {
       const content = contentRef.current
       if (content) {
@@ -231,8 +356,10 @@ function NoteDetailPage({ note, onClose, onSave }) {
         if (styleBarRef.current) styleBarRef.current.classList.remove('visible')
       }
       setEditing(false)
+    } else {
+      setIsOpen(false)
+      setTimeout(onClose, 360)
     }
-    onClose()
   }, [editing, note, onSave, onClose])
 
   const handleKeyDown = useCallback((e) => {
@@ -243,33 +370,70 @@ function NoteDetailPage({ note, onClose, onSave }) {
     const sel = window.getSelection()
     if (!sel || sel.rangeCount === 0) return
     const range = sel.getRangeAt(0)
+
+    // Delete any selected content first
+    if (!range.collapsed) range.deleteContents()
+
     let currentPara = range.startContainer
     while (currentPara && currentPara !== content) {
-      if (currentPara.classList && currentPara.classList.contains('note-para')) break
-      currentPara = currentPara.parentElement
+      if (currentPara.nodeType === 1 && currentPara.classList && currentPara.classList.contains('note-para')) break
+      currentPara = currentPara.parentNode
     }
-    let newStyle = currentStyle
-    if (currentStyle === 'bullet') newStyle = 'bullet'
-    else newStyle = 'body'
+
+    // Empty bullet + Enter → revert current paragraph to Body
+    if (currentStyle === 'bullet' && currentPara && currentPara.classList?.contains('note-para')) {
+      const isEmpty = currentPara.textContent.trim() === '' || currentPara.innerHTML.trim() === '<br>'
+      if (isEmpty) {
+        currentPara.className = 'note-para style-body'
+        setCurrentStyle('body')
+        updateStyleIndicator('body')
+        const newRange = document.createRange()
+        newRange.setStart(currentPara, 0)
+        newRange.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(newRange)
+        return
+      }
+    }
+
+    const newStyle = currentStyle === 'bullet' ? 'bullet' : 'body'
     const newPara = document.createElement('div')
     newPara.className = 'note-para style-' + newStyle
-    newPara.innerHTML = '<br>'
-    if (currentPara && currentPara.parentElement === content) {
+
+    if (currentPara && currentPara !== content && currentPara.parentNode === content) {
+      // Extract content from cursor to end of currentPara into the new para
+      const afterRange = document.createRange()
+      afterRange.setStart(range.startContainer, range.startOffset)
+      afterRange.setEnd(currentPara, currentPara.childNodes.length)
+      const fragment = afterRange.extractContents()
+
+      if (fragment.textContent) {
+        newPara.appendChild(fragment)
+      } else {
+        newPara.innerHTML = '<br>'
+      }
+
+      // Ensure currentPara isn't left empty
+      if (!currentPara.textContent && !currentPara.querySelector('br')) {
+        currentPara.innerHTML = '<br>'
+      }
+
       currentPara.after(newPara)
     } else {
+      newPara.innerHTML = '<br>'
       content.appendChild(newPara)
     }
+
     const newRange = document.createRange()
     newRange.setStart(newPara, 0)
     newRange.collapse(true)
     sel.removeAllRanges()
     sel.addRange(newRange)
-    newPara.focus()
     newPara.scrollIntoView({ block: 'nearest' })
-  }, [currentStyle])
+  }, [currentStyle, updateStyleIndicator])
 
   return (
-    <div className={`note-detail-page${editing ? ' editing' : ''} open`}>
+    <div className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}`}>
       <div className="note-detail-header">
         <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
           <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="2" strokeLinejoin="round" fill="none"/>
@@ -277,21 +441,27 @@ function NoteDetailPage({ note, onClose, onSave }) {
           <line x1="5" y1="13" x2="15" y2="13" stroke="#595959" strokeWidth="2" strokeLinecap="round"/>
           <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#595959" strokeWidth="2" strokeLinecap="round"/>
         </svg>
-        <button className="note-detail-done" onClick={handleDone}>Done</button>
+        <span ref={scrollTitleRef} className="note-scroll-title" />
+        <button className="note-detail-done" onClick={handleButtonClick}>
+          {editing ? 'Save' : 'Done'}
+        </button>
       </div>
 
-      <div className="note-editor" id="noteEditor">
+      <div className="note-editor" id="noteEditor" ref={editorRef}>
+        <div ref={underlineRef} style={{ display: 'block', marginTop: '32px', marginLeft: '32px', marginBottom: '32px' }}>
+          <UnderlineSvg style={{ display: 'block', color: '#6993FE' }} />
+        </div>
         <div
           ref={contentRef}
           id="noteEditorContent"
-          style={{ padding: '32px 32px 40px', outline: 'none', minHeight: '100px', cursor: 'text', overflow: 'hidden' }}
+          style={{ padding: '0 32px 40px', outline: 'none', minHeight: '100px', cursor: 'text', overflow: 'hidden' }}
           contentEditable={false}
           onKeyDown={handleKeyDown}
-          onClick={() => { if (!editing) handleEnterEdit() }}
+          onClick={handleContentClick}
         />
         <div
           style={{ minHeight: '120px', cursor: 'text' }}
-          onClick={handleEnterEdit}
+          onClick={handleEmptyAreaClick}
         />
       </div>
 
@@ -304,7 +474,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
             data-style={s}
             onMouseDown={e => { e.preventDefault(); selectStyle(s) }}
           >
-            {s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}
+            <span>{s === 'heading' ? 'Head' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
           </button>
         ))}
       </div>
@@ -312,12 +482,41 @@ function NoteDetailPage({ note, onClose, onSave }) {
   )
 }
 
+export { NoteDetailPage }
+
 export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   const [openNoteId, setOpenNoteId] = useState(null)
   const swipeState = useRef({})
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const { onDragPointerDown } = useDragReorder(containerRef, notes, onReorder)
+
+  const handleDelete = useCallback((id) => {
+    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+    const wrapper = swipeRow?.parentElement
+    if (!wrapper) { onDelete(id); return }
+    wrapper.animate(
+      [
+        { background: 'rgba(178,74,74,0)' },
+        { background: 'rgba(178,74,74,0.20)', offset: 0.4 },
+        { background: 'rgba(178,74,74,0)' },
+      ],
+      { duration: 280, fill: 'none' }
+    )
+    setTimeout(() => {
+      const height = wrapper.getBoundingClientRect().height
+      wrapper.style.height = height + 'px'
+      wrapper.style.overflow = 'hidden'
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
+          wrapper.style.height = '0'
+          wrapper.style.opacity = '0'
+        })
+      })
+      setTimeout(() => onDelete(id), 250)
+    }, 180)
+  }, [onDelete])
 
   useLayoutEffect(() => {
     const card = cardRef.current
@@ -411,7 +610,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
                   </svg>
                   <span className="swipe-action-label active-tag">Active</span>
                 </button>
-                <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); onDelete(n.id) }}>
+                <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <polyline points="3 6 5 6 21 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -437,12 +636,13 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
         </div>
       </div>
 
-      {openNote && (
+      {openNote && createPortal(
         <NoteDetailPage
           note={openNote}
           onClose={() => setOpenNoteId(null)}
           onSave={onUpdateNote}
-        />
+        />,
+        document.getElementById('app')
       )}
     </>
   )

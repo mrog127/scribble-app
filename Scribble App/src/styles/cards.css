@@ -63,6 +63,12 @@
   height: 40px;
 }
 
+@keyframes row-flash-check {
+  0%   { background: transparent; }
+  25%  { background: rgba(105,147,254,0.15); }
+  100% { background: transparent; }
+}
+
 @keyframes checkbox-bounce-in {
   0%   { transform: scale(1); }
   18%  { transform: scale(0.72); }
@@ -197,6 +203,7 @@
 /* Drag states */
 .todo-row.dragging, .note-row.dragging { opacity: 0; pointer-events: none; }
 .todo-row.drag-over { background: rgba(105,147,254,0.08); }
+.todo-row.flash-check { animation: row-flash-check 500ms ease forwards; }
 
 /* Card intro animation */
 .card-intro { opacity: 0; transform: translateY(16px); transition: opacity 200ms ease, transform 200ms ease; }
@@ -214,6 +221,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  user-select: text;
+  -webkit-user-select: text;
 }
 .note-detail-page.open { transform: translateY(0); }
 
@@ -222,6 +231,24 @@
   align-items: center;
   justify-content: space-between;
   padding: 60px 32px 0;
+}
+
+.note-scroll-title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 0 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #3D3D3D;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
 }
 
 .note-detail-done {
@@ -234,9 +261,13 @@
   color: #3F5999;
 }
 
-.note-detail-page.editing { background: #FFFFFF; }
+.note-detail-page.editing { background: #FCFBF9; }
 
-.note-detail-page.editing .note-editor { padding-bottom: 108px; }
+.note-detail-page.editing .note-editor {
+  padding-bottom: 144px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - 140px), transparent calc(100% - 124px));
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - 140px), transparent calc(100% - 124px));
+}
 
 .note-editor {
   flex: 1 1 0;
@@ -245,6 +276,9 @@
   overflow-x: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 28px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - 24px), transparent calc(100% - 8px));
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - 24px), transparent calc(100% - 8px));
 }
 .note-editor::-webkit-scrollbar { display: none; }
 
@@ -262,6 +296,7 @@
   right: 12px;
   height: 56px;
   overflow: hidden;
+  padding: 0 12px;
   z-index: 10;
   opacity: 0;
   visibility: hidden;
@@ -276,8 +311,7 @@
   transform: translateY(-50%);
   height: 40px;
   background: rgba(105,147,254,0.2);
-  border-bottom: 2px solid #3F5999;
-  border-radius: 2px;
+  border-radius: 4px;
   pointer-events: none;
   transition: left 100ms ease, width 100ms ease;
   z-index: 0;
@@ -306,12 +340,12 @@
 
 /* Note paragraph styles */
 .note-para { margin: 0; padding: 0; }
-.note-para.style-title { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 56px; font-weight: 700; line-height: 56px; color: #242424; margin-bottom: 24px; }
-.note-para.style-heading { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 24px; margin-bottom: 12px; }
-.note-para.style-bold { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 24px; color: #3D3D3D; margin-top: 12px; }
-.note-para.style-body { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; line-height: 24px; color: #3D3D3D; }
-.note-para.style-italic { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; font-style: italic; line-height: 24px; color: #3D3D3D; }
-.note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; line-height: 24px; color: #3D3D3D; padding-left: 20px; position: relative; }
+.note-para.style-title { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 56px; font-weight: 700; line-height: 56px; color: #242424; margin-bottom: 32px; }
+.note-para.style-heading { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; }
+.note-para.style-bold { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
+.note-para.style-body { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 26px; color: #575757; }
+.note-para.style-italic { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; font-style: italic; line-height: 26px; color: #575757; }
+.note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
 .note-para.style-bullet::before { content: "•"; position: absolute; left: 0; }
 
 .note-detail-body {
@@ -335,3 +369,188 @@
 .no-select { user-select: none; -webkit-user-select: none; }
 
 #animation-portal { position: absolute; inset: 0; pointer-events: none; z-index: 99999; overflow: visible; }
+
+/* ---- Project Card ---- */
+.project-card { padding-bottom: 0; }
+
+.project-tab-bar {
+  display: flex;
+  align-items: center;
+  margin: 4px 16px 8px;
+  gap: 8px;
+}
+
+.project-tab-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 120ms ease;
+}
+
+.project-tab-btn.selected {
+  background: rgba(105,147,254,0.2);
+}
+
+/* Project card row heights */
+.project-card .todo-row { min-height: 48px; align-items: center; }
+.project-card .note-row { min-height: 48px; align-items: center; }
+
+.project-items {
+  min-height: 0;
+}
+
+.project-empty {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #B5B4B2;
+  padding: 16px 24px;
+  text-align: center;
+}
+
+.project-input-wrap {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px 12px;
+  gap: 8px;
+  position: relative;
+}
+
+.project-input {
+  flex: 1;
+  height: 48px;
+  border-radius: 4px;
+  border: 1px solid #C2C1BF;
+  background: #FAF9F7;
+  padding: 0 16px;
+  color: #242424;
+  outline: none;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 1px 20px rgba(0,0,0,0.15);
+  min-width: 0;
+}
+
+.project-input::placeholder { color: #B5B4B2; }
+
+.project-send-btn {
+  height: 48px;
+  padding: 0;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  overflow: hidden;
+  transition: width 100ms ease, margin-left 100ms ease, opacity 100ms ease;
+}
+
+.project-send-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+  width: 48px;
+  margin-left: 8px;
+}
+
+.project-link-text {
+  color: #3F5999;
+  text-decoration: underline;
+}
+
+/* New project creation card */
+.new-project-card {
+  padding: 20px 0 4px;
+}
+
+.new-project-label {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #242424;
+  margin: 0 0 4px;
+  padding: 0 16px;
+}
+
+/* Project footer toolbar */
+.project-footer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 150ms ease, padding-bottom 200ms ease;
+}
+
+.project-footer-toolbar.visible {
+  max-height: 52px;
+  opacity: 1;
+  padding-bottom: 12px;
+}
+
+.project-active-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #959493;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.project-active-btn.on {
+  color: #3F5999;
+  background: rgba(105,147,254,0.1);
+}
+
+.project-type-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms ease;
+}
+
+.project-type-btn.selected {
+  background: rgba(105,147,254,0.2);
+}
+
+/* Activated indicator badge (star icon on items in project card) */
+.activated-indicator {
+  flex-shrink: 0;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  opacity: 0.85;
+}
+

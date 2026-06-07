@@ -1,4 +1,8 @@
+import { useAppContext } from '../context/AppContext.jsx'
+
 export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScroll }) {
+  const { categories } = useAppContext()
+
   return (
     <div className={`tab-bar${inputFocused ? ' hidden' : ''}`}>
       <div className="tab-indicator" id="tabIndicator"></div>
@@ -20,14 +24,13 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
       </button>
 
       <div className="tabs-scroll" onScroll={onTabsScroll}>
-        {['personal','family','projects','trips','finances'].map(tab => (
+        {categories.map(cat => (
           <button
-            key={tab}
-            className={`text-tab${activeTab === tab ? ' selected' : ''}`}
-            onClick={() => onSelectTab(tab)}
-            style={{ textTransform: 'capitalize' }}
+            key={cat.id}
+            className={`text-tab${activeTab === cat.id ? ' selected' : ''}`}
+            onClick={() => onSelectTab(cat.id)}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {cat.name}
           </button>
         ))}
       </div>

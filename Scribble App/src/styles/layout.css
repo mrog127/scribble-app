@@ -1,43 +1,5 @@
 html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0EB; }
 
-/* On mobile viewports, stretch to fill the full screen */
-@media (max-width: 480px) {
-  html, body {
-    height: 100%;
-    height: -webkit-fill-available;
-    overflow: hidden;
-  }
-  .app-wrap {
-    padding: 0;
-    height: 100%;
-    height: -webkit-fill-available;
-    min-height: unset;
-    align-items: stretch;
-    overflow: hidden;
-  }
-  .phone {
-    width: 100%;
-    height: 100dvh;
-    border-radius: 0;
-    box-shadow: none;
-    flex: 1;
-  }
-  /* Reduce the fake-status-bar padding — iOS handles the real status bar */
-  .page-header {
-    padding-top: 16px;
-  }
-  /* Remove the scroll-fade mask and rounded corners */
-  .page {
-    -webkit-mask-image: none;
-    mask-image: none;
-    border-radius: 0;
-  }
-  /* Remove desktop frame bottom radius */
-  .footer {
-    border-radius: 0;
-  }
-}
-
 @font-face {
   font-family: 'BaskervilleSemi';
   src: local('Baskerville SemiBold'), local('Baskerville-SemiBold'), local('Baskerville Bold'), local('Baskerville-Bold');
@@ -583,3 +545,38 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 }
 .toolbar-source-label.inactive { color: #959493; }
 .toolbar-source-btn.inactive { opacity: 0.7; }
+
+/* On mobile viewports, stretch to fill the full screen */
+@media (max-width: 480px) {
+  html, body {
+    height: 100%;
+    height: -webkit-fill-available;
+    overflow: hidden;
+  }
+  .app-wrap {
+    padding: 0;
+    height: 100%;
+    height: -webkit-fill-available;
+    min-height: unset;
+    align-items: stretch;
+    overflow: hidden;
+  }
+  .phone {
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    flex: 1;
+  }
+  .page-header {
+    padding-top: 16px;
+  }
+  .page {
+    -webkit-mask-image: none;
+    mask-image: none;
+    border-radius: 0;
+  }
+  .footer {
+    border-radius: 0;
+  }
+}

@@ -21,9 +21,20 @@ html, body { overflow: hidden; height: 100%; margin: 0; }
     border-radius: 0;
     box-shadow: none;
     flex: 1;
-    padding-top: env(safe-area-inset-top);
+  }
+  /* Replace the hardcoded 59px fake-status-bar padding with the real safe area */
+  .page-header {
+    padding-top: calc(env(safe-area-inset-top) + 16px);
+  }
+  /* Remove the scroll-fade mask — not needed without the rounded phone frame */
+  .page {
+    -webkit-mask-image: none;
+    mask-image: none;
+    border-radius: 0;
+  }
+  /* Push tab bar above the home indicator */
+  .tab-bar {
     padding-bottom: env(safe-area-inset-bottom);
-    box-sizing: border-box;
   }
 }
 

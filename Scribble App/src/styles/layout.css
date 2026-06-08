@@ -2,17 +2,20 @@ html, body { overflow: hidden; height: 100%; margin: 0; }
 
 /* On mobile viewports, stretch to fill the full screen */
 @media (max-width: 480px) {
-  html, body { height: 100%; }
+  html, body { height: 100dvh; overflow: hidden; }
   .app-wrap {
     padding: 0;
-    min-height: 100dvh;
+    height: 100dvh;
+    min-height: unset;
     align-items: stretch;
+    overflow: hidden;
   }
   .phone {
     width: 100%;
     height: 100dvh;
     border-radius: 0;
     box-shadow: none;
+    flex: 1;
   }
 }
 

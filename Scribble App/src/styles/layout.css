@@ -1,4 +1,4 @@
-html, body { overflow: hidden; height: 100%; margin: 0; }
+html, body { overflow: hidden; height: 100%; margin: 0; background: #F2F0EB; }
 
 /* On mobile viewports, stretch to fill the full screen */
 @media (max-width: 480px) {
@@ -22,19 +22,19 @@ html, body { overflow: hidden; height: 100%; margin: 0; }
     box-shadow: none;
     flex: 1;
   }
-  /* Replace the hardcoded 59px fake-status-bar padding with the real safe area */
+  /* Reduce the fake-status-bar padding — iOS handles the real status bar */
   .page-header {
-    padding-top: calc(env(safe-area-inset-top) + 16px);
+    padding-top: 16px;
   }
-  /* Remove the scroll-fade mask — not needed without the rounded phone frame */
+  /* Remove the scroll-fade mask and rounded corners */
   .page {
     -webkit-mask-image: none;
     mask-image: none;
     border-radius: 0;
   }
-  /* Push tab bar above the home indicator */
-  .tab-bar {
-    padding-bottom: env(safe-area-inset-bottom);
+  /* Remove desktop frame bottom radius */
+  .footer {
+    border-radius: 0;
   }
 }
 

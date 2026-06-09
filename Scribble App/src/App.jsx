@@ -2,16 +2,18 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
 import TabBar from './components/TabBar.jsx'
+import AuthScreen from './components/AuthScreen.jsx'
+import MenuPage from './components/MenuPage.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
-
-let nextId = 5
-let nextNoteId = 4
+import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 
 function AppInner() {
-  const { categories, addProjectTodo, addProjectNote, addProjectLink } = useAppContext()
+  const {
+    categories, activeTodos, activeNotes,
+    addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
+    addProjectTodo, addProjectNote, addProjectLink,
+  } = useAppContext()
   const categoryIds = categories.map(c => c.id)
-  const [todos, setTodos] = useState([])
-  const [notes, setNotes] = useState([])
   const [activeTab, setActiveTab] = useState('star')
   const [toolbarType, setToolbarType] = useState('list')
   const [inputFocused, setInputFocused] = useState(false)
@@ -22,6 +24,13 @@ function AppInner() {
   const [headerTranslate, setHeaderTranslate] = useState(0)
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
+
+  // Reset to star tab if active category tab is deleted
+  useEffect(() => {
+    if (activeTab !== 'star' && activeTab !== 'menu' && !categories.some(c => c.id === activeTab)) {
+      setActiveTab('star')
+    }
+  }, [categories]) // eslint-disable-line
 
   // Auto-select first available project for "Save to..." panel
   useEffect(() => {
@@ -245,7 +254,7 @@ function AppInner() {
         }, 100)
       }, 250)
     })
-  }, [todos, notes])
+  }, [activeTodos, activeNotes])
 
   // Fly animation for active project items — fires when footer closes after send
   useEffect(() => {
@@ -386,57 +395,29 @@ function AppInner() {
       : inputRect
 
     if (toolbarType === 'list') {
-      const newId = nextId++
-      setTodos(prev => [...prev, { id: newId, text, checked: false, source: 'Active' }])
+      const newId = addActiveTodo(text)
       if (animRect && appRect) pendingAnimRef.current = { id: newId, type: 'list', text, inputRect: animRect, appRect }
     } else if (toolbarType === 'note') {
-      const newId = nextNoteId++
-      setNotes(prev => [...prev, { id: newId, text, source: 'Active', accent: false, editorHTML: null }])
+      const newId = addActiveNote(text)
       if (animRect && appRect) pendingAnimRef.current = { id: newId, type: 'note', text, inputRect: animRect, appRect }
     }
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
-  }, [inputValue, activeTab, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink])
+  }, [inputValue, activeTab, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote])
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') { e.preventDefault(); addItem() }
   }, [addItem])
 
-  const toggleTodo = useCallback((id) => {
-    setTodos(prev => {
-      const item = prev.find(t => t.id === id)
-      if (!item) return prev
-      const toggled = { ...item, checked: !item.checked }
-      const rest = prev.filter(t => t.id !== id)
-      const unchecked = rest.filter(t => !t.checked)
-      const checked = rest.filter(t => t.checked)
-      // Checking → top of checked section; Unchecking → bottom of unchecked section
-      return [...unchecked, toggled, ...checked]
-    })
-  }, [])
+  const toggleTodo = useCallback((id) => toggleActiveTodo(id), [toggleActiveTodo])
+  const deleteTodo = useCallback((id) => deleteActiveTodo(id), [deleteActiveTodo])
+  const deleteNote = useCallback((id) => deleteActiveNote(id), [deleteActiveNote])
+  const updateNote = useCallback((id, editorHTML, text) => updateActiveNote(id, editorHTML, text), [updateActiveNote])
+  const reorderTodos = useCallback((newOrder) => reorderActiveTodos(newOrder), [reorderActiveTodos])
+  const reorderNotes = useCallback((newOrder) => reorderActiveNotes(newOrder), [reorderActiveNotes])
 
-  const deleteTodo = useCallback((id) => {
-    setTodos(prev => prev.filter(t => t.id !== id))
-  }, [])
-
-  const deleteNote = useCallback((id) => {
-    setNotes(prev => prev.filter(n => n.id !== id))
-  }, [])
-
-  const updateNote = useCallback((id, editorHTML, text) => {
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, editorHTML, text: text || n.text } : n))
-  }, [])
-
-  const reorderTodos = useCallback((newOrder) => {
-    setTodos(newOrder)
-  }, [])
-
-  const reorderNotes = useCallback((newOrder) => {
-    setNotes(newOrder)
-  }, [])
-
-  const hasContent = todos.length > 0 || notes.length > 0
+  const hasContent = activeTodos.length > 0 || activeNotes.length > 0
 
   return (
     <div className="app-wrap">
@@ -446,8 +427,8 @@ function AppInner() {
         {/* Active Page */}
         {activeTab === 'star' && (
           <ActivePage
-            todos={todos}
-            notes={notes}
+            todos={activeTodos}
+            notes={activeNotes}
             hideCompleted={hideCompleted}
             onToggleTodo={toggleTodo}
             onDeleteTodo={deleteTodo}
@@ -471,7 +452,11 @@ function AppInner() {
           />
         )}
 
-        {activeTab !== 'star' && !categoryIds.includes(activeTab) && (
+        {activeTab === 'menu' && (
+          <MenuPage />
+        )}
+
+        {activeTab !== 'star' && activeTab !== 'menu' && !categoryIds.includes(activeTab) && (
           <div className="page active" id={`page-${activeTab}`}>
             <div className="page-header">
               <p className="active-title" style={{ textTransform: 'capitalize' }}>{activeTab}</p>
@@ -589,7 +574,7 @@ function AppInner() {
             <TabBar activeTab={activeTab} onSelectTab={setActiveTab} inputFocused={inputFocused} onTabsScroll={handleTabsScroll} />
           </div>
 
-          <div className="home-indicator"></div>
+
         </div>
 
         <div id="animation-portal"></div>
@@ -598,10 +583,21 @@ function AppInner() {
   )
 }
 
-export default function App() {
+function AuthGate() {
+  const { user } = useAuth()
+  if (user === undefined) return null // still loading session
+  if (!user) return <AuthScreen />
   return (
     <AppProvider>
       <AppInner />
     </AppProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
@@ -11,7 +11,9 @@ function useSwipe() {
     if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null }
+    const wasLeft = row.classList.contains('swiped-left')
+    const wasRight = row.classList.contains('swiped-right')
+    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null }
 
     const onMove = (e2) => {
       const s = swipeState.current
@@ -24,28 +26,64 @@ function useSwipe() {
       }
       const content = s.row.querySelector('.swipe-content')
       if (!content) return
-      const base = s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0
+      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const proposed = base + dx
+      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
+      let newX = Math.max(-84, Math.min(84, proposed))
+      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
+      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
       content.style.transition = 'none'
-      content.style.transform = `translateX(${Math.max(-72, Math.min(72, base + dx))}px)`
+      content.style.transform = `translateX(${newX}px)`
     }
 
     const onUp = (e2) => {
       const s = swipeState.current
       if (!s.row) { cleanup(); return }
       const dx = e2.clientX - s.startX
+      const dy = e2.clientY - s.startY
       const content = s.row.querySelector('.swipe-content')
       if (!content) { cleanup(); return }
       content.style.transition = ''
-      const total = (s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0) + dx
+      const isTap = Math.abs(dx) < 8 && Math.abs(dy) < 8
+      if (isTap && (s.wasLeft || s.wasRight)) {
+        s.row.classList.remove('swiped-left', 'swiped-right')
+        content.style.transform = ''
+        cleanup()
+        return
+      }
+      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const rawTotal = base + dx
+      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
+      if (s.lockSign === 1) total = Math.max(0, total)
+      if (s.lockSign === -1) total = Math.min(0, total)
       if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
       else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
       else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
       cleanup()
     }
 
-    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
+    const handleCancel = () => {
+      const s2 = swipeState.current
+      if (s2.row) {
+        const c2 = s2.row.querySelector('.swipe-content')
+        if (c2) {
+          c2.style.transition = ''
+          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
+          const cx = m ? parseFloat(m[1]) : 0
+          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
+          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
+          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
+          c2.style.transform = ''
+        }
+      }
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
+    }
+    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); document.removeEventListener('pointercancel', handleCancel) }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', handleCancel)
   }, [])
 
   return { onPointerDown }
@@ -80,6 +118,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
     const startX = e.clientX, startY = e.clientY
     let started = false, longPressTimer = null
+    const preventScroll = (e) => e.preventDefault()
 
     const start = (clientY) => {
       const container = containerRef.current
@@ -118,7 +157,9 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     const doStart = (clientY, longPress) => {
       if (started) return
       started = start(clientY)
-      if (!started || !longPress) return
+      if (!started) return
+      document.addEventListener('touchmove', preventScroll, { passive: false })
+      if (!longPress) return
       const s = dragRef.current
       if (s) { s.clone.style.transition = 'box-shadow 120ms ease'; s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'; setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120) }
     }
@@ -140,7 +181,8 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
       if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null }
-      if (!started) { if (dy < 12 || dx > dy) return; doStart(e2.clientY, false); if (!started) return }
+      if (!started) return
+      e2.preventDefault()
       const s = dragRef.current
       if (!s) return
       const rawTop = s.cloneTop + (e2.clientY - s.startY)
@@ -153,9 +195,25 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH, s.uncheckedCount) }
     }
 
+    const onCancel = () => {
+      clearTimeout(longPressTimer); longPressTimer = null
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
+      const s = dragRef.current
+      if (!s) return
+      dragRef.current = null
+      s.clone.remove()
+      s.snapshots.forEach(snap => { snap.wrapper.style.transition = ''; snap.wrapper.style.transform = ''; snap.wrapper.style.opacity = '' })
+    }
+
     const onUp = () => {
       clearTimeout(longPressTimer); longPressTimer = null
-      document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
       const s = dragRef.current
       if (!s || !started) return
       dragRef.current = null
@@ -174,7 +232,9 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       onReorder(newOrder)
     }
 
-    document.addEventListener('pointermove', onMove); document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
   }, [containerRef, onReorder])
 
   return { onDragPointerDown }
@@ -220,20 +280,20 @@ function LinkIcon({ active }) {
 function TrashIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <polyline points="3 6 5 6 21 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M10 11v6M14 11v6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
 
 function ActivateIcon({ activated }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
       <polygon
         points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-        stroke="#3F5999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
         fill={activated ? 'rgba(105,147,254,0.3)' : 'none'}
       />
     </svg>
@@ -242,10 +302,63 @@ function ActivateIcon({ activated }) {
 
 function SendIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
       <path d="M10 16 L10 4" stroke="#3F5999" strokeWidth="2" strokeLinecap="round"/>
       <path d="M4 9 L10 3 L16 9" stroke="#3F5999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
+  )
+}
+
+// ---- Note preview helpers ----
+
+// Extract plain text from all note-para elements after the first (the title).
+// Returns null if there's nothing meaningful beyond the title.
+function extractNotePreview(editorHTML) {
+  if (!editorHTML) return null
+  try {
+    const tmp = document.createElement('div')
+    tmp.innerHTML = editorHTML
+    const paras = [...tmp.querySelectorAll('.note-para')]
+    if (paras.length <= 1) return null
+    const text = paras.slice(1)
+      .map(p => p.textContent)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return text || null
+  } catch { return null }
+}
+
+// Renders the title line (clamped to 2 lines) and, when the title
+// naturally fits on one line, a single truncated preview line below it.
+function NoteRowContent({ note }) {
+  const titleRef = useRef(null)
+  const [isMultiLine, setIsMultiLine] = useState(false)
+
+  const previewText = useMemo(() => extractNotePreview(note.editorHTML), [note.editorHTML])
+
+  // Measure natural title height before the browser paints so there's no flicker.
+  // Deps: only re-run when the title text or available preview changes.
+  useLayoutEffect(() => {
+    const el = titleRef.current
+    if (!el || !previewText) { setIsMultiLine(false); return }
+    const lh = parseFloat(getComputedStyle(el).lineHeight) || 22.4
+    // On the first render isMultiLine=false so the title is unclamped — scrollHeight
+    // reflects its natural height. Deps prevent this from re-running after we clamp.
+    setIsMultiLine(el.scrollHeight > lh * 1.5)
+  }, [note.text, previewText]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const titleStyle = isMultiLine
+    ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+    : { display: 'block' }
+
+  return (
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <span ref={titleRef} className="note-text" style={titleStyle}>{note.text}</span>
+      {previewText && !isMultiLine && (
+        <span className="note-preview-text">{previewText}</span>
+      )}
+    </div>
   )
 }
 
@@ -257,6 +370,10 @@ export default function ProjectCard({ categoryId, project }) {
   const [openNoteId, setOpenNoteId] = useState(null)
   const [addAsActive, setAddAsActive] = useState(false)
   const [addType, setAddType] = useState('list')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState('')
+  const [hideCompleted, setHideCompleted] = useState(false)
 
   const cardRef = useRef(null)
   const todoContainerRef = useRef(null)
@@ -265,23 +382,59 @@ export default function ProjectCard({ categoryId, project }) {
   const inputRef = useRef(null)
   const pendingAnim = useRef(null)
   const noteSwipeState = useRef({})
-  const sortFlipRef = useRef(null) // positions captured before a checkbox toggle
+  const sortFlipRef = useRef(null)
+  const menuRef = useRef(null)
+  const renameInputRef = useRef(null)
+  const btnRef = useRef(null)
+  const showingRef = useRef(false)
+  const checkTimers = useRef({})
 
   const {
     addProjectTodo, addProjectNote, addProjectLink,
     toggleProjectTodo, deleteProjectTodo, deleteProjectNote,
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
-    updateProjectNote, reorderProjectTodos, reorderProjectNotes
+    updateProjectNote, reorderProjectTodos, reorderProjectNotes,
+    renameProject, deleteProject,
   } = useAppContext()
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  // Focus rename input when entering rename mode
+  useEffect(() => {
+    if (renaming && renameInputRef.current) {
+      renameInputRef.current.focus()
+      renameInputRef.current.select()
+    }
+  }, [renaming])
+
+  const handleRenameSubmit = useCallback(() => {
+    const trimmed = renameValue.trim()
+    if (trimmed && trimmed !== project.name) renameProject(categoryId, project.id, trimmed)
+    setRenaming(false)
+  }, [renameValue, project.name, project.id, categoryId, renameProject])
+
+  const handleDeleteProject = useCallback(() => {
+    setMenuOpen(false)
+    deleteProject(categoryId, project.id)
+  }, [categoryId, project.id, deleteProject])
 
   const { onPointerDown } = useSwipe()
 
-  // ---- Sorted todos: unchecked first, checked last ----
-  const sortedTodos = [
-    ...project.todos.filter(t => !t.checked),
-    ...project.todos.filter(t => t.checked),
-  ]
+  // ---- Sorted todos: unchecked first, checked last (checked hidden when hideCompleted) ----
+  const sortedTodos = hideCompleted
+    ? project.todos.filter(t => !t.checked)
+    : [...project.todos.filter(t => !t.checked), ...project.todos.filter(t => t.checked)]
   const uncheckedCount = project.todos.filter(t => !t.checked).length
+  const hasChecked = project.todos.some(t => t.checked)
+  const checkedCount = project.todos.filter(t => t.checked).length
 
   // ---- Reorder handlers ----
   const handleTodoReorder = useCallback((newOrder) => {
@@ -291,6 +444,105 @@ export default function ProjectCard({ categoryId, project }) {
   const handleNoteReorder = useCallback((newOrder) => {
     reorderProjectNotes(categoryId, project.id, newOrder)
   }, [categoryId, project.id, reorderProjectNotes])
+
+  // ---- Checkbox press/release animations ----
+  const handleCheckboxDown = useCallback((e, id) => {
+    e.stopPropagation()
+    const row = e.currentTarget.closest('.swipe-row')
+    if (row && (row.classList.contains('swiped-left') || row.classList.contains('swiped-right'))) {
+      row.classList.remove('swiped-left', 'swiped-right')
+      const content = row.querySelector('.swipe-content')
+      if (content) content.style.transform = ''
+      checkTimers.current[`suppress_${id}`] = true
+      return
+    }
+    checkTimers.current[`suppress_${id}`] = false
+    const checkboxEl = e.currentTarget.querySelector('.checkbox')
+    if (checkboxEl) {
+      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.animate(
+        [{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }],
+        { duration: 100, fill: 'forwards' }
+      )
+    }
+    checkTimers.current[id] = setTimeout(() => {}, 300)
+  }, [])
+
+  const handleCheckboxUp = useCallback((e, id) => {
+    e.stopPropagation()
+    if (checkTimers.current[`suppress_${id}`]) {
+      checkTimers.current[`suppress_${id}`] = false
+      return
+    }
+    clearTimeout(checkTimers.current[id])
+    const checkboxEl = e.currentTarget.querySelector('.checkbox')
+    const isChecked = project.todos.find(t => t.id === id)?.checked
+    if (!checkboxEl) {
+      if (todoContainerRef.current) {
+        sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
+      }
+      toggleProjectTodo(categoryId, project.id, id)
+      return
+    }
+    checkboxEl.getAnimations().forEach(a => a.cancel())
+    checkboxEl.animate(
+      [{ transform: 'scale(0.82)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
+      { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'none' }
+    )
+    if (!isChecked) {
+      checkboxEl.classList.add('checked')
+      e.currentTarget.closest('.todo-row')?.classList.add('checked')
+      e.currentTarget.closest('.todo-row')?.animate(
+        [
+          { background: 'rgba(105,147,254,0)' },
+          { background: 'rgba(105,147,254,0.18)', offset: 0.2 },
+          { background: 'rgba(105,147,254,0)' },
+        ],
+        { duration: 500, easing: 'ease', fill: 'none' }
+      )
+      setTimeout(() => {
+        if (todoContainerRef.current) {
+          sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
+        }
+        toggleProjectTodo(categoryId, project.id, id)
+      }, 500)
+    } else {
+      if (todoContainerRef.current) {
+        sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
+      }
+      toggleProjectTodo(categoryId, project.id, id)
+    }
+  }, [categoryId, project.id, project.todos, toggleProjectTodo])
+
+  // ---- Hide/Show Completed ----
+  const handleToggleHideCompleted = useCallback(() => {
+    if (!hideCompleted) {
+      const container = todoContainerRef.current
+      const wrappers = project.todos.filter(t => t.checked).map(t =>
+        container?.querySelector(`[data-swipe-id="${t.id}"]`)?.parentElement
+      ).filter(Boolean)
+      wrappers.forEach(el => {
+        el.style.overflow = 'hidden'
+        el.style.maxHeight = el.getBoundingClientRect().height + 'px'
+        el.offsetHeight
+        el.style.transition = 'max-height 200ms ease, opacity 150ms ease'
+        el.style.maxHeight = '0'
+        el.style.opacity = '0'
+      })
+      setTimeout(() => {
+        wrappers.forEach(el => {
+          el.style.maxHeight = ''
+          el.style.overflow = ''
+          el.style.transition = ''
+          el.style.opacity = ''
+        })
+        setHideCompleted(true)
+      }, 210)
+    } else {
+      showingRef.current = true
+      setHideCompleted(false)
+    }
+  }, [hideCompleted, project.todos])
 
   // ---- Drag reorder ----
   const { onDragPointerDown: onTodoDrag } = useDragReorder(todoContainerRef, sortedTodos, handleTodoReorder, uncheckedCount)
@@ -311,6 +563,34 @@ export default function ProjectCard({ categoryId, project }) {
       setTimeout(() => frames.forEach(({ el }) => { el.style.transition = '' }), 350)
     })
   }, [sortedTodos])
+
+  // Animate checked items back in when "Show Completed" is clicked
+  useLayoutEffect(() => {
+    if (!showingRef.current) return
+    showingRef.current = false
+    const container = todoContainerRef.current
+    if (!container) return
+    const wrappers = project.todos.filter(t => t.checked).map(t =>
+      container.querySelector(`[data-swipe-id="${t.id}"]`)?.parentElement
+    ).filter(Boolean)
+    if (!wrappers.length) return
+    wrappers.forEach(el => {
+      el.style.overflow = 'hidden'; el.style.maxHeight = '0'
+      el.style.opacity = '0'; el.style.transition = 'none'
+    })
+    document.body.offsetHeight
+    requestAnimationFrame(() => {
+      wrappers.forEach(el => {
+        el.style.transition = 'max-height 220ms ease, opacity 180ms ease'
+        el.style.maxHeight = el.scrollHeight + 'px'
+        el.style.opacity = '1'
+      })
+      setTimeout(() => wrappers.forEach(el => {
+        el.style.maxHeight = ''; el.style.overflow = ''
+        el.style.transition = ''; el.style.opacity = ''
+      }), 220)
+    })
+  }, [hideCompleted, project.todos])
 
   // ---- Which tabs have content ----
   const typesWithItems = ['list', 'note', 'link'].filter(t =>
@@ -403,6 +683,19 @@ export default function ProjectCard({ categoryId, project }) {
     })
   }, [project.todos, project.notes, project.links])
 
+  // Fade the Hide/Show Completed button in and out
+  useEffect(() => {
+    const btn = btnRef.current
+    if (!btn) return
+    if (hasChecked) {
+      btn.style.display = 'block'
+      requestAnimationFrame(() => { btn.classList.add('visible') })
+    } else {
+      btn.classList.remove('visible')
+      setTimeout(() => { if (btnRef.current) btnRef.current.style.display = '' }, 210)
+    }
+  }, [hasChecked, displayType])
+
   // ---- Handlers ----
   const handleDelete = useCallback((type, id, rowEl) => {
     const wrapper = rowEl?.parentElement
@@ -449,6 +742,8 @@ export default function ProjectCard({ categoryId, project }) {
     if (e.target.closest('.swipe-action-btn')) return
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
+    // If swiped, the swipe hook handles closing; skip note-open logic entirely
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
     noteSwipeState.current = { id, startX: e.clientX, startY: e.clientY, dir: null }
     const onMove = (e2) => {
       const s = noteSwipeState.current
@@ -493,8 +788,62 @@ export default function ProjectCard({ categoryId, project }) {
       <div className="card project-card card-intro" ref={cardRef}>
         {/* Header */}
         <div className="card-header">
-          <span className="card-title">{project.name}</span>
-          <div className="dots-menu"><span/><span/><span/></div>
+          {renaming ? (
+            <div className="card-rename-wrap">
+              <div className="project-input-wrap focused">
+                <div className="project-input-row">
+                  <input
+                    ref={renameInputRef}
+                    className="project-input"
+                    value={renameValue}
+                    onChange={e => setRenameValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleRenameSubmit() }
+                      if (e.key === 'Escape') setRenaming(false)
+                    }}
+                    onBlur={() => setRenaming(false)}
+                  />
+                  <button
+                    className="project-send-btn visible"
+                    onMouseDown={e => { e.preventDefault(); handleRenameSubmit() }}
+                  >
+                    <SendIcon/>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <span className="card-title">{project.name}</span>
+          )}
+          <div className="dots-menu-wrap" ref={menuRef}>
+            <div
+              className="dots-menu"
+              onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
+            >
+              <span/><span/><span/>
+            </div>
+            {menuOpen && (
+              <div className="card-context-menu">
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    setMenuOpen(false)
+                    setRenameValue(project.name)
+                    setRenaming(true)
+                  }}
+                >
+                  Rename Project
+                </button>
+                <button
+                  className="card-context-item danger"
+                  onMouseDown={e => { e.preventDefault(); handleDeleteProject() }}
+                >
+                  Delete Project
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tab selector — only when 2+ content types have items */}
@@ -537,13 +886,17 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={t.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={t.id}>
-                    <button className="swipe-action-btn active-tag" onMouseDown={e => { e.preventDefault(); handleActivate('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <ActivateIcon activated={t.activated}/>
-                      <span className="swipe-action-label active-tag">{t.activated ? 'Active' : 'Activate'}</span>
+                    <button className={`swipe-action-btn active-tag${t.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
+                      <div className="swipe-active-inner">
+                        <ActivateIcon activated={t.activated}/>
+                        <span className="swipe-action-label active-tag">{t.activated ? 'Active' : 'Inactive'}</span>
+                      </div>
                     </button>
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <TrashIcon/>
-                      <span className="swipe-action-label delete">Delete</span>
+                      <div className="swipe-active-inner">
+                        <TrashIcon/>
+                        <span className="swipe-action-label delete">Delete</span>
+                      </div>
                     </button>
                     <div className="swipe-content">
                       <div
@@ -551,16 +904,17 @@ export default function ProjectCard({ categoryId, project }) {
                         data-id={t.id}
                         onPointerDown={e => { onPointerDown(e, t.id); onTodoDrag(e, t.id) }}
                       >
-                        <div className="checkbox-wrap" onMouseDown={e => {
-                          e.stopPropagation()
-                          // Capture wrapper positions for FLIP before the sort changes
-                          if (todoContainerRef.current) {
-                            sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({
-                              el, top: el.getBoundingClientRect().top
-                            }))
-                          }
-                          toggleProjectTodo(categoryId, project.id, t.id)
-                        }}>
+                        <div
+                          className="checkbox-wrap"
+                          onMouseDown={e => handleCheckboxDown(e, t.id)}
+                          onMouseUp={e => handleCheckboxUp(e, t.id)}
+                          onMouseLeave={e => {
+                            clearTimeout(checkTimers.current[t.id])
+                            e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                          }}
+                          onTouchStart={e => handleCheckboxDown(e, t.id)}
+                          onTouchEnd={e => handleCheckboxUp(e, t.id)}
+                        >
                           <div className={`checkbox${t.checked ? ' checked' : ''}`}>
                             <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                               <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -569,14 +923,14 @@ export default function ProjectCard({ categoryId, project }) {
                         </div>
                         <div className="item-content">
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
+                          {t.activated && (
+                            <div className="activated-indicator" title="Active">
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill="rgba(105,147,254,0.2)" stroke="#3F5999" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                              </svg>
+                            </div>
+                          )}
                         </div>
-                        {t.activated && (
-                          <div className="activated-indicator" title="Active">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <polygon points="6,1 7.27,4.27 10.85,4.63 8.3,6.9 9.09,10.4 6,8.5 2.91,10.4 3.7,6.9 1.15,4.63 4.73,4.27" fill="rgba(105,147,254,0.4)" stroke="#3F5999" strokeWidth="1.5" strokeLinejoin="round"/>
-                            </svg>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -592,13 +946,17 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={n.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={n.id}>
-                    <button className="swipe-action-btn active-tag" onMouseDown={e => { e.preventDefault(); handleActivate('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <ActivateIcon activated={n.activated}/>
-                      <span className="swipe-action-label active-tag">{n.activated ? 'Active' : 'Activate'}</span>
+                    <button className={`swipe-action-btn active-tag${n.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
+                      <div className="swipe-active-inner">
+                        <ActivateIcon activated={n.activated}/>
+                        <span className="swipe-action-label active-tag">{n.activated ? 'Active' : 'Inactive'}</span>
+                      </div>
                     </button>
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <TrashIcon/>
-                      <span className="swipe-action-label delete">Delete</span>
+                      <div className="swipe-active-inner">
+                        <TrashIcon/>
+                        <span className="swipe-action-label delete">Delete</span>
+                      </div>
                     </button>
                     <div className="swipe-content">
                       <div
@@ -607,15 +965,15 @@ export default function ProjectCard({ categoryId, project }) {
                         onPointerDown={e => { onPointerDown(e, n.id); onNotePointerDown(e, n.id); onNoteDrag(e, n.id) }}
                       >
                         <div className="item-content">
-                          <span className="note-text">{n.text}</span>
+                          <NoteRowContent note={n} />
+                          {n.activated && (
+                            <div className="activated-indicator" title="Active">
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill="rgba(105,147,254,0.2)" stroke="#3F5999" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                              </svg>
+                            </div>
+                          )}
                         </div>
-                        {n.activated && (
-                          <div className="activated-indicator" title="Active">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <polygon points="6,1 7.27,4.27 10.85,4.63 8.3,6.9 9.09,10.4 6,8.5 2.91,10.4 3.7,6.9 1.15,4.63 4.73,4.27" fill="rgba(105,147,254,0.4)" stroke="#3F5999" strokeWidth="1.5" strokeLinejoin="round"/>
-                            </svg>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -632,8 +990,10 @@ export default function ProjectCard({ categoryId, project }) {
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={l.id}>
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('link', l.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <TrashIcon/>
-                      <span className="swipe-action-label delete">Delete</span>
+                      <div className="swipe-active-inner">
+                        <TrashIcon/>
+                        <span className="swipe-action-label delete">Delete</span>
+                      </div>
                     </button>
                     <div className="swipe-content">
                       <div className="note-row" onPointerDown={e => onPointerDown(e, l.id)}>
@@ -649,53 +1009,73 @@ export default function ProjectCard({ categoryId, project }) {
           )}
         </div>
 
-        {/* Input */}
-        <div className="project-input-wrap">
-          <input
-            ref={inputRef}
-            className="project-input"
-            placeholder={placeholder}
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem() } }}
-          />
+        {/* Hide/Show Completed — list tab only */}
+        {displayType === 'list' && (
           <button
-            className={`project-send-btn${sendVisible ? ' visible' : ''}`}
-            onMouseDown={e => { e.preventDefault(); addItem() }}
+            ref={btnRef}
+            className="hide-completed-btn"
+            style={{ display: 'none' }}
+            onClick={handleToggleHideCompleted}
           >
-            <SendIcon/>
+            {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
           </button>
-        </div>
+        )}
 
-        {/* Footer toolbar — slides in on focus */}
-        <div className={`project-footer-toolbar${inputFocused ? ' visible' : ''}`}>
-          <button
-            className={`project-active-btn${addAsActive ? ' on' : ''}`}
-            onMouseDown={e => { e.preventDefault(); setAddAsActive(v => !v) }}
-          >
-            <ActivateIcon activated={addAsActive}/>
-            <span>Active</span>
-          </button>
-          <button
-            className={`project-type-btn${addType === 'list' ? ' selected' : ''}`}
-            onMouseDown={e => { e.preventDefault(); setAddType('list') }}
-          >
-            <ListIcon active={addType === 'list'}/>
-          </button>
-          <button
-            className={`project-type-btn${addType === 'note' ? ' selected' : ''}`}
-            onMouseDown={e => { e.preventDefault(); setAddType('note') }}
-          >
-            <NoteIcon active={addType === 'note'}/>
-          </button>
-          <button
-            className={`project-type-btn${addType === 'link' ? ' selected' : ''}`}
-            onMouseDown={e => { e.preventDefault(); setAddType('link') }}
-          >
-            <LinkIcon active={addType === 'link'}/>
-          </button>
+        {/* Input */}
+        <div className={`project-input-wrap${inputFocused ? ' focused' : ''}`}>
+          <div className="project-input-row">
+            <input
+              ref={inputRef}
+              className="project-input"
+              placeholder={placeholder}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem() } }}
+            />
+            <button
+              className={`project-send-btn${sendVisible ? ' visible' : ''}`}
+              onMouseDown={e => { e.preventDefault(); addItem() }}
+            >
+              <SendIcon/>
+            </button>
+          </div>
+          <div className="project-input-bottom">
+            <div className="project-input-divider"/>
+            <div className="project-footer-toolbar">
+              <div className="project-toolbar-left">
+                <button
+                  className={`project-active-btn${addAsActive ? ' on' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); setAddAsActive(v => !v) }}
+                >
+                  <ActivateIcon activated={addAsActive}/>
+                  <span>{addAsActive ? 'Active' : 'Inactive'}</span>
+                </button>
+              </div>
+              <div className="project-toolbar-divider"/>
+              <div className="project-toolbar-right">
+                <button
+                  className={`project-type-btn${addType === 'list' ? ' selected' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); setAddType('list') }}
+                >
+                  <ListIcon active={addType === 'list'}/>
+                </button>
+                <button
+                  className={`project-type-btn${addType === 'note' ? ' selected' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); setAddType('note') }}
+                >
+                  <NoteIcon active={addType === 'note'}/>
+                </button>
+                <button
+                  className={`project-type-btn${addType === 'link' ? ' selected' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); setAddType('link') }}
+                >
+                  <LinkIcon active={addType === 'link'}/>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

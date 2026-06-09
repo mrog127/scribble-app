@@ -38,6 +38,7 @@ function useDragReorder(containerRef, items, onReorder) {
     const startX = e.clientX, startY = e.clientY
     let started = false
     let longPressTimer = null
+    const preventScroll = (e) => e.preventDefault()
 
     const start = (clientY) => {
       const container = containerRef.current
@@ -88,6 +89,7 @@ function useDragReorder(containerRef, items, onReorder) {
       if (started) return
       started = start(clientY)
       if (!started) return
+      document.addEventListener('touchmove', preventScroll, { passive: false })
       if (longPress) {
         const s = dragRef.current
         if (s) {
@@ -114,11 +116,8 @@ function useDragReorder(containerRef, items, onReorder) {
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
       if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null }
-      if (!started) {
-        if (dy < 12 || dx > dy) return
-        doStart(e2.clientY, false)
-        if (!started) return
-      }
+      if (!started) return
+      e2.preventDefault()
       const s = dragRef.current
       if (!s) return
       s.clone.style.top = (s.cloneTop + (e2.clientY - s.startY)) + 'px'
@@ -131,10 +130,25 @@ function useDragReorder(containerRef, items, onReorder) {
       if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH) }
     }
 
+    const onCancel = () => {
+      clearTimeout(longPressTimer); longPressTimer = null
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
+      const s = dragRef.current
+      if (!s) return
+      dragRef.current = null
+      s.clone.remove()
+      s.snapshots.forEach(snap => { snap.wrapper.style.transition = ''; snap.wrapper.style.transform = ''; snap.wrapper.style.opacity = '' })
+    }
+
     const onUp = () => {
       clearTimeout(longPressTimer); longPressTimer = null
-      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
       const s = dragRef.current
       if (!s || !started) return
       dragRef.current = null
@@ -160,8 +174,9 @@ function useDragReorder(containerRef, items, onReorder) {
       onReorder(newOrder)
     }
 
-    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointermove', onMove, { passive: false })
     document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
   }, [containerRef, onReorder])
 
   return { onDragPointerDown }
@@ -190,6 +205,40 @@ function NoteDetailPage({ note, onClose, onSave }) {
   // Slide in on mount
   useEffect(() => {
     requestAnimationFrame(() => setIsOpen(true))
+  }, [])
+
+  // Track keyboard height and push style bar above it (mobile)
+  useEffect(() => {
+    const vv = window.visualViewport
+    const update = () => {
+      const page = pageRef.current
+      if (!page) return
+      const pageBottom = page.getBoundingClientRect().bottom
+      const vpBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight
+      const kbh = Math.max(0, pageBottom - vpBottom)
+      page.style.setProperty('--kbh', kbh + 'px')
+    }
+    if (vv) {
+      vv.addEventListener('resize', update)
+      vv.addEventListener('scroll', update)
+    }
+    // Fallback: vv.resize timing is unreliable on some iOS versions —
+    // also poll after the contenteditable is focused (keyboard starts opening)
+    const onFocusIn = (e) => {
+      if (e.target === contentRef.current) {
+        setTimeout(update, 100)
+        setTimeout(update, 400)
+      }
+    }
+    document.addEventListener('focusin', onFocusIn)
+    return () => {
+      if (vv) {
+        vv.removeEventListener('resize', update)
+        vv.removeEventListener('scroll', update)
+      }
+      document.removeEventListener('focusin', onFocusIn)
+      if (pageRef.current) pageRef.current.style.removeProperty('--kbh')
+    }
   }, [])
 
   useEffect(() => {
@@ -433,7 +482,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
   }, [currentStyle, updateStyleIndicator])
 
   return (
-    <div className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}`}>
+    <div ref={pageRef} className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}`}>
       <div className="note-detail-header">
         <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
           <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="2" strokeLinejoin="round" fill="none"/>
@@ -532,8 +581,9 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
     if (e.target.closest('.swipe-action-btn')) return
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, tapTimer: null }
-    swipeState.current.tapTimer = setTimeout(() => { swipeState.current.isTap = false }, 200)
+    const wasLeft = row.classList.contains('swiped-left')
+    const wasRight = row.classList.contains('swiped-right')
+    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null }
 
     const onMove = (e2) => {
       const s = swipeState.current
@@ -542,45 +592,78 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
       const dy = e2.clientY - s.startY
       if (!s.dir) {
         if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) { s.dir = dx < 0 ? 'left' : 'right'; s.isTap = false }
+        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
         else return
       }
       const content = s.row.querySelector('.swipe-content')
       if (!content) return
-      const base = s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0
-      const clamped = Math.max(-72, Math.min(72, base + dx))
+      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const proposed = base + dx
+      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
+      let newX = Math.max(-84, Math.min(84, proposed))
+      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
+      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
       content.style.transition = 'none'
-      content.style.transform = `translateX(${clamped}px)`
+      content.style.transform = `translateX(${newX}px)`
     }
 
     const onUp = (e2) => {
       const s = swipeState.current
       if (!s.row) { cleanup(); return }
       const dx = e2.clientX - s.startX
+      const dy = e2.clientY - s.startY
       const content = s.row.querySelector('.swipe-content')
       if (!content) { cleanup(); return }
       content.style.transition = ''
-      if (!s.dir && Math.abs(dx) < 8) {
-        setOpenNoteId(id)
+      const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
+      if (isTap) {
+        if (s.wasLeft || s.wasRight) {
+          s.row.classList.remove('swiped-left', 'swiped-right')
+          content.style.transform = ''
+        } else {
+          setOpenNoteId(id)
+        }
         cleanup()
         return
       }
-      const base = s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0
-      const total = base + dx
+      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const rawTotal = base + dx
+      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
+      if (s.lockSign === 1) total = Math.max(0, total)
+      if (s.lockSign === -1) total = Math.min(0, total)
       if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
       else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
       else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
       cleanup()
     }
 
-    const cleanup = () => {
-      clearTimeout(swipeState.current.tapTimer)
+    const handleCancel = () => {
+      const s2 = swipeState.current
+      if (s2.row) {
+        const c2 = s2.row.querySelector('.swipe-content')
+        if (c2) {
+          c2.style.transition = ''
+          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
+          const cx = m ? parseFloat(m[1]) : 0
+          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
+          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
+          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
+          c2.style.transform = ''
+        }
+      }
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
+    }
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
     }
 
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', handleCancel)
   }
 
   return (
@@ -605,19 +688,23 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
               {i > 0 && <div className="divider"/>}
               <div className="swipe-row" data-swipe-id={n.id} data-swipe-type="note">
                 <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="#3F5999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                  </svg>
-                  <span className="swipe-action-label active-tag">Active</span>
+                  <div className="swipe-active-inner">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    </svg>
+                    <span className="swipe-action-label">Active</span>
+                  </div>
                 </button>
                 <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3 6 5 6 21 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M10 11v6M14 11v6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span className="swipe-action-label delete">Delete</span>
+                  <div className="swipe-active-inner">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="swipe-action-label">Delete</span>
+                  </div>
                 </button>
                 <div className="swipe-content">
                   <div className="note-row" data-note-id={n.id} onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>

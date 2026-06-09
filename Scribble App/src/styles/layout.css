@@ -64,7 +64,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .page.active { display: flex; flex-direction: column; }
 
 .page-header {
-  padding: 59px 16px 0;
+  padding: 67px 16px 0;
   position: sticky;
   top: 0;
   background: transparent;
@@ -79,14 +79,58 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   font-weight: 700;
   color: #242424;
   line-height: 1.1;
-  margin: 0 0 8px 0;
+  margin: 0 0 8px 8px;
+}
+
+.header-decoration {
+  position: absolute;
+  right: 0;
+  top: 20px;
+  width: 178px;
+  height: auto;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.active-today-label {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #242424;
+  margin: 0 0 4px 8px;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
+}
+
+.active-day-name {
+  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #242424;
+  margin: 0 0 0 8px;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
+}
+
+.active-month-date {
+  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #242424;
+  margin: 0 0 16px 8px;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
 }
 
 .underline-img {
   display: block;
-  margin-bottom: 24px;
+  margin: 0 0 24px 8px;
   width: 40px;
   height: auto;
+  filter: invert(58%) sepia(75%) saturate(600%) hue-rotate(203deg) brightness(105%);
 }
 
 .category-header-row {
@@ -123,6 +167,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .cards-area {
   padding: 0 16px;
   position: relative;
+  z-index: 2;
 }
 
 .empty-state {
@@ -149,9 +194,10 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .footer {
   background: #F7F6F3;
   border-top: 1px solid #C2C1BF;
-  padding: 10px 16px 6px;
+  padding: 10px 16px 32px;
   flex-shrink: 0;
   position: relative;
+  z-index: 3;
   border-radius: 0 0 28px 28px;
 }
 
@@ -418,7 +464,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 
 /* Page fade when save-to panel is open */
 .page { transition: opacity 200ms ease; }
-.phone.save-panel-open .page { opacity: 0.5; }
+.phone.save-panel-open .page { opacity: 0.2; }
 
 /* Save-to panel */
 @keyframes radio-pop {
@@ -569,7 +615,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     flex: 1;
   }
   .page-header {
-    padding-top: 16px;
+    padding-top: env(safe-area-inset-top);
   }
   .page {
     -webkit-mask-image: none;
@@ -578,5 +624,9 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
   .footer {
     border-radius: 0;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  }
+  .home-indicator {
+    display: none;
   }
 }

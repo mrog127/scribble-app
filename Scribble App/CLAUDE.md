@@ -19,14 +19,20 @@ Code/
       NoteCard.jsx
       TabBar.jsx
       ActivePage.jsx
+      AuthScreen.jsx        ← sign in / sign up UI
+    context/
+      AuthContext.jsx       ← Supabase session, useAuth() hook
+      AppContext.jsx        ← all app data + Supabase CRUD, useAppContext() hook
     styles/
       cards.css
       layout.css
     App.jsx
     main.jsx
+    supabaseClient.js       ← Supabase client init
   index.html
   package.json
   vite.config.js
+  .env.local               ← Supabase credentials (not in git)
   CLAUDE.md
 ```
 
@@ -104,6 +110,37 @@ Code/
 - **FLIP drag reorder:** must snapshot `.swipe-row` wrappers, not `.todo-row` inner elements
 - **Stale function risk:** when refactoring functions, fully replace old versions — don't shadow them. Old versions referencing removed DOM elements will silently override new ones.
 - **hideCompleted:** checked items are removed from DOM when true — preserve them in state so they survive toggle
+
+---
+
+## Supabase Backend
+
+The app has a full Supabase backend (auth + database). Added in a separate session — **read these files fresh before editing them**.
+
+### App shell structure
+```
+<AuthProvider>       ← manages Supabase session (AuthContext.jsx)
+  <AuthGate>         ← shows AuthScreen if logged out
+    <AppProvider>    ← loads/stores all data from Supabase (AppContext.jsx)
+      <AppInner />   ← the actual UI
+    </AppProvider>
+  </AuthGate>
+</AuthProvider>
+```
+
+### Safe to edit freely
+`TodoCard.jsx`, `NoteCard.jsx`, `TabBar.jsx`, `ActivePage.jsx`, `AuthScreen.jsx`, `cards.css`, `layout.css`
+
+### Read before editing
+`App.jsx` — contains Supabase wiring and the AuthGate/AppProvider setup
+
+### Do not overwrite without understanding
+`AppContext.jsx`, `AuthContext.jsx`, `supabaseClient.js` — contain all Supabase logic
+
+### Data flow
+All todos, notes, links, categories come from `useAppContext()`, not local state.
+Key context values: `activeTodos`, `activeNotes`, `categories`, `loading`
+Key context functions: `addActiveTodo`, `toggleActiveTodo`, `deleteActiveTodo`, `updateActiveNote`, `addProjectTodo`, `toggleProjectTodo`, etc.
 
 ---
 

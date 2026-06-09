@@ -110,21 +110,23 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
         {creating && (
           <div className="card card-intro new-project-card" ref={creationCardRef}>
             <p className="new-project-label">Title your project:</p>
-            <div className="project-input-wrap" style={{ marginTop: 0 }}>
-              <input
-                ref={inputRef}
-                className="project-input"
-                placeholder="Project name..."
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
-              />
-              <button
-                className={`project-send-btn${title.trim() ? ' visible' : ''}`}
-                onMouseDown={e => { e.preventDefault(); handleSubmit() }}
-              >
-                <SendIcon/>
-              </button>
+            <div className="project-input-wrap focused" style={{ marginTop: 0 }}>
+              <div className="project-input-row">
+                <input
+                  ref={inputRef}
+                  className="project-input"
+                  placeholder="Project name..."
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
+                />
+                <button
+                  className={`project-send-btn${title.trim() ? ' visible' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); handleSubmit() }}
+                >
+                  <SendIcon/>
+                </button>
+              </div>
             </div>
           </div>
         )}

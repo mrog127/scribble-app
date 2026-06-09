@@ -202,7 +202,7 @@ function useCategoryDragReorder(containerRef, categories, onReorder) {
   return { onDragPointerDown }
 }
 
-export default function MenuPage() {
+export default function MenuPage({ pageAnimClass = '', isExiting = false }) {
   const { categories, reorderCategories, renameCategory, deleteCategory, addCategory } = useAppContext()
   const { user, signOut } = useAuth()
 
@@ -242,7 +242,7 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="page active" id="page-menu">
+    <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-menu'}>
       <div className="page-header">
         <p className="active-title">Menu</p>
       </div>

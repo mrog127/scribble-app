@@ -64,7 +64,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .page.active { display: flex; flex-direction: column; }
 
 .page-header {
-  padding: 75px 16px 0;
+  padding: 91px 16px 0;
   position: sticky;
   top: 0;
   background: transparent;
@@ -130,7 +130,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   margin: 0 0 24px 8px;
   width: 40px;
   height: auto;
-  filter: invert(58%) sepia(75%) saturate(600%) hue-rotate(203deg) brightness(105%);
+  color: var(--accent-base);
 }
 
 .category-header-row {
@@ -161,7 +161,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .category-header-btn:active {
-  background: rgba(105, 147, 254, 0.12);
+  background: rgba(var(--accent-base-rgb), 0.12);
 }
 
 .cards-area {
@@ -288,8 +288,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 
 .icon-tab.selected { background: transparent; border-radius: 4px; }
 .icon-tab svg polygon, .icon-tab svg .mline-el { stroke: #242424; }
-.icon-tab.selected svg polygon { stroke: #3F5999; }
-.icon-tab.selected .mline-el { background: #3F5999; }
+.icon-tab.selected svg polygon { stroke: var(--accent-dark); }
+.icon-tab.selected .mline-el { background: var(--accent-dark); }
 
 .mline-el { width: 18px; height: 2px; background: #242424; border-radius: 1px; }
 .hamburger-icon { display: flex; flex-direction: column; gap: 4px; align-items: center; }
@@ -329,13 +329,13 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   align-items: center;
 }
 
-.text-tab.selected { background: transparent; color: #3F5999; }
+.text-tab.selected { background: transparent; color: var(--accent-dark); }
 
 .tab-indicator {
   position: absolute;
   bottom: 0;
   height: 40px;
-  background: rgba(105,147,254,0.15);
+  background: rgba(var(--accent-base-rgb),0.15);
   border-radius: 4px;
   pointer-events: none;
   transition: left 100ms ease, width 100ms ease;
@@ -381,7 +381,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: #3F5999;
+  color: var(--accent-dark);
 }
 
 .toolbar-divider { width: 1px; height: 24px; background: #DBDAD8; flex-shrink: 0; }
@@ -402,7 +402,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   transform: translateY(-50%);
   width: 40px;
   height: 40px;
-  background: rgba(105,147,254,0.2);
+  background: rgba(var(--accent-base-rgb),0.2);
   border-radius: 4px;
   pointer-events: none;
   transition: left 100ms ease;
@@ -431,8 +431,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .toolbar-icon-btn svg circle { fill: #3D3D3D; }
 .toolbar-icon-btn.selected svg line,
 .toolbar-icon-btn.selected svg path,
-.toolbar-icon-btn.selected svg polygon { stroke: #3F5999; }
-.toolbar-icon-btn.selected svg circle { fill: #3F5999; }
+.toolbar-icon-btn.selected svg polygon { stroke: var(--accent-dark); }
+.toolbar-icon-btn.selected svg circle { fill: var(--accent-dark); }
 
 .home-indicator {
   width: 120px;
@@ -462,9 +462,15 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   display: none !important;
 }
 
-/* Page fade when save-to panel is open */
+/* Page fade + collapse when save-to panel is open */
 .page { transition: opacity 200ms ease; }
-.phone.save-panel-open .page { opacity: 0.2; }
+.phone.save-panel-open .page {
+  opacity: 0.2;
+  flex: 0;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
 
 /* Save-to panel */
 @keyframes radio-pop {
@@ -476,41 +482,74 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .save-to-panel {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  right: 0;
-  margin-bottom: 8px;
-  padding: 0 8px;
-  pointer-events: none;
+  /* Flex item at phone level — hidden by default, expands to fill space above footer */
+  flex: 0;
+  min-height: 0;
+  overflow: hidden;
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 200ms ease, transform 200ms ease;
-  z-index: 50;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  display: flex;
+  flex-direction: column;
 }
 .save-to-panel.visible {
+  flex: 1;
   opacity: 1;
-  transform: translateY(0);
   pointer-events: auto;
+  padding: 8px 8px 8px;
 }
 .save-to-card {
+  flex: 1;
+  min-height: 0;
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.save-to-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  max-height: calc(100vh - 3rem - 150px);
   scrollbar-width: none;
   padding-bottom: 8px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 12px, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0px, black 12px, black 100%);
 }
-.save-to-card::-webkit-scrollbar { display: none; }
+.save-to-scroll::-webkit-scrollbar { display: none; }
+.save-to-header {
+  position: sticky;
+  top: 0;
+  background: #F7F6F3;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px;
+  flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
+}
 .save-to-title {
   font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
   font-size: 24px;
   font-weight: 700;
   color: #242424;
-  padding: 16px 16px 8px;
+  padding: 0;
   margin: 0;
+}
+.save-to-cancel {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #3F5999;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
 }
 .save-to-empty {
   font-family: 'Open Sans', system-ui, sans-serif;
@@ -523,7 +562,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 12px;
   font-weight: 700;
-  color: #3F5999;
+  color: var(--accent-dark);
   padding: 8px 16px 2px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -546,12 +585,12 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   position: relative;
   box-sizing: border-box;
 }
-/* Blue highlight box — full row height, 8px inset L/R, 4px radius */
+/* Accent highlight box — full row height, 8px inset L/R, 4px radius */
 .save-to-option.selected::before {
   content: '';
   position: absolute;
   inset: 0 8px;
-  background: rgba(105, 147, 254, 0.12);
+  background: rgba(var(--accent-base-rgb), 0.12);
   border-radius: 4px;
   pointer-events: none;
 }
@@ -577,8 +616,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   transform-origin: center;
 }
 .save-to-radio.filled {
-  border-color: #6993FE;
-  background: #6993FE;
+  border-color: var(--accent-base);
+  background: var(--accent-base);
   box-shadow: none;
   animation: radio-pop 320ms ease forwards;
 }
@@ -591,6 +630,89 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 }
 .toolbar-source-label.inactive { color: #959493; }
 .toolbar-source-btn.inactive { opacity: 0.7; }
+
+/* =============================================
+   Tab transition animations
+   ============================================= */
+
+/* Exiting page: absolutely overlaid so it doesn't affect flex layout */
+.page.page-exiting {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+  transition: none !important;
+}
+
+/* Entering page: stays in normal flex flow; disable save-panel opacity transition */
+.page.page-entering {
+  transition: none !important;
+}
+
+/* Header: fade out when exiting, fade in when entering */
+.page.page-exiting .page-header {
+  animation: tab-hdr-out 160ms ease both;
+}
+.page.page-entering .page-header {
+  animation: tab-hdr-in 220ms ease both;
+}
+
+/* Card slide animations — direction variants */
+.page.page-entering.page-enter-from-right .cards-area .card {
+  animation: card-from-right 240ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+.page.page-entering.page-enter-from-left .cards-area .card {
+  animation: card-from-left 240ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+.page.page-exiting.page-exit-to-left .cards-area .card {
+  animation: card-to-left 160ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+.page.page-exiting.page-exit-to-right .cards-area .card {
+  animation: card-to-right 160ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Enter stagger: top card leads, each subsequent card follows with a delay */
+.page.page-entering .cards-area .card:nth-child(1) { animation-delay: 0ms; }
+.page.page-entering .cards-area .card:nth-child(2) { animation-delay: 50ms; }
+.page.page-entering .cards-area .card:nth-child(3) { animation-delay: 100ms; }
+.page.page-entering .cards-area .card:nth-child(4) { animation-delay: 150ms; }
+.page.page-entering .cards-area .card:nth-child(5) { animation-delay: 200ms; }
+.page.page-entering .cards-area .card:nth-child(6) { animation-delay: 250ms; }
+
+/* Exit stagger: fast pull — top card drags the ones below it */
+.page.page-exiting .cards-area .card:nth-child(1) { animation-delay: 0ms; }
+.page.page-exiting .cards-area .card:nth-child(2) { animation-delay: 22ms; }
+.page.page-exiting .cards-area .card:nth-child(3) { animation-delay: 44ms; }
+.page.page-exiting .cards-area .card:nth-child(4) { animation-delay: 66ms; }
+.page.page-exiting .cards-area .card:nth-child(5) { animation-delay: 88ms; }
+.page.page-exiting .cards-area .card:nth-child(6) { animation-delay: 110ms; }
+
+/* Keyframes */
+@keyframes tab-hdr-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tab-hdr-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes card-from-right {
+  from { transform: translateX(115%); opacity: 0.4; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes card-from-left {
+  from { transform: translateX(-115%); opacity: 0.4; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes card-to-left {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-115%); opacity: 0; }
+}
+@keyframes card-to-right {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(115%); opacity: 0; }
+}
 
 /* On mobile viewports, stretch to fill the full screen */
 @media (max-width: 480px) {
@@ -608,14 +730,16 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     overflow: hidden;
   }
   .phone {
-    width: 100%;
-    height: 100dvh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--ivh, 100dvh); /* Set to vv.height via JS when keyboard open */
     border-radius: 0;
     box-shadow: none;
-    flex: 1;
   }
   .page-header {
-    padding-top: env(safe-area-inset-top);
+    padding-top: calc(env(safe-area-inset-top) + 16px);
   }
   .page {
     -webkit-mask-image: none;

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ACCENT_COLORS, getCategoryAccent } from './theme.js'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
 import TabBar from './components/TabBar.jsx'
@@ -19,7 +20,6 @@ function AppInner() {
   const [inputFocused, setInputFocused] = useState(false)
   const [toolbarFadedIn, setToolbarFadedIn] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const [hideCompleted, setHideCompleted] = useState(false)
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
@@ -45,6 +45,34 @@ function AppInner() {
     else setSaveToProject(null)
   }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Resize the phone to sit exactly above the keyboard on mobile.
+  // vv.height = visible area above keyboard; vv.offsetTop = how far iOS scrolled
+  // the layout viewport (non-zero when iOS auto-scrolls to reveal the input).
+  // Setting height = vv.height + translateY(vv.offsetTop) keeps the phone
+  // anchored to the top of the visual viewport with the correct height,
+  // regardless of dvh/innerHeight mismatches on iOS Safari.
+  useEffect(() => {
+    const vv = window.visualViewport
+    const phone = document.getElementById('app')
+    if (!vv || !phone) return
+    const update = () => {
+      phone.style.setProperty('--ivh', vv.height + 'px')
+      phone.style.transform = vv.offsetTop > 0 ? `translateY(${vv.offsetTop}px)` : ''
+    }
+    if (inputFocused) {
+      vv.addEventListener('resize', update)
+      vv.addEventListener('scroll', update)
+      update()
+    } else {
+      phone.style.removeProperty('--ivh')
+      phone.style.transform = ''
+    }
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [inputFocused])
+
   // Delay faded-in by one frame so CSS transition fires correctly
   useEffect(() => {
     if (inputFocused) {
@@ -64,6 +92,88 @@ function AppInner() {
   const toolbarIndicatorMounted = useRef(false)
   const pendingAnimRef = useRef(null)
   const pendingProjectAnimRef = useRef(null)
+
+  // Tab transition state
+  const TRANSITION_MS = 480
+  const [exitingTab, setExitingTab] = useState(null)
+  const [transitionDir, setTransitionDir] = useState(null) // 'left' | 'right'
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const transitionTimerRef = useRef(null)
+
+  const handleTabChange = useCallback((newTab) => {
+    if (newTab === activeTab) return
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
+    const tabs = ['star', ...categoryIds, 'menu']
+    const currentIdx = tabs.indexOf(activeTab)
+    const newIdx = tabs.indexOf(newTab)
+    const dir = currentIdx === -1 || newIdx >= currentIdx ? 'left' : 'right'
+    setHeaderOpacity(1)
+    setHeaderTranslate(0)
+    setExitingTab(activeTab)
+    setActiveTab(newTab)
+    setTransitionDir(dir)
+    setIsTransitioning(true)
+    transitionTimerRef.current = setTimeout(() => {
+      setExitingTab(null)
+      setIsTransitioning(false)
+      setTransitionDir(null)
+    }, TRANSITION_MS)
+  }, [activeTab, categoryIds]) // eslint-disable-line
+
+  // Refs for swipe-to-change-tab gesture (avoids re-registering listeners on every state change)
+  const activeTabRef = useRef(activeTab)
+  const tabOrderRef = useRef(['star', ...categoryIds, 'menu'])
+  const handleTabChangeRef = useRef(handleTabChange)
+  useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
+  useEffect(() => { tabOrderRef.current = ['star', ...categoryIds, 'menu'] }, [categoryIds])
+  useEffect(() => { handleTabChangeRef.current = handleTabChange }, [handleTabChange])
+
+  // Swipe left/right on non-row areas to navigate tabs
+  useEffect(() => {
+    const phone = document.getElementById('app')
+    if (!phone) return
+    let startX = 0, startY = 0, tracking = false
+
+    const onPointerDown = (e) => {
+      // Ignore swipes that start on a swipe row, input, or contenteditable
+      if (e.target.closest('.swipe-row')) return
+      if (e.target.closest('input, textarea, [contenteditable]')) return
+      startX = e.clientX
+      startY = e.clientY
+      tracking = true
+    }
+
+    const onPointerUp = (e) => {
+      if (!tracking) return
+      tracking = false
+      const dx = e.clientX - startX
+      const dy = e.clientY - startY
+      // Require 60px horizontal; only cancel if vertical clearly dominates
+      if (Math.abs(dx) < 60) return
+      if (Math.abs(dy) > Math.abs(dx) * 3) return
+
+      const tabs = tabOrderRef.current
+      const currentIdx = tabs.indexOf(activeTabRef.current)
+      if (currentIdx === -1) return
+
+      if (dx < 0 && currentIdx < tabs.length - 1) {
+        handleTabChangeRef.current(tabs[currentIdx + 1])
+      } else if (dx > 0 && currentIdx > 0) {
+        handleTabChangeRef.current(tabs[currentIdx - 1])
+      }
+    }
+
+    const onPointerCancel = () => { tracking = false }
+
+    phone.addEventListener('pointerdown', onPointerDown)
+    phone.addEventListener('pointerup', onPointerUp)
+    phone.addEventListener('pointercancel', onPointerCancel)
+    return () => {
+      phone.removeEventListener('pointerdown', onPointerDown)
+      phone.removeEventListener('pointerup', onPointerUp)
+      phone.removeEventListener('pointercancel', onPointerCancel)
+    }
+  }, []) // eslint-disable-line
 
   // Close swipe rows when clicking outside
   useEffect(() => {
@@ -419,43 +529,58 @@ function AppInner() {
 
   const hasContent = activeTodos.length > 0 || activeNotes.length > 0
 
+  const activeAccent = useMemo(() => {
+    if (activeTab === 'star' || activeTab === 'menu') return ACCENT_COLORS[0]
+    const idx = categories.findIndex(c => c.id === activeTab)
+    if (idx === -1) return ACCENT_COLORS[0]
+    return getCategoryAccent(idx)
+  }, [activeTab, categories])
+
   return (
     <div className="app-wrap">
-      <div className={`phone${inputFocused && activeTab === 'star' ? ' save-panel-open' : ''}`} id="app">
+      <div
+        className={`phone${inputFocused && activeTab === 'star' ? ' save-panel-open' : ''}`}
+        id="app"
+        style={{
+          '--accent-base': activeAccent.base,
+          '--accent-dark': activeAccent.dark,
+          '--accent-light': activeAccent.light,
+          '--accent-base-rgb': activeAccent.baseRgb,
+        }}
+      >
 
 
-        {/* Active Page */}
+        {/* Entering pages — normal flex flow */}
         {activeTab === 'star' && (
           <ActivePage
             todos={activeTodos}
             notes={activeNotes}
-            hideCompleted={hideCompleted}
             onToggleTodo={toggleTodo}
             onDeleteTodo={deleteTodo}
             onDeleteNote={deleteNote}
             onUpdateNote={updateNote}
             onReorderTodos={reorderTodos}
             onReorderNotes={reorderNotes}
-            onToggleHideCompleted={() => setHideCompleted(h => !h)}
             onScroll={handleScroll}
             headerOpacity={headerOpacity}
             headerTranslate={headerTranslate}
+            pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
           />
         )}
-
-        {activeTab !== 'star' && categoryIds.includes(activeTab) && (
+        {activeTab !== 'star' && activeTab !== 'menu' && categoryIds.includes(activeTab) && (
           <CategoryPage
             categoryId={activeTab}
             onScroll={handleScroll}
             headerOpacity={headerOpacity}
             headerTranslate={headerTranslate}
+            pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
           />
         )}
-
         {activeTab === 'menu' && (
-          <MenuPage />
+          <MenuPage
+            pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
+          />
         )}
-
         {activeTab !== 'star' && activeTab !== 'menu' && !categoryIds.includes(activeTab) && (
           <div className="page active" id={`page-${activeTab}`}>
             <div className="page-header">
@@ -464,14 +589,53 @@ function AppInner() {
           </div>
         )}
 
-        {/* Footer */}
-        <div className={`footer${activeTab !== 'star' ? ' category-mode' : ''}`}>
+        {/* Exiting pages — absolutely overlaid, pointer-events:none, play exit animation */}
+        {isTransitioning && exitingTab === 'star' && (
+          <ActivePage
+            key="exit-star"
+            todos={activeTodos}
+            notes={activeNotes}
+            onToggleTodo={toggleTodo}
+            onDeleteTodo={deleteTodo}
+            onDeleteNote={deleteNote}
+            onUpdateNote={updateNote}
+            onReorderTodos={reorderTodos}
+            onReorderNotes={reorderNotes}
+            onScroll={handleScroll}
+            headerOpacity={headerOpacity}
+            headerTranslate={headerTranslate}
+            pageAnimClass={`page-exiting page-exit-to-${transitionDir}`}
+            isExiting
+          />
+        )}
+        {isTransitioning && exitingTab !== 'star' && exitingTab !== 'menu' && categoryIds.includes(exitingTab) && (
+          <CategoryPage
+            key={`exit-${exitingTab}`}
+            categoryId={exitingTab}
+            onScroll={handleScroll}
+            headerOpacity={headerOpacity}
+            headerTranslate={headerTranslate}
+            pageAnimClass={`page-exiting page-exit-to-${transitionDir}`}
+            isExiting
+          />
+        )}
+        {isTransitioning && exitingTab === 'menu' && (
+          <MenuPage
+            key="exit-menu"
+            pageAnimClass={`page-exiting page-exit-to-${transitionDir}`}
+            isExiting
+          />
+        )}
 
-          {/* Save to… floating panel — Active page only */}
-          {activeTab === 'star' && (
-            <div className={`save-to-panel${inputFocused ? ' visible' : ''}`}>
-              <div className="save-to-card">
+        {/* Save to… panel — Active page only, flex sibling to footer */}
+        {activeTab === 'star' && (
+          <div className={`save-to-panel${inputFocused ? ' visible' : ''}`}>
+            <div className="save-to-card">
+              <div className="save-to-header">
                 <p className="save-to-title">Save to...</p>
+                <button className="save-to-cancel" onMouseDown={e => { e.preventDefault(); inputRef.current?.blur() }}>Cancel</button>
+              </div>
+              <div className="save-to-scroll">
                 {categories.every(c => c.projects.length === 0) && (
                   <p className="save-to-empty">No projects yet</p>
                 )}
@@ -494,7 +658,11 @@ function AppInner() {
                 ))}
               </div>
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className={`footer${activeTab !== 'star' ? ' category-mode' : ''}`}>
 
           <div className="add-row">
             <input
@@ -512,8 +680,8 @@ function AppInner() {
               onMouseDown={e => { e.preventDefault(); addItem() }}
             >
               <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-                <path d="M10 16 L10 4" stroke="#3F5999" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M4 9 L10 3 L16 9" stroke="#3F5999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round"/>
+                <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           </div>
@@ -527,7 +695,7 @@ function AppInner() {
                   onMouseDown={e => { e.preventDefault(); setAddAsActiveFlag(v => !v) }}
                 >
                   <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill={addAsActiveFlag ? 'rgba(105,147,254,0.3)' : 'none'} stroke={addAsActiveFlag ? '#3F5999' : '#959493'} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#959493' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
                   <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>Active</span>
                 </button>
@@ -571,7 +739,7 @@ function AppInner() {
               </div>
             </div>
 
-            <TabBar activeTab={activeTab} onSelectTab={setActiveTab} inputFocused={inputFocused} onTabsScroll={handleTabsScroll} />
+            <TabBar activeTab={activeTab} onSelectTab={handleTabChange} inputFocused={inputFocused} onTabsScroll={handleTabsScroll} />
           </div>
 
 

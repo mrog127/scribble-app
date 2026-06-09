@@ -115,7 +115,7 @@
 
 @keyframes row-flash-check {
   0%   { background: transparent; }
-  25%  { background: rgba(105,147,254,0.15); }
+  25%  { background: rgba(var(--accent-base-rgb),0.15); }
   100% { background: transparent; }
 }
 
@@ -151,7 +151,7 @@
 .checkbox.animating-check   { animation: checkbox-bounce-in  320ms ease forwards; }
 .checkbox.animating-uncheck { animation: checkbox-bounce-out 200ms ease forwards; }
 
-.checkbox.checked { background: #6993FE; border-color: #6993FE; box-shadow: none; }
+.checkbox.checked { background: var(--accent-base); border-color: var(--accent-base); box-shadow: none; }
 .checkmark { opacity: 0; transition: opacity 80ms ease 60ms; display: block; }
 .checkbox.checked .checkmark { opacity: 1; }
 
@@ -246,8 +246,8 @@
 }
 
 .swipe-action-btn.active-tag.activated .swipe-active-inner {
-  background: rgba(105,147,254,0.15);
-  color: #3F5999;
+  background: rgba(var(--accent-base-rgb),0.15);
+  color: var(--accent-dark);
 }
 
 .swipe-action-label { font-family: 'Open Sans', system-ui, sans-serif; font-size: 12px; font-weight: 700; line-height: 1; color: inherit; }
@@ -274,7 +274,7 @@
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: #3F5999;
+  color: var(--accent-dark);
   padding: 8px 0 0 0;
   margin-left: 62px;
   margin-right: 24px;
@@ -311,7 +311,7 @@
 
 /* Drag states */
 .todo-row.dragging, .note-row.dragging { opacity: 0; pointer-events: none; }
-.todo-row.drag-over { background: rgba(105,147,254,0.08); }
+.todo-row.drag-over { background: rgba(var(--accent-base-rgb),0.08); }
 .todo-row.flash-check { animation: row-flash-check 500ms ease forwards; }
 
 /* Card intro animation */
@@ -367,13 +367,18 @@
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 700;
-  color: #3F5999;
+  color: var(--accent-dark);
 }
 
 .note-detail-page.editing { background: #FCFBF9; }
 
 .note-detail-page.editing .note-editor {
   padding-bottom: calc(var(--kbh, 0px) + 144px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black 100%);
+}
+
+.note-detail-page.editing .note-editor.has-overflow-below {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 140px)), transparent calc(100% - calc(var(--kbh, 0px) + 124px)));
   mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 140px)), transparent calc(100% - calc(var(--kbh, 0px) + 124px)));
 }
@@ -419,7 +424,7 @@
   top: 50%;
   transform: translateY(-50%);
   height: 40px;
-  background: rgba(105,147,254,0.2);
+  background: rgba(var(--accent-base-rgb),0.2);
   border-radius: 4px;
   pointer-events: none;
   transition: left 100ms ease, width 100ms ease;
@@ -441,7 +446,7 @@
   padding: 0 2px;
   white-space: nowrap;
 }
-.note-style-btn.active { color: #3F5999; }
+.note-style-btn.active { color: var(--accent-dark); }
 .note-style-btn[data-style="title"],
 .note-style-btn[data-style="heading"] { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 16px; font-weight: 700; }
 .note-style-btn[data-style="bold"] { font-weight: 700; }
@@ -472,7 +477,7 @@
 .note-detail-body[contenteditable="true"] {
   outline: none;
   cursor: text;
-  caret-color: #6993FE;
+  caret-color: var(--accent-base);
 }
 
 .no-select { user-select: none; -webkit-user-select: none; }
@@ -505,7 +510,7 @@
 }
 
 .project-tab-btn.selected {
-  background: rgba(105,147,254,0.2);
+  background: rgba(var(--accent-base-rgb),0.2);
 }
 
 /* Project card row heights */
@@ -606,7 +611,7 @@
 }
 
 .project-link-text {
-  color: #3F5999;
+  color: var(--accent-dark);
   text-decoration: underline;
 }
 
@@ -669,7 +674,7 @@
 }
 
 .project-active-btn.on {
-  color: #3F5999;
+  color: var(--accent-dark);
 }
 
 .project-type-btn {
@@ -687,7 +692,7 @@
 }
 
 .project-type-btn.selected {
-  background: rgba(105,147,254,0.2);
+  background: rgba(var(--accent-base-rgb),0.2);
 }
 
 /* Activated indicator badge (star icon on items in project card) */

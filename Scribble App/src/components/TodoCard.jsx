@@ -1,4 +1,4 @@
-import { useRef, useCallback, useLayoutEffect, useEffect } from 'react'
+import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
 
 function useSwipe(onDelete, onTagActive) {
   const swipeState = useRef({})
@@ -307,7 +307,7 @@ function useDragReorder(containerRef, items, onReorder) {
 function StarIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill="rgba(105,147,254,0.2)" stroke="#3F5999" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+      <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -331,7 +331,10 @@ function ActiveTagIcon() {
   )
 }
 
-export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onReorder, onToggleHideCompleted }) {
+export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
+  const [hideCompleted, setHideCompleted] = useState(() => {
+    try { return localStorage.getItem('hc-active-todos') === 'true' } catch { return false }
+  })
   const containerRef = useRef(null)
   const handleDelete = useCallback((id) => {
     const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
@@ -493,15 +496,19 @@ export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onR
       checkboxEl.classList.add('checked')
       e.currentTarget.closest('.todo-row')?.classList.add('checked')
 
-      // Blue row flash
-      e.currentTarget.closest('.todo-row')?.animate(
-        [
-          { background: 'rgba(105,147,254,0)' },
-          { background: 'rgba(105,147,254,0.18)', offset: 0.2 },
-          { background: 'rgba(105,147,254,0)' },
-        ],
-        { duration: 500, easing: 'ease', fill: 'none' }
-      )
+      // Row flash in accent color
+      const todoRow = e.currentTarget.closest('.todo-row')
+      if (todoRow) {
+        const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+        todoRow.animate(
+          [
+            { background: `rgba(${rgb},0)` },
+            { background: `rgba(${rgb},0.18)`, offset: 0.2 },
+            { background: `rgba(${rgb},0)` },
+          ],
+          { duration: 500, easing: 'ease', fill: 'none' }
+        )
+      }
 
       // After flash completes, snapshot + trigger reorder
       setTimeout(() => {
@@ -545,12 +552,14 @@ export default function TodoCard({ todos, hideCompleted, onToggle, onDelete, onR
           el.style.transition = ''
           el.style.opacity = ''
         })
-        onToggleHideCompleted()
+        setHideCompleted(true)
+        try { localStorage.setItem('hc-active-todos', 'true') } catch {}
       }, 210)
     } else {
       // Mark that we want to animate items in after re-render
       showingRef.current = true
-      onToggleHideCompleted()
+      setHideCompleted(false)
+      try { localStorage.setItem('hc-active-todos', 'false') } catch {}
     }
   }
 

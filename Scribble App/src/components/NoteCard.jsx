@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import UnderlineSvg from '../assets/Underline.svg?react'
+import { useAppContext } from '../context/AppContext.jsx'
+import { getCategoryAccent } from '../theme.js'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -185,12 +187,20 @@ function useDragReorder(containerRef, items, onReorder) {
 function StarIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill="rgba(105,147,254,0.2)" stroke="#3F5999" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+      <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
     </svg>
   )
 }
 
 function NoteDetailPage({ note, onClose, onSave }) {
+  const { categories } = useAppContext()
+  const noteAccent = useMemo(() => {
+    if (!note?.categoryId) return null
+    const idx = categories.findIndex(c => c.id === note.categoryId)
+    if (idx === -1) return null
+    return getCategoryAccent(idx)
+  }, [note, categories])
+
   const [editing, setEditing] = useState(false)
   const [currentStyle, setCurrentStyle] = useState('body')
   const [isOpen, setIsOpen] = useState(false)
@@ -201,6 +211,22 @@ function NoteDetailPage({ note, onClose, onSave }) {
   const editorRef = useRef(null)
   const scrollTitleRef = useRef(null)
   const underlineRef = useRef(null)
+
+  // Check whether the last paragraph is below the style bar.
+  // Only fires on scroll — not on input — so the fade appears only when the user
+  // has manually scrolled up and left content hidden, not while actively typing.
+  const checkBottomOverflow = useCallback((editor) => {
+    const content = contentRef.current
+    const page = pageRef.current
+    if (!content || !page) return
+    const paras = content.querySelectorAll('.note-para')
+    const lastPara = paras[paras.length - 1]
+    if (!lastPara) { editor.classList.remove('has-overflow-below'); return }
+    const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
+    const pageBottom = page.getBoundingClientRect().bottom
+    const styleBarTop = pageBottom - kbh - 92  // 56px bar + 36px gap
+    editor.classList.toggle('has-overflow-below', lastPara.getBoundingClientRect().bottom > styleBarTop + 4)
+  }, [])
 
   // Slide in on mount
   useEffect(() => {
@@ -214,8 +240,11 @@ function NoteDetailPage({ note, onClose, onSave }) {
       const page = pageRef.current
       if (!page) return
       const pageBottom = page.getBoundingClientRect().bottom
-      const vpBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight
-      const kbh = Math.max(0, pageBottom - vpBottom)
+      // Do NOT include vv.offsetTop — iOS scrolls the visual viewport when the caret is
+      // near the bottom, increasing offsetTop and shrinking the computed kbh incorrectly.
+      // Keyboard height is simply pageBottom minus the (unscrolled) visual viewport height.
+      const vvHeight = vv ? vv.height : window.innerHeight
+      const kbh = Math.max(0, pageBottom - vvHeight)
       page.style.setProperty('--kbh', kbh + 'px')
     }
     if (vv) {
@@ -276,10 +305,22 @@ function NoteDetailPage({ note, onClose, onSave }) {
         const opacity = Math.max(0, Math.min(1, (bottomRelative - 32) / rect.height))
         underlineEl.style.opacity = opacity
       }
+
+      // Bottom overflow: show fade only when the last paragraph is below the style bar,
+      // meaning the user has scrolled up and left content hidden. Don't use scroll math —
+      // padding-bottom (kbh+144) inflates scrollHeight and makes arithmetic unreliable.
+      checkBottomOverflow(editor)
     }
     editor.addEventListener('scroll', check, { passive: true })
     return () => editor.removeEventListener('scroll', check)
   }, [])
+
+  // Initial overflow check when editing state changes (no input listener — scroll-only detection)
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    checkBottomOverflow(editor)
+  }, [editing])
 
   const updateStyleIndicator = useCallback((style) => {
     const btn = document.querySelector(`.note-style-btn[data-style="${style}"]`)
@@ -320,6 +361,33 @@ function NoteDetailPage({ note, onClose, onSave }) {
     document.addEventListener('selectionchange', detectCursorStyle)
     return () => document.removeEventListener('selectionchange', detectCursorStyle)
   }, [editing, detectCursorStyle])
+
+  // Scroll cursor into view while typing — handles text wrapping without Enter
+  useEffect(() => {
+    if (!editing) return
+    const content = contentRef.current
+    const editor = editorRef.current
+    const page = pageRef.current
+    if (!content || !editor || !page) return
+
+    const scrollCursorIntoView = () => {
+      const sel = window.getSelection()
+      if (!sel || sel.rangeCount === 0) return
+      const range = sel.getRangeAt(0)
+      const cursorRect = range.getBoundingClientRect()
+      if (!cursorRect.height) return
+      const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
+      const pageBottom = page.getBoundingClientRect().bottom
+      // style bar top = pageBottom - kbh - 36px gap - 56px bar height = pageBottom - kbh - 92
+      const visibleBottom = pageBottom - kbh - 92 - 12 // 12px breathing room
+      if (cursorRect.bottom > visibleBottom) {
+        editor.scrollTop += cursorRect.bottom - visibleBottom
+      }
+    }
+
+    content.addEventListener('input', scrollCursorIntoView)
+    return () => content.removeEventListener('input', scrollCursorIntoView)
+  }, [editing])
 
   const selectStyle = useCallback((style) => {
     setCurrentStyle(style)
@@ -478,11 +546,32 @@ function NoteDetailPage({ note, onClose, onSave }) {
     newRange.collapse(true)
     sel.removeAllRanges()
     sel.addRange(newRange)
-    newPara.scrollIntoView({ block: 'nearest' })
+    // Scroll editor so new paragraph is visible above the style bar
+    requestAnimationFrame(() => {
+      const editor = editorRef.current
+      const page = pageRef.current
+      if (!editor || !page) return
+      const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
+      const pageBottom = page.getBoundingClientRect().bottom
+      const visibleBottom = pageBottom - kbh - 92 - 12
+      const paraRect = newPara.getBoundingClientRect()
+      if (paraRect.bottom > visibleBottom) {
+        editor.scrollTop += paraRect.bottom - visibleBottom
+      }
+    })
   }, [currentStyle, updateStyleIndicator])
 
   return (
-    <div ref={pageRef} className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}`}>
+    <div
+      ref={pageRef}
+      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}`}
+      style={noteAccent ? {
+        '--accent-base': noteAccent.base,
+        '--accent-dark': noteAccent.dark,
+        '--accent-light': noteAccent.light,
+        '--accent-base-rgb': noteAccent.baseRgb,
+      } : undefined}
+    >
       <div className="note-detail-header">
         <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
           <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="2" strokeLinejoin="round" fill="none"/>
@@ -498,7 +587,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
 
       <div className="note-editor" id="noteEditor" ref={editorRef}>
         <div ref={underlineRef} style={{ display: 'block', marginTop: '32px', marginLeft: '32px', marginBottom: '32px' }}>
-          <UnderlineSvg style={{ display: 'block', color: '#6993FE' }} />
+          <UnderlineSvg style={{ display: 'block' }} />
         </div>
         <div
           ref={contentRef}

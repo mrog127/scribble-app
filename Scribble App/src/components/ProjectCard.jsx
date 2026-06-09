@@ -242,37 +242,37 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
 // ---- Icons ----
 function ListIcon({ active }) {
-  const c = active ? '#3F5999' : '#595959'
+  const s = active ? { fill: 'var(--accent-dark)', stroke: 'var(--accent-dark)' } : { fill: '#595959', stroke: '#595959' }
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <circle cx="5" cy="7" r="1.6" fill={c}/>
-      <line x1="9" y1="7" x2="21" y2="7" stroke={c} strokeWidth="1.9" strokeLinecap="round"/>
-      <circle cx="5" cy="13" r="1.6" fill={c}/>
-      <line x1="9" y1="13" x2="21" y2="13" stroke={c} strokeWidth="1.9" strokeLinecap="round"/>
-      <circle cx="5" cy="19" r="1.6" fill={c}/>
-      <line x1="9" y1="19" x2="15" y2="19" stroke={c} strokeWidth="1.9" strokeLinecap="round"/>
+      <circle cx="5" cy="7" r="1.6" style={{ fill: s.fill }}/>
+      <line x1="9" y1="7" x2="21" y2="7" style={{ stroke: s.stroke }} strokeWidth="1.9" strokeLinecap="round"/>
+      <circle cx="5" cy="13" r="1.6" style={{ fill: s.fill }}/>
+      <line x1="9" y1="13" x2="21" y2="13" style={{ stroke: s.stroke }} strokeWidth="1.9" strokeLinecap="round"/>
+      <circle cx="5" cy="19" r="1.6" style={{ fill: s.fill }}/>
+      <line x1="9" y1="19" x2="15" y2="19" style={{ stroke: s.stroke }} strokeWidth="1.9" strokeLinecap="round"/>
     </svg>
   )
 }
 
 function NoteIcon({ active }) {
-  const c = active ? '#3F5999' : '#595959'
+  const s = active ? { stroke: 'var(--accent-dark)' } : { stroke: '#595959' }
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M4 4h10l6 6v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
-      <path d="M14 4v6h6" stroke={c} strokeWidth="1.8" strokeLinejoin="round"/>
-      <line x1="6" y1="15" x2="18" y2="15" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
-      <line x1="6" y1="18.5" x2="14" y2="18.5" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M4 4h10l6 6v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" style={s} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
+      <path d="M14 4v6h6" style={s} strokeWidth="1.8" strokeLinejoin="round"/>
+      <line x1="6" y1="15" x2="18" y2="15" style={s} strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="6" y1="18.5" x2="14" y2="18.5" style={s} strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   )
 }
 
 function LinkIcon({ active }) {
-  const c = active ? '#3F5999' : '#595959'
+  const s = active ? { stroke: 'var(--accent-dark)' } : { stroke: '#595959' }
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" style={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" style={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -294,7 +294,7 @@ function ActivateIcon({ activated }) {
       <polygon
         points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        fill={activated ? 'rgba(105,147,254,0.3)' : 'none'}
+        style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}
       />
     </svg>
   )
@@ -303,8 +303,8 @@ function ActivateIcon({ activated }) {
 function SendIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-      <path d="M10 16 L10 4" stroke="#3F5999" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M4 9 L10 3 L16 9" stroke="#3F5999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round"/>
+      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -373,7 +373,9 @@ export default function ProjectCard({ categoryId, project }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
-  const [hideCompleted, setHideCompleted] = useState(false)
+  const [hideCompleted, setHideCompleted] = useState(() => {
+    try { return localStorage.getItem(`hc-project-${project.id}`) === 'true' } catch { return false }
+  })
 
   const cardRef = useRef(null)
   const todoContainerRef = useRef(null)
@@ -492,14 +494,18 @@ export default function ProjectCard({ categoryId, project }) {
     if (!isChecked) {
       checkboxEl.classList.add('checked')
       e.currentTarget.closest('.todo-row')?.classList.add('checked')
-      e.currentTarget.closest('.todo-row')?.animate(
-        [
-          { background: 'rgba(105,147,254,0)' },
-          { background: 'rgba(105,147,254,0.18)', offset: 0.2 },
-          { background: 'rgba(105,147,254,0)' },
-        ],
-        { duration: 500, easing: 'ease', fill: 'none' }
-      )
+      const todoRow = e.currentTarget.closest('.todo-row')
+      if (todoRow) {
+        const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+        todoRow.animate(
+          [
+            { background: `rgba(${rgb},0)` },
+            { background: `rgba(${rgb},0.18)`, offset: 0.2 },
+            { background: `rgba(${rgb},0)` },
+          ],
+          { duration: 500, easing: 'ease', fill: 'none' }
+        )
+      }
       setTimeout(() => {
         if (todoContainerRef.current) {
           sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
@@ -537,12 +543,14 @@ export default function ProjectCard({ categoryId, project }) {
           el.style.opacity = ''
         })
         setHideCompleted(true)
+        try { localStorage.setItem(`hc-project-${project.id}`, 'true') } catch {}
       }, 210)
     } else {
       showingRef.current = true
       setHideCompleted(false)
+      try { localStorage.setItem(`hc-project-${project.id}`, 'false') } catch {}
     }
-  }, [hideCompleted, project.todos])
+  }, [hideCompleted, project.todos, project.id])
 
   // ---- Drag reorder ----
   const { onDragPointerDown: onTodoDrag } = useDragReorder(todoContainerRef, sortedTodos, handleTodoReorder, uncheckedCount)
@@ -924,7 +932,7 @@ export default function ProjectCard({ categoryId, project }) {
                           {t.activated && (
                             <div className="activated-indicator" title="Active">
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill="rgba(105,147,254,0.2)" stroke="#3F5999" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
                               </svg>
                             </div>
                           )}
@@ -967,7 +975,7 @@ export default function ProjectCard({ categoryId, project }) {
                           {n.activated && (
                             <div className="activated-indicator" title="Active">
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" fill="rgba(105,147,254,0.2)" stroke="#3F5999" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
                               </svg>
                             </div>
                           )}

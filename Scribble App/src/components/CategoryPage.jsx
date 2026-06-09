@@ -6,7 +6,7 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 function ExpandIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <path d="M3 9V3h6M19 9V3h-6M3 13v6h6M19 13v6h-6" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 9V3h6M19 9V3h-6M3 13v6h6M19 13v6h-6" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -14,8 +14,8 @@ function ExpandIcon() {
 function AddIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <rect x="1.5" y="1.5" width="19" height="19" rx="4.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1.8"/>
-      <path d="M11 6v10M6 11h10" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round"/>
+      <rect x="1.5" y="1.5" width="19" height="19" rx="4.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1"/>
+      <path d="M11 6v10M6 11h10" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -23,8 +23,8 @@ function AddIcon() {
 function SendIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round"/>
-      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
+      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -89,7 +89,7 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
             </button>
           </div>
         </div>
-        <UnderlineSvg className="underline-img" style={{ marginTop: '12px' }} />
+        <UnderlineSvg className="underline-img" style={{ marginTop: '12px', marginBottom: '16px', color: 'var(--accent-base)' }} />
       </div>
 
       <div className="cards-area">

@@ -61,7 +61,7 @@ function useDragReorder(containerRef, items, onReorder) {
       const cloneTop = origTop - 4
 
       const cloneInner = dragged.el.cloneNode(true)
-      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
+      cloneInner.style.cssText = 'pointer-events:none;background:#F2F0EB;'
       const clone = document.createElement('div')
       clone.style.cssText = [
         'position:absolute',
@@ -73,7 +73,7 @@ function useDragReorder(containerRef, items, onReorder) {
         'box-shadow:0 4px 20px rgba(0,0,0,0.10)',
         'border-radius:8px',
         'border:1px solid #C2C1BF',
-        'background:#F7F6F3',
+        'background:#F2F0EB',
         'overflow:hidden',
         'z-index:999',
       ].join(';')
@@ -187,7 +187,7 @@ function useDragReorder(containerRef, items, onReorder) {
 function StarIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+      <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -202,6 +202,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
   }, [note, categories])
 
   const [editing, setEditing] = useState(false)
+  const editingRef = useRef(false)
   const [currentStyle, setCurrentStyle] = useState('body')
   const [isOpen, setIsOpen] = useState(false)
   const contentRef = useRef(null)
@@ -211,6 +212,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
   const editorRef = useRef(null)
   const scrollTitleRef = useRef(null)
   const underlineRef = useRef(null)
+  const lastCursorParaRef = useRef(null)
 
   // Check whether the last paragraph is below the style bar.
   // Only fires on scroll — not on input — so the fade appears only when the user
@@ -274,7 +276,8 @@ function NoteDetailPage({ note, onClose, onSave }) {
     if (contentRef.current) {
       contentRef.current.innerHTML = buildNoteContent(note)
     }
-  }, [note])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id])
 
   // Scroll title visibility + underline fade
   useEffect(() => {
@@ -344,6 +347,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
     let el = sel.anchorNode
     while (el && el !== content) {
       if (el.nodeType === 1 && el.classList && el.classList.contains('note-para')) {
+        lastCursorParaRef.current = el
         const match = el.className.match(/style-(\w+)/)
         if (match) {
           setCurrentStyle(match[1])
@@ -393,21 +397,23 @@ function NoteDetailPage({ note, onClose, onSave }) {
     setCurrentStyle(style)
     updateStyleIndicator(style)
     const content = contentRef.current
-    if (!content || content.contentEditable !== 'true') return
-    const sel = window.getSelection()
+    if (!content || !editingRef.current) return
     let target = null
-    if (sel) {
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0) {
       let el = sel.anchorNode
       while (el && el !== content) {
         if (el.nodeType === 1 && el.classList?.contains('note-para')) { target = el; break }
         el = el.parentNode
       }
     }
+    if (!target) target = lastCursorParaRef.current
     if (!target) target = content.querySelector('.note-para:last-of-type')
-    if (target) target.className = 'note-para style-' + style
+    if (target && content.contains(target)) target.className = 'note-para style-' + style
   }, [updateStyleIndicator])
 
   const enterEdit = useCallback((savedRange) => {
+    editingRef.current = true
     setEditing(true)
     const content = contentRef.current
     if (!content) return
@@ -467,6 +473,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
       const content = contentRef.current
       if (content) {
         content.contentEditable = 'false'
+        editingRef.current = false
         const firstPara = content.querySelector('.note-para')
         const text = firstPara ? firstPara.textContent.trim() : note.text
         onSave(note.id, content.innerHTML, text)
@@ -574,10 +581,10 @@ function NoteDetailPage({ note, onClose, onSave }) {
     >
       <div className="note-detail-header">
         <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-          <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="2" strokeLinejoin="round" fill="none"/>
-          <path d="M12 3v5h5" stroke="#595959" strokeWidth="2" strokeLinejoin="round"/>
-          <line x1="5" y1="13" x2="15" y2="13" stroke="#595959" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#595959" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="1" strokeLinejoin="round" fill="none"/>
+          <path d="M12 3v5h5" stroke="#595959" strokeWidth="1" strokeLinejoin="round"/>
+          <line x1="5" y1="13" x2="15" y2="13" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
+          <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
         </svg>
         <span ref={scrollTitleRef} className="note-scroll-title" />
         <button className="note-detail-done" onClick={handleButtonClick}>
@@ -587,7 +594,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
 
       <div className="note-editor" id="noteEditor" ref={editorRef}>
         <div ref={underlineRef} style={{ display: 'block', marginTop: '32px', marginLeft: '32px', marginBottom: '32px' }}>
-          <UnderlineSvg style={{ display: 'block' }} />
+          <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
         </div>
         <div
           ref={contentRef}
@@ -610,9 +617,10 @@ function NoteDetailPage({ note, onClose, onSave }) {
             key={s}
             className={`note-style-btn${currentStyle === s ? ' active' : ''}`}
             data-style={s}
+            onTouchStart={e => { e.preventDefault(); selectStyle(s) }}
             onMouseDown={e => { e.preventDefault(); selectStyle(s) }}
           >
-            <span>{s === 'heading' ? 'Head' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
+            <span>{s === 'title' ? 'H1' : s === 'heading' ? 'H2' : s === 'bold' ? 'H3' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
           </button>
         ))}
       </div>
@@ -628,6 +636,24 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const { onDragPointerDown } = useDragReorder(containerRef, notes, onReorder)
+
+  useEffect(() => {
+    const themeTag = document.querySelector('meta[name="theme-color"]')
+    if (openNoteId) {
+      document.documentElement.style.backgroundColor = '#F2F0EB'
+      document.body.style.backgroundColor = '#F2F0EB'
+      if (themeTag) themeTag.setAttribute('content', '#F2F0EB')
+    } else {
+      document.documentElement.style.backgroundColor = ''
+      document.body.style.backgroundColor = ''
+      if (themeTag) themeTag.setAttribute('content', '#F2F0EB')
+    }
+    return () => {
+      document.documentElement.style.backgroundColor = ''
+      document.body.style.backgroundColor = ''
+      if (themeTag) themeTag.setAttribute('content', '#F2F0EB')
+    }
+  }, [openNoteId])
 
   const handleDelete = useCallback((id) => {
     const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
@@ -759,14 +785,6 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
     <>
       <div className="card card-intro" id="notesCard" ref={cardRef}>
         <div className="card-header">
-          <div>
-            <svg width="20" height="22" viewBox="0 0 20 22" fill="none">
-              <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#3D3D3D" strokeWidth="1.5" fill="none"/>
-              <path d="M12 3v5h5" stroke="#3D3D3D" strokeWidth="1.5"/>
-              <line x1="5" y1="13" x2="15" y2="13" stroke="#3D3D3D" strokeWidth="1.3" strokeLinecap="round"/>
-              <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#3D3D3D" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-          </div>
           <span className="card-title">Notes</span>
           <div className="dots-menu"><span/><span/><span/></div>
         </div>
@@ -779,7 +797,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
                 <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
                   <div className="swipe-active-inner">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                     </svg>
                     <span className="swipe-action-label">Active</span>
                   </div>
@@ -787,16 +805,24 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
                 <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>
                   <div className="swipe-active-inner">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     <span className="swipe-action-label">Delete</span>
                   </div>
                 </button>
                 <div className="swipe-content">
                   <div className="note-row" data-note-id={n.id} onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+                    <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+                      <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+                        <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="var(--accent-dark)" strokeWidth="1" fill="var(--accent-light)"/>
+                        <path d="M12 3v5h5" stroke="var(--accent-dark)" strokeWidth="1" fill="none"/>
+                        <line x1="5" y1="13" x2="15" y2="13" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round"/>
+                        <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round"/>
+                      </svg>
+                    </div>
                     <div className="item-content">
                       <span className={`note-text${n.accent ? ' accent' : ''}`}>{n.text}</span>
                       <div className="source-label">

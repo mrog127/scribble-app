@@ -11,10 +11,10 @@ const UNDERLINE_PATH = "M39.9543 9.72912C39.9645 9.93827 39.9125 10.0477 39.8113
 function TrashSvg() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <polyline points="3 6 5 6 21 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M10 11v6M14 11v6" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="#B24A4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="3 6 5 6 21 6" stroke="#B24A4A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="#B24A4A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 11v6M14 11v6" stroke="#B24A4A" strokeWidth="1" strokeLinecap="round"/>
+      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="#B24A4A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -22,7 +22,7 @@ function TrashSvg() {
 function RemoveSvg() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" style={{ fill: 'rgba(var(--accent-base-rgb),0.3)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" style={{ fill: 'rgba(var(--accent-base-rgb),0.3)', stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -393,16 +393,6 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
   return (
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
-        <div>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <circle cx="5" cy="7" r="1.5" fill="#3D3D3D"/>
-            <line x1="9" y1="7" x2="19" y2="7" stroke="#3D3D3D" strokeWidth="1.8" strokeLinecap="round"/>
-            <circle cx="5" cy="12" r="1.5" fill="#3D3D3D"/>
-            <line x1="9" y1="12" x2="19" y2="12" stroke="#3D3D3D" strokeWidth="1.8" strokeLinecap="round"/>
-            <circle cx="5" cy="17" r="1.5" fill="#3D3D3D"/>
-            <line x1="9" y1="17" x2="14" y2="17" stroke="#3D3D3D" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-        </div>
         <span className="card-title">Lists</span>
         <div className="dots-menu"><span/><span/><span/></div>
       </div>
@@ -429,11 +419,20 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                     onPointerUp={e => handleCheckboxUp(e, t.id)}
                     onPointerLeave={e => { clearTimeout(checkTimers.current[t.id]); e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel()) }}
                   >
-                    <div className={`checkbox${t.checked ? ' checked' : ''}`}>
-                      <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
+                    {(() => {
+                      const catIdx = categories.findIndex(c => c.id === t.categoryId)
+                      const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+                      return (
+                        <div
+                          className={`checkbox activated-checkbox${t.checked ? ' checked' : ''}`}
+                          style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb }}
+                        >
+                          <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      )
+                    })()}
                   </div>
                   <div className="item-content">
                     <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
@@ -441,13 +440,8 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                       {(() => {
                         const catIdx = categories.findIndex(c => c.id === t.categoryId)
                         const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
-                        return (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: `rgba(${a.baseRgb},0.2)`, stroke: a.dark }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                          </svg>
-                        )
+                        return <span className="source-label-text">{t.projectName}</span>
                       })()}
-                      <span className="source-label-text">{t.projectName}</span>
                     </div>
                   </div>
                 </div>
@@ -456,7 +450,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
           </div>
         ))}
       </div>
-      <button ref={btnRef} className="hide-completed-btn" onClick={handleToggleHideCompleted}>
+      <button ref={btnRef} className="hide-completed-btn" style={{ color: '#3D3D3D' }} onClick={handleToggleHideCompleted}>
         {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
       </button>
     </div>
@@ -567,19 +561,14 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
     <>
       <div className="card card-intro" ref={cardRef}>
         <div className="card-header">
-          <div>
-            <svg width="20" height="22" viewBox="0 0 20 22" fill="none">
-              <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#3D3D3D" strokeWidth="1.5" fill="none"/>
-              <path d="M12 3v5h5" stroke="#3D3D3D" strokeWidth="1.5"/>
-              <line x1="5" y1="13" x2="15" y2="13" stroke="#3D3D3D" strokeWidth="1.3" strokeLinecap="round"/>
-              <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#3D3D3D" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-          </div>
           <span className="card-title">Notes</span>
           <div className="dots-menu"><span/><span/><span/></div>
         </div>
         <div ref={containerRef}>
-          {activatedNotes.map((n, i) => (
+          {activatedNotes.map((n, i) => {
+            const catIdx = categories.findIndex(c => c.id === n.categoryId)
+            const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+            return (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
               <div className="swipe-row" data-swipe-id={n.id}>
@@ -591,18 +580,17 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
                 </button>
                 <div className="swipe-content">
                   <div className="note-row" data-note-id={n.id} onPointerDown={e => { onNotePointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+                    <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+                      <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+                        <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={a.dark} strokeWidth="1" fill={a.light}/>
+                        <path d="M12 3v5h5" stroke={a.dark} strokeWidth="1" fill="none"/>
+                        <line x1="5" y1="13" x2="15" y2="13" stroke={a.dark} strokeWidth="1" strokeLinecap="round"/>
+                        <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={a.dark} strokeWidth="1" strokeLinecap="round"/>
+                      </svg>
+                    </div>
                     <div className="item-content">
                       <span className="note-text">{n.text}</span>
                       <div className="source-label">
-                        {(() => {
-                          const catIdx = categories.findIndex(c => c.id === n.categoryId)
-                          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
-                          return (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: `rgba(${a.baseRgb},0.2)`, stroke: a.dark }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                            </svg>
-                          )
-                        })()}
                         <span className="source-label-text">{n.projectName}</span>
                       </div>
                     </div>
@@ -610,7 +598,8 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
       {openNote && createPortal(
@@ -635,6 +624,14 @@ export default function ActivePage({
   const pageRef = useRef(null)
   const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, toggleProjectTodoActivated, toggleProjectNoteActivated } = useAppContext()
 
+  const [underlineColorIdx, setUnderlineColorIdx] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setUnderlineColorIdx(i => (i + 1) % ACCENT_COLORS.length)
+    }, 3000)
+    return () => clearInterval(id)
+  }, [])
+
   const now = new Date()
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' })
   const monthDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
@@ -656,11 +653,9 @@ export default function ActivePage({
   return (
     <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-star'} ref={pageRef} onScroll={onScroll}>
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
-        <img className="header-decoration" src={homepageDecoration} alt="" />
         <p className="active-today-label">Today is</p>
         <p className="active-day-name">{dayName},</p>
         <p className="active-month-date">{monthDate}</p>
-        <UnderlineSvg className="underline-img" />
       </div>
 
       {!hasContent && (

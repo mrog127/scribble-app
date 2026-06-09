@@ -4,7 +4,7 @@
   border-radius: 8px;
   margin-bottom: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+  box-shadow: 0 6px 0px rgba(0,0,0,0.10);
   padding-bottom: 8px;
 }
 
@@ -16,10 +16,10 @@
 }
 
 .card-title {
-  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
-  font-size: 24px;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 20px;
   color: #242424;
-  font-weight: 600;
+  font-weight: 500;
   flex: 1;
 }
 
@@ -38,22 +38,24 @@
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 0px rgba(0,0,0,0.12);
   min-width: 160px;
   z-index: 100;
   overflow: hidden;
 }
 
 .card-context-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 11px 16px;
+  height: 48px;
+  padding: 0 16px;
   text-align: left;
   background: none;
   border: none;
-  font-family: 'Open Sans', system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
   color: #242424;
   cursor: pointer;
 }
@@ -91,8 +93,8 @@
 .divider { height: 1px; background: #DBDAD8; margin: 0 16px; }
 
 .checkbox-wrap {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   margin-right: 16px;
   margin-top: 1px;
@@ -134,16 +136,16 @@
 }
 
 .checkbox {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 2px;
-  border: 1.5px solid #B8B8B8;
+  border: 1px solid #B8B8B8;
   background: #FAF9F7;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.15);
+  box-shadow: 0 3px 0px rgba(0,0,0,0.1);
   transition: background 150ms ease, border-color 150ms ease;
   transform-origin: center;
 }
@@ -151,15 +153,28 @@
 .checkbox.animating-check   { animation: checkbox-bounce-in  320ms ease forwards; }
 .checkbox.animating-uncheck { animation: checkbox-bounce-out 200ms ease forwards; }
 
-.checkbox.checked { background: var(--accent-base); border-color: var(--accent-base); box-shadow: none; }
+.checkbox.checked { background: var(--accent-base); border-color: var(--accent-dark); box-shadow: none; }
 .checkmark { opacity: 0; transition: opacity 80ms ease 60ms; display: block; }
 .checkbox.checked .checkmark { opacity: 1; }
+
+/* Category-colored checkbox (activated items on homescreen & project cards) */
+.checkbox.activated-checkbox {
+  background: var(--cb-light, var(--accent-light));
+  border-color: var(--cb-dark, var(--accent-dark));
+  box-shadow: 0 3px 0px rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.40);
+}
+.checkbox.activated-checkbox.checked,
+.checkbox.activated-checkbox.animating-check {
+  background: var(--cb-base, var(--accent-base));
+  border-color: var(--cb-dark, var(--accent-dark));
+  box-shadow: none;
+}
 
 .item-text {
   display: block;
   width: 100%;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   color: #3D3D3D;
   line-height: 1.4;
   word-wrap: break-word;
@@ -171,11 +186,11 @@
 
 .source-label { display: flex; align-items: center; margin-top: 2px; }
 .source-label-text {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 600;
-  color: #626262;
-  margin-left: 4px;
+  font-weight: 400;
+  color: #7A7A7A;
+  margin-left: 0;
 }
 
 /* Swipe rows */
@@ -250,7 +265,7 @@
   color: var(--accent-dark);
 }
 
-.swipe-action-label { font-family: 'Open Sans', system-ui, sans-serif; font-size: 12px; font-weight: 700; line-height: 1; color: inherit; }
+.swipe-action-label { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 12px; font-weight: 700; line-height: 1; color: inherit; }
 
 .swipe-row.swiped-left .swipe-content { transform: translateX(-84px); }
 .swipe-row.swiped-right .swipe-content { transform: translateX(84px); }
@@ -271,9 +286,9 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--accent-dark);
   padding: 8px 0 0 0;
   margin-left: 62px;
@@ -293,14 +308,14 @@
 
 /* Note rows */
 .note-row { display: flex; align-items: flex-start; padding: 12px 24px; }
-.note-text { display: block; width: 100%; font-size: 16px; font-weight: 600; color: #3D3D3D; line-height: 1.4; word-wrap: break-word; }
+.note-text { display: block; width: 100%; font-size: 16px; font-weight: 400; color: #3D3D3D; line-height: 1.4; word-wrap: break-word; }
 .note-text.accent { color: #7069FE; }
 
 .note-preview-text {
-  font-family: 'Open Sans', system-ui, sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  color: #707070;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #7A7A7A;
   display: block;
   overflow: hidden;
   white-space: nowrap;
@@ -320,10 +335,10 @@
 
 /* Note detail page */
 .note-detail-page {
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: #F7F6F3;
-  border-radius: 28px;
+  background: #F2F0EB;
+  border-radius: 0;
   z-index: 50;
   transform: translateY(100%);
   transition: transform 350ms ease;
@@ -339,7 +354,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 60px 32px 0;
+  padding: calc(env(safe-area-inset-top) + 16px) 32px 0;
 }
 
 .note-scroll-title {
@@ -350,7 +365,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 16px;
   font-weight: 700;
   color: #3D3D3D;
@@ -364,13 +379,13 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--accent-dark);
 }
 
-.note-detail-page.editing { background: #FCFBF9; }
+.note-detail-page.editing { background: #F2F0EB; }
 
 .note-detail-page.editing .note-editor {
   padding-bottom: calc(var(--kbh, 0px) + 144px);
@@ -398,19 +413,20 @@
 
 /* Note style toolbar */
 .note-style-bar {
-  background: #F7F6F3;
+  background: #F2F0EB;
   border: 1px solid #DBDAD8;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 0px rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
+  justify-content: space-evenly;
   position: absolute;
   bottom: calc(36px + var(--kbh, 0px));
   left: 12px;
-  right: 12px;
+  right: 20px;
   height: 56px;
-  overflow: hidden;
-  padding: 0 12px;
+  overflow: visible;
+  padding: 0;
   z-index: 10;
   opacity: 0;
   visibility: hidden;
@@ -432,13 +448,13 @@
 }
 
 .note-style-btn {
-  flex: 1;
+  flex: none;
   height: 40px;
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'Open Sans', system-ui, sans-serif;
-  font-size: 13px;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 14px;
   font-weight: 600;
   color: #3D3D3D;
   position: relative;
@@ -447,25 +463,25 @@
   white-space: nowrap;
 }
 .note-style-btn.active { color: var(--accent-dark); }
-.note-style-btn[data-style="title"],
-.note-style-btn[data-style="heading"] { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 16px; font-weight: 700; }
+.note-style-btn[data-style="title"] { font-family: 'Momo Signature', cursive; font-size: 16px; font-weight: 700; }
+.note-style-btn[data-style="heading"] { font-family: 'Merriweather', Georgia, serif; font-size: 16px; font-weight: 700; }
 .note-style-btn[data-style="bold"] { font-weight: 700; }
 .note-style-btn[data-style="italic"] { font-style: italic; }
 
 /* Note paragraph styles */
 .note-para { margin: 0; padding: 0; }
-.note-para.style-title { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 56px; font-weight: 700; line-height: 56px; color: #242424; margin-bottom: 32px; }
-.note-para.style-heading { font-family: 'BaskervilleSemi','Baskerville','Georgia',serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; }
-.note-para.style-bold { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
-.note-para.style-body { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 26px; color: #575757; }
-.note-para.style-italic { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; font-style: italic; line-height: 26px; color: #575757; }
-.note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
+.note-para.style-title { font-family: 'Momo Signature', cursive; font-size: 56px; font-weight: 700; line-height: 72px; color: #242424; margin-bottom: 32px; }
+.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; }
+.note-para.style-bold { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
+.note-para.style-body { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; }
+.note-para.style-italic { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }
+.note-para.style-bullet { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
 .note-para.style-bullet::before { content: "•"; position: absolute; left: 0; }
 
 .note-detail-body {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   color: #3D3D3D;
   padding: 32px 32px 40px;
   line-height: 1.6;
@@ -525,7 +541,7 @@
 }
 
 .project-empty {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
   color: #B5B4B2;
@@ -534,10 +550,11 @@
 }
 
 .project-input-wrap {
-  margin: 4px 16px 12px;
+  margin: 12px 16px 12px;
   border: 1px solid #C2C1BF;
   border-radius: 4px;
   background: #FAF9F7;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -545,7 +562,7 @@
 }
 
 .project-input-wrap.focused {
-  box-shadow: 0 1px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 0px rgba(0,0,0,0.10);
 }
 
 .project-input-row {
@@ -563,8 +580,8 @@
   padding: 0 52px 0 16px;
   color: #242424;
   outline: none;
-  font-family: 'Open Sans', system-ui, sans-serif;
-  font-weight: 600;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-weight: 400;
   font-size: 16px;
   min-width: 0;
 }
@@ -621,7 +638,7 @@
 }
 
 .new-project-label {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: #242424;
@@ -665,7 +682,7 @@
   border: none;
   background: none;
   border-radius: 4px;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
   color: #242424;

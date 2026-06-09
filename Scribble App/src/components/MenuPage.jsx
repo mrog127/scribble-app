@@ -268,8 +268,8 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false }) {
             }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <line x1="7" y1="2" x2="7" y2="12" stroke="#6993FE" strokeWidth="2" strokeLinecap="round"/>
-              <line x1="2" y1="7" x2="12" y2="7" stroke="#6993FE" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="7" y1="2" x2="7" y2="12" stroke="#6993FE" strokeWidth="1" strokeLinecap="round"/>
+              <line x1="2" y1="7" x2="12" y2="7" stroke="#6993FE" strokeWidth="1" strokeLinecap="round"/>
             </svg>
             Add
           </button>
@@ -305,9 +305,9 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false }) {
                   }}
                 >
                   <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                    <line x1="2" y1="1" x2="14" y2="1" stroke="#C2C1BF" strokeWidth="1.5" strokeLinecap="round"/>
-                    <line x1="2" y1="6" x2="14" y2="6" stroke="#C2C1BF" strokeWidth="1.5" strokeLinecap="round"/>
-                    <line x1="2" y1="11" x2="14" y2="11" stroke="#C2C1BF" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="2" y1="1" x2="14" y2="1" stroke="#C2C1BF" strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="2" y1="6" x2="14" y2="6" stroke="#C2C1BF" strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="2" y1="11" x2="14" y2="11" stroke="#C2C1BF" strokeWidth="1" strokeLinecap="round"/>
                   </svg>
                 </div>
 
@@ -407,8 +407,8 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false }) {
               <div style={{ display: 'flex', alignItems: 'center', height: 52 }}>
                 <div style={{ width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <line x1="7" y1="2" x2="7" y2="12" stroke="#C2C1BF" strokeWidth="2" strokeLinecap="round"/>
-                    <line x1="2" y1="7" x2="12" y2="7" stroke="#C2C1BF" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="7" y1="2" x2="7" y2="12" stroke="#C2C1BF" strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="2" y1="7" x2="12" y2="7" stroke="#C2C1BF" strokeWidth="1" strokeLinecap="round"/>
                   </svg>
                 </div>
                 <input

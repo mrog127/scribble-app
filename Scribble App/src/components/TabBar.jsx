@@ -4,7 +4,7 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
   const { categories } = useAppContext()
 
   return (
-    <div className={`tab-bar${inputFocused ? ' hidden' : ''}`}>
+    <div className={`tab-bar${inputFocused ? ' hidden' : ''}${activeTab === 'star' ? ' star-active' : ''}`}>
       <div className="tab-indicator" id="tabIndicator"></div>
 
       <button
@@ -14,11 +14,11 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <polygon
             points="10,2 12.5,7.5 18.5,8 14,12.5 15.5,18.5 10,15.5 4.5,18.5 6,12.5 1.5,8 7.5,7.5"
-            strokeWidth="2"
+            strokeWidth="1"
             strokeLinejoin="round"
             strokeLinecap="round"
             fill="none"
-            style={{ stroke: activeTab === 'star' ? 'var(--accent-dark)' : '#242424' }}
+            style={{ stroke: activeTab === 'star' ? '#535353' : '#242424' }}
           />
         </svg>
       </button>

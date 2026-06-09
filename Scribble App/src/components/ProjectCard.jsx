@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } fr
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
+import { getCategoryAccent } from '../theme.js'
 
 // ---- Swipe hook ----
 function useSwipe() {
@@ -246,11 +247,11 @@ function ListIcon({ active }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <circle cx="5" cy="7" r="1.6" style={{ fill: s.fill }}/>
-      <line x1="9" y1="7" x2="21" y2="7" style={{ stroke: s.stroke }} strokeWidth="1.9" strokeLinecap="round"/>
+      <line x1="9" y1="7" x2="21" y2="7" style={{ stroke: s.stroke }} strokeWidth="1" strokeLinecap="round"/>
       <circle cx="5" cy="13" r="1.6" style={{ fill: s.fill }}/>
-      <line x1="9" y1="13" x2="21" y2="13" style={{ stroke: s.stroke }} strokeWidth="1.9" strokeLinecap="round"/>
+      <line x1="9" y1="13" x2="21" y2="13" style={{ stroke: s.stroke }} strokeWidth="1" strokeLinecap="round"/>
       <circle cx="5" cy="19" r="1.6" style={{ fill: s.fill }}/>
-      <line x1="9" y1="19" x2="15" y2="19" style={{ stroke: s.stroke }} strokeWidth="1.9" strokeLinecap="round"/>
+      <line x1="9" y1="19" x2="15" y2="19" style={{ stroke: s.stroke }} strokeWidth="1" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -259,10 +260,10 @@ function NoteIcon({ active }) {
   const s = active ? { stroke: 'var(--accent-dark)' } : { stroke: '#595959' }
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M4 4h10l6 6v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" style={s} strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
-      <path d="M14 4v6h6" style={s} strokeWidth="1.8" strokeLinejoin="round"/>
-      <line x1="6" y1="15" x2="18" y2="15" style={s} strokeWidth="1.5" strokeLinecap="round"/>
-      <line x1="6" y1="18.5" x2="14" y2="18.5" style={s} strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M4 4h10l6 6v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" style={s} strokeWidth="1" strokeLinejoin="round" fill="none"/>
+      <path d="M14 4v6h6" style={s} strokeWidth="1" strokeLinejoin="round"/>
+      <line x1="6" y1="15" x2="18" y2="15" style={s} strokeWidth="1" strokeLinecap="round"/>
+      <line x1="6" y1="18.5" x2="14" y2="18.5" style={s} strokeWidth="1" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -271,8 +272,8 @@ function LinkIcon({ active }) {
   const s = active ? { stroke: 'var(--accent-dark)' } : { stroke: '#595959' }
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" style={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" style={s} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" style={s} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" style={s} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -280,10 +281,10 @@ function LinkIcon({ active }) {
 function TrashIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -293,7 +294,7 @@ function ActivateIcon({ activated }) {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
       <polygon
         points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
         style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}
       />
     </svg>
@@ -303,8 +304,8 @@ function ActivateIcon({ activated }) {
 function SendIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round"/>
-      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
+      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -392,6 +393,7 @@ export default function ProjectCard({ categoryId, project }) {
   const checkTimers = useRef({})
 
   const {
+    categories,
     addProjectTodo, addProjectNote, addProjectLink,
     toggleProjectTodo, deleteProjectTodo, deleteProjectNote,
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
@@ -735,12 +737,32 @@ export default function ProjectCard({ categoryId, project }) {
   const handleActivate = useCallback((type, id, row) => {
     if (type === 'todo') toggleProjectTodoActivated(categoryId, project.id, id)
     else if (type === 'note') toggleProjectNoteActivated(categoryId, project.id, id)
+
+    // Flash the row with the category light color
+    const wrapper = row?.parentElement
+    if (wrapper) {
+      const catIdx = categories.findIndex(c => c.id === categoryId)
+      const accent = getCategoryAccent(catIdx)
+      const hex = accent.light
+      const r = parseInt(hex.slice(1, 3), 16)
+      const g = parseInt(hex.slice(3, 5), 16)
+      const b = parseInt(hex.slice(5, 7), 16)
+      wrapper.animate(
+        [
+          { background: `rgba(${r},${g},${b},0)` },
+          { background: `rgba(${r},${g},${b},0.6)`, offset: 0.4 },
+          { background: `rgba(${r},${g},${b},0)` },
+        ],
+        { duration: 280, fill: 'none' }
+      )
+    }
+
     if (row) {
       row.classList.remove('swiped-left', 'swiped-right')
       const content = row.querySelector('.swipe-content')
       if (content) { content.style.transition = ''; content.style.transform = '' }
     }
-  }, [categoryId, project.id, toggleProjectTodoActivated, toggleProjectNoteActivated])
+  }, [categoryId, project.id, categories, toggleProjectTodoActivated, toggleProjectNoteActivated])
 
   const handleNoteSave = useCallback((noteId, html, text) => {
     updateProjectNote(categoryId, project.id, noteId, html, text)
@@ -921,21 +943,16 @@ export default function ProjectCard({ categoryId, project }) {
                             e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
                           }}
                         >
-                          <div className={`checkbox${t.checked ? ' checked' : ''}`}>
+                          <div
+                            className={`checkbox${t.activated ? ' activated-checkbox' : ''}${t.checked ? ' checked' : ''}`}
+                          >
                             <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
-                              <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                           </div>
                         </div>
                         <div className="item-content">
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
-                          {t.activated && (
-                            <div className="activated-indicator" title="Active">
-                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                              </svg>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -970,15 +987,16 @@ export default function ProjectCard({ categoryId, project }) {
                         data-note-id={n.id}
                         onPointerDown={e => { onPointerDown(e, n.id); onNotePointerDown(e, n.id); onNoteDrag(e, n.id) }}
                       >
+                        <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+                          <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+                            <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill={n.activated ? 'var(--accent-light)' : 'none'}/>
+                            <path d="M12 3v5h5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill="none"/>
+                            <line x1="5" y1="13" x2="15" y2="13" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
+                            <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
+                          </svg>
+                        </div>
                         <div className="item-content">
                           <NoteRowContent note={n} />
-                          {n.activated && (
-                            <div className="activated-indicator" title="Active">
-                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: 'rgba(var(--accent-base-rgb),0.2)', stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                              </svg>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>

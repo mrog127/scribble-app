@@ -1,10 +1,5 @@
 html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0EB; }
 
-@font-face {
-  font-family: 'BaskervilleSemi';
-  src: local('Baskerville SemiBold'), local('Baskerville-SemiBold'), local('Baskerville Bold'), local('Baskerville-Bold');
-  font-weight: 600;
-}
 
 .app-wrap {
   display: flex;
@@ -26,7 +21,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   display: flex;
   flex-direction: column;
   position: relative;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   box-shadow: 0 8px 40px rgba(0,0,0,0.18);
 }
 
@@ -64,7 +59,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .page.active { display: flex; flex-direction: column; }
 
 .page-header {
-  padding: 91px 16px 0;
+  padding: 123px 16px 0;
   position: sticky;
   top: 0;
   background: transparent;
@@ -74,10 +69,10 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .active-title {
-  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-family: 'Momo Signature', cursive;
   font-size: 32px;
   font-weight: 700;
-  color: #242424;
+  color: #333333;
   line-height: 1.1;
   margin: 0 0 8px 8px;
 }
@@ -93,33 +88,33 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .active-today-label {
-  font-family: 'Open Sans', sans-serif;
+  font-family: 'Merriweather Sans', sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: #242424;
-  margin: 0 0 4px 8px;
+  color: #7A7A7A;
+  margin: 0 0 12px 8px;
   line-height: 1.2;
   position: relative;
   z-index: 1;
 }
 
 .active-day-name {
-  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-family: 'Momo Signature', cursive;
   font-size: 40px;
   font-weight: 700;
-  color: #242424;
-  margin: 0 0 0 8px;
+  color: #333333;
+  margin: 8px 0 0 8px;
   line-height: 1.2;
   position: relative;
   z-index: 1;
 }
 
 .active-month-date {
-  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-family: 'Momo Signature', cursive;
   font-size: 40px;
   font-weight: 700;
-  color: #242424;
-  margin: 0 0 16px 8px;
+  color: #333333;
+  margin: 0 0 24px 8px;
   line-height: 1.2;
   position: relative;
   z-index: 1;
@@ -130,7 +125,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   margin: 0 0 24px 8px;
   width: 40px;
   height: auto;
-  color: var(--accent-base);
+  color: #7B7B7B;
 }
 
 .category-header-row {
@@ -181,7 +176,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .empty-state p {
-  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 32px;
   font-weight: 600;
   color: #242424;
@@ -194,11 +189,13 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .footer {
   background: #F7F6F3;
   border-top: 1px solid #C2C1BF;
-  padding: 10px 16px 24px;
+  box-shadow: 0 -4px 0px rgba(0,0,0,0.08);
+  padding: 10px 16px 28px;
   flex-shrink: 0;
   position: relative;
   z-index: 3;
   border-radius: 0 0 28px 28px;
+  overflow: visible;
 }
 
 .add-row {
@@ -219,11 +216,16 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   padding: 0 16px;
   color: #242424;
   outline: none;
-  font-family: 'Open Sans', system-ui, sans-serif;
-  font-weight: 600;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-weight: 400;
   font-size: 16px;
-  box-shadow: 0 1px 20px rgba(0,0,0,0.15);
+  box-shadow: none;
   min-width: 0;
+  transition: box-shadow 150ms ease;
+}
+
+.add-input:focus {
+  box-shadow: 0 4px 0px rgba(0,0,0,0.10);
 }
 
 .add-input::placeholder { color: #B5B4B2; transition: opacity 100ms ease; }
@@ -264,7 +266,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   transition: opacity 100ms ease, transform 100ms ease;
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow: visible;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, calc(100% - 40px) 100%, calc(100% - 40px) calc(100% + 8px), 0 calc(100% + 8px));
   transform: translateY(0);
 }
 
@@ -319,7 +322,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   border: none;
   border-radius: 4px;
   background: transparent;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
   color: #242424;
@@ -329,22 +332,30 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   align-items: center;
 }
 
-.text-tab.selected { background: transparent; color: var(--accent-dark); }
+.text-tab.selected { background: transparent; color: var(--accent-dark); font-weight: 600; }
 
 .tab-indicator {
   position: absolute;
   bottom: 0;
-  height: 40px;
-  background: rgba(var(--accent-base-rgb),0.15);
+  height: 38px;
+  background: var(--accent-light);
   border-radius: 4px;
   pointer-events: none;
   transition: left 100ms ease, width 100ms ease;
   z-index: 0;
   left: 0;
   width: 40px;
+  border: 1px solid var(--accent-dark);
+  box-shadow: 0 3px 0px rgba(var(--accent-base-rgb), 0.40);
 }
 
-.tab-area { position: relative; height: 40px; overflow: hidden; }
+.tab-bar.star-active .tab-indicator {
+  background: #FAF9F7;
+  border: 1px solid #B8B8B8;
+  box-shadow: 0 3px 0px rgba(0,0,0,0.10);
+}
+
+.tab-area { position: relative; height: 40px; overflow: visible; }
 
 .input-toolbar {
   position: absolute;
@@ -378,7 +389,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .toolbar-source-label {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
   color: var(--accent-dark);
@@ -501,10 +512,10 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .save-to-card {
   flex: 1;
   min-height: 0;
-  background: #F7F6F3;
+  background: #F2F0EB;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -522,7 +533,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .save-to-header {
   position: sticky;
   top: 0;
-  background: #F7F6F3;
+  background: #F2F0EB;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -532,7 +543,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   border-radius: 8px 8px 0 0;
 }
 .save-to-title {
-  font-family: 'BaskervilleSemi', 'Baskerville', 'Georgia', serif;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 24px;
   font-weight: 700;
   color: #242424;
@@ -540,7 +551,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   margin: 0;
 }
 .save-to-cancel {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: #3F5999;
@@ -552,14 +563,14 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   flex-shrink: 0;
 }
 .save-to-empty {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 14px;
   color: #959493;
   padding: 4px 16px 16px;
   margin: 0;
 }
 .save-to-category {
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: var(--accent-dark);
@@ -578,7 +589,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: 'Open Sans', system-ui, sans-serif;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
   color: #242424;
@@ -608,7 +619,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   height: 20px;
   border-radius: 50%;
   border: 1.5px solid #B8B8B8;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 0px rgba(0,0,0,0.15);
   flex-shrink: 0;
   position: relative;
   box-sizing: border-box;
@@ -633,6 +644,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
 /* =============================================
    Tab transition animations
+   Exit (75ms) → Enter (75ms) = 150ms total
    ============================================= */
 
 /* Exiting page: absolutely overlaid so it doesn't affect flex layout */
@@ -645,73 +657,60 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   transition: none !important;
 }
 
-/* Entering page: stays in normal flex flow; disable save-panel opacity transition */
+/* Entering page: stays in normal flex flow */
 .page.page-entering {
   transition: none !important;
 }
 
-/* Header: fade out when exiting, fade in when entering */
+/* Header: fade out, then fade in after exit completes */
 .page.page-exiting .page-header {
-  animation: tab-hdr-out 160ms ease both;
+  animation: tab-hdr-out 125ms ease both;
 }
 .page.page-entering .page-header {
-  animation: tab-hdr-in 220ms ease both;
+  animation: tab-hdr-in 125ms ease both;
+  animation-delay: 125ms;
 }
 
-/* Card slide animations — direction variants */
-.page.page-entering.page-enter-from-right .cards-area .card {
-  animation: card-from-right 240ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+/* Cards area slides and fades as one unit */
+.page.page-exiting.page-exit-to-left .cards-area {
+  animation: cards-to-left 125ms ease both;
 }
-.page.page-entering.page-enter-from-left .cards-area .card {
-  animation: card-from-left 240ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+.page.page-exiting.page-exit-to-right .cards-area {
+  animation: cards-to-right 125ms ease both;
 }
-.page.page-exiting.page-exit-to-left .cards-area .card {
-  animation: card-to-left 160ms cubic-bezier(0.4, 0, 1, 1) both;
+.page.page-entering.page-enter-from-right .cards-area {
+  animation: cards-from-right 125ms ease both;
+  animation-delay: 125ms;
 }
-.page.page-exiting.page-exit-to-right .cards-area .card {
-  animation: card-to-right 160ms cubic-bezier(0.4, 0, 1, 1) both;
+.page.page-entering.page-enter-from-left .cards-area {
+  animation: cards-from-left 125ms ease both;
+  animation-delay: 125ms;
 }
-
-/* Enter stagger: top card leads, each subsequent card follows with a delay */
-.page.page-entering .cards-area .card:nth-child(1) { animation-delay: 0ms; }
-.page.page-entering .cards-area .card:nth-child(2) { animation-delay: 50ms; }
-.page.page-entering .cards-area .card:nth-child(3) { animation-delay: 100ms; }
-.page.page-entering .cards-area .card:nth-child(4) { animation-delay: 150ms; }
-.page.page-entering .cards-area .card:nth-child(5) { animation-delay: 200ms; }
-.page.page-entering .cards-area .card:nth-child(6) { animation-delay: 250ms; }
-
-/* Exit stagger: fast pull — top card drags the ones below it */
-.page.page-exiting .cards-area .card:nth-child(1) { animation-delay: 0ms; }
-.page.page-exiting .cards-area .card:nth-child(2) { animation-delay: 22ms; }
-.page.page-exiting .cards-area .card:nth-child(3) { animation-delay: 44ms; }
-.page.page-exiting .cards-area .card:nth-child(4) { animation-delay: 66ms; }
-.page.page-exiting .cards-area .card:nth-child(5) { animation-delay: 88ms; }
-.page.page-exiting .cards-area .card:nth-child(6) { animation-delay: 110ms; }
 
 /* Keyframes */
 @keyframes tab-hdr-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes tab-hdr-out {
   from { opacity: 1; }
   to   { opacity: 0; }
 }
-@keyframes card-from-right {
-  from { transform: translateX(115%); opacity: 0.4; }
+@keyframes cards-from-right {
+  from { transform: translateX(32px); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
-@keyframes card-from-left {
-  from { transform: translateX(-115%); opacity: 0.4; }
+@keyframes cards-from-left {
+  from { transform: translateX(-32px); opacity: 0; }
   to   { transform: translateX(0);     opacity: 1; }
 }
-@keyframes card-to-left {
+@keyframes cards-to-left {
   from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(-115%); opacity: 0; }
+  to   { transform: translateX(-32px); opacity: 0; }
 }
-@keyframes card-to-right {
+@keyframes cards-to-right {
   from { transform: translateX(0);    opacity: 1; }
-  to   { transform: translateX(115%); opacity: 0; }
+  to   { transform: translateX(32px); opacity: 0; }
 }
 
 /* On mobile viewports, stretch to fill the full screen */
@@ -739,7 +738,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     box-shadow: none;
   }
   .page-header {
-    padding-top: calc(env(safe-area-inset-top) + 16px);
+    padding-top: calc(env(safe-area-inset-top) + 24px);
   }
   .page {
     -webkit-mask-image: none;
@@ -749,6 +748,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .footer {
     border-radius: 0;
     padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+    overflow: visible;
   }
   .home-indicator {
     display: none;

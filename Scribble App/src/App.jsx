@@ -94,7 +94,7 @@ function AppInner() {
   const pendingProjectAnimRef = useRef(null)
 
   // Tab transition state
-  const TRANSITION_MS = 480
+  const TRANSITION_MS = 260
   const [exitingTab, setExitingTab] = useState(null)
   const [transitionDir, setTransitionDir] = useState(null) // 'left' | 'right'
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -680,8 +680,8 @@ function AppInner() {
               onMouseDown={e => { e.preventDefault(); addItem() }}
             >
               <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-                <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round"/>
-                <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
+                <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           </div>
@@ -695,7 +695,7 @@ function AppInner() {
                   onMouseDown={e => { e.preventDefault(); setAddAsActiveFlag(v => !v) }}
                 >
                   <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#959493' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#959493' }} strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
                   <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>Active</span>
                 </button>
@@ -709,11 +709,11 @@ function AppInner() {
                 >
                   <svg width="24" height="24" viewBox="0 0 22 22" fill="none">
                     <circle cx="5" cy="7" r="1.5" fill={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'}/>
-                    <line x1="9" y1="7" x2="19" y2="7" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="9" y1="7" x2="19" y2="7" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                     <circle cx="5" cy="12" r="1.5" fill={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'}/>
-                    <line x1="9" y1="12" x2="19" y2="12" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="9" y1="12" x2="19" y2="12" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                     <circle cx="5" cy="17" r="1.5" fill={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'}/>
-                    <line x1="9" y1="17" x2="14" y2="17" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="9" y1="17" x2="14" y2="17" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                   </svg>
                 </button>
                 <button
@@ -721,10 +721,10 @@ function AppInner() {
                   onMouseDown={e => { e.preventDefault(); setToolbarType('note') }}
                 >
                   <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-                    <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinejoin="round" fill="none"/>
-                    <path d="M12 3v5h5" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinejoin="round"/>
-                    <line x1="5" y1="13" x2="15" y2="13" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round"/>
-                    <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round" fill="none"/>
+                    <path d="M12 3v5h5" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round"/>
+                    <line x1="5" y1="13" x2="15" y2="13" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                   </svg>
                 </button>
                 <button
@@ -732,8 +732,8 @@ function AppInner() {
                   onMouseDown={e => { e.preventDefault(); setToolbarType('link') }}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={toolbarType === 'link' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={toolbarType === 'link' ? '#3F5999' : '#3D3D3D'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={toolbarType === 'link' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={toolbarType === 'link' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
               </div>

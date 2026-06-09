@@ -4,3 +4,5 @@ dist
 .env
 vercel-recovery-codes.txt
 package-lock.json
+.vercel
+.env*

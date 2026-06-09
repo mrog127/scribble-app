@@ -322,17 +322,17 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   border: none;
   border-radius: 4px;
   background: transparent;
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 16px;
-  font-weight: 600;
-  color: #242424;
+  font-weight: 700;
+  color: #333333;
   cursor: pointer;
   white-space: nowrap;
   display: flex;
   align-items: center;
 }
 
-.text-tab.selected { background: transparent; color: var(--accent-dark); font-weight: 600; }
+.text-tab.selected { background: transparent; color: var(--accent-dark); font-weight: 700; }
 
 .tab-indicator {
   position: absolute;

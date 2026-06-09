@@ -388,14 +388,14 @@
 .note-detail-page.editing { background: #F2F0EB; }
 
 .note-detail-page.editing .note-editor {
-  padding-bottom: calc(var(--kbh, 0px) + 144px);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black 100%);
-  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black 100%);
+  padding-bottom: calc(var(--kbh, 0px) + 128px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 124px)), transparent calc(100% - calc(var(--kbh, 0px) + 108px)));
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 124px)), transparent calc(100% - calc(var(--kbh, 0px) + 108px)));
 }
 
 .note-detail-page.editing .note-editor.has-overflow-below {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 140px)), transparent calc(100% - calc(var(--kbh, 0px) + 124px)));
-  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 140px)), transparent calc(100% - calc(var(--kbh, 0px) + 124px)));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 124px)), transparent calc(100% - calc(var(--kbh, 0px) + 108px)));
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - calc(var(--kbh, 0px) + 124px)), transparent calc(100% - calc(var(--kbh, 0px) + 108px)));
 }
 
 .note-editor {
@@ -413,7 +413,7 @@
 
 /* Note style toolbar */
 .note-style-bar {
-  background: #F2F0EB;
+  background: #F7F6F3;
   border: 1px solid #DBDAD8;
   border-radius: 8px;
   box-shadow: 0 4px 0px rgba(0,0,0,0.25);
@@ -421,7 +421,7 @@
   align-items: center;
   justify-content: space-evenly;
   position: absolute;
-  bottom: calc(36px + var(--kbh, 0px));
+  bottom: calc(20px + var(--kbh, 0px));
   left: 12px;
   right: 20px;
   height: 56px;

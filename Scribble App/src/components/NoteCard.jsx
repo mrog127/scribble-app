@@ -226,7 +226,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
     if (!lastPara) { editor.classList.remove('has-overflow-below'); return }
     const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
     const pageBottom = page.getBoundingClientRect().bottom
-    const styleBarTop = pageBottom - kbh - 92  // 56px bar + 36px gap
+    const styleBarTop = pageBottom - kbh - 76  // 56px bar + 20px gap
     editor.classList.toggle('has-overflow-below', lastPara.getBoundingClientRect().bottom > styleBarTop + 4)
   }, [])
 
@@ -367,6 +367,15 @@ function NoteDetailPage({ note, onClose, onSave }) {
   }, [editing, detectCursorStyle])
 
   // Scroll cursor into view while typing — handles text wrapping without Enter
+  // Prevent iOS from scrolling the layout viewport when the keyboard opens,
+  // which would push the position:fixed note page up and hide the header.
+  useEffect(() => {
+    if (!editing) return
+    const lockScroll = () => { if (window.scrollY !== 0) window.scrollTo(0, 0) }
+    window.addEventListener('scroll', lockScroll)
+    return () => window.removeEventListener('scroll', lockScroll)
+  }, [editing])
+
   useEffect(() => {
     if (!editing) return
     const content = contentRef.current
@@ -382,8 +391,8 @@ function NoteDetailPage({ note, onClose, onSave }) {
       if (!cursorRect.height) return
       const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
       const pageBottom = page.getBoundingClientRect().bottom
-      // style bar top = pageBottom - kbh - 36px gap - 56px bar height = pageBottom - kbh - 92
-      const visibleBottom = pageBottom - kbh - 92 - 12 // 12px breathing room
+      // style bar top = pageBottom - kbh - 20px gap - 56px bar height = pageBottom - kbh - 76
+      const visibleBottom = pageBottom - kbh - 76 - 12 // 12px breathing room
       if (cursorRect.bottom > visibleBottom) {
         editor.scrollTop += cursorRect.bottom - visibleBottom
       }
@@ -427,7 +436,29 @@ function NoteDetailPage({ note, onClose, onSave }) {
     if (styleBarRef.current) styleBarRef.current.classList.add('visible')
     // Detect style at cursor (or init to body if no cursor)
     setTimeout(detectCursorStyle, 0)
-  }, [detectCursorStyle])
+    // Check overflow immediately so mask is correct before first scroll
+    setTimeout(() => { if (editorRef.current) checkBottomOverflow(editorRef.current) }, 50)
+    // Center the cursor line vertically once the keyboard is fully open
+    setTimeout(() => {
+      const editor = editorRef.current
+      const page = pageRef.current
+      if (!editor || !page) return
+      const sel = window.getSelection()
+      if (!sel || sel.rangeCount === 0) return
+      const range = sel.getRangeAt(0)
+      const cursorRect = range.getBoundingClientRect()
+      if (!cursorRect.height) return
+      const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
+      const editorRect = editor.getBoundingClientRect()
+      const pageBottom = page.getBoundingClientRect().bottom
+      const visibleTop = editorRect.top
+      const visibleBottom = pageBottom - kbh - 76 - 12
+      const visibleCenter = (visibleTop + visibleBottom) / 2
+      const cursorCenter = (cursorRect.top + cursorRect.bottom) / 2
+      const targetScrollTop = editor.scrollTop + (cursorCenter - visibleCenter)
+      editor.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+    }, 300)
+  }, [detectCursorStyle, checkBottomOverflow])
 
   // Click on the text content — capture caret position then enter edit mode
   const handleContentClick = useCallback((e) => {
@@ -560,7 +591,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
       if (!editor || !page) return
       const kbh = parseFloat(page.style.getPropertyValue('--kbh') || '0') || 0
       const pageBottom = page.getBoundingClientRect().bottom
-      const visibleBottom = pageBottom - kbh - 92 - 12
+      const visibleBottom = pageBottom - kbh - 76 - 12
       const paraRect = newPara.getBoundingClientRect()
       if (paraRect.bottom > visibleBottom) {
         editor.scrollTop += paraRect.bottom - visibleBottom

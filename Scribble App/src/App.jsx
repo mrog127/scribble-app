@@ -662,7 +662,7 @@ function AppInner() {
         )}
 
         {/* Footer */}
-        <div className={`footer${activeTab !== 'star' ? ' category-mode' : ''}`}>
+        <div className={`footer${activeTab !== 'star' ? ' category-mode' : ''}${inputFocused ? ' keyboard-open' : ''}`}>
 
           <div className="add-row">
             <input
@@ -674,6 +674,11 @@ function AppInner() {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               onKeyDown={handleKeyDown}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="sentences"
+              spellCheck="false"
+              enterKeyHint="send"
             />
             <button
               className={`send-btn${inputFocused || inputValue.trim() ? ' visible' : ''}`}

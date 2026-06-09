@@ -118,7 +118,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
     const startX = e.clientX, startY = e.clientY
     let started = false, longPressTimer = null
-    const preventScroll = (e) => e.preventDefault()
+    const preventScroll = (e) => { if (started) e.preventDefault() }
 
     const start = (clientY) => {
       const container = containerRef.current
@@ -158,13 +158,13 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       if (started) return
       started = start(clientY)
       if (!started) return
-      document.addEventListener('touchmove', preventScroll, { passive: false })
       if (!longPress) return
       const s = dragRef.current
       if (s) { s.clone.style.transition = 'box-shadow 120ms ease'; s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'; setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120) }
     }
 
     longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY, true) }, 250)
+    document.addEventListener('touchmove', preventScroll, { passive: false })
 
     const applyShifts = (snapshots, dragIdx, newIdx, draggedH, uncheckedCount) => {
       snapshots.forEach((snap, i) => {
@@ -180,7 +180,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
-      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null }
+      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll) }
       if (!started) return
       e2.preventDefault()
       const s = dragRef.current
@@ -906,14 +906,12 @@ export default function ProjectCard({ categoryId, project }) {
                       >
                         <div
                           className="checkbox-wrap"
-                          onMouseDown={e => handleCheckboxDown(e, t.id)}
-                          onMouseUp={e => handleCheckboxUp(e, t.id)}
-                          onMouseLeave={e => {
+                          onPointerDown={e => handleCheckboxDown(e, t.id)}
+                          onPointerUp={e => handleCheckboxUp(e, t.id)}
+                          onPointerLeave={e => {
                             clearTimeout(checkTimers.current[t.id])
                             e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
                           }}
-                          onTouchStart={e => handleCheckboxDown(e, t.id)}
-                          onTouchEnd={e => handleCheckboxUp(e, t.id)}
                         >
                           <div className={`checkbox${t.checked ? ' checked' : ''}`}>
                             <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">

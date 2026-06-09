@@ -103,6 +103,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
     const startX = e.clientX, startY = e.clientY
     let started = false, longPressTimer = null
+    const preventScroll = (e) => { if (started) e.preventDefault() }
     const start = (clientY) => {
       const container = containerRef.current
       if (!container) return false
@@ -139,11 +140,14 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     const doStart = (clientY, longPress) => {
       if (started) return
       started = start(clientY)
-      if (!started || !longPress) return
-      const s = dragRef.current
-      if (s) { s.clone.style.transition = 'box-shadow 120ms ease'; s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'; setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120) }
+      if (!started) return
+      if (longPress) {
+        const s = dragRef.current
+        if (s) { s.clone.style.transition = 'box-shadow 120ms ease'; s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'; setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120) }
+      }
     }
     longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY, true) }, 250)
+    document.addEventListener('touchmove', preventScroll, { passive: false })
     const applyShifts = (snapshots, dragIdx, newIdx, draggedH, uncheckedCount) => {
       snapshots.forEach((snap, i) => {
         if (i === dragIdx) return
@@ -157,8 +161,9 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     }
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
-      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null }
-      if (!started) { if (dy < 12 || dx > dy) return; doStart(e2.clientY, false); if (!started) return }
+      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll) }
+      if (!started) return
+      e2.preventDefault()
       const s = dragRef.current
       if (!s) return
       const rawTop = s.cloneTop + (e2.clientY - s.startY)
@@ -170,9 +175,24 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       const newIdx = Math.min(insertAt, s.uncheckedCount - 1)
       if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH, s.uncheckedCount) }
     }
+    const onCancel = () => {
+      clearTimeout(longPressTimer); longPressTimer = null
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
+      const s = dragRef.current
+      if (!s) return
+      dragRef.current = null
+      s.clone.remove()
+      s.snapshots.forEach(snap => { snap.wrapper.style.transition = ''; snap.wrapper.style.transform = ''; snap.wrapper.style.opacity = '' })
+    }
     const onUp = () => {
       clearTimeout(longPressTimer); longPressTimer = null
-      document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
       const s = dragRef.current
       if (!s || !started) return
       dragRef.current = null
@@ -190,7 +210,9 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       flipRef.current = s.snapshots.map((snap, i) => ({ el: snap.wrapper, fromTop: fromTops[i] }))
       onReorder(newOrder)
     }
-    document.addEventListener('pointermove', onMove); document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
   }, [containerRef, onReorder])
 
   return { onDragPointerDown }
@@ -394,11 +416,9 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                 >
                   <div
                     className="checkbox-wrap"
-                    onMouseDown={e => handleCheckboxDown(e, t.id)}
-                    onMouseUp={e => handleCheckboxUp(e, t.id)}
-                    onMouseLeave={e => { clearTimeout(checkTimers.current[t.id]); e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel()) }}
-                    onTouchStart={e => handleCheckboxDown(e, t.id)}
-                    onTouchEnd={e => handleCheckboxUp(e, t.id)}
+                    onPointerDown={e => handleCheckboxDown(e, t.id)}
+                    onPointerUp={e => handleCheckboxUp(e, t.id)}
+                    onPointerLeave={e => { clearTimeout(checkTimers.current[t.id]); e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel()) }}
                   >
                     <div className={`checkbox${t.checked ? ' checked' : ''}`}>
                       <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">

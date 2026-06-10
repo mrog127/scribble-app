@@ -590,25 +590,29 @@
 
 .project-send-btn {
   position: absolute;
-  right: 0;
-  top: 0;
-  height: 48px;
-  width: 48px;
+  right: 8px;
+  top: 8px;
+  height: 32px;
+  width: 32px;
   padding: 0;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease;
+  transition: opacity 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .project-send-btn.visible {
   opacity: 1;
   pointer-events: auto;
+  background: var(--accent-light);
+  border-color: var(--accent-dark);
+  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
 }
 
 .project-input-bottom {

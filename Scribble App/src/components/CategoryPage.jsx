@@ -5,7 +5,7 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 
 function ExpandIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+    <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
       <path d="M3 9V3h6M19 9V3h-6M3 13v6h6M19 13v6h-6" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
@@ -13,7 +13,7 @@ function ExpandIcon() {
 
 function AddIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+    <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
       <rect x="1.5" y="1.5" width="19" height="19" rx="4.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1"/>
       <path d="M11 6v10M6 11h10" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
     </svg>
@@ -70,7 +70,7 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
   if (!category) return null
 
   return (
-    <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : `page-${categoryId}`} onScroll={onScroll}>
+    <div className={`page active category-page${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : `page-${categoryId}`} onScroll={onScroll}>
       <div
         className="page-header"
         style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}

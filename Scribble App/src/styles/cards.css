@@ -229,18 +229,18 @@
 /* Shared inner box for all swipe buttons */
 .swipe-action-btn .swipe-active-inner {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   width: 64px;
   height: 52px;
   border-radius: 4px;
 }
 
 .swipe-action-btn.delete .swipe-active-inner {
-  background: rgba(178,74,74,0.12);
-  color: #B24A4A;
+  background: #F5DDDD;
+  border: 1px solid #8B3333;
+  box-shadow: 0 4px 0 rgba(178,74,74,0.40);
+  color: #8B3333;
 }
 
 .swipe-action-btn.active-tag {
@@ -256,19 +256,23 @@
 }
 
 .swipe-action-btn.active-tag .swipe-active-inner {
-  background: rgba(0,0,0,0.06);
-  color: #242424;
+  background: #F7F6F3;
+  border: 1px solid #C2C1BF;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.10);
+  color: #595959;
 }
 
 .swipe-action-btn.active-tag.activated .swipe-active-inner {
-  background: rgba(var(--accent-base-rgb),0.15);
+  background: var(--accent-light);
+  border: 1px solid var(--accent-dark);
+  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
   color: var(--accent-dark);
 }
 
-.swipe-action-label { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 12px; font-weight: 700; line-height: 1; color: inherit; }
+.swipe-action-label { display: none; }
 
-.swipe-row.swiped-left .swipe-content { transform: translateX(-84px); }
-.swipe-row.swiped-right .swipe-content { transform: translateX(84px); }
+.swipe-row.swiped-left .swipe-content { transform: translateX(-84px); pointer-events: none; }
+.swipe-row.swiped-right .swipe-content { transform: translateX(84px); pointer-events: none; }
 .swipe-row.swiped-left .swipe-action-btn.delete { opacity: 1; pointer-events: auto; }
 .swipe-row.swiped-right .swipe-action-btn.active-tag { opacity: 1; pointer-events: auto; }
 

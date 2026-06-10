@@ -391,6 +391,7 @@ export default function ProjectCard({ categoryId, project }) {
   const btnRef = useRef(null)
   const showingRef = useRef(false)
   const checkTimers = useRef({})
+  const checkPopping = useRef({})
 
   const {
     categories,
@@ -432,10 +433,17 @@ export default function ProjectCard({ categoryId, project }) {
 
   const { onPointerDown } = useSwipe()
 
-  // ---- Sorted todos: unchecked first, checked last (checked hidden when hideCompleted) ----
+  // ---- Sorted todos: activated first, then unchecked, then checked ----
   const sortedTodos = hideCompleted
-    ? project.todos.filter(t => !t.checked)
-    : [...project.todos.filter(t => !t.checked), ...project.todos.filter(t => t.checked)]
+    ? [
+        ...project.todos.filter(t => !t.checked && t.activated),
+        ...project.todos.filter(t => !t.checked && !t.activated),
+      ]
+    : [
+        ...project.todos.filter(t => !t.checked && t.activated),
+        ...project.todos.filter(t => !t.checked && !t.activated),
+        ...project.todos.filter(t => t.checked),
+      ]
   const uncheckedCount = project.todos.filter(t => !t.checked).length
   const hasChecked = project.todos.some(t => t.checked)
   const checkedCount = project.todos.filter(t => t.checked).length
@@ -461,6 +469,7 @@ export default function ProjectCard({ categoryId, project }) {
       return
     }
     checkTimers.current[`suppress_${id}`] = false
+    checkPopping.current[id] = false
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
     if (checkboxEl) {
       checkboxEl.getAnimations().forEach(a => a.cancel())
@@ -488,11 +497,16 @@ export default function ProjectCard({ categoryId, project }) {
       toggleProjectTodo(categoryId, project.id, id)
       return
     }
-    checkboxEl.getAnimations().forEach(a => a.cancel())
-    checkboxEl.animate(
-      [{ transform: 'scale(0.82)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
-      { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'none' }
+    checkPopping.current[id] = true
+    const popAnim = checkboxEl.animate(
+      [
+        { transform: 'scale(0.82)' },
+        { transform: 'scale(1.25)' },
+        { transform: 'scale(1)' },
+      ],
+      { duration: 320, easing: 'ease', fill: 'forwards' }
     )
+    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => a.cancel())
     if (!isChecked) {
       checkboxEl.classList.add('checked')
       e.currentTarget.closest('.todo-row')?.classList.add('checked')
@@ -735,32 +749,60 @@ export default function ProjectCard({ categoryId, project }) {
   }, [categoryId, project.id, deleteProjectTodo, deleteProjectNote, deleteProjectLink])
 
   const handleActivate = useCallback((type, id, row) => {
-    if (type === 'todo') toggleProjectTodoActivated(categoryId, project.id, id)
-    else if (type === 'note') toggleProjectNoteActivated(categoryId, project.id, id)
-
-    // Flash the row with the category light color
-    const wrapper = row?.parentElement
-    if (wrapper) {
-      const catIdx = categories.findIndex(c => c.id === categoryId)
-      const accent = getCategoryAccent(catIdx)
-      const hex = accent.light
-      const r = parseInt(hex.slice(1, 3), 16)
-      const g = parseInt(hex.slice(3, 5), 16)
-      const b = parseInt(hex.slice(5, 7), 16)
-      wrapper.animate(
-        [
-          { background: `rgba(${r},${g},${b},0)` },
-          { background: `rgba(${r},${g},${b},0.6)`, offset: 0.4 },
-          { background: `rgba(${r},${g},${b},0)` },
-        ],
-        { duration: 280, fill: 'none' }
-      )
-    }
-
+    // Close swipe row immediately
     if (row) {
       row.classList.remove('swiped-left', 'swiped-right')
       const content = row.querySelector('.swipe-content')
       if (content) { content.style.transition = ''; content.style.transform = '' }
+    }
+
+    if (type === 'todo') {
+      // Flash, then after it completes snapshot + toggle (triggers FLIP move)
+      const wrapper = row?.parentElement
+      if (wrapper) {
+        const catIdx = categories.findIndex(c => c.id === categoryId)
+        const accent = getCategoryAccent(catIdx)
+        const hex = accent.light
+        const r = parseInt(hex.slice(1, 3), 16)
+        const g = parseInt(hex.slice(3, 5), 16)
+        const b = parseInt(hex.slice(5, 7), 16)
+        wrapper.animate(
+          [
+            { background: `rgba(${r},${g},${b},0)` },
+            { background: `rgba(${r},${g},${b},0.6)`, offset: 0.4 },
+            { background: `rgba(${r},${g},${b},0)` },
+          ],
+          { duration: 280, fill: 'none' }
+        )
+      }
+      setTimeout(() => {
+        if (todoContainerRef.current) {
+          sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({
+            el, top: el.getBoundingClientRect().top,
+          }))
+        }
+        toggleProjectTodoActivated(categoryId, project.id, id)
+      }, 280)
+    } else if (type === 'note') {
+      // Flash immediately for notes (no reorder)
+      const wrapper = row?.parentElement
+      if (wrapper) {
+        const catIdx = categories.findIndex(c => c.id === categoryId)
+        const accent = getCategoryAccent(catIdx)
+        const hex = accent.light
+        const r = parseInt(hex.slice(1, 3), 16)
+        const g = parseInt(hex.slice(3, 5), 16)
+        const b = parseInt(hex.slice(5, 7), 16)
+        wrapper.animate(
+          [
+            { background: `rgba(${r},${g},${b},0)` },
+            { background: `rgba(${r},${g},${b},0.6)`, offset: 0.4 },
+            { background: `rgba(${r},${g},${b},0)` },
+          ],
+          { duration: 280, fill: 'none' }
+        )
+      }
+      toggleProjectNoteActivated(categoryId, project.id, id)
     }
   }, [categoryId, project.id, categories, toggleProjectTodoActivated, toggleProjectNoteActivated])
 
@@ -940,7 +982,9 @@ export default function ProjectCard({ categoryId, project }) {
                           onPointerUp={e => handleCheckboxUp(e, t.id)}
                           onPointerLeave={e => {
                             clearTimeout(checkTimers.current[t.id])
-                            e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                            if (!checkPopping.current[t.id]) {
+                              e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                            }
                           }}
                         >
                           <div

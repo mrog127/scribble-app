@@ -365,6 +365,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
   }, [onDelete])
   const { onPointerDown } = useSwipe(handleDelete, () => {})
   const checkTimers = useRef({})
+  const checkPopping = useRef({})
   const cardRef = useRef(null)
   const { onDragPointerDown } = useDragReorder(containerRef, todos, onReorder)
   const toggleFlipRef = useRef(null)
@@ -460,6 +461,15 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       return
     }
     checkTimers.current[`suppress_${id}`] = false
+    checkPopping.current[id] = false
+    const checkboxEl = e.currentTarget.querySelector('.checkbox')
+    if (checkboxEl) {
+      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.animate(
+        [{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }],
+        { duration: 100, fill: 'forwards' }
+      )
+    }
     checkTimers.current[id] = setTimeout(() => {}, 300)
   }
 
@@ -476,11 +486,16 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
 
     const isChecked = todos.find(t => t.id === id)?.checked
 
-    // Trigger CSS bounce animation
-    checkboxEl.classList.remove('animating-check', 'animating-uncheck')
-    void checkboxEl.offsetWidth // restart animation
-    checkboxEl.classList.add(isChecked ? 'animating-uncheck' : 'animating-check')
-    setTimeout(() => checkboxEl.classList.remove('animating-check', 'animating-uncheck'), isChecked ? 200 : 320)
+    checkPopping.current[id] = true
+    const popAnim = checkboxEl.animate(
+      [
+        { transform: 'scale(0.82)' },
+        { transform: 'scale(1.3)' },
+        { transform: 'scale(1)' },
+      ],
+      { duration: 350, easing: 'ease', fill: 'forwards' }
+    )
+    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => a.cancel())
 
     if (!isChecked) {
       // Apply checked visual immediately so color/checkmark appear during the pop
@@ -590,6 +605,9 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
                     onPointerUp={e => handleCheckboxUp(e, t.id)}
                     onPointerLeave={e => {
                       clearTimeout(checkTimers.current[t.id])
+                      if (!checkPopping.current[t.id]) {
+                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                      }
                     }}
                   >
                     <div className={`checkbox${t.checked ? ' checked' : ''}`}>

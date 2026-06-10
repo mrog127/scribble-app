@@ -68,11 +68,11 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   transform: translateY(0);
 }
 
-.category-page .page-header { padding-top: 131px; }
+.category-page .page-header { padding-top: 131px; padding-right: 24px; }
 
 .active-title {
   font-family: 'Momo Signature', cursive;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #333333;
   line-height: 1.1;
@@ -90,7 +90,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .active-today-label {
-  font-family: 'Merriweather Sans', sans-serif;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 16px;
   font-weight: 600;
   color: #7A7A7A;
@@ -299,6 +299,30 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .icon-tab.selected svg polygon { stroke: var(--accent-dark); }
 .icon-tab.selected .mline-el { background: var(--accent-dark); }
 
+@keyframes star-stroke-cycle {
+  0%      { stroke: #3F5999; }
+  14.286% { stroke: #993F3F; }
+  28.571% { stroke: #229026; }
+  42.857% { stroke: #99633F; }
+  57.143% { stroke: #6B3F99; }
+  71.429% { stroke: #99813F; }
+  85.714% { stroke: #993F95; }
+  100%    { stroke: #3F5999; }
+}
+@keyframes star-fill-cycle {
+  0%      { fill: #E1E9FF; }
+  14.286% { fill: #FFE1E1; }
+  28.571% { fill: #CEF4CC; }
+  42.857% { fill: #FFEDE1; }
+  57.143% { fill: #EFE1FF; }
+  71.429% { fill: #FFF7E1; }
+  85.714% { fill: #FFE1FD; }
+  100%    { fill: #E1E9FF; }
+}
+.star-active .icon-tab.selected svg polygon {
+  animation: star-stroke-cycle 35s linear infinite, star-fill-cycle 35s linear infinite;
+}
+
 .mline-el { width: 18px; height: 2px; background: #242424; border-radius: 1px; }
 .hamburger-icon { display: flex; flex-direction: column; gap: 4px; align-items: center; }
 
@@ -329,7 +353,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   background: transparent;
   font-family: 'Merriweather', Georgia, serif;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   color: #333333;
   cursor: pointer;
   white-space: nowrap;
@@ -337,7 +361,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   align-items: center;
 }
 
-.text-tab.selected { background: transparent; color: var(--accent-dark); font-weight: 700; }
+.text-tab.selected { background: transparent; color: var(--accent-dark); font-weight: 600; }
 
 .tab-indicator {
   position: absolute;

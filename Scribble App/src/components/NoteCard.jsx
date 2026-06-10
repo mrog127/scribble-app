@@ -631,6 +631,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
           ref={contentRef}
           id="noteEditorContent"
           style={{ padding: '0 32px 40px', outline: 'none', minHeight: '100px', cursor: 'text', overflow: 'hidden' }}
+          autoCapitalize="sentences"
           contentEditable={false}
           onKeyDown={handleKeyDown}
           onClick={handleContentClick}
@@ -725,11 +726,17 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
 
   const onPointerDown = (e, id) => {
     if (e.target.closest('.swipe-action-btn')) return
-    const row = e.currentTarget.closest('.swipe-row')
-    if (!row) return
-    const wasLeft = row.classList.contains('swiped-left')
-    const wasRight = row.classList.contains('swiped-right')
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null }
+    const row = e.currentTarget  // handler is on .swipe-row, so this IS the row
+
+    // If a button is exposed, close and swallow — note must not open
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) {
+      row.classList.remove('swiped-left', 'swiped-right')
+      const content = row.querySelector('.swipe-content')
+      if (content) content.style.transform = ''
+      return
+    }
+
+    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft: false, wasRight: false, lockSign: null }
 
     const onMove = (e2) => {
       const s = swipeState.current
@@ -763,12 +770,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
       content.style.transition = ''
       const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
       if (isTap) {
-        if (s.wasLeft || s.wasRight) {
-          s.row.classList.remove('swiped-left', 'swiped-right')
-          content.style.transform = ''
-        } else {
-          setOpenNoteId(id)
-        }
+        setOpenNoteId(id)
         cleanup()
         return
       }
@@ -785,7 +787,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
 
     const handleCancel = () => {
       const s2 = swipeState.current
-      if (s2.row) {
+      if (s2.row && s2.dir) {
         const c2 = s2.row.querySelector('.swipe-content')
         if (c2) {
           c2.style.transition = ''
@@ -824,7 +826,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
           {notes.map((n, i) => (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
-              <div className="swipe-row" data-swipe-id={n.id} data-swipe-type="note">
+              <div className="swipe-row" data-swipe-id={n.id} data-swipe-type="note" onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
                 <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
                   <div className="swipe-active-inner">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -845,7 +847,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
                   </div>
                 </button>
                 <div className="swipe-content">
-                  <div className="note-row" data-note-id={n.id} onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+                  <div className="note-row" data-note-id={n.id}>
                     <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                       <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
                         <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="var(--accent-dark)" strokeWidth="1" fill="var(--accent-light)"/>

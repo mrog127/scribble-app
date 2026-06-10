@@ -89,7 +89,7 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
             </button>
           </div>
         </div>
-        <UnderlineSvg className="underline-img" style={{ marginTop: '12px', marginBottom: '16px', color: 'var(--accent-base)' }} />
+        <UnderlineSvg className="underline-img" style={{ marginTop: '8px', marginBottom: '18px', color: 'var(--accent-base)' }} />
       </div>
 
       <div className="cards-area">

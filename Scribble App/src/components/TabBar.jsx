@@ -17,8 +17,6 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
             strokeWidth="1"
             strokeLinejoin="round"
             strokeLinecap="round"
-            fill="none"
-            style={{ stroke: activeTab === 'star' ? '#535353' : '#242424' }}
           />
         </svg>
       </button>

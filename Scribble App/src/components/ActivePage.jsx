@@ -52,9 +52,9 @@ function useSwipe() {
       }
       const content = s.row.querySelector('.swipe-content')
       if (!content) return
-      const base = s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0
+      const base = s.row.classList.contains('swiped-left') ? -84 : s.row.classList.contains('swiped-right') ? 84 : 0
       content.style.transition = 'none'
-      content.style.transform = `translateX(${Math.max(-72, Math.min(72, base + dx))}px)`
+      content.style.transform = `translateX(${Math.max(-84, Math.min(84, base + dx))}px)`
     }
     const onUp = (e2) => {
       const s = swipeState.current
@@ -63,15 +63,38 @@ function useSwipe() {
       const content = s.row.querySelector('.swipe-content')
       if (!content) { cleanup(); return }
       content.style.transition = ''
-      const total = (s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0) + dx
+      const total = (s.row.classList.contains('swiped-left') ? -84 : s.row.classList.contains('swiped-right') ? 84 : 0) + dx
       if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
       else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
       else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
       cleanup()
     }
-    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
+    const handleCancel = () => {
+      const s2 = swipeState.current
+      if (s2.row && s2.dir) {
+        const c2 = s2.row.querySelector('.swipe-content')
+        if (c2) {
+          c2.style.transition = ''
+          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
+          const cx = m ? parseFloat(m[1]) : 0
+          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
+          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
+          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
+          c2.style.transform = ''
+        }
+      }
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
+    }
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
+    }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', handleCancel)
   }, [])
   return { onPointerDown }
 }
@@ -230,6 +253,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const checkTimers = useRef({})
+  const checkPopping = useRef({})
   const toggleFlipRef = useRef(null)
   const btnRef = useRef(null)
   const showingRef = useRef(false)
@@ -254,6 +278,28 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
       setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
     }, 180)
   }, [onDelete, items])
+
+  const handleDeactivate = useCallback((id) => {
+    const item = items.find(t => t.id === id)
+    if (!item) return
+    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+    const wrapper = swipeRow?.parentElement
+    if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
+    const catIdx = categories.findIndex(c => c.id === item.categoryId)
+    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    // First close the row (snap back to center)
+    closeSwipeRow(swipeRow)
+    setTimeout(() => {
+      // Then flash and collapse
+      wrapper.animate([{ background: `rgba(${a.baseRgb},0)` }, { background: `rgba(${a.baseRgb},0.25)`, offset: 0.4 }, { background: `rgba(${a.baseRgb},0)` }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => onDeactivate(item.categoryId, item.projectId, id), 250)
+      }, 180)
+    }, 200)
+  }, [onDeactivate, items, categories])
 
   const handleReorder = useCallback((newOrder) => {
     // Distribute reordered items back to their respective projects
@@ -334,8 +380,12 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
 
   const handleCheckboxDown = (e, id) => {
     e.stopPropagation()
+    checkPopping.current[id] = false
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
-    if (checkboxEl) { checkboxEl.getAnimations().forEach(a => a.cancel()); checkboxEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }], { duration: 100, fill: 'forwards' }) }
+    if (checkboxEl) {
+      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }], { duration: 100, fill: 'forwards' })
+    }
     checkTimers.current[id] = setTimeout(() => {}, 300)
   }
 
@@ -347,8 +397,12 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
     if (!checkboxEl) { onToggle(item.categoryId, item.projectId, id); return }
     const isChecked = item.checked
-    checkboxEl.getAnimations().forEach(a => a.cancel())
-    checkboxEl.animate([{ transform: 'scale(0.82)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'none' })
+    checkPopping.current[id] = true
+    const popAnim = checkboxEl.animate(
+      [{ transform: 'scale(0.82)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }],
+      { duration: 350, easing: 'ease', fill: 'forwards' }
+    )
+    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => a.cancel())
     if (!isChecked) {
       checkboxEl.classList.add('checked')
       e.currentTarget.closest('.todo-row')?.classList.add('checked')
@@ -397,15 +451,18 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
         <div className="dots-menu"><span/><span/><span/></div>
       </div>
       <div ref={containerRef}>
-        {sorted.map((t, i) => (
+        {sorted.map((t, i) => {
+          const catIdx = categories.findIndex(c => c.id === t.categoryId)
+          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+          return (
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={t.id}>
-              <button className="swipe-action-btn active-tag" onMouseDown={e => { e.preventDefault(); onDeactivate(t.categoryId, t.projectId, t.id); closeSwipeRow(e.currentTarget.closest('.swipe-row')) }}>
-                <RemoveSvg/><span className="swipe-action-label active-tag">Remove</span>
+            <div className="swipe-row" data-swipe-id={t.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }}>
+              <button className="swipe-action-btn active-tag activated" onMouseDown={e => { e.preventDefault(); handleDeactivate(t.id) }}>
+                <div className="swipe-active-inner"><RemoveSvg/></div>
               </button>
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id) }}>
-                <TrashSvg/><span className="swipe-action-label delete">Delete</span>
+                <div className="swipe-active-inner"><TrashSvg/></div>
               </button>
               <div className="swipe-content">
                 <div
@@ -417,38 +474,34 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                     className="checkbox-wrap"
                     onPointerDown={e => handleCheckboxDown(e, t.id)}
                     onPointerUp={e => handleCheckboxUp(e, t.id)}
-                    onPointerLeave={e => { clearTimeout(checkTimers.current[t.id]); e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel()) }}
+                    onPointerLeave={e => {
+                      clearTimeout(checkTimers.current[t.id])
+                      if (!checkPopping.current[t.id]) {
+                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                      }
+                    }}
                   >
-                    {(() => {
-                      const catIdx = categories.findIndex(c => c.id === t.categoryId)
-                      const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
-                      return (
-                        <div
-                          className={`checkbox activated-checkbox${t.checked ? ' checked' : ''}`}
-                          style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb }}
-                        >
-                          <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </div>
-                      )
-                    })()}
+                    <div
+                      className={`checkbox activated-checkbox${t.checked ? ' checked' : ''}`}
+                      style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb }}
+                    >
+                      <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
                   </div>
                   <div className="item-content">
                     <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                     <div className="source-label">
-                      {(() => {
-                        const catIdx = categories.findIndex(c => c.id === t.categoryId)
-                        const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
-                        return <span className="source-label-text">{t.projectName}</span>
-                      })()}
+                      <span className="source-label-text">{t.projectName}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
       <button ref={btnRef} className="hide-completed-btn" style={{ color: '#3D3D3D' }} onClick={handleToggleHideCompleted}>
         {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
@@ -484,6 +537,28 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
     }, 180)
   }, [onDelete, items])
 
+  const handleDeactivate = useCallback((id) => {
+    const item = items.find(n => n.id === id)
+    if (!item) return
+    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+    const wrapper = swipeRow?.parentElement
+    if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
+    const catIdx = categories.findIndex(c => c.id === item.categoryId)
+    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    // First close the row (snap back to center)
+    closeSwipeRow(swipeRow)
+    setTimeout(() => {
+      // Then flash and collapse
+      wrapper.animate([{ background: `rgba(${a.baseRgb},0)` }, { background: `rgba(${a.baseRgb},0.25)`, offset: 0.4 }, { background: `rgba(${a.baseRgb},0)` }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => onDeactivate(item.categoryId, item.projectId, id), 250)
+      }, 180)
+    }, 200)
+  }, [onDeactivate, items, categories])
+
   const handleReorder = useCallback((newOrder) => {
     const byProject = {}
     newOrder.forEach(item => {
@@ -512,39 +587,96 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
 
   const onNotePointerDown = useCallback((e, id) => {
     if (e.target.closest('.swipe-action-btn')) return
-    const row = e.currentTarget.closest('.swipe-row')
+    const row = e.currentTarget  // handler is on .swipe-row, so this IS the row
     if (!row) return
-    noteSwipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null }
+
+    // If a button is exposed, close and swallow — note must not open
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) {
+      row.classList.remove('swiped-left', 'swiped-right')
+      const content = row.querySelector('.swipe-content')
+      if (content) content.style.transform = ''
+      return
+    }
+
+    const wasLeft = false
+    const wasRight = false
+    noteSwipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null }
+
     const onMove = (e2) => {
       const s = noteSwipeState.current
       if (!s.row) return
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
       if (!s.dir) {
         if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) { s.dir = dx < 0 ? 'left' : 'right' } else return
+        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
+        else return
       }
       const content = s.row.querySelector('.swipe-content')
       if (!content) return
-      const base = s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0
+      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const proposed = base + dx
+      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
+      let newX = Math.max(-84, Math.min(84, proposed))
+      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
+      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
       content.style.transition = 'none'
-      content.style.transform = `translateX(${Math.max(-72, Math.min(72, base + dx))}px)`
+      content.style.transform = `translateX(${newX}px)`
     }
+
     const onUp = (e2) => {
       const s = noteSwipeState.current
       if (!s.row) { cleanup(); return }
       const dx = e2.clientX - s.startX
+      const dy = e2.clientY - s.startY
       const content = s.row.querySelector('.swipe-content')
       if (!content) { cleanup(); return }
       content.style.transition = ''
-      if (!s.dir && Math.abs(dx) < 8) { setOpenNoteId(id); cleanup(); return }
-      const total = (s.row.classList.contains('swiped-left') ? -72 : s.row.classList.contains('swiped-right') ? 72 : 0) + dx
+      const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
+      if (isTap) {
+        setOpenNoteId(id)
+        cleanup()
+        return
+      }
+      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const rawTotal = base + dx
+      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
+      if (s.lockSign === 1) total = Math.max(0, total)
+      if (s.lockSign === -1) total = Math.min(0, total)
       if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
       else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
       else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
       cleanup()
     }
-    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
-    document.addEventListener('pointermove', onMove); document.addEventListener('pointerup', onUp)
+
+    const handleCancel = () => {
+      const s2 = noteSwipeState.current
+      if (s2.row && s2.dir) {
+        // Only settle the row if actual dragging occurred — not on a plain tap
+        const c2 = s2.row.querySelector('.swipe-content')
+        if (c2) {
+          c2.style.transition = ''
+          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
+          const cx = m ? parseFloat(m[1]) : 0
+          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
+          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
+          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
+          c2.style.transform = ''
+        }
+      }
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
+    }
+
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', handleCancel)
+    }
+
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', handleCancel)
   }, [])
 
   useEffect(() => {
@@ -571,15 +703,15 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
             return (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
-              <div className="swipe-row" data-swipe-id={n.id}>
-                <button className="swipe-action-btn active-tag" onMouseDown={e => { e.preventDefault(); onDeactivate(n.categoryId, n.projectId, n.id); closeSwipeRow(e.currentTarget.closest('.swipe-row')) }}>
-                  <RemoveSvg/><span className="swipe-action-label active-tag">Remove</span>
+              <div className="swipe-row" data-swipe-id={n.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { onNotePointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+                <button className="swipe-action-btn active-tag activated" onMouseDown={e => { e.preventDefault(); handleDeactivate(n.id) }}>
+                  <div className="swipe-active-inner"><RemoveSvg/></div>
                 </button>
                 <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>
-                  <TrashSvg/><span className="swipe-action-label delete">Delete</span>
+                  <div className="swipe-active-inner"><TrashSvg/></div>
                 </button>
                 <div className="swipe-content">
-                  <div className="note-row" data-note-id={n.id} onPointerDown={e => { onNotePointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+                  <div className="note-row" data-note-id={n.id}>
                     <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                       <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
                         <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={a.dark} strokeWidth="1" fill={a.light}/>

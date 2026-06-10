@@ -319,6 +319,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   85.714% { fill: #FFE1FD; }
   100%    { fill: #E1E9FF; }
 }
+.star-active .icon-tab.selected svg {
+  transform: scale(1.1);
+}
 .star-active .icon-tab.selected svg polygon {
   animation: star-stroke-cycle 35s linear infinite, star-fill-cycle 35s linear infinite;
 }
@@ -365,8 +368,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 
 .tab-indicator {
   position: absolute;
-  bottom: 0;
+  top: 1px;
   height: 38px;
+  box-sizing: border-box;
   background: var(--accent-light);
   border-radius: 4px;
   pointer-events: none;

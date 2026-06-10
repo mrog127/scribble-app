@@ -302,6 +302,13 @@ export function AppProvider({ children }) {
     Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ sort_order: i }).eq('id', n.id)))
   }, [updateProject])
 
+  const reorderProjects = useCallback((categoryId, newOrder) => {
+    setCategories(prev => prev.map(cat =>
+      cat.id !== categoryId ? cat : { ...cat, projects: newOrder }
+    ))
+    Promise.all(newOrder.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
+  }, [])
+
   // ---- Categories ----
   const addCategory = useCallback((name) => {
     const id = `cat-${Date.now()}`
@@ -391,6 +398,7 @@ export function AppProvider({ children }) {
       deleteProjectLink,
       reorderProjectTodos,
       reorderProjectNotes,
+      reorderProjects,
       renameProject,
       deleteProject,
     }}>

@@ -512,7 +512,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .save-to-card {
   flex: 1;
   min-height: 0;
-  background: #F2F0EB;
+  background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   box-shadow: none;
@@ -533,7 +533,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .save-to-header {
   position: sticky;
   top: 0;
-  background: #F2F0EB;
+  background: #F7F6F3;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -544,8 +544,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 .save-to-title {
   font-family: 'Merriweather', Georgia, serif;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 500;
   color: #242424;
   padding: 0;
   margin: 0;
@@ -573,7 +573,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent-dark);
+  color: var(--cb-dark);
   padding: 8px 16px 2px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -591,19 +591,22 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   text-align: left;
   font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   color: #242424;
   position: relative;
   box-sizing: border-box;
 }
+.save-to-option { isolation: isolate; }
+.save-to-option.selected { color: var(--cb-dark); }
 /* Accent highlight box — full row height, 8px inset L/R, 4px radius */
 .save-to-option.selected::before {
   content: '';
   position: absolute;
   inset: 0 8px;
-  background: rgba(var(--accent-base-rgb), 0.12);
+  background: var(--cb-light);
   border-radius: 4px;
   pointer-events: none;
+  z-index: -1;
 }
 /* Hide divider immediately above or below the selected row */
 .save-to-divider:has(+ .save-to-option.selected) { display: none; }
@@ -618,7 +621,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1.5px solid #B8B8B8;
+  border: 1px solid #B8B8B8;
   box-shadow: 0 2px 0px rgba(0,0,0,0.15);
   flex-shrink: 0;
   position: relative;
@@ -627,8 +630,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   transform-origin: center;
 }
 .save-to-radio.filled {
-  border-color: var(--accent-base);
-  background: var(--accent-base);
+  border-color: var(--cb-base);
+  background: var(--cb-base);
   box-shadow: none;
   animation: radio-pop 320ms ease forwards;
 }
@@ -639,8 +642,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   background: white;
   border-radius: 50%;
 }
-.toolbar-source-label.inactive { color: #959493; }
-.toolbar-source-btn.inactive { opacity: 0.7; }
+.toolbar-source-label.inactive { color: #242424; }
+.toolbar-source-btn.inactive { opacity: 1; }
 
 /* =============================================
    Tab transition animations

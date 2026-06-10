@@ -460,14 +460,6 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       return
     }
     checkTimers.current[`suppress_${id}`] = false
-    const checkboxEl = e.currentTarget.querySelector('.checkbox')
-    if (checkboxEl) {
-      checkboxEl.getAnimations().forEach(a => a.cancel())
-      checkboxEl.animate(
-        [{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }],
-        { duration: 100, fill: 'forwards' }
-      )
-    }
     checkTimers.current[id] = setTimeout(() => {}, 300)
   }
 
@@ -484,12 +476,11 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
 
     const isChecked = todos.find(t => t.id === id)?.checked
 
-    // Cancel press, start pop animation
-    checkboxEl.getAnimations().forEach(a => a.cancel())
-    checkboxEl.animate(
-      [{ transform: 'scale(0.82)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
-      { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'none' }
-    )
+    // Trigger CSS bounce animation
+    checkboxEl.classList.remove('animating-check', 'animating-uncheck')
+    void checkboxEl.offsetWidth // restart animation
+    checkboxEl.classList.add(isChecked ? 'animating-uncheck' : 'animating-check')
+    setTimeout(() => checkboxEl.classList.remove('animating-check', 'animating-uncheck'), isChecked ? 200 : 320)
 
     if (!isChecked) {
       // Apply checked visual immediately so color/checkmark appear during the pop
@@ -599,7 +590,6 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
                     onPointerUp={e => handleCheckboxUp(e, t.id)}
                     onPointerLeave={e => {
                       clearTimeout(checkTimers.current[t.id])
-                      e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
                     }}
                   >
                     <div className={`checkbox${t.checked ? ' checked' : ''}`}>

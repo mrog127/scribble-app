@@ -536,6 +536,14 @@ function AppInner() {
     return getCategoryAccent(idx)
   }, [activeTab, categories])
 
+  const footerAccent = useMemo(() => {
+    if (activeTab === 'star' && saveToProject) {
+      const catIdx = categories.findIndex(c => c.id === saveToProject.categoryId)
+      if (catIdx !== -1) return getCategoryAccent(catIdx)
+    }
+    return activeAccent
+  }, [activeTab, saveToProject, categories, activeAccent])
+
   return (
     <div className="app-wrap">
       <div
@@ -639,8 +647,11 @@ function AppInner() {
                 {categories.every(c => c.projects.length === 0) && (
                   <p className="save-to-empty">No projects yet</p>
                 )}
-                {categories.filter(c => c.projects.length > 0).map(cat => (
-                  <div key={cat.id}>
+                {categories.filter(c => c.projects.length > 0).map(cat => {
+                  const catIdx = categories.findIndex(c2 => c2.id === cat.id)
+                  const accent = getCategoryAccent(catIdx)
+                  return (
+                  <div key={cat.id} style={{ '--cb-base': accent.base, '--cb-dark': accent.dark, '--cb-light': accent.light, '--cb-base-rgb': accent.baseRgb }}>
                     <div className="save-to-category">{cat.name}</div>
                     {cat.projects.map((proj, i) => (
                       <div key={proj.id}>
@@ -655,14 +666,23 @@ function AppInner() {
                       </div>
                     ))}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className={`footer${activeTab !== 'star' ? ' category-mode' : ''}${inputFocused ? ' keyboard-open' : ''}`}>
+        <div
+          className={`footer${activeTab !== 'star' ? ' category-mode' : ''}${inputFocused ? ' keyboard-open' : ''}`}
+          style={{
+            '--accent-base': footerAccent.base,
+            '--accent-dark': footerAccent.dark,
+            '--accent-light': footerAccent.light,
+            '--accent-base-rgb': footerAccent.baseRgb,
+          }}
+        >
 
           <div className="add-row">
             <input
@@ -700,9 +720,9 @@ function AppInner() {
                   onMouseDown={e => { e.preventDefault(); setAddAsActiveFlag(v => !v) }}
                 >
                   <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#959493' }} strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"/>
+                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#242424' }} strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
-                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>Active</span>
+                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>{addAsActiveFlag ? 'Active' : 'Inactive'}</span>
                 </button>
               </div>
               <div className="toolbar-divider"></div>

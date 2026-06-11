@@ -78,6 +78,33 @@ export function AppProvider({ children }) {
     setActiveTodos((aTodos || []).map(t => ({ id: t.id, text: t.text, checked: t.checked, activated: t.activated, source: 'Active' })))
     setActiveNotes((aNotes || []).map(n => ({ id: n.id, text: n.text, activated: n.activated, editorHTML: n.editor_html, source: 'Active', accent: false })))
     setLoading(false)
+
+    // Midnight reset: once per calendar day, deactivate any todos that are
+    // both checked (completed) and activated (showing on homescreen).
+    const today = new Date().toLocaleDateString()
+    const lastReset = localStorage.getItem('scribble_last_midnight_reset')
+    if (lastReset !== today) {
+      const { error } = await supabase
+        .from('todos')
+        .update({ activated: false })
+        .eq('checked', true)
+        .eq('activated', true)
+      if (!error) {
+        localStorage.setItem('scribble_last_midnight_reset', today)
+        setActiveTodos(prev => prev.map(t =>
+          t.checked && t.activated ? { ...t, activated: false } : t
+        ))
+        setCategories(prev => prev.map(cat => ({
+          ...cat,
+          projects: cat.projects.map(proj => ({
+            ...proj,
+            todos: proj.todos.map(t =>
+              t.checked && t.activated ? { ...t, activated: false } : t
+            ),
+          })),
+        })))
+      }
+    }
   }
 
   // ---- Internal helper ----

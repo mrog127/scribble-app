@@ -27,6 +27,20 @@ function RemoveSvg() {
   )
 }
 
+// Open a (possibly scheme-less) URL in a new browser tab
+function openUrl(url) {
+  if (!url) return
+  let u = url.trim()
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
+  window.open(u, '_blank', 'noopener,noreferrer')
+}
+
+// Strip the scheme for a cleaner one-line preview
+function displayUrl(url) {
+  if (!url) return ''
+  return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
+}
+
 function closeSwipeRow(row) {
   if (!row) return
   row.classList.remove('swiped-left', 'swiped-right')
@@ -746,6 +760,161 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
   )
 }
 
+// Activated links — aggregated from all projects into one "Links" card
+function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
+  const { categories } = useAppContext()
+  const cardRef = useRef(null)
+  const containerRef = useRef(null)
+  const linkSwipeState = useRef({})
+
+  const handleDelete = useCallback((id) => {
+    const item = items.find(l => l.id === id)
+    if (!item) return
+    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+    const wrapper = swipeRow?.parentElement
+    if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
+    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+    setTimeout(() => {
+      const height = wrapper.getBoundingClientRect().height
+      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+      setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
+    }, 180)
+  }, [onDelete, items])
+
+  const handleDeactivate = useCallback((id) => {
+    const item = items.find(l => l.id === id)
+    if (!item) return
+    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+    const wrapper = swipeRow?.parentElement
+    if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
+    const catIdx = categories.findIndex(c => c.id === item.categoryId)
+    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    closeSwipeRow(swipeRow)
+    setTimeout(() => {
+      wrapper.animate([{ background: `rgba(${a.baseRgb},0)` }, { background: `rgba(${a.baseRgb},0.25)`, offset: 0.4 }, { background: `rgba(${a.baseRgb},0)` }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => onDeactivate(item.categoryId, item.projectId, id), 250)
+      }, 180)
+    }, 200)
+  }, [onDeactivate, items, categories])
+
+  const onLinkPointerDown = useCallback((e, id, url) => {
+    if (e.target.closest('.swipe-action-btn')) return
+    const row = e.currentTarget
+    if (!row) return
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) {
+      row.classList.remove('swiped-left', 'swiped-right')
+      const content = row.querySelector('.swipe-content')
+      if (content) content.style.transform = ''
+      return
+    }
+    linkSwipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, lockSign: null }
+
+    const onMove = (e2) => {
+      const s = linkSwipeState.current
+      if (!s.row) return
+      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
+      if (!s.dir) {
+        if (Math.abs(dy) > 8) { cleanup(); return }
+        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
+        else return
+      }
+      const content = s.row.querySelector('.swipe-content')
+      if (!content) return
+      const proposed = dx
+      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
+      let newX = Math.max(-84, Math.min(84, proposed))
+      if (s.lockSign === 1) newX = Math.max(0, newX)
+      if (s.lockSign === -1) newX = Math.min(0, newX)
+      content.style.transition = 'none'
+      content.style.transform = `translateX(${newX}px)`
+    }
+
+    const onUp = (e2) => {
+      const s = linkSwipeState.current
+      if (!s.row) { cleanup(); return }
+      const dx = e2.clientX - s.startX
+      const dy = e2.clientY - s.startY
+      const content = s.row.querySelector('.swipe-content')
+      if (!content) { cleanup(); return }
+      content.style.transition = ''
+      const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
+      if (isTap) { openUrl(url); cleanup(); return }
+      let total = dx
+      if (s.lockSign === 1) total = Math.max(0, total)
+      if (s.lockSign === -1) total = Math.min(0, total)
+      if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
+      else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
+      else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
+      cleanup()
+    }
+
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }, [])
+
+  useEffect(() => {
+    const card = cardRef.current
+    if (!card) return
+    requestAnimationFrame(() => card.classList.add('visible'))
+  }, [])
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="card card-intro" ref={cardRef}>
+      <div className="card-header">
+        <span className="card-title">Links</span>
+        <div className="dots-menu"><span/><span/><span/></div>
+      </div>
+      <div ref={containerRef}>
+        {items.map((l, i) => {
+          const catIdx = categories.findIndex(c => c.id === l.categoryId)
+          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+          return (
+          <div key={l.id}>
+            {i > 0 && <div className="divider"/>}
+            <div className="swipe-row" data-swipe-id={l.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => onLinkPointerDown(e, l.id, l.url)}>
+              <button className="swipe-action-btn active-tag activated" onMouseDown={e => { e.preventDefault(); handleDeactivate(l.id) }}>
+                <div className="swipe-active-inner"><RemoveSvg/></div>
+              </button>
+              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id) }}>
+                <div className="swipe-active-inner"><TrashSvg/></div>
+              </button>
+              <div className="swipe-content">
+                <div className="note-row">
+                  <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="8" fill={a.light}/>
+                      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={a.dark} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={a.dark} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div className="item-content">
+                    <span className="note-text">{l.title}</span>
+                    <div className="source-label">
+                      <span className="source-label-text">{l.projectName}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function ActivePage({
   todos, notes,
   onToggleTodo, onDeleteTodo, onDeleteNote, onUpdateNote,
@@ -754,7 +923,7 @@ export default function ActivePage({
   pageAnimClass = '', isExiting = false,
 }) {
   const pageRef = useRef(null)
-  const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, toggleProjectTodoActivated, toggleProjectNoteActivated } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated } = useAppContext()
 
   const [underlineColorIdx, setUnderlineColorIdx] = useState(0)
   useEffect(() => {
@@ -779,8 +948,13 @@ export default function ActivePage({
       proj.notes.filter(n => n.activated).map(n => ({ ...n, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   )
+  const allActivatedLinks = categories.flatMap(cat =>
+    cat.projects.flatMap(proj =>
+      proj.links.filter(l => l.activated).map(l => ({ ...l, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
+    )
+  )
 
-  const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0
+  const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
 
   return (
     <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-star'} ref={pageRef} onScroll={onScroll}>
@@ -822,6 +996,13 @@ export default function ActivePage({
             items={allActivatedNotes}
             onDelete={deleteProjectNote}
             onDeactivate={toggleProjectNoteActivated}
+          />
+        )}
+        {allActivatedLinks.length > 0 && (
+          <ActivatedLinksCard
+            items={allActivatedLinks}
+            onDelete={deleteProjectLink}
+            onDeactivate={toggleProjectLinkActivated}
           />
         )}
       </div>

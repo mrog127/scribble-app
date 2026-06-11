@@ -4,6 +4,20 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import { getCategoryAccent } from '../theme.js'
 
+// Open a (possibly scheme-less) URL in a new browser tab
+function openUrl(url) {
+  if (!url) return
+  let u = url.trim()
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
+  window.open(u, '_blank', 'noopener,noreferrer')
+}
+
+// Strip the scheme for a cleaner one-line preview
+function displayUrl(url) {
+  if (!url) return ''
+  return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
+}
+
 // ---- Swipe hook ----
 function useSwipe() {
   const swipeState = useRef({})
@@ -278,6 +292,18 @@ function LinkIcon({ active }) {
   )
 }
 
+// Row icon for a link item. When active, a 16x16 light-colored circle sits behind it.
+function LinkRowIcon({ activated }) {
+  const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      {activated && <circle cx="12" cy="12" r="8" fill="var(--accent-light)"/>}
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 function TrashIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -367,6 +393,7 @@ function NoteRowContent({ note }) {
 export default function ProjectCard({ categoryId, project }) {
   const [activeTab, setActiveTab] = useState('list')
   const [inputValue, setInputValue] = useState('')
+  const [linkUrlValue, setLinkUrlValue] = useState('')
   const [inputFocused, setInputFocused] = useState(false)
   const [openNoteId, setOpenNoteId] = useState(null)
   const [addAsActive, setAddAsActive] = useState(false)
@@ -379,6 +406,8 @@ export default function ProjectCard({ categoryId, project }) {
   })
 
   const cardRef = useRef(null)
+  const inputWrapRef = useRef(null)
+  const linkUrlRef = useRef(null)
   const todoContainerRef = useRef(null)
   const noteContainerRef = useRef(null)
   const linkContainerRef = useRef(null)
@@ -398,9 +427,12 @@ export default function ProjectCard({ categoryId, project }) {
     addProjectTodo, addProjectNote, addProjectLink,
     toggleProjectTodo, deleteProjectTodo, deleteProjectNote,
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
+    toggleProjectLinkActivated,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes,
     renameProject, deleteProject,
   } = useAppContext()
+
+  const linkSwipeState = useRef({})
 
   // Close menu on outside click
   useEffect(() => {
@@ -803,8 +835,55 @@ export default function ProjectCard({ categoryId, project }) {
         )
       }
       toggleProjectNoteActivated(categoryId, project.id, id)
+    } else if (type === 'link') {
+      // Flash immediately for links (no reorder)
+      const wrapper = row?.parentElement
+      if (wrapper) {
+        const catIdx = categories.findIndex(c => c.id === categoryId)
+        const accent = getCategoryAccent(catIdx)
+        const hex = accent.light
+        const r = parseInt(hex.slice(1, 3), 16)
+        const g = parseInt(hex.slice(3, 5), 16)
+        const b = parseInt(hex.slice(5, 7), 16)
+        wrapper.animate(
+          [
+            { background: `rgba(${r},${g},${b},0)` },
+            { background: `rgba(${r},${g},${b},0.6)`, offset: 0.4 },
+            { background: `rgba(${r},${g},${b},0)` },
+          ],
+          { duration: 280, fill: 'none' }
+        )
+      }
+      toggleProjectLinkActivated(categoryId, project.id, id)
     }
-  }, [categoryId, project.id, categories, toggleProjectTodoActivated, toggleProjectNoteActivated])
+  }, [categoryId, project.id, categories, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated])
+
+  // Tap a link row (without swiping) to open it in a new tab
+  const onLinkPointerDown = useCallback((e, url) => {
+    if (e.target.closest('.swipe-action-btn')) return
+    const row = e.currentTarget.closest('.swipe-row')
+    if (!row) return
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
+    linkSwipeState.current = { startX: e.clientX, startY: e.clientY, dir: null }
+    const onMove = (e2) => {
+      const s = linkSwipeState.current
+      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
+      if (!s.dir) {
+        if (Math.abs(dy) > 8) { cleanup(); return }
+        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
+      }
+    }
+    const onUp = (e2) => {
+      const s = linkSwipeState.current
+      const dx = e2.clientX - s.startX
+      const dy = e2.clientY - s.startY
+      if (!s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8) openUrl(url)
+      cleanup()
+    }
+    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }, [])
 
   const handleNoteSave = useCallback((noteId, html, text) => {
     updateProjectNote(categoryId, project.id, noteId, html, text)
@@ -837,22 +916,46 @@ export default function ProjectCard({ categoryId, project }) {
   }, [])
 
   const addItem = useCallback(() => {
+    if (addType === 'link') {
+      const url = linkUrlValue.trim()
+      if (!url) return
+      const title = inputValue.trim()
+      const inputEl = inputRef.current
+      if (inputEl) pendingAnim.current = { fromRect: inputEl.getBoundingClientRect(), text: title || displayUrl(url), addType }
+      addProjectLink(categoryId, project.id, title, url, addAsActive)
+      setInputValue('')
+      setLinkUrlValue('')
+      linkUrlRef.current?.blur()
+      inputRef.current?.blur()
+      return
+    }
     const text = inputValue.trim()
     if (!text) return
     const inputEl = inputRef.current
     if (inputEl) pendingAnim.current = { fromRect: inputEl.getBoundingClientRect(), text, addType }
     if (addType === 'list') addProjectTodo(categoryId, project.id, text, addAsActive)
     else if (addType === 'note') addProjectNote(categoryId, project.id, text, addAsActive)
-    else if (addType === 'link') addProjectLink(categoryId, project.id, text, addAsActive)
     setInputValue('')
     inputRef.current?.blur()
-  }, [inputValue, addType, addAsActive, categoryId, project.id, addProjectTodo, addProjectNote, addProjectLink])
+  }, [inputValue, linkUrlValue, addType, addAsActive, categoryId, project.id, addProjectTodo, addProjectNote, addProjectLink])
+
+  // Keep the input wrap "focused" while focus moves between the title and URL fields
+  const handleInputBlur = useCallback(() => {
+    requestAnimationFrame(() => {
+      const ae = document.activeElement
+      if (ae && inputWrapRef.current && inputWrapRef.current.contains(ae)) return
+      setInputFocused(false)
+    })
+  }, [])
 
   const placeholder =
     displayType === 'list' ? 'Add a task...' :
     displayType === 'note' ? 'Add a note...' : 'Add a link...'
 
-  const sendVisible = inputFocused || !!inputValue.trim()
+  const linkMode = addType === 'link'
+  const sendVisible = linkMode
+    ? (inputFocused || !!inputValue.trim() || !!linkUrlValue.trim())
+    : (inputFocused || !!inputValue.trim())
   const openNote = project.notes.find(n => n.id === openNoteId)
 
   return (
@@ -1057,6 +1160,12 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={l.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={l.id}>
+                    <button className={`swipe-action-btn active-tag${l.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate('link', l.id, e.currentTarget.closest('.swipe-row')) }}>
+                      <div className="swipe-active-inner">
+                        <ActivateIcon activated={l.activated}/>
+                        <span className="swipe-action-label active-tag">{l.activated ? 'Active' : 'Inactive'}</span>
+                      </div>
+                    </button>
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('link', l.id, e.currentTarget.closest('.swipe-row')) }}>
                       <div className="swipe-active-inner">
                         <TrashIcon/>
@@ -1064,9 +1173,18 @@ export default function ProjectCard({ categoryId, project }) {
                       </div>
                     </button>
                     <div className="swipe-content">
-                      <div className="note-row" onPointerDown={e => onPointerDown(e, l.id)}>
+                      <div
+                        className="note-row link-row"
+                        onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url) }}
+                      >
+                        <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+                          <LinkRowIcon activated={l.activated}/>
+                        </div>
                         <div className="item-content">
-                          <span className="note-text project-link-text">{l.title}</span>
+                          <div className="link-row-text">
+                            <span className="note-text">{l.title}</span>
+                            <span className="note-preview-text">{displayUrl(l.url)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1090,17 +1208,17 @@ export default function ProjectCard({ categoryId, project }) {
         )}
 
         {/* Input */}
-        <div className={`project-input-wrap${inputFocused ? ' focused' : ''}`}>
+        <div className={`project-input-wrap${inputFocused ? ' focused' : ''}${linkMode ? ' link-mode' : ''}`} ref={inputWrapRef}>
           <div className="project-input-row">
             <input
               ref={inputRef}
               className="project-input"
-              placeholder={placeholder}
+              placeholder={linkMode && inputFocused ? 'Title your link' : placeholder}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem() } }}
+              onBlur={handleInputBlur}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (linkMode) linkUrlRef.current?.focus(); else addItem() } }}
             />
             <button
               className={`project-send-btn${sendVisible ? ' visible' : ''}`}
@@ -1108,6 +1226,20 @@ export default function ProjectCard({ categoryId, project }) {
             >
               <SendIcon/>
             </button>
+          </div>
+          <div className={`project-link-url-row${linkMode && inputFocused ? ' open' : ''}`}>
+            <div className="project-input-divider"/>
+            <input
+              ref={linkUrlRef}
+              className="project-input project-link-url-input"
+              placeholder="Add link"
+              value={linkUrlValue}
+              onChange={e => setLinkUrlValue(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={handleInputBlur}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem() } }}
+              tabIndex={linkMode && inputFocused ? 0 : -1}
+            />
           </div>
           <div className="project-input-bottom">
             <div className="project-input-divider"/>

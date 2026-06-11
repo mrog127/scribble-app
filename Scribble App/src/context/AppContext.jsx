@@ -235,16 +235,17 @@ export function AppProvider({ children }) {
     return tempId
   }, [user, updateProject])
 
-  const addProjectLink = useCallback((categoryId, projectId, url, activated = false) => {
+  const addProjectLink = useCallback((categoryId, projectId, title, url, activated = false) => {
     const tempId = Date.now()
+    const finalTitle = (title && title.trim()) || url
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
     const sortOrder = proj?.links.length || 0
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      links: [...proj.links, { id: tempId, url, title: url, activated }]
+      links: [...proj.links, { id: tempId, url, title: finalTitle, activated }]
     }))
     supabase.from('links')
-      .insert({ user_id: user.id, project_id: projectId, url, title: url, activated, sort_order: sortOrder })
+      .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, sort_order: sortOrder })
       .select().single().then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
@@ -296,6 +297,18 @@ export function AppProvider({ children }) {
       ...proj, notes: proj.notes.map(n => n.id !== noteId ? n : { ...n, activated: newActivated })
     }))
     db(supabase.from('notes').update({ activated: newActivated }).eq('id', noteId))
+  }, [updateProject])
+
+  const toggleProjectLinkActivated = useCallback((categoryId, projectId, linkId) => {
+    const cat = categoriesRef.current.find(c => c.id === categoryId)
+    const proj = cat?.projects.find(p => p.id === projectId)
+    const link = proj?.links.find(l => l.id === linkId)
+    if (!link) return
+    const newActivated = !link.activated
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, links: proj.links.map(l => l.id !== linkId ? l : { ...l, activated: newActivated })
+    }))
+    db(supabase.from('links').update({ activated: newActivated }).eq('id', linkId))
   }, [updateProject])
 
   const deleteProjectTodo = useCallback((categoryId, projectId, todoId) => {
@@ -420,6 +433,7 @@ export function AppProvider({ children }) {
       updateProjectNote,
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
+      toggleProjectLinkActivated,
       deleteProjectTodo,
       deleteProjectNote,
       deleteProjectLink,

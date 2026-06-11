@@ -20,6 +20,7 @@ function AppInner() {
   const [inputFocused, setInputFocused] = useState(false)
   const [toolbarFadedIn, setToolbarFadedIn] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const [linkUrlValue, setLinkUrlValue] = useState('')
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
@@ -85,6 +86,8 @@ function AppInner() {
   }, [inputFocused])
 
   const inputRef = useRef(null)
+  const linkUrlRef = useRef(null)
+  const addRowRef = useRef(null)
   const tabBarRef = useRef(null)
   const indicatorRef = useRef(null)
   const toolbarIndicatorRef = useRef(null)
@@ -233,6 +236,13 @@ function AppInner() {
       }
     }
     requestAnimationFrame(updateToolbarIndicator)
+  }, [toolbarType, inputFocused])
+
+  // When switching to link mode while the footer is open, focus the title field
+  useEffect(() => {
+    if (inputFocused && toolbarType === 'link') {
+      requestAnimationFrame(() => inputRef.current?.focus())
+    }
   }, [toolbarType, inputFocused])
 
   const handleScroll = useCallback((e) => {
@@ -455,6 +465,21 @@ function AppInner() {
   }, [inputFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const addItem = useCallback(() => {
+    // Link mode: requires a URL and a destination project
+    if (toolbarType === 'link') {
+      const url = linkUrlValue.trim()
+      if (!url) return
+      if (activeTab === 'star' && saveToProject) {
+        addProjectLink(saveToProject.categoryId, saveToProject.projectId, inputValue.trim(), url, addAsActiveFlag)
+      }
+      setInputValue('')
+      setLinkUrlValue('')
+      setToolbarType('list')
+      linkUrlRef.current?.blur()
+      inputRef.current?.blur()
+      return
+    }
+
     const text = inputValue.trim()
     if (!text) return
 
@@ -465,7 +490,7 @@ function AppInner() {
       if (addAsActiveFlag && (toolbarType === 'list' || toolbarType === 'note')) {
         // Capture input position BEFORE blur for the fly animation
         const inputEl = inputRef.current
-        const addRowEl = inputEl?.parentElement
+        const addRowEl = addRowRef.current
         const appEl = document.getElementById('app')
         const inputRect = inputEl?.getBoundingClientRect()
         const addRowRect = addRowEl?.getBoundingClientRect()
@@ -482,10 +507,9 @@ function AppInner() {
           pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
         }
       } else {
-        // Inactive or link: add without animation
+        // Inactive: add without animation
         if (toolbarType === 'list') addProjectTodo(categoryId, projectId, text, addAsActiveFlag)
         else if (toolbarType === 'note') addProjectNote(categoryId, projectId, text, addAsActiveFlag)
-        else if (toolbarType === 'link') addProjectLink(categoryId, projectId, text, addAsActiveFlag)
       }
 
       setInputValue('')
@@ -514,7 +538,16 @@ function AppInner() {
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
-  }, [inputValue, activeTab, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote])
+  }, [inputValue, linkUrlValue, activeTab, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote])
+
+  // Keep the footer "focused" while focus moves between the title and URL fields
+  const handleAddInputBlur = useCallback(() => {
+    requestAnimationFrame(() => {
+      const ae = document.activeElement
+      if (ae && addRowRef.current && addRowRef.current.contains(ae)) return
+      setInputFocused(false)
+    })
+  }, [])
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') { e.preventDefault(); addItem() }
@@ -684,24 +717,46 @@ function AppInner() {
           }}
         >
 
-          <div className="add-row">
-            <input
-              ref={inputRef}
-              className={`add-input${inputFocused ? ' focused' : ''}`}
-              placeholder="Scribble something down..."
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onKeyDown={handleKeyDown}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="sentences"
-              spellCheck="false"
-              enterKeyHint="send"
-            />
+          <div className="add-row" ref={addRowRef}>
+            <div className="link-input-stack">
+              <input
+                ref={inputRef}
+                className={`add-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}`}
+                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : 'Scribble something down...'}
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={handleAddInputBlur}
+                onKeyDown={e => { if (toolbarType === 'link') { if (e.key === 'Enter') { e.preventDefault(); linkUrlRef.current?.focus() } } else handleKeyDown(e) }}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                spellCheck="false"
+                enterKeyHint={toolbarType === 'link' ? 'next' : 'send'}
+              />
+              <div className={`add-link-url-wrap${toolbarType === 'link' && inputFocused ? ' open' : ''}`}>
+                <div className="add-input-divider"/>
+                <input
+                  ref={linkUrlRef}
+                  className="add-input link-url-input"
+                  placeholder="Add link"
+                  value={linkUrlValue}
+                  onChange={e => setLinkUrlValue(e.target.value)}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={handleAddInputBlur}
+                  onKeyDown={handleKeyDown}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                  enterKeyHint="send"
+                  inputMode="url"
+                  tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
+                />
+              </div>
+            </div>
             <button
-              className={`send-btn${inputFocused || inputValue.trim() ? ' visible' : ''}`}
+              className={`send-btn${inputFocused || inputValue.trim() || (toolbarType === 'link' && linkUrlValue.trim()) ? ' visible' : ''}`}
               onMouseDown={e => { e.preventDefault(); addItem() }}
             >
               <svg width="24" height="24" viewBox="0 0 20 20" fill="none">

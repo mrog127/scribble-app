@@ -978,8 +978,21 @@ export default function ProjectCard({ categoryId, project }) {
   const sendVisible = linkMode
     ? (inputFocused || !!inputValue.trim() || !!linkUrlValue.trim())
     : (inputFocused || !!inputValue.trim())
-  const openNote = project.notes.find(n => n.id === openNoteId)
-  const openTodo = project.todos.find(t => t.id === openTodoId)
+  // Derive the open item from the full data so it survives being moved to another project
+  let openNote = null, openNoteCat = categoryId, openNoteProj = project
+  if (openNoteId != null) {
+    for (const cat of categories) {
+      const p = cat.projects.find(pr => pr.notes.some(n => n.id === openNoteId))
+      if (p) { openNote = p.notes.find(n => n.id === openNoteId); openNoteCat = cat.id; openNoteProj = p; break }
+    }
+  }
+  let openTodo = null, openTodoCat = categoryId, openTodoProj = project
+  if (openTodoId != null) {
+    for (const cat of categories) {
+      const p = cat.projects.find(pr => pr.todos.some(t => t.id === openTodoId))
+      if (p) { openTodo = p.todos.find(t => t.id === openTodoId); openTodoCat = cat.id; openTodoProj = p; break }
+    }
+  }
 
   return (
     <>
@@ -1311,9 +1324,14 @@ export default function ProjectCard({ categoryId, project }) {
 
       {openNote && createPortal(
         <NoteDetailPage
-          note={openNote}
+          note={{ ...openNote, categoryId: openNoteCat }}
           onClose={() => setOpenNoteId(null)}
-          onSave={handleNoteSave}
+          onSave={(noteId, html, text) => updateProjectNote(openNoteCat, openNoteProj.id, noteId, html, text)}
+          activated={!!openNote.activated}
+          onToggleActive={() => toggleProjectNoteActivated(openNoteCat, openNoteProj.id, openNote.id)}
+          projectName={openNoteProj.name}
+          categoryId={openNoteCat}
+          projectId={openNoteProj.id}
         />,
         document.getElementById('app')
       )}
@@ -1321,10 +1339,10 @@ export default function ProjectCard({ categoryId, project }) {
       {openTodo && createPortal(
         <TodoDetailPage
           todo={openTodo}
-          categoryId={categoryId}
-          projectId={project.id}
-          projectNotes={project.notes}
-          projectLinks={project.links}
+          categoryId={openTodoCat}
+          projectId={openTodoProj.id}
+          projectNotes={openTodoProj.notes}
+          projectLinks={openTodoProj.links}
           onClose={() => setOpenTodoId(null)}
         />,
         document.getElementById('app')

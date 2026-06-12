@@ -398,6 +398,35 @@ export function AppProvider({ children }) {
     return tempId
   }, [user, updateProject])
 
+  // ---- Move a todo / note to a different project ----
+  const moveProjectTodo = useCallback((fromCat, fromProj, toCat, toProj, todoId) => {
+    if (fromCat === toCat && fromProj === toProj) return
+    const todo = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)?.todos.find(t => t.id === todoId)
+    if (!todo) return
+    const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.todos.length || 0
+    setCategories(prev => prev.map(cat => {
+      let projects = cat.projects
+      if (cat.id === fromCat) projects = projects.map(p => p.id === fromProj ? { ...p, todos: p.todos.filter(t => t.id !== todoId) } : p)
+      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, todos: [...p.todos, todo] } : p)
+      return projects === cat.projects ? cat : { ...cat, projects }
+    }))
+    db(supabase.from('todos').update({ project_id: toProj, sort_order: sortOrder }).eq('id', todoId))
+  }, [])
+
+  const moveProjectNote = useCallback((fromCat, fromProj, toCat, toProj, noteId) => {
+    if (fromCat === toCat && fromProj === toProj) return
+    const note = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)?.notes.find(n => n.id === noteId)
+    if (!note) return
+    const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.notes.length || 0
+    setCategories(prev => prev.map(cat => {
+      let projects = cat.projects
+      if (cat.id === fromCat) projects = projects.map(p => p.id === fromProj ? { ...p, notes: p.notes.filter(n => n.id !== noteId) } : p)
+      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, notes: [...p.notes, note] } : p)
+      return projects === cat.projects ? cat : { ...cat, projects }
+    }))
+    db(supabase.from('notes').update({ project_id: toProj, sort_order: sortOrder }).eq('id', noteId))
+  }, [])
+
   const toggleProjectTodoActivated = useCallback((categoryId, projectId, todoId) => {
     const cat = categoriesRef.current.find(c => c.id === categoryId)
     const proj = cat?.projects.find(p => p.id === projectId)
@@ -442,17 +471,39 @@ export function AppProvider({ children }) {
   }, [updateProject])
 
   const deleteProjectNote = useCallback((categoryId, projectId, noteId) => {
+    const sid = String(noteId)
+    const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
+    const affected = (proj?.todos || []).filter(t => (t.linkedNoteIds || []).map(String).includes(sid))
     updateProject(categoryId, projectId, proj => ({
-      ...proj, notes: proj.notes.filter(n => n.id !== noteId)
+      ...proj,
+      notes: proj.notes.filter(n => n.id !== noteId),
+      todos: proj.todos.map(t => (t.linkedNoteIds || []).map(String).includes(sid)
+        ? { ...t, linkedNoteIds: (t.linkedNoteIds || []).filter(id => String(id) !== sid) }
+        : t)
     }))
     db(supabase.from('notes').delete().eq('id', noteId))
+    affected.forEach(t => {
+      const newIds = (t.linkedNoteIds || []).filter(id => String(id) !== sid)
+      dbw(supabase.from('todos').update({ linked_note_ids: newIds }).eq('id', t.id), 'deleteNote-detach')
+    })
   }, [updateProject])
 
   const deleteProjectLink = useCallback((categoryId, projectId, linkId) => {
+    const sid = String(linkId)
+    const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
+    const affected = (proj?.todos || []).filter(t => (t.linkedLinkIds || []).map(String).includes(sid))
     updateProject(categoryId, projectId, proj => ({
-      ...proj, links: proj.links.filter(l => l.id !== linkId)
+      ...proj,
+      links: proj.links.filter(l => l.id !== linkId),
+      todos: proj.todos.map(t => (t.linkedLinkIds || []).map(String).includes(sid)
+        ? { ...t, linkedLinkIds: (t.linkedLinkIds || []).filter(id => String(id) !== sid) }
+        : t)
     }))
     db(supabase.from('links').delete().eq('id', linkId))
+    affected.forEach(t => {
+      const newIds = (t.linkedLinkIds || []).filter(id => String(id) !== sid)
+      dbw(supabase.from('todos').update({ linked_link_ids: newIds }).eq('id', t.id), 'deleteLink-detach')
+    })
   }, [updateProject])
 
   const reorderProjectTodos = useCallback((categoryId, projectId, newOrder) => {
@@ -561,6 +612,8 @@ export function AppProvider({ children }) {
       detachLinkFromTodo,
       addTodoNote,
       addTodoLink,
+      moveProjectTodo,
+      moveProjectNote,
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
       toggleProjectLinkActivated,

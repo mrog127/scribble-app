@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
+import DetailFooter from './DetailFooter.jsx'
+import MoveToCard from './MoveToCard.jsx'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -192,8 +194,11 @@ function StarIcon() {
   )
 }
 
-function NoteDetailPage({ note, onClose, onSave }) {
-  const { categories } = useAppContext()
+function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, projectName, categoryId, projectId }) {
+  const hasFooter = !!projectName && typeof onToggleActive === 'function'
+  const { categories, moveProjectNote } = useAppContext()
+  const [moveOpen, setMoveOpen] = useState(false)
+  const [moveTop, setMoveTop] = useState(null)
   const noteAccent = useMemo(() => {
     if (!note?.categoryId) return null
     const idx = categories.findIndex(c => c.id === note.categoryId)
@@ -234,6 +239,21 @@ function NoteDetailPage({ note, onClose, onSave }) {
   useEffect(() => {
     requestAnimationFrame(() => setIsOpen(true))
   }, [])
+
+  const openMove = useCallback(() => {
+    const titleEl = contentRef.current?.querySelector('.note-para')
+    const pageEl = pageRef.current
+    if (titleEl && pageEl) {
+      const top = titleEl.getBoundingClientRect().bottom - pageEl.getBoundingClientRect().top + 16
+      setMoveTop(Math.max(72, top))
+    }
+    setMoveOpen(true)
+  }, [])
+
+  const saveMove = useCallback((sel) => {
+    if (categoryId && projectId) moveProjectNote(categoryId, projectId, sel.categoryId, sel.projectId, note.id)
+    setMoveOpen(false)
+  }, [categoryId, projectId, note?.id, moveProjectNote])
 
   // Track keyboard height and push style bar above it (mobile)
   useEffect(() => {
@@ -602,7 +622,7 @@ function NoteDetailPage({ note, onClose, onSave }) {
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}`}
+      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}${hasFooter ? ' has-footer' : ''}`}
       style={noteAccent ? {
         '--accent-base': noteAccent.base,
         '--accent-dark': noteAccent.dark,
@@ -656,6 +676,27 @@ function NoteDetailPage({ note, onClose, onSave }) {
           </button>
         ))}
       </div>
+
+      {hasFooter && !editing && moveOpen && (
+        <MoveToCard
+          categories={categories}
+          currentCategoryId={categoryId}
+          currentProjectId={projectId}
+          topPx={moveTop}
+          onCancel={() => setMoveOpen(false)}
+          onSave={saveMove}
+        />
+      )}
+
+      {hasFooter && !editing && (
+        <DetailFooter
+          activated={!!activated}
+          onToggleActive={onToggleActive}
+          projectName={projectName}
+          onProjectClick={openMove}
+          menuOpen={moveOpen}
+        />
+      )}
     </div>
   )
 }

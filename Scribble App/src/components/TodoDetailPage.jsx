@@ -4,6 +4,8 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { NoteDetailPage } from './NoteCard.jsx'
+import DetailFooter from './DetailFooter.jsx'
+import MoveToCard from './MoveToCard.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -237,7 +239,7 @@ function LinkComposer({ onAdd }) {
 
 function UnattachButton({ onUnattach }) {
   return (
-    <button className="todo-unattach-btn" onMouseDown={e => { e.preventDefault(); onUnattach() }}>
+    <button className="todo-unattach-btn" onMouseDown={e => { e.preventDefault(); onUnattach(e.currentTarget) }}>
       <div className="todo-unattach-inner">
         <PaperclipIcon/>
         <span className="todo-unattach-label">Unattach</span>
@@ -285,12 +287,20 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const {
     categories,
     toggleProjectTodo,
+    toggleProjectTodoActivated,
+    toggleProjectNoteActivated,
     updateProjectTodoText,
     attachNoteToTodo, detachNoteFromTodo,
     attachLinkToTodo, detachLinkFromTodo,
     addTodoNote, addTodoLink,
+    moveProjectTodo,
     updateProjectNote,
   } = useAppContext()
+
+  const projectName = useMemo(
+    () => categories.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.name || '',
+    [categories, categoryId, projectId]
+  )
 
   const [isOpen, setIsOpen] = useState(false)
   const [noteAttachOpen, setNoteAttachOpen] = useState(false)
@@ -298,18 +308,74 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [openNoteId, setOpenNoteId] = useState(null)
   const titleRef = useRef(null)
   const completeBtnRef = useRef(null)
+  const flashRef = useRef(null)
+  const completePressed = useRef(false)
+  const scrollRef = useRef(null)
+  const scrollTitleRef = useRef(null)
+  const pageRef = useRef(null)
+  const [moveOpen, setMoveOpen] = useState(false)
+  const [moveTop, setMoveTop] = useState(null)
+  const [editingTitle, setEditingTitle] = useState(false)
 
-  const handleToggleComplete = useCallback(() => {
+  const openMove = useCallback(() => {
+    const titleEl = titleRef.current
+    const pageEl = pageRef.current
+    if (titleEl && pageEl) {
+      const top = titleEl.getBoundingClientRect().bottom - pageEl.getBoundingClientRect().top + 16
+      setMoveTop(Math.max(72, top))
+    }
+    setMoveOpen(true)
+  }, [])
+
+  const saveMove = useCallback((sel) => {
+    moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id)
+    setMoveOpen(false)
+  }, [categoryId, projectId, todo.id, moveProjectTodo])
+
+  // Press down: shrink (subtly) and hold while pressed, drop the shadow
+  const completeDown = useCallback(() => {
+    const el = completeBtnRef.current
+    if (!el) return
+    completePressed.current = true
+    el.style.boxShadow = 'none'
+    el.getAnimations().forEach(a => a.cancel())
+    el.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.91)' }], { duration: 100, fill: 'forwards' })
+  }, [])
+
+  // Release: spring big -> settle back, toggle, and flash the page on check
+  const completeUp = useCallback(() => {
+    if (!completePressed.current) return
+    completePressed.current = false
     const el = completeBtnRef.current
     if (el) {
+      el.style.boxShadow = ''
       el.getAnimations().forEach(a => a.cancel())
-      const frames = todo.checked
-        ? [{ transform: 'scale(1)' }, { transform: 'scale(1.14)', offset: 0.3 }, { transform: 'scale(1)' }]
-        : [{ transform: 'scale(1)' }, { transform: 'scale(0.72)', offset: 0.18 }, { transform: 'scale(1.18)', offset: 0.52 }, { transform: 'scale(0.94)', offset: 0.78 }, { transform: 'scale(1)' }]
-      el.animate(frames, { duration: todo.checked ? 200 : 320, easing: 'ease', fill: 'none' })
+      el.animate(
+        [{ transform: 'scale(0.91)' }, { transform: 'scale(1.125)', offset: 0.5 }, { transform: 'scale(0.95)', offset: 0.78 }, { transform: 'scale(1)' }],
+        { duration: 340, easing: 'ease', fill: 'none' }
+      )
+    }
+    if (!todo.checked && flashRef.current) {
+      const rgb = getComputedStyle(flashRef.current).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+      flashRef.current.animate(
+        [{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.18)`, offset: 0.2 }, { background: `rgba(${rgb},0)` }],
+        { duration: 500, easing: 'ease', fill: 'none' }
+      )
     }
     toggleProjectTodo(categoryId, projectId, todo.id)
   }, [todo.checked, todo.id, categoryId, projectId, toggleProjectTodo])
+
+  // Pointer left the button before release: restore size, don't toggle
+  const completeCancel = useCallback(() => {
+    if (!completePressed.current) return
+    completePressed.current = false
+    const el = completeBtnRef.current
+    if (el) {
+      el.style.boxShadow = ''
+      el.getAnimations().forEach(a => a.cancel())
+      el.animate([{ transform: 'scale(0.91)' }, { transform: 'scale(1)' }], { duration: 120, fill: 'forwards' })
+    }
+  }, [])
 
   const accent = useMemo(() => {
     const idx = categories.findIndex(c => c.id === categoryId)
@@ -318,6 +384,37 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   // Slide in on mount
   useEffect(() => { requestAnimationFrame(() => setIsOpen(true)) }, [])
+
+  // Dynamic header title: fade in the item title once the big title scrolls out the top
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+    const check = () => {
+      const titleEl = titleRef.current
+      const headEl = scrollTitleRef.current
+      if (!titleEl || !headEl) return
+      const show = titleEl.getBoundingClientRect().bottom <= scroll.getBoundingClientRect().top + 8
+      headEl.style.opacity = show ? '1' : '0'
+      headEl.style.transform = show ? 'translateY(0)' : 'translateY(8px)'
+      if (show) headEl.textContent = (titleEl.textContent || '').trim()
+    }
+    check()
+    scroll.addEventListener('scroll', check, { passive: true })
+    return () => scroll.removeEventListener('scroll', check)
+  }, [])
+
+  // Tapping anywhere outside an open attach menu closes it.
+  // (The attach buttons themselves are excluded so they can toggle / switch menus.)
+  useEffect(() => {
+    if (!noteAttachOpen && !linkAttachOpen) return
+    const handler = (e) => {
+      if (e.target.closest('.todo-attach-panel') || e.target.closest('.todo-attach-btn')) return
+      setNoteAttachOpen(false)
+      setLinkAttachOpen(false)
+    }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [noteAttachOpen, linkAttachOpen])
 
   // Seed the editable title once (uncontrolled so the caret behaves)
   useEffect(() => {
@@ -351,9 +448,49 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     setTimeout(onClose, 360)
   }
 
+  // Top-right button: "Save" while editing the title (commits + exits edit), "Done" otherwise (closes).
+  // Editing state is only cleared here (not on blur) so a touch that blurs the title first can't trip "Done".
+  const handleTopButton = (e) => {
+    e.preventDefault()
+    if (editingTitle) {
+      titleRef.current?.blur()
+      saveTitle()
+      setEditingTitle(false)
+    } else {
+      handleDone()
+    }
+  }
+
   const handleTitleKeyDown = (e) => {
     if (e.key === 'Enter') { e.preventDefault(); titleRef.current?.blur() }
   }
+
+  // Flash highlight + collapse, then detach — mirrors the homescreen "deactivate" animation
+  const handleUnattach = useCallback((btnEl, doDetach) => {
+    const row = btnEl?.closest('.todo-swipe-row')
+    if (!row) { doDetach(); return }
+    row.classList.remove('swiped-left')
+    const content = row.querySelector('.todo-swipe-content')
+    if (content) { content.style.transition = ''; content.style.transform = '' }
+    const flashEl = row.querySelector('.todo-attached-row') || row
+    const rgb = getComputedStyle(row).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+    setTimeout(() => {
+      flashEl.animate(
+        [{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.25)`, offset: 0.4 }, { background: `rgba(${rgb},0)` }],
+        { duration: 280, fill: 'none' }
+      )
+      setTimeout(() => {
+        row.style.height = row.getBoundingClientRect().height + 'px'
+        row.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          row.style.transition = 'height 220ms ease, opacity 180ms ease'
+          row.style.height = '0'
+          row.style.opacity = '0'
+        }))
+        setTimeout(() => doDetach(), 250)
+      }, 180)
+    }, 200)
+  }, [])
 
   // Swipe-left to reveal the Unattach button (and tap to open when closed)
   const onRowPointerDown = useCallback((e, onTap) => {
@@ -423,6 +560,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   return (
     <div
+      ref={pageRef}
       className={`note-detail-page${isOpen ? ' open' : ''}`}
       style={accent ? {
         '--accent-base': accent.base,
@@ -431,13 +569,14 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         '--accent-base-rgb': accent.baseRgb,
       } : undefined}
     >
+      <div className="todo-complete-flash" ref={flashRef} />
       <div className="note-detail-header">
         <NoteListIcon/>
-        <span className="note-scroll-title" />
-        <button className="note-detail-done" onClick={handleDone}>Done</button>
+        <span className="note-scroll-title" ref={scrollTitleRef} />
+        <button className="note-detail-done" onMouseDown={handleTopButton}>{editingTitle ? 'Save' : 'Done'}</button>
       </div>
 
-      <div className="todo-detail-scroll">
+      <div className="todo-detail-scroll" ref={scrollRef}>
         <div className="todo-detail-underline">
           <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
         </div>
@@ -448,6 +587,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           contentEditable
           suppressContentEditableWarning
           autoCapitalize="sentences"
+          onFocus={() => setEditingTitle(true)}
           onKeyDown={handleTitleKeyDown}
           onBlur={saveTitle}
         />
@@ -455,7 +595,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <button
           ref={completeBtnRef}
           className={`mark-complete-btn${todo.checked ? ' done' : ''}`}
-          onClick={handleToggleComplete}
+          onPointerDown={completeDown}
+          onPointerUp={completeUp}
+          onPointerLeave={completeCancel}
+          onPointerCancel={completeCancel}
         >
           {todo.checked ? (<><CheckIcon/> Complete!</>) : 'Mark as Complete'}
         </button>
@@ -465,7 +608,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           <div className="todo-section-header">
             <span className="todo-section-title">Notes</span>
             {attachableNotes.length > 0 && (
-              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(v => !v) }}>
+              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteAttachOpen(v => !v) }}>
                 <PaperclipIcon/><span>Attach</span>
               </button>
             )}
@@ -496,7 +639,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
               key={n.id}
               note={n}
               onOpen={() => setOpenNoteId(n.id)}
-              onUnattach={() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)}
+              onUnattach={(btnEl) => handleUnattach(btnEl, () => detachNoteFromTodo(categoryId, projectId, todo.id, n.id))}
               onPointerDown={onRowPointerDown}
             />
           ))}
@@ -511,7 +654,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           <div className="todo-section-header">
             <span className="todo-section-title">Links</span>
             {attachableLinks.length > 0 && (
-              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(v => !v) }}>
+              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(v => !v) }}>
                 <PaperclipIcon/><span>Attach</span>
               </button>
             )}
@@ -538,7 +681,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             <AttachedLinkRow
               key={l.id}
               link={l}
-              onUnattach={() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)}
+              onUnattach={(btnEl) => handleUnattach(btnEl, () => detachLinkFromTodo(categoryId, projectId, todo.id, l.id))}
               onPointerDown={onRowPointerDown}
             />
           ))}
@@ -549,11 +692,35 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         </div>
       </div>
 
+      {moveOpen && (
+        <MoveToCard
+          categories={categories}
+          currentCategoryId={categoryId}
+          currentProjectId={projectId}
+          topPx={moveTop}
+          onCancel={() => setMoveOpen(false)}
+          onSave={saveMove}
+        />
+      )}
+
+      <DetailFooter
+        activated={!!todo.activated}
+        onToggleActive={() => toggleProjectTodoActivated(categoryId, projectId, todo.id)}
+        projectName={projectName}
+        onProjectClick={openMove}
+        menuOpen={moveOpen}
+      />
+
       {openNote && createPortal(
         <NoteDetailPage
           note={{ ...openNote, categoryId }}
           onClose={() => setOpenNoteId(null)}
           onSave={(noteId, html, text) => updateProjectNote(categoryId, projectId, noteId, html, text)}
+          activated={!!openNote.activated}
+          onToggleActive={() => toggleProjectNoteActivated(categoryId, projectId, openNote.id)}
+          projectName={projectName}
+          categoryId={categoryId}
+          projectId={projectId}
         />,
         document.getElementById('app')
       )}

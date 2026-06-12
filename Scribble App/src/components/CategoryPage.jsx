@@ -1,13 +1,36 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
 import { useAppContext } from '../context/AppContext.jsx'
 import ProjectCard from './ProjectCard.jsx'
+import CategoryCollapsedView from './CategoryCollapsedView.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 
-function ExpandIcon() {
+// Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
+// outward to the corners (Collapsed → expand). The two glyphs crossfade.
+function CollapseToggleIcon({ collapsed }) {
+  const common = { stroke: 'var(--accent-dark)', strokeWidth: 1, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }
+  const layer = (show) => ({
+    position: 'absolute', inset: 0,
+    opacity: show ? 1 : 0,
+    transform: show ? 'scale(1)' : 'scale(0.7)',
+    transition: 'opacity 220ms ease, transform 240ms cubic-bezier(0.4,0,0.2,1)',
+  })
   return (
-    <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
-      <path d="M3 9V3h6M19 9V3h-6M3 13v6h6M19 13v6h-6" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <span style={{ position: 'relative', width: 24, height: 24, display: 'block' }}>
+      {/* Collapse (inward) — shown in the Expanded state */}
+      <svg width="24" height="24" viewBox="0 0 22 22" fill="none" style={layer(!collapsed)}>
+        <polyline points="18 9.5 12.5 9.5 12.5 4" {...common}/>
+        <path d="M12.5 9.5 L20.5 1.5" {...common}/>
+        <polyline points="4 12.5 9.5 12.5 9.5 18" {...common}/>
+        <path d="M9.5 12.5 L1.5 20.5" {...common}/>
+      </svg>
+      {/* Expand (outward) — shown in the Collapsed state */}
+      <svg width="24" height="24" viewBox="0 0 22 22" fill="none" style={layer(collapsed)}>
+        <polyline points="13.5 1.5 20.5 1.5 20.5 8.5" {...common}/>
+        <path d="M20.5 1.5 L12 10" {...common}/>
+        <polyline points="8.5 20.5 1.5 20.5 1.5 13.5" {...common}/>
+        <path d="M1.5 20.5 L10 12" {...common}/>
+      </svg>
+    </span>
   )
 }
 
@@ -369,7 +392,29 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
   const inputRef = useRef(null)
   const cardsAreaRef = useRef(null)
 
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(`cat-collapsed-${categoryId}`) === 'true' } catch { return false }
+  })
+
   const category = categories.find(c => c.id === categoryId)
+
+  // Re-sync persisted collapse state when this instance is reused for a different category
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(`cat-collapsed-${categoryId}`) === 'true') }
+    catch { setCollapsed(false) }
+  }, [categoryId])
+
+  const toggleCollapsed = useCallback(() => {
+    const next = !collapsed
+    const area = cardsAreaRef.current
+    if (area) { area.style.transition = 'opacity 160ms ease'; area.style.opacity = '0' }
+    setTimeout(() => {
+      setCollapsed(next)
+      try { localStorage.setItem(`cat-collapsed-${categoryId}`, next ? 'true' : 'false') } catch {}
+      requestAnimationFrame(() => { if (cardsAreaRef.current) cardsAreaRef.current.style.opacity = '1' })
+      setTimeout(() => { if (cardsAreaRef.current) cardsAreaRef.current.style.transition = '' }, 220)
+    }, 160)
+  }, [collapsed, categoryId])
 
   const handleReorderProjects = useCallback((newOrder) => {
     reorderProjects(categoryId, newOrder)
@@ -432,12 +477,22 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
         <div className="category-header-row">
           <p className="active-title" style={{ marginBottom: '0' }}>{category.name}</p>
           <div className="category-header-actions">
-            <button className="category-header-btn">
-              <ExpandIcon/>
+            <button
+              className="category-header-btn"
+              onMouseDown={e => { e.preventDefault(); toggleCollapsed() }}
+            >
+              <CollapseToggleIcon collapsed={collapsed}/>
             </button>
             <button
               className="category-header-btn"
-              onMouseDown={e => { e.preventDefault(); setCreating(true); setTitle('') }}
+              onMouseDown={e => {
+                e.preventDefault()
+                if (collapsed) {
+                  setCollapsed(false)
+                  try { localStorage.setItem(`cat-collapsed-${categoryId}`, 'false') } catch {}
+                }
+                setCreating(true); setTitle('')
+              }}
             >
               <AddIcon/>
             </button>
@@ -447,6 +502,10 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
       </div>
 
       <div className="cards-area" ref={cardsAreaRef}>
+        {collapsed ? (
+          <CategoryCollapsedView category={category} />
+        ) : (
+        <>
         {category.projects.length === 0 && !creating && (
           <div className="empty-state">
             <p>No projects yet</p>
@@ -484,6 +543,8 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
               </div>
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

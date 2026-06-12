@@ -393,7 +393,19 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     }
   }, [hasChecked])
 
-  if (items.length === 0) return null
+  // Look the open todo up from the full data so it survives being deactivated (and removed from this card's items)
+  let openTodo = null, openTodoCat = null, openTodoProj = null
+  if (openTodoId != null) {
+    for (const cat of categories) {
+      for (const p of cat.projects) {
+        const t = p.todos.find(x => x.id === openTodoId)
+        if (t) { openTodo = t; openTodoCat = cat.id; openTodoProj = p; break }
+      }
+      if (openTodo) break
+    }
+  }
+
+  if (items.length === 0 && !openTodo) return null
 
   const handleCheckboxDown = (e, id) => {
     e.stopPropagation()
@@ -550,29 +562,24 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
         {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
       </button>
 
-      {(() => {
-        const openTodo = items.find(t => t.id === openTodoId)
-        if (!openTodo) return null
-        const proj = categories.find(c => c.id === openTodo.categoryId)?.projects.find(p => p.id === openTodo.projectId)
-        return createPortal(
-          <TodoDetailPage
-            todo={openTodo}
-            categoryId={openTodo.categoryId}
-            projectId={openTodo.projectId}
-            projectNotes={proj?.notes || []}
-            projectLinks={proj?.links || []}
-            onClose={() => setOpenTodoId(null)}
-          />,
-          document.getElementById('app')
-        )
-      })()}
+      {openTodo && createPortal(
+        <TodoDetailPage
+          todo={openTodo}
+          categoryId={openTodoCat}
+          projectId={openTodoProj.id}
+          projectNotes={openTodoProj.notes || []}
+          projectLinks={openTodoProj.links || []}
+          onClose={() => setOpenTodoId(null)}
+        />,
+        document.getElementById('app')
+      )}
     </div>
   )
 }
 
 // Activated notes — aggregated from all projects into one "Notes" card
 function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
-  const { reorderProjectNotes, updateProjectNote, categories } = useAppContext()
+  const { reorderProjectNotes, updateProjectNote, toggleProjectNoteActivated, categories } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const [openNoteId, setOpenNoteId] = useState(null)
@@ -745,9 +752,19 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
     requestAnimationFrame(() => card.classList.add('visible'))
   }, [])
 
-  if (activatedNotes.length === 0) return null
+  // Look the open note up from the full data so it survives being deactivated (and removed from this card's items)
+  let openNote = null
+  if (openNoteId != null) {
+    outer:
+    for (const cat of categories) {
+      for (const p of cat.projects) {
+        const n = p.notes.find(x => x.id === openNoteId)
+        if (n) { openNote = { ...n, categoryId: cat.id, projectId: p.id, projectName: p.name }; break outer }
+      }
+    }
+  }
 
-  const openNote = activatedNotes.find(n => n.id === openNoteId)
+  if (activatedNotes.length === 0 && !openNote) return null
 
   return (
     <>
@@ -799,6 +816,11 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
           note={openNote}
           onClose={() => setOpenNoteId(null)}
           onSave={handleNoteSave}
+          activated={!!openNote.activated}
+          onToggleActive={() => toggleProjectNoteActivated(openNote.categoryId, openNote.projectId, openNote.id)}
+          projectName={openNote.projectName}
+          categoryId={openNote.categoryId}
+          projectId={openNote.projectId}
         />,
         document.getElementById('app')
       )}

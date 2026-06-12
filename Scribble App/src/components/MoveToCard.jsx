@@ -1,0 +1,46 @@
+import { useState } from 'react'
+import { getCategoryAccent } from '../theme.js'
+
+// "Move to..." card — pick a destination project. Nothing applies until Save.
+// Reuses the .save-to-* styles from the homescreen "Save to..." card.
+export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave }) {
+  const [sel, setSel] = useState({ categoryId: currentCategoryId, projectId: currentProjectId })
+  const changed = sel.projectId !== currentProjectId
+
+  return (
+    <div className="move-to-card" style={topPx != null ? { top: topPx + 'px' } : undefined}>
+      <div className="save-to-header">
+        <p className="save-to-title">Move to...</p>
+        <button
+          className="save-to-cancel"
+          onMouseDown={e => { e.preventDefault(); changed ? onSave(sel) : onCancel() }}
+        >
+          {changed ? 'Save' : 'Cancel'}
+        </button>
+      </div>
+      <div className="save-to-scroll">
+        {categories.filter(c => c.projects.length > 0).map(cat => {
+          const catIdx = categories.findIndex(c2 => c2.id === cat.id)
+          const accent = getCategoryAccent(catIdx)
+          return (
+            <div key={cat.id} style={{ '--cb-base': accent.base, '--cb-dark': accent.dark, '--cb-light': accent.light, '--cb-base-rgb': accent.baseRgb }}>
+              <div className="save-to-category">{cat.name}</div>
+              {cat.projects.map((proj, i) => (
+                <div key={proj.id}>
+                  {i > 0 && <div className="save-to-divider"/>}
+                  <button
+                    className={`save-to-option${sel.projectId === proj.id ? ' selected' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); setSel({ categoryId: cat.id, projectId: proj.id }) }}
+                  >
+                    <div className={`save-to-radio${sel.projectId === proj.id ? ' filled' : ''}`}/>
+                    <span>{proj.name}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

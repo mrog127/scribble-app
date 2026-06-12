@@ -505,6 +505,100 @@
 #animation-portal { position: absolute; inset: 0; pointer-events: none; z-index: 99999; overflow: visible; }
 
 /* ---- Todo detail page ---- */
+.todo-complete-flash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* Static detail footer (list-item pages + non-edit note pages) — slim bar with the category-footer chrome */
+.detail-footer {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 3;
+  box-sizing: border-box;
+  height: 64px;
+  background: #F7F6F3;
+  border-top: 1px solid #C2C1BF;
+  box-shadow: 0 -4px 0px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: stretch;
+}
+
+.detail-footer-cell {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detail-footer-cell.right { padding: 0 16px; position: relative; }
+/* Selector box: inset 8px from top/right/bottom and from the centre divider */
+.detail-footer-cell.right.active::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  background: var(--accent-light);
+  border-radius: 4px;
+  z-index: 0;
+}
+
+.detail-footer .project-active-btn { font-size: 16px; }
+
+.detail-footer-divider {
+  width: 1px;
+  height: 24px;
+  align-self: center;
+  background: #DBDAD8;
+}
+
+.detail-footer-project-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.detail-footer-project {
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Move to... card */
+.move-to-card {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 72px; /* 8px above the 64px footer */
+  top: 200px;   /* default; overridden inline to sit 16px below the page title */
+  background: #F7F6F3;
+  border: 1px solid #C2C1BF;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+}
+
 .todo-detail-scroll {
   flex: 1 1 0;
   min-height: 0;
@@ -512,7 +606,9 @@
   overflow-x: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding: 0 32px calc(env(safe-area-inset-bottom) + 60px);
+  padding: 0 32px 24px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 6px, black 28px, black calc(100% - 24px), transparent calc(100% - 8px));
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 6px, black 28px, black calc(100% - 24px), transparent calc(100% - 8px));
 }
 .todo-detail-scroll::-webkit-scrollbar { display: none; }
 
@@ -596,8 +692,8 @@
 
 .todo-attach-panel {
   position: absolute;
-  top: 8px;
-  left: 0;
+  top: 0;
+  left: 40px;
   right: 0;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
@@ -619,7 +715,10 @@
 .todo-attach-item {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
   text-align: left;
   background: none;
   border: none;

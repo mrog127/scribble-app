@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react
 import { createPortal } from 'react-dom'
 import TodoCard from './TodoCard.jsx'
 import NoteCard, { NoteDetailPage } from './NoteCard.jsx'
+import TodoDetailPage from './TodoDetailPage.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import homepageDecoration from '../assets/Homepage decoration.png'
@@ -264,6 +265,8 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
   const [hideCompleted, setHideCompleted] = useState(() => {
     try { return localStorage.getItem('hc-activated-todos') === 'true' } catch { return false }
   })
+  const [openTodoId, setOpenTodoId] = useState(null)
+  const todoTapState = useRef({})
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const checkTimers = useRef({})
@@ -435,6 +438,25 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     }
   }
 
+  const onTodoTap = (e, id) => {
+    if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
+    const row = e.currentTarget.closest('.swipe-row')
+    if (!row) return
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
+    todoTapState.current = { startX: e.clientX, startY: e.clientY, moved: false }
+    const onMove = (e2) => {
+      const s = todoTapState.current
+      if (Math.abs(e2.clientX - s.startX) > 8 || Math.abs(e2.clientY - s.startY) > 8) s.moved = true
+    }
+    const onUp = () => {
+      if (!todoTapState.current.moved) setOpenTodoId(id)
+      cleanup()
+    }
+    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
   const handleToggleHideCompleted = () => {
     if (!hideCompleted) {
       const container = containerRef.current
@@ -482,7 +504,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                 <div
                   className={`todo-row${t.checked ? ' checked' : ''}`}
                   data-id={t.id}
-                  onPointerDown={e => { onPointerDown(e, t.id); onDragPointerDown(e, t.id) }}
+                  onPointerDown={e => { onPointerDown(e, t.id); onTodoTap(e, t.id); onDragPointerDown(e, t.id) }}
                 >
                   <div
                     className="checkbox-wrap"
@@ -510,6 +532,13 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                       <span className="source-label-text">{t.projectName}</span>
                     </div>
                   </div>
+                  {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
+                    <span className="todo-attach-indicator">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -520,6 +549,23 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
       <button ref={btnRef} className="hide-completed-btn" style={{ color: '#3D3D3D' }} onClick={handleToggleHideCompleted}>
         {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
       </button>
+
+      {(() => {
+        const openTodo = items.find(t => t.id === openTodoId)
+        if (!openTodo) return null
+        const proj = categories.find(c => c.id === openTodo.categoryId)?.projects.find(p => p.id === openTodo.projectId)
+        return createPortal(
+          <TodoDetailPage
+            todo={openTodo}
+            categoryId={openTodo.categoryId}
+            projectId={openTodo.projectId}
+            projectNotes={proj?.notes || []}
+            projectLinks={proj?.links || []}
+            onClose={() => setOpenTodoId(null)}
+          />,
+          document.getElementById('app')
+        )
+      })()}
     </div>
   )
 }

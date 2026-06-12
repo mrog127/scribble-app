@@ -1,0 +1,562 @@
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import UnderlineSvg from '../assets/Underline.svg?react'
+import { useAppContext } from '../context/AppContext.jsx'
+import { getCategoryAccent } from '../theme.js'
+import { NoteDetailPage } from './NoteCard.jsx'
+
+// Open a (possibly scheme-less) URL in a new browser tab
+function openUrl(url) {
+  if (!url) return
+  let u = url.trim()
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
+  window.open(u, '_blank', 'noopener,noreferrer')
+}
+
+// Strip the scheme for a cleaner one-line preview
+function displayUrl(url) {
+  if (!url) return ''
+  return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
+}
+
+// Plain-text preview from a note's paragraphs after the title
+function extractNotePreview(editorHTML) {
+  if (!editorHTML) return null
+  try {
+    const tmp = document.createElement('div')
+    tmp.innerHTML = editorHTML
+    const paras = [...tmp.querySelectorAll('.note-para')]
+    if (paras.length <= 1) return null
+    const text = paras.slice(1).map(p => p.textContent).join(' ').replace(/\s+/g, ' ').trim()
+    return text || null
+  } catch { return null }
+}
+
+function NoteListIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <circle cx="5" cy="7" r="1.6" fill="#595959"/>
+      <line x1="9" y1="7" x2="21" y2="7" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
+      <circle cx="5" cy="13" r="1.6" fill="#595959"/>
+      <line x1="9" y1="13" x2="21" y2="13" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
+      <circle cx="5" cy="19" r="1.6" fill="#595959"/>
+      <line x1="9" y1="19" x2="15" y2="19" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function PaperclipIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9"
+        stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg className="mc-check" width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M4 12.5L9.5 18L20 6.5" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function ActivateIcon({ activated }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <polygon
+        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+        stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
+        style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}
+      />
+    </svg>
+  )
+}
+
+function SendIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
+      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+// Row icons matching the project card note/link rows
+function NoteRowIcon({ activated }) {
+  const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
+  return (
+    <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+      <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={stroke} strokeWidth="1" fill={activated ? 'var(--accent-light)' : 'none'}/>
+      <path d="M12 3v5h5" stroke={stroke} strokeWidth="1" fill="none"/>
+      <line x1="5" y1="13" x2="15" y2="13" stroke={stroke} strokeWidth="1" strokeLinecap="round"/>
+      <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={stroke} strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function LinkRowIcon({ activated }) {
+  const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      {activated && <circle cx="12" cy="12" r="8" fill="var(--accent-light)"/>}
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+// ---- Inline composer (matches the project-card footer input) ----
+function NoteComposer({ onAdd }) {
+  const [value, setValue] = useState('')
+  const [focused, setFocused] = useState(false)
+  const [active, setActive] = useState(false)
+  const inputRef = useRef(null)
+
+  const submit = () => {
+    const text = value.trim()
+    if (!text) return
+    onAdd(text, active)
+    setValue('')
+    inputRef.current?.blur()
+  }
+
+  const sendVisible = focused || !!value.trim()
+
+  return (
+    <div className={`project-input-wrap${focused ? ' focused' : ''}`}>
+      <div className="project-input-row">
+        <input
+          ref={inputRef}
+          className="project-input"
+          placeholder="Add a note"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => requestAnimationFrame(() => setFocused(false))}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
+        />
+        <button className={`project-send-btn${sendVisible ? ' visible' : ''}`} onMouseDown={e => { e.preventDefault(); submit() }}>
+          <SendIcon/>
+        </button>
+      </div>
+      <div className="project-input-bottom">
+        <div className="project-input-divider"/>
+        <div className="project-footer-toolbar">
+          <div className="project-toolbar-left">
+            <button
+              className={`project-active-btn${active ? ' on' : ''}`}
+              onMouseDown={e => { e.preventDefault(); setActive(v => !v) }}
+            >
+              <ActivateIcon activated={active}/>
+              <span>{active ? 'Active' : 'Inactive'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LinkComposer({ onAdd }) {
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [focused, setFocused] = useState(false)
+  const [active, setActive] = useState(false)
+  const titleRef = useRef(null)
+  const urlRef = useRef(null)
+  const wrapRef = useRef(null)
+
+  const submit = () => {
+    const u = url.trim()
+    if (!u) return
+    onAdd(title.trim(), u, active)
+    setTitle('')
+    setUrl('')
+    titleRef.current?.blur()
+    urlRef.current?.blur()
+  }
+
+  const onBlur = () => requestAnimationFrame(() => {
+    const ae = document.activeElement
+    if (ae && wrapRef.current && wrapRef.current.contains(ae)) return
+    setFocused(false)
+  })
+
+  const sendVisible = focused || !!title.trim() || !!url.trim()
+
+  return (
+    <div className={`project-input-wrap link-mode${focused ? ' focused' : ''}`} ref={wrapRef}>
+      <div className="project-input-row">
+        <input
+          ref={titleRef}
+          className="project-input"
+          placeholder={focused ? 'Title your link' : 'Add a link'}
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={onBlur}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); urlRef.current?.focus() } }}
+        />
+        <button className={`project-send-btn${sendVisible ? ' visible' : ''}`} onMouseDown={e => { e.preventDefault(); submit() }}>
+          <SendIcon/>
+        </button>
+      </div>
+      <div className={`project-link-url-row${focused ? ' open' : ''}`}>
+        <div className="project-input-divider"/>
+        <input
+          ref={urlRef}
+          className="project-input project-link-url-input"
+          placeholder="Add link"
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={onBlur}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
+          tabIndex={focused ? 0 : -1}
+        />
+      </div>
+      <div className="project-input-bottom">
+        <div className="project-input-divider"/>
+        <div className="project-footer-toolbar">
+          <div className="project-toolbar-left">
+            <button
+              className={`project-active-btn${active ? ' on' : ''}`}
+              onMouseDown={e => { e.preventDefault(); setActive(v => !v) }}
+            >
+              <ActivateIcon activated={active}/>
+              <span>{active ? 'Active' : 'Inactive'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UnattachButton({ onUnattach }) {
+  return (
+    <button className="todo-unattach-btn" onMouseDown={e => { e.preventDefault(); onUnattach() }}>
+      <div className="todo-unattach-inner">
+        <PaperclipIcon/>
+        <span className="todo-unattach-label">Unattach</span>
+      </div>
+    </button>
+  )
+}
+
+function AttachedNoteRow({ note, onOpen, onUnattach, onPointerDown }) {
+  const preview = useMemo(() => extractNotePreview(note.editorHTML), [note.editorHTML])
+  return (
+    <div className="todo-swipe-row">
+      <UnattachButton onUnattach={onUnattach} />
+      <div className="todo-swipe-content" onPointerDown={e => onPointerDown(e, onOpen)}>
+        <div className="todo-attached-row">
+          <div className="todo-attached-icon"><NoteRowIcon activated={note.activated}/></div>
+          <div className="todo-attached-text">
+            <span className="todo-attached-note-title">{note.text}</span>
+            {preview && <span className="todo-attached-note-preview">{preview}</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AttachedLinkRow({ link, onUnattach, onPointerDown }) {
+  return (
+    <div className="todo-swipe-row">
+      <UnattachButton onUnattach={onUnattach} />
+      <div className="todo-swipe-content" onPointerDown={e => onPointerDown(e, () => openUrl(link.url))}>
+        <div className="todo-attached-row">
+          <div className="todo-attached-icon"><LinkRowIcon activated={link.activated}/></div>
+          <div className="todo-attached-text">
+            <span className="todo-attached-link-title">{link.title}</span>
+            <span className="todo-attached-link-url">{displayUrl(link.url)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose }) {
+  const {
+    categories,
+    toggleProjectTodo,
+    updateProjectTodoText,
+    attachNoteToTodo, detachNoteFromTodo,
+    attachLinkToTodo, detachLinkFromTodo,
+    addTodoNote, addTodoLink,
+    updateProjectNote,
+  } = useAppContext()
+
+  const [isOpen, setIsOpen] = useState(false)
+  const [noteAttachOpen, setNoteAttachOpen] = useState(false)
+  const [linkAttachOpen, setLinkAttachOpen] = useState(false)
+  const [openNoteId, setOpenNoteId] = useState(null)
+  const titleRef = useRef(null)
+  const completeBtnRef = useRef(null)
+
+  const handleToggleComplete = useCallback(() => {
+    const el = completeBtnRef.current
+    if (el) {
+      el.getAnimations().forEach(a => a.cancel())
+      const frames = todo.checked
+        ? [{ transform: 'scale(1)' }, { transform: 'scale(1.14)', offset: 0.3 }, { transform: 'scale(1)' }]
+        : [{ transform: 'scale(1)' }, { transform: 'scale(0.72)', offset: 0.18 }, { transform: 'scale(1.18)', offset: 0.52 }, { transform: 'scale(0.94)', offset: 0.78 }, { transform: 'scale(1)' }]
+      el.animate(frames, { duration: todo.checked ? 200 : 320, easing: 'ease', fill: 'none' })
+    }
+    toggleProjectTodo(categoryId, projectId, todo.id)
+  }, [todo.checked, todo.id, categoryId, projectId, toggleProjectTodo])
+
+  const accent = useMemo(() => {
+    const idx = categories.findIndex(c => c.id === categoryId)
+    return idx === -1 ? null : getCategoryAccent(idx)
+  }, [categories, categoryId])
+
+  // Slide in on mount
+  useEffect(() => { requestAnimationFrame(() => setIsOpen(true)) }, [])
+
+  // Seed the editable title once (uncontrolled so the caret behaves)
+  useEffect(() => {
+    if (titleRef.current) titleRef.current.textContent = todo.text
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todo.id])
+
+  const linkedNoteIds = (todo.linkedNoteIds || []).map(String)
+  const linkedLinkIds = (todo.linkedLinkIds || []).map(String)
+
+  const attachedNotes = useMemo(
+    () => linkedNoteIds.map(id => projectNotes.find(n => String(n.id) === id)).filter(Boolean),
+    [linkedNoteIds.join(','), projectNotes] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const attachedLinks = useMemo(
+    () => linkedLinkIds.map(id => projectLinks.find(l => String(l.id) === id)).filter(Boolean),
+    [linkedLinkIds.join(','), projectLinks] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const attachableNotes = projectNotes.filter(n => !linkedNoteIds.includes(String(n.id)))
+  const attachableLinks = projectLinks.filter(l => !linkedLinkIds.includes(String(l.id)))
+
+  const saveTitle = useCallback(() => {
+    const text = (titleRef.current?.textContent || '').trim()
+    if (text && text !== todo.text) updateProjectTodoText(categoryId, projectId, todo.id, text)
+    else if (!text && titleRef.current) titleRef.current.textContent = todo.text
+  }, [categoryId, projectId, todo.id, todo.text, updateProjectTodoText])
+
+  const handleDone = () => {
+    saveTitle()
+    setIsOpen(false)
+    setTimeout(onClose, 360)
+  }
+
+  const handleTitleKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); titleRef.current?.blur() }
+  }
+
+  // Swipe-left to reveal the Unattach button (and tap to open when closed)
+  const onRowPointerDown = useCallback((e, onTap) => {
+    if (e.target.closest('.todo-unattach-btn')) return
+    const row = e.currentTarget.closest('.todo-swipe-row')
+    if (!row) return
+    const content = row.querySelector('.todo-swipe-content')
+    const wasLeft = row.classList.contains('swiped-left')
+    const s = { startX: e.clientX, startY: e.clientY, dir: null, lastX: wasLeft ? -84 : 0 }
+
+    // Snap to open/closed based on current offset, clear inline transform so CSS takes over
+    const settle = () => {
+      if (content) { content.style.transition = ''; content.style.transform = '' }
+      if (s.lastX < -36) {
+        // Only one row open at a time — close any other open row first
+        document.querySelectorAll('.todo-swipe-row.swiped-left').forEach(r => {
+          if (r === row) return
+          r.classList.remove('swiped-left')
+          const c = r.querySelector('.todo-swipe-content')
+          if (c) { c.style.transition = ''; c.style.transform = '' }
+        })
+        row.classList.add('swiped-left')
+      } else {
+        row.classList.remove('swiped-left')
+      }
+      cleanup()
+    }
+
+    const onMove = (e2) => {
+      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
+      if (!s.dir) {
+        if (Math.abs(dy) > 8) { settle(); return }
+        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
+        else return
+      }
+      if (!content) return
+      const base = wasLeft ? -84 : 0
+      const newX = Math.max(-84, Math.min(0, base + dx))
+      s.lastX = newX
+      content.style.transition = 'none'
+      content.style.transform = `translateX(${newX}px)`
+    }
+
+    const onUp = (e2) => {
+      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
+      const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
+      if (isTap) {
+        if (content) content.style.transition = ''
+        if (wasLeft) { row.classList.remove('swiped-left'); if (content) content.style.transform = '' }
+        else onTap()
+        cleanup(); return
+      }
+      settle()
+    }
+
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', settle)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', settle)
+  }, [])
+
+  const openNote = attachedNotes.find(n => n.id === openNoteId)
+
+  return (
+    <div
+      className={`note-detail-page${isOpen ? ' open' : ''}`}
+      style={accent ? {
+        '--accent-base': accent.base,
+        '--accent-dark': accent.dark,
+        '--accent-light': accent.light,
+        '--accent-base-rgb': accent.baseRgb,
+      } : undefined}
+    >
+      <div className="note-detail-header">
+        <NoteListIcon/>
+        <span className="note-scroll-title" />
+        <button className="note-detail-done" onClick={handleDone}>Done</button>
+      </div>
+
+      <div className="todo-detail-scroll">
+        <div className="todo-detail-underline">
+          <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
+        </div>
+
+        <div
+          ref={titleRef}
+          className="todo-detail-title"
+          contentEditable
+          suppressContentEditableWarning
+          autoCapitalize="sentences"
+          onKeyDown={handleTitleKeyDown}
+          onBlur={saveTitle}
+        />
+
+        <button
+          ref={completeBtnRef}
+          className={`mark-complete-btn${todo.checked ? ' done' : ''}`}
+          onClick={handleToggleComplete}
+        >
+          {todo.checked ? (<><CheckIcon/> Complete!</>) : 'Mark as Complete'}
+        </button>
+
+        {/* ---- Notes ---- */}
+        <div className="todo-section">
+          <div className="todo-section-header">
+            <span className="todo-section-title">Notes</span>
+            {attachableNotes.length > 0 && (
+              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(v => !v) }}>
+                <PaperclipIcon/><span>Attach</span>
+              </button>
+            )}
+          </div>
+
+          <div className="todo-attach-anchor">
+            <div className={`todo-attach-panel${noteAttachOpen ? ' open' : ''}`}>
+              {attachableNotes.length === 0 ? (
+                <div className="todo-attach-empty">No other notes in this project</div>
+              ) : attachableNotes.map(n => {
+                const preview = extractNotePreview(n.editorHTML)
+                return (
+                  <button
+                    key={n.id}
+                    className="todo-attach-item"
+                    onMouseDown={e => { e.preventDefault(); attachNoteToTodo(categoryId, projectId, todo.id, n.id); setNoteAttachOpen(false) }}
+                  >
+                    <span className="note-text">{n.text}</span>
+                    {preview && <span className="note-preview-text">{preview}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {attachedNotes.map(n => (
+            <AttachedNoteRow
+              key={n.id}
+              note={n}
+              onOpen={() => setOpenNoteId(n.id)}
+              onUnattach={() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)}
+              onPointerDown={onRowPointerDown}
+            />
+          ))}
+
+          <div className="todo-composer">
+            <NoteComposer onAdd={(text, active) => addTodoNote(categoryId, projectId, todo.id, text, active)} />
+          </div>
+        </div>
+
+        {/* ---- Links ---- */}
+        <div className="todo-section">
+          <div className="todo-section-header">
+            <span className="todo-section-title">Links</span>
+            {attachableLinks.length > 0 && (
+              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(v => !v) }}>
+                <PaperclipIcon/><span>Attach</span>
+              </button>
+            )}
+          </div>
+
+          <div className="todo-attach-anchor">
+            <div className={`todo-attach-panel${linkAttachOpen ? ' open' : ''}`}>
+              {attachableLinks.length === 0 ? (
+                <div className="todo-attach-empty">No other links in this project</div>
+              ) : attachableLinks.map(l => (
+                <button
+                  key={l.id}
+                  className="todo-attach-item"
+                  onMouseDown={e => { e.preventDefault(); attachLinkToTodo(categoryId, projectId, todo.id, l.id); setLinkAttachOpen(false) }}
+                >
+                  <span className="note-text">{l.title}</span>
+                  <span className="note-preview-text">{displayUrl(l.url)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {attachedLinks.map(l => (
+            <AttachedLinkRow
+              key={l.id}
+              link={l}
+              onUnattach={() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)}
+              onPointerDown={onRowPointerDown}
+            />
+          ))}
+
+          <div className="todo-composer">
+            <LinkComposer onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />
+          </div>
+        </div>
+      </div>
+
+      {openNote && createPortal(
+        <NoteDetailPage
+          note={{ ...openNote, categoryId }}
+          onClose={() => setOpenNoteId(null)}
+          onSave={(noteId, html, text) => updateProjectNote(categoryId, projectId, noteId, html, text)}
+        />,
+        document.getElementById('app')
+      )}
+    </div>
+  )
+}

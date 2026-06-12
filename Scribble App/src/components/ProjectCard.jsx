@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } fr
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
+import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -396,6 +397,7 @@ export default function ProjectCard({ categoryId, project }) {
   const [linkUrlValue, setLinkUrlValue] = useState('')
   const [inputFocused, setInputFocused] = useState(false)
   const [openNoteId, setOpenNoteId] = useState(null)
+  const [openTodoId, setOpenTodoId] = useState(null)
   const [addAsActive, setAddAsActive] = useState(false)
   const [addType, setAddType] = useState('list')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -915,6 +917,26 @@ export default function ProjectCard({ categoryId, project }) {
     document.addEventListener('pointerup', onUp)
   }, [])
 
+  const todoTapState = useRef({})
+  const onTodoTap = useCallback((e, id) => {
+    if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
+    const row = e.currentTarget.closest('.swipe-row')
+    if (!row) return
+    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
+    todoTapState.current = { startX: e.clientX, startY: e.clientY, moved: false }
+    const onMove = (e2) => {
+      const s = todoTapState.current
+      if (Math.abs(e2.clientX - s.startX) > 8 || Math.abs(e2.clientY - s.startY) > 8) s.moved = true
+    }
+    const onUp = () => {
+      if (!todoTapState.current.moved) setOpenTodoId(id)
+      cleanup()
+    }
+    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }, [])
+
   const addItem = useCallback(() => {
     if (addType === 'link') {
       const url = linkUrlValue.trim()
@@ -957,6 +979,7 @@ export default function ProjectCard({ categoryId, project }) {
     ? (inputFocused || !!inputValue.trim() || !!linkUrlValue.trim())
     : (inputFocused || !!inputValue.trim())
   const openNote = project.notes.find(n => n.id === openNoteId)
+  const openTodo = project.todos.find(t => t.id === openTodoId)
 
   return (
     <>
@@ -1077,7 +1100,7 @@ export default function ProjectCard({ categoryId, project }) {
                       <div
                         className={`todo-row${t.checked ? ' checked' : ''}`}
                         data-id={t.id}
-                        onPointerDown={e => { onPointerDown(e, t.id); onTodoDrag(e, t.id) }}
+                        onPointerDown={e => { onPointerDown(e, t.id); onTodoTap(e, t.id); onTodoDrag(e, t.id) }}
                       >
                         <div
                           className="checkbox-wrap"
@@ -1101,6 +1124,13 @@ export default function ProjectCard({ categoryId, project }) {
                         <div className="item-content">
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                         </div>
+                        {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
+                          <span className="todo-attach-indicator">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                              <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1284,6 +1314,18 @@ export default function ProjectCard({ categoryId, project }) {
           note={openNote}
           onClose={() => setOpenNoteId(null)}
           onSave={handleNoteSave}
+        />,
+        document.getElementById('app')
+      )}
+
+      {openTodo && createPortal(
+        <TodoDetailPage
+          todo={openTodo}
+          categoryId={categoryId}
+          projectId={project.id}
+          projectNotes={project.notes}
+          projectLinks={project.links}
+          onClose={() => setOpenTodoId(null)}
         />,
         document.getElementById('app')
       )}

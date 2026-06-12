@@ -12,6 +12,23 @@ const DEFAULT_PROJECT = { id: 'proj-scheduling', category_id: 'personal', name: 
 
 const db = (promise) => promise.then(() => {}) // fire-and-forget helper
 
+// Normalize a linked-id column into a clean array of string ids.
+// Handles: a real array, a Postgres array literal string "{a,b}", a JSON string "[a,b]", "{}", or null.
+function normalizeIds(v) {
+  if (Array.isArray(v)) return v.map(x => String(x))
+  if (typeof v === 'string') {
+    const s = v.trim()
+    if (!s || s === '{}' || s === '[]') return []
+    const inner = (s.startsWith('{') || s.startsWith('[')) ? s.slice(1, -1) : s
+    return inner.split(',').map(x => x.replace(/^["']|["']$/g, '').trim()).filter(Boolean)
+  }
+  return []
+}
+// Fire-and-forget, but surface DB errors to the console (e.g. missing column / stale schema cache)
+const dbw = (promise, label) => promise.then(({ error }) => {
+  if (error) console.error(`Supabase write failed [${label}]:`, error.message || error)
+})
+
 export function AppProvider({ children }) {
   const { user } = useAuth()
   const [categories, setCategories] = useState([])
@@ -63,7 +80,8 @@ export function AppProvider({ children }) {
           id: proj.id,
           name: proj.name,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
-            id: t.id, text: t.text, checked: t.checked, activated: t.activated
+            id: t.id, text: t.text, checked: t.checked, activated: t.activated,
+            linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
           notes: (notes || []).filter(n => n.project_id === proj.id).map(n => ({
             id: n.id, text: n.text, activated: n.activated, editorHTML: n.editor_html
@@ -203,7 +221,7 @@ export function AppProvider({ children }) {
     const sortOrder = proj?.todos.length || 0
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      todos: [...proj.todos, { id: tempId, text, checked: false, activated }]
+      todos: [...proj.todos, { id: tempId, text, checked: false, activated, linkedNoteIds: [], linkedLinkIds: [] }]
     }))
     supabase.from('todos')
       .insert({ user_id: user.id, project_id: projectId, text, checked: false, activated, sort_order: sortOrder })
@@ -274,6 +292,111 @@ export function AppProvider({ children }) {
     }))
     db(supabase.from('notes').update({ editor_html: editorHTML, ...(text ? { text } : {}) }).eq('id', noteId))
   }, [updateProject])
+
+  // ---- Todo title + attachments ----
+  const updateProjectTodoText = useCallback((categoryId, projectId, todoId, text) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, text })
+    }))
+    db(supabase.from('todos').update({ text }).eq('id', todoId))
+  }, [updateProject])
+
+  const attachNoteToTodo = useCallback((categoryId, projectId, todoId, noteId) => {
+    const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
+    if (!todo) return
+    const current = todo.linkedNoteIds || []
+    if (current.includes(noteId)) return
+    const newIds = [...current, noteId]
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: newIds })
+    }))
+    dbw(supabase.from('todos').update({ linked_note_ids: newIds }).eq('id', todoId), 'attachNote')
+  }, [updateProject])
+
+  const detachNoteFromTodo = useCallback((categoryId, projectId, todoId, noteId) => {
+    const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
+    if (!todo) return
+    const newIds = (todo.linkedNoteIds || []).filter(id => id !== noteId)
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: newIds })
+    }))
+    dbw(supabase.from('todos').update({ linked_note_ids: newIds }).eq('id', todoId), 'detachNote')
+  }, [updateProject])
+
+  const attachLinkToTodo = useCallback((categoryId, projectId, todoId, linkId) => {
+    const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
+    if (!todo) return
+    const current = todo.linkedLinkIds || []
+    if (current.includes(linkId)) return
+    const newIds = [...current, linkId]
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: newIds })
+    }))
+    dbw(supabase.from('todos').update({ linked_link_ids: newIds }).eq('id', todoId), 'attachLink')
+  }, [updateProject])
+
+  const detachLinkFromTodo = useCallback((categoryId, projectId, todoId, linkId) => {
+    const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
+    if (!todo) return
+    const newIds = (todo.linkedLinkIds || []).filter(id => id !== linkId)
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: newIds })
+    }))
+    dbw(supabase.from('todos').update({ linked_link_ids: newIds }).eq('id', todoId), 'detachLink')
+  }, [updateProject])
+
+  // Create a new note in the project AND attach it to the todo
+  const addTodoNote = useCallback((categoryId, projectId, todoId, text, activated = false) => {
+    const tempId = Date.now()
+    const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
+    const sortOrder = proj?.notes.length || 0
+    const current = proj?.todos.find(t => t.id === todoId)?.linkedNoteIds || []
+    updateProject(categoryId, projectId, proj => ({
+      ...proj,
+      notes: [...proj.notes, { id: tempId, text, activated, editorHTML: null }],
+      todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: [...current, tempId] })
+    }))
+    supabase.from('notes')
+      .insert({ user_id: user.id, project_id: projectId, text, activated, editor_html: null, sort_order: sortOrder })
+      .select().single().then(({ data }) => {
+        if (!data) return
+        const realIds = [...current, data.id]
+        updateProject(categoryId, projectId, proj => ({
+          ...proj,
+          notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n),
+          todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: (t.linkedNoteIds || []).map(x => x === tempId ? data.id : x) })
+        }))
+        dbw(supabase.from('todos').update({ linked_note_ids: realIds }).eq('id', todoId), 'addTodoNote')
+      })
+    return tempId
+  }, [user, updateProject])
+
+  // Create a new link in the project AND attach it to the todo
+  const addTodoLink = useCallback((categoryId, projectId, todoId, title, url, activated = false) => {
+    const tempId = Date.now()
+    const finalTitle = (title && title.trim()) || url
+    const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
+    const sortOrder = proj?.links.length || 0
+    const current = proj?.todos.find(t => t.id === todoId)?.linkedLinkIds || []
+    updateProject(categoryId, projectId, proj => ({
+      ...proj,
+      links: [...proj.links, { id: tempId, url, title: finalTitle, activated }],
+      todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: [...current, tempId] })
+    }))
+    supabase.from('links')
+      .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, sort_order: sortOrder })
+      .select().single().then(({ data }) => {
+        if (!data) return
+        const realIds = [...current, data.id]
+        updateProject(categoryId, projectId, proj => ({
+          ...proj,
+          links: proj.links.map(l => l.id === tempId ? { ...l, id: data.id } : l),
+          todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: (t.linkedLinkIds || []).map(x => x === tempId ? data.id : x) })
+        }))
+        dbw(supabase.from('todos').update({ linked_link_ids: realIds }).eq('id', todoId), 'addTodoLink')
+      })
+    return tempId
+  }, [user, updateProject])
 
   const toggleProjectTodoActivated = useCallback((categoryId, projectId, todoId) => {
     const cat = categoriesRef.current.find(c => c.id === categoryId)
@@ -431,6 +554,13 @@ export function AppProvider({ children }) {
       addProjectLink,
       toggleProjectTodo,
       updateProjectNote,
+      updateProjectTodoText,
+      attachNoteToTodo,
+      detachNoteFromTodo,
+      attachLinkToTodo,
+      detachLinkFromTodo,
+      addTodoNote,
+      addTodoLink,
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
       toggleProjectLinkActivated,

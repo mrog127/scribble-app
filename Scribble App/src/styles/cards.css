@@ -504,6 +504,271 @@
 
 #animation-portal { position: absolute; inset: 0; pointer-events: none; z-index: 99999; overflow: visible; }
 
+/* ---- Todo detail page ---- */
+.todo-detail-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 32px calc(env(safe-area-inset-bottom) + 60px);
+}
+.todo-detail-scroll::-webkit-scrollbar { display: none; }
+
+.todo-detail-underline { display: block; margin: 24px 0 14px; }
+
+.todo-detail-title {
+  font-family: 'Momo Signature', cursive;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 40px;
+  color: #242424;
+  outline: none;
+  caret-color: var(--accent-base);
+  word-wrap: break-word;
+  margin-bottom: 28px;
+  cursor: text;
+}
+
+.mark-complete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--accent-light);
+  border: 1px solid var(--accent-dark);
+  color: var(--accent-dark);
+  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  transform-origin: center;
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+.mark-complete-btn.done {
+  background: var(--accent-base);
+  border-color: var(--accent-dark);
+  color: #FFFFFF;
+  box-shadow: none;
+}
+.mark-complete-btn .mc-check { display: block; }
+
+.todo-section { margin-top: 40px; }
+
+.todo-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.todo-section-title {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #242424;
+}
+
+.todo-attach-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  padding: 4px;
+}
+
+.todo-attach-anchor {
+  position: relative;
+  height: 0;
+  z-index: 20;
+}
+
+.todo-attach-panel {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  border: 1px solid #C2C1BF;
+  border-radius: 8px;
+  background: #FAF9F7;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.10);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 220ms ease, opacity 160ms ease;
+}
+
+.todo-attach-panel.open {
+  max-height: 360px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.todo-attach-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  overflow: hidden;
+}
+.todo-attach-item + .todo-attach-item { border-top: 1px solid #DBDAD8; }
+.todo-attach-item:active { background: rgba(0,0,0,0.04); }
+.todo-attach-item .note-text {
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.todo-attach-empty {
+  padding: 12px 16px;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 14px;
+  color: #B5B4B2;
+}
+
+/* Paperclip indicator on list rows with attachments */
+.todo-attach-indicator {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  color: #7A7A7A;
+}
+
+.todo-attached-row {
+  padding: 12px 0;
+  cursor: pointer;
+  min-height: 64px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.todo-attached-icon {
+  width: 24px;
+  flex-shrink: 0;
+  margin-right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.todo-attached-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Swipe-to-unattach on attached note/link rows */
+.todo-swipe-row { position: relative; overflow: hidden; }
+.todo-swipe-row + .todo-swipe-row { border-top: 1px solid #DBDAD8; }
+
+.todo-swipe-content {
+  position: relative;
+  z-index: 1;
+  background: #F2F0EB;
+  transform: translateX(0);
+  transition: transform 200ms ease;
+  touch-action: pan-y;
+}
+
+.todo-unattach-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 84px;
+  padding: 8px 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.todo-swipe-row.swiped-left .todo-swipe-content { transform: translateX(-84px); }
+.todo-swipe-row.swiped-left .todo-unattach-btn { opacity: 1; pointer-events: auto; }
+
+.todo-unattach-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 72px;
+  border-radius: 4px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent-dark);
+  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  color: var(--accent-dark);
+}
+.todo-unattach-label {
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+
+.todo-attached-note-title,
+.todo-attached-link-title {
+  display: block;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #242424;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.todo-attached-note-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #7A7A7A;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.todo-attached-link-url {
+  display: block;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 16px;
+  color: var(--accent-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+}
+
+.todo-composer { margin-top: 10px; }
+.todo-composer .project-input-wrap { margin: 0; }
+
 /* ---- Project Card ---- */
 .project-card { padding-bottom: 0; }
 

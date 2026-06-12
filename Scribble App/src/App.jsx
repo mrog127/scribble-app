@@ -141,6 +141,8 @@ function AppInner() {
       // Ignore swipes that start on a swipe row, input, or contenteditable
       if (e.target.closest('.swipe-row')) return
       if (e.target.closest('input, textarea, [contenteditable]')) return
+      // Ignore swipes inside a full-screen detail page (note or list item)
+      if (e.target.closest('.note-detail-page')) return
       startX = e.clientX
       startY = e.clientY
       tracking = true

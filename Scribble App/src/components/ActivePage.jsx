@@ -1005,18 +1005,20 @@ export default function ActivePage({
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' })
   const monthDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
-  // Collect all activated items across all categories/projects as flat tagged arrays
-  const allActivatedTodos = categories.flatMap(cat =>
+  // Collect all activated items across all categories/projects as flat tagged arrays.
+  // Categories with sendToHomescreen === false keep their active items off the homescreen.
+  const homescreenCats = categories.filter(cat => cat.sendToHomescreen !== false)
+  const allActivatedTodos = homescreenCats.flatMap(cat =>
     cat.projects.flatMap(proj =>
       proj.todos.filter(t => t.activated).map(t => ({ ...t, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   )
-  const allActivatedNotes = categories.flatMap(cat =>
+  const allActivatedNotes = homescreenCats.flatMap(cat =>
     cat.projects.flatMap(proj =>
       proj.notes.filter(n => n.activated).map(n => ({ ...n, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   )
-  const allActivatedLinks = categories.flatMap(cat =>
+  const allActivatedLinks = homescreenCats.flatMap(cat =>
     cat.projects.flatMap(proj =>
       proj.links.filter(l => l.activated).map(l => ({ ...l, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { getCategoryAccent } from '../theme.js'
 
 // "Move to..." card — pick a destination project. Nothing applies until Save.
@@ -6,6 +6,19 @@ import { getCategoryAccent } from '../theme.js'
 export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave }) {
   const [sel, setSel] = useState({ categoryId: currentCategoryId, projectId: currentProjectId })
   const changed = sel.projectId !== currentProjectId
+  const scrollRef = useRef(null)
+
+  // On open, scroll so the currently selected location is centered in the view
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const selectedEl = scroller.querySelector('.save-to-option.selected')
+    if (!selectedEl) return
+    const sRect = scroller.getBoundingClientRect()
+    const eRect = selectedEl.getBoundingClientRect()
+    const delta = (eRect.top - sRect.top) - (scroller.clientHeight - eRect.height) / 2
+    scroller.scrollTop += delta
+  }, [])
 
   return (
     <div className="move-to-card" style={topPx != null ? { top: topPx + 'px' } : undefined}>
@@ -18,7 +31,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
           {changed ? 'Save' : 'Cancel'}
         </button>
       </div>
-      <div className="save-to-scroll">
+      <div className="save-to-scroll" ref={scrollRef}>
         {categories.filter(c => c.projects.length > 0).map(cat => {
           const catIdx = categories.findIndex(c2 => c2.id === cat.id)
           const accent = getCategoryAccent(catIdx)

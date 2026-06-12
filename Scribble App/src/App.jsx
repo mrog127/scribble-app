@@ -26,6 +26,28 @@ function AppInner() {
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
 
+  // Per-category expand/collapse state (persisted). Lifted here so the shared
+  // footer can show its text box only when the active category is collapsed.
+  const [collapsedMap, setCollapsedMap] = useState({})
+  const readCollapsedLS = (catId) => {
+    try { return localStorage.getItem(`cat-collapsed-${catId}`) === 'true' } catch { return false }
+  }
+  const getCollapsed = useCallback((catId) => (
+    catId in collapsedMap ? collapsedMap[catId] : readCollapsedLS(catId)
+  ), [collapsedMap])
+  const toggleCollapsed = useCallback((catId) => {
+    setCollapsedMap(prev => {
+      const cur = catId in prev ? prev[catId] : readCollapsedLS(catId)
+      const next = !cur
+      try { localStorage.setItem(`cat-collapsed-${catId}`, next ? 'true' : 'false') } catch {}
+      return { ...prev, [catId]: next }
+    })
+  }, [])
+
+  const activeCategoryCollapsed = categoryIds.includes(activeTab) && getCollapsed(activeTab)
+  // The footer shows its text box on the homescreen and on collapsed category pages.
+  const footerInputMode = activeTab === 'star' || activeCategoryCollapsed
+
   // Reset to star tab if active category tab is deleted
   useEffect(() => {
     if (activeTab !== 'star' && activeTab !== 'menu' && !categories.some(c => c.id === activeTab)) {
@@ -33,8 +55,16 @@ function AppInner() {
     }
   }, [categories]) // eslint-disable-line
 
-  // Auto-select first available project for "Save to..." panel
+  // Auto-select an available project for the "Save to..." panel.
+  // On a collapsed category page the selection is constrained to that category.
   useEffect(() => {
+    if (activeCategoryCollapsed) {
+      const cat = categories.find(c => c.id === activeTab)
+      if (!cat || cat.projects.length === 0) return
+      const valid = saveToProject?.categoryId === activeTab && cat.projects.some(p => p.id === saveToProject.projectId)
+      if (!valid) setSaveToProject({ categoryId: cat.id, projectId: cat.projects[0].id })
+      return
+    }
     // Validate current selection
     if (saveToProject) {
       const cat = categories.find(c => c.id === saveToProject.categoryId)
@@ -44,7 +74,7 @@ function AppInner() {
     const firstCat = categories.find(c => c.projects.length > 0)
     if (firstCat) setSaveToProject({ categoryId: firstCat.id, projectId: firstCat.projects[0].id })
     else setSaveToProject(null)
-  }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [categories, activeTab, activeCategoryCollapsed]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resize the phone to sit exactly above the keyboard on mobile.
   // vv.height = visible area above keyboard; vv.offsetTop = how far iOS scrolled
@@ -471,7 +501,7 @@ function AppInner() {
     if (toolbarType === 'link') {
       const url = linkUrlValue.trim()
       if (!url) return
-      if (activeTab === 'star' && saveToProject) {
+      if (footerInputMode && saveToProject) {
         addProjectLink(saveToProject.categoryId, saveToProject.projectId, inputValue.trim(), url, addAsActiveFlag)
       }
       setInputValue('')
@@ -485,8 +515,8 @@ function AppInner() {
     const text = inputValue.trim()
     if (!text) return
 
-    // Active page: route into the selected project
-    if (activeTab === 'star' && saveToProject) {
+    // Homescreen or collapsed category: route into the selected project
+    if (footerInputMode && saveToProject) {
       const { categoryId, projectId } = saveToProject
 
       if (addAsActiveFlag && (toolbarType === 'list' || toolbarType === 'note')) {
@@ -519,6 +549,10 @@ function AppInner() {
       return
     }
 
+    // Fallback applies only on the homescreen (collapsed category with no
+    // projects has nowhere to save, so do nothing there)
+    if (activeTab !== 'star') { setInputValue(''); inputRef.current?.blur(); return }
+
     // Fallback: add to local Active-page lists (no project selected)
     const inputEl = inputRef.current
     const addRowEl = inputEl?.parentElement
@@ -540,7 +574,7 @@ function AppInner() {
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
-  }, [inputValue, linkUrlValue, activeTab, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {
@@ -582,7 +616,7 @@ function AppInner() {
   return (
     <div className="app-wrap">
       <div
-        className={`phone${inputFocused && activeTab === 'star' ? ' save-panel-open' : ''}`}
+        className={`phone${inputFocused && footerInputMode ? ' save-panel-open' : ''}`}
         id="app"
         style={{
           '--accent-base': activeAccent.base,
@@ -613,6 +647,8 @@ function AppInner() {
         {activeTab !== 'star' && activeTab !== 'menu' && categoryIds.includes(activeTab) && (
           <CategoryPage
             categoryId={activeTab}
+            collapsed={getCollapsed(activeTab)}
+            onToggleCollapsed={() => toggleCollapsed(activeTab)}
             onScroll={handleScroll}
             headerOpacity={headerOpacity}
             headerTranslate={headerTranslate}
@@ -621,6 +657,7 @@ function AppInner() {
         )}
         {activeTab === 'menu' && (
           <MenuPage
+            onSelectTab={handleTabChange}
             pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
           />
         )}
@@ -655,6 +692,8 @@ function AppInner() {
           <CategoryPage
             key={`exit-${exitingTab}`}
             categoryId={exitingTab}
+            collapsed={getCollapsed(exitingTab)}
+            onToggleCollapsed={() => toggleCollapsed(exitingTab)}
             onScroll={handleScroll}
             headerOpacity={headerOpacity}
             headerTranslate={headerTranslate}
@@ -670,8 +709,8 @@ function AppInner() {
           />
         )}
 
-        {/* Save to… panel — Active page only, flex sibling to footer */}
-        {activeTab === 'star' && (
+        {/* Save to… panel — homescreen & collapsed category pages, flex sibling to footer */}
+        {footerInputMode && (
           <div className={`save-to-panel${inputFocused ? ' visible' : ''}`}>
             <div className="save-to-card">
               <div className="save-to-header">
@@ -679,10 +718,10 @@ function AppInner() {
                 <button className="save-to-cancel" onMouseDown={e => { e.preventDefault(); inputRef.current?.blur() }}>Cancel</button>
               </div>
               <div className="save-to-scroll">
-                {categories.every(c => c.projects.length === 0) && (
+                {(activeTab === 'star' ? categories : categories.filter(c => c.id === activeTab)).every(c => c.projects.length === 0) && (
                   <p className="save-to-empty">No projects yet</p>
                 )}
-                {categories.filter(c => c.projects.length > 0).map(cat => {
+                {(activeTab === 'star' ? categories : categories.filter(c => c.id === activeTab)).filter(c => c.projects.length > 0).map(cat => {
                   const catIdx = categories.findIndex(c2 => c2.id === cat.id)
                   const accent = getCategoryAccent(catIdx)
                   return (
@@ -710,7 +749,7 @@ function AppInner() {
 
         {/* Footer */}
         <div
-          className={`footer${activeTab !== 'star' ? ' category-mode' : ''}${inputFocused ? ' keyboard-open' : ''}`}
+          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}`}
           style={{
             '--accent-base': footerAccent.base,
             '--accent-dark': footerAccent.dark,

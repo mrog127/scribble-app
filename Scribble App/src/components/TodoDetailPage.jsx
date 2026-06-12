@@ -321,8 +321,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     const titleEl = titleRef.current
     const pageEl = pageRef.current
     if (titleEl && pageEl) {
+      const pageH = pageEl.getBoundingClientRect().height
       const top = titleEl.getBoundingClientRect().bottom - pageEl.getBoundingClientRect().top + 16
-      setMoveTop(Math.max(72, top))
+      // Cap at the screen midpoint so the card keeps a minimum height (footer → halfway)
+      setMoveTop(Math.min(Math.max(72, top), pageH / 2))
     }
     setMoveOpen(true)
   }, [])

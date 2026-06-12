@@ -46,8 +46,15 @@ function AddIcon() {
 function SendIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
-      <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M4 10.5 L8.5 15 L16 5.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function CancelIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
     </svg>
   )
 }
@@ -384,7 +391,7 @@ function useCardDragReorder(containerRef, projects, onReorder) {
   return { onCardHeaderPointerDown }
 }
 
-export default function CategoryPage({ categoryId, onScroll, headerOpacity, headerTranslate, pageAnimClass = '', isExiting = false }) {
+export default function CategoryPage({ categoryId, collapsed = false, onToggleCollapsed, onScroll, headerOpacity, headerTranslate, pageAnimClass = '', isExiting = false }) {
   const { categories, addProject, reorderProjects } = useAppContext()
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
@@ -392,29 +399,18 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
   const inputRef = useRef(null)
   const cardsAreaRef = useRef(null)
 
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(`cat-collapsed-${categoryId}`) === 'true' } catch { return false }
-  })
-
   const category = categories.find(c => c.id === categoryId)
 
-  // Re-sync persisted collapse state when this instance is reused for a different category
-  useEffect(() => {
-    try { setCollapsed(localStorage.getItem(`cat-collapsed-${categoryId}`) === 'true') }
-    catch { setCollapsed(false) }
-  }, [categoryId])
-
+  // Fade the cards area out, flip the (lifted) collapse state, then fade back in
   const toggleCollapsed = useCallback(() => {
-    const next = !collapsed
     const area = cardsAreaRef.current
     if (area) { area.style.transition = 'opacity 160ms ease'; area.style.opacity = '0' }
     setTimeout(() => {
-      setCollapsed(next)
-      try { localStorage.setItem(`cat-collapsed-${categoryId}`, next ? 'true' : 'false') } catch {}
+      onToggleCollapsed && onToggleCollapsed()
       requestAnimationFrame(() => { if (cardsAreaRef.current) cardsAreaRef.current.style.opacity = '1' })
       setTimeout(() => { if (cardsAreaRef.current) cardsAreaRef.current.style.transition = '' }, 220)
     }, 160)
-  }, [collapsed, categoryId])
+  }, [onToggleCollapsed])
 
   const handleReorderProjects = useCallback((newOrder) => {
     reorderProjects(categoryId, newOrder)
@@ -449,6 +445,16 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
     const t = setTimeout(() => inputRef.current?.focus(), 80)
     return () => clearTimeout(t)
   }, [creating])
+
+  const handleCancel = useCallback(() => {
+    const card = creationCardRef.current
+    if (card) {
+      card.style.transition = 'opacity 150ms ease, transform 150ms ease'
+      card.style.opacity = '0'
+      card.style.transform = 'translateY(-6px) scale(0.98)'
+    }
+    setTimeout(() => { setCreating(false); setTitle('') }, 150)
+  }, [])
 
   const handleSubmit = useCallback(() => {
     const name = title.trim()
@@ -487,10 +493,6 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
               className="category-header-btn"
               onMouseDown={e => {
                 e.preventDefault()
-                if (collapsed) {
-                  setCollapsed(false)
-                  try { localStorage.setItem(`cat-collapsed-${categoryId}`, 'false') } catch {}
-                }
                 setCreating(true); setTitle('')
               }}
             >
@@ -502,6 +504,38 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
       </div>
 
       <div className="cards-area" ref={cardsAreaRef}>
+        {creating && (
+          <div className="card card-intro new-project-card" ref={creationCardRef}>
+            <div className="project-input-wrap focused" style={{ marginTop: 0 }}>
+              <div className="project-input-row">
+                <input
+                  ref={inputRef}
+                  className="project-input"
+                  placeholder="Project name..."
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
+                />
+                {title.trim() ? (
+                  <button
+                    className="project-send-btn visible"
+                    onMouseDown={e => { e.preventDefault(); handleSubmit() }}
+                  >
+                    <SendIcon/>
+                  </button>
+                ) : (
+                  <button
+                    className="project-cancel-btn"
+                    onMouseDown={e => { e.preventDefault(); handleCancel() }}
+                  >
+                    <CancelIcon/>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {collapsed ? (
           <CategoryCollapsedView category={category} />
         ) : (
@@ -520,30 +554,6 @@ export default function CategoryPage({ categoryId, onScroll, headerOpacity, head
             />
           </div>
         ))}
-
-        {creating && (
-          <div className="card card-intro new-project-card" ref={creationCardRef}>
-            <p className="new-project-label">Title your project:</p>
-            <div className="project-input-wrap focused" style={{ marginTop: 0 }}>
-              <div className="project-input-row">
-                <input
-                  ref={inputRef}
-                  className="project-input"
-                  placeholder="Project name..."
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
-                />
-                <button
-                  className={`project-send-btn${title.trim() ? ' visible' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); handleSubmit() }}
-                >
-                  <SendIcon/>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
         </>
         )}
       </div>

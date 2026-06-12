@@ -244,8 +244,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, proj
     const titleEl = contentRef.current?.querySelector('.note-para')
     const pageEl = pageRef.current
     if (titleEl && pageEl) {
+      const pageH = pageEl.getBoundingClientRect().height
       const top = titleEl.getBoundingClientRect().bottom - pageEl.getBoundingClientRect().top + 16
-      setMoveTop(Math.max(72, top))
+      // Cap at the screen midpoint so the card keeps a minimum height (footer → halfway)
+      setMoveTop(Math.min(Math.max(72, top), pageH / 2))
     }
     setMoveOpen(true)
   }, [])

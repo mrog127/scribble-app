@@ -74,6 +74,7 @@ export function AppProvider({ children }) {
     const builtCats = (cats || []).map(cat => ({
       id: cat.id,
       name: cat.name,
+      sendToHomescreen: cat.send_to_homescreen !== false,
       projects: (projs || [])
         .filter(p => p.category_id === cat.id)
         .map(proj => ({
@@ -527,7 +528,7 @@ export function AppProvider({ children }) {
   const addCategory = useCallback((name) => {
     const id = `cat-${Date.now()}`
     const sortOrder = categoriesRef.current.length
-    setCategories(prev => [...prev, { id, name, projects: [] }])
+    setCategories(prev => [...prev, { id, name, sendToHomescreen: true, projects: [] }])
     db(supabase.from('categories').insert({ id, user_id: user.id, name, sort_order: sortOrder }))
     return id
   }, [user])
@@ -535,6 +536,14 @@ export function AppProvider({ children }) {
   const renameCategory = useCallback((id, newName) => {
     setCategories(prev => prev.map(cat => cat.id !== id ? cat : { ...cat, name: newName }))
     db(supabase.from('categories').update({ name: newName }).eq('id', id))
+  }, [])
+
+  const toggleCategoryHomescreen = useCallback((id) => {
+    const cat = categoriesRef.current.find(c => c.id === id)
+    if (!cat) return
+    const newVal = !(cat.sendToHomescreen !== false)
+    setCategories(prev => prev.map(c => c.id !== id ? c : { ...c, sendToHomescreen: newVal }))
+    dbw(supabase.from('categories').update({ send_to_homescreen: newVal }).eq('id', id), 'toggleHomescreen')
   }, [])
 
   const deleteCategory = useCallback(async (id) => {
@@ -591,6 +600,7 @@ export function AppProvider({ children }) {
       renameCategory,
       deleteCategory,
       reorderCategories,
+      toggleCategoryHomescreen,
       addProject,
       addActiveTodo,
       addActiveNote,

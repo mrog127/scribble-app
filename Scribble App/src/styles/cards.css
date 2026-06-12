@@ -474,8 +474,8 @@
 
 /* Note paragraph styles */
 .note-para { margin: 0; padding: 0; }
-.note-para.style-title { font-family: 'Momo Signature', cursive; font-size: 56px; font-weight: 700; line-height: 72px; color: #242424; margin-bottom: 32px; }
-.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; }
+.note-para.style-title { font-family: 'Momo Signature', cursive; font-size: 56px; font-weight: 700; line-height: 72px; color: #242424; margin-bottom: 32px; overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
+.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
 .note-para.style-bold { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
 .note-para.style-body { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; }
 .note-para.style-italic { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }
@@ -521,9 +521,9 @@
   box-sizing: border-box;
   height: 80px;
   padding-bottom: 16px;
-  background: #F7F6F3;
+  background: #F2F0EB;
   border-top: 1px solid #C2C1BF;
-  box-shadow: 0 -4px 0px rgba(0,0,0,0.08);
+  box-shadow: none;
   display: flex;
   align-items: stretch;
 }
@@ -588,8 +588,8 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: 72px; /* 8px above the 64px footer */
-  top: 200px;   /* default; overridden inline to sit 16px below the page title */
+  bottom: 88px; /* 8px above the 80px footer */
+  top: 200px;   /* default; overridden inline to sit 16px below the page title, capped at mid-screen */
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
@@ -982,6 +982,23 @@
   background: var(--accent-light);
   border-color: var(--accent-dark);
   box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+}
+
+.project-cancel-btn {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  background: #FFFFFF;
+  border: 1px solid #C2C1BF;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
 }
 
 .project-input-bottom {

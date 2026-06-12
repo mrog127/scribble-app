@@ -519,7 +519,8 @@
   position: relative;
   z-index: 3;
   box-sizing: border-box;
-  height: 64px;
+  height: 80px;
+  padding-bottom: 16px;
   background: #F7F6F3;
   border-top: 1px solid #C2C1BF;
   box-shadow: 0 -4px 0px rgba(0,0,0,0.08);

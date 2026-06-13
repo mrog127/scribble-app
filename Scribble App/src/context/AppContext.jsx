@@ -81,17 +81,34 @@ export function AppProvider({ children }) {
           id: proj.id,
           name: proj.name,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
-            id: t.id, text: t.text, checked: t.checked, activated: t.activated,
+            id: t.id, text: t.text, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
           notes: (notes || []).filter(n => n.project_id === proj.id).map(n => ({
-            id: n.id, text: n.text, activated: n.activated, editorHTML: n.editor_html
+            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, editorHTML: n.editor_html
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
-            id: l.id, url: l.url, title: l.title, activated: l.activated
+            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date
           })),
         }))
     }))
+
+    // Client-side fallback for scheduled activation: flip any item whose
+    // scheduled date is today or past. Mirrors the server-side daily job so
+    // items never appear stuck "scheduled" once the app is opened.
+    const pad2 = (n) => String(n).padStart(2, '0')
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+    const dueTodoIds = [], dueNoteIds = [], dueLinkIds = []
+    const isDue = (s) => s && s <= todayStr
+    builtCats.forEach(cat => cat.projects.forEach(proj => {
+      proj.todos = proj.todos.map(t => { if (isDue(t.scheduledDate)) { dueTodoIds.push(t.id); return { ...t, activated: true, scheduledDate: null } } return t })
+      proj.notes = proj.notes.map(n => { if (isDue(n.scheduledDate)) { dueNoteIds.push(n.id); return { ...n, activated: true, scheduledDate: null } } return n })
+      proj.links = proj.links.map(l => { if (isDue(l.scheduledDate)) { dueLinkIds.push(l.id); return { ...l, activated: true, scheduledDate: null } } return l })
+    }))
+    if (dueTodoIds.length) db(supabase.from('todos').update({ activated: true, scheduled_date: null }).in('id', dueTodoIds))
+    if (dueNoteIds.length) db(supabase.from('notes').update({ activated: true, scheduled_date: null }).in('id', dueNoteIds))
+    if (dueLinkIds.length) db(supabase.from('links').update({ activated: true, scheduled_date: null }).in('id', dueLinkIds))
 
     setCategories(builtCats)
     setActiveTodos((aTodos || []).map(t => ({ id: t.id, text: t.text, checked: t.checked, activated: t.activated, source: 'Active' })))
@@ -216,16 +233,17 @@ export function AppProvider({ children }) {
   }, [user])
 
   // ---- Project todos ----
-  const addProjectTodo = useCallback((categoryId, projectId, text, activated = false) => {
+  const addProjectTodo = useCallback((categoryId, projectId, text, activated = false, scheduledDate = null) => {
+    if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
     const sortOrder = proj?.todos.length || 0
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      todos: [...proj.todos, { id: tempId, text, checked: false, activated, linkedNoteIds: [], linkedLinkIds: [] }]
+      todos: [...proj.todos, { id: tempId, text, checked: false, activated, scheduledDate, linkedNoteIds: [], linkedLinkIds: [] }]
     }))
     supabase.from('todos')
-      .insert({ user_id: user.id, project_id: projectId, text, checked: false, activated, sort_order: sortOrder })
+      .insert({ user_id: user.id, project_id: projectId, text, checked: false, activated, scheduled_date: scheduledDate, sort_order: sortOrder })
       .select().single().then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
@@ -235,16 +253,17 @@ export function AppProvider({ children }) {
     return tempId
   }, [user, updateProject])
 
-  const addProjectNote = useCallback((categoryId, projectId, text, activated = false) => {
+  const addProjectNote = useCallback((categoryId, projectId, text, activated = false, scheduledDate = null) => {
+    if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
     const sortOrder = proj?.notes.length || 0
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      notes: [...proj.notes, { id: tempId, text, activated, editorHTML: null }]
+      notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }]
     }))
     supabase.from('notes')
-      .insert({ user_id: user.id, project_id: projectId, text, activated, editor_html: null, sort_order: sortOrder })
+      .insert({ user_id: user.id, project_id: projectId, text, activated, scheduled_date: scheduledDate, editor_html: null, sort_order: sortOrder })
       .select().single().then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
@@ -254,17 +273,18 @@ export function AppProvider({ children }) {
     return tempId
   }, [user, updateProject])
 
-  const addProjectLink = useCallback((categoryId, projectId, title, url, activated = false) => {
+  const addProjectLink = useCallback((categoryId, projectId, title, url, activated = false, scheduledDate = null) => {
+    if (scheduledDate) activated = false
     const tempId = Date.now()
     const finalTitle = (title && title.trim()) || url
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
     const sortOrder = proj?.links.length || 0
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      links: [...proj.links, { id: tempId, url, title: finalTitle, activated }]
+      links: [...proj.links, { id: tempId, url, title: finalTitle, activated, scheduledDate }]
     }))
     supabase.from('links')
-      .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, sort_order: sortOrder })
+      .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, scheduled_date: scheduledDate, sort_order: sortOrder })
       .select().single().then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
@@ -464,6 +484,28 @@ export function AppProvider({ children }) {
     db(supabase.from('links').update({ activated: newActivated }).eq('id', linkId))
   }, [updateProject])
 
+  // ---- Scheduled activation: set a date (or pass null to clear) ----
+  const setProjectTodoScheduled = useCallback((categoryId, projectId, todoId, dateStr) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, scheduledDate: dateStr, activated: dateStr ? false : t.activated })
+    }))
+    dbw(supabase.from('todos').update({ scheduled_date: dateStr, ...(dateStr ? { activated: false } : {}) }).eq('id', todoId), 'scheduleTodo')
+  }, [updateProject])
+
+  const setProjectNoteScheduled = useCallback((categoryId, projectId, noteId, dateStr) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, notes: proj.notes.map(n => n.id !== noteId ? n : { ...n, scheduledDate: dateStr, activated: dateStr ? false : n.activated })
+    }))
+    dbw(supabase.from('notes').update({ scheduled_date: dateStr, ...(dateStr ? { activated: false } : {}) }).eq('id', noteId), 'scheduleNote')
+  }, [updateProject])
+
+  const setProjectLinkScheduled = useCallback((categoryId, projectId, linkId, dateStr) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, links: proj.links.map(l => l.id !== linkId ? l : { ...l, scheduledDate: dateStr, activated: dateStr ? false : l.activated })
+    }))
+    dbw(supabase.from('links').update({ scheduled_date: dateStr, ...(dateStr ? { activated: false } : {}) }).eq('id', linkId), 'scheduleLink')
+  }, [updateProject])
+
   const deleteProjectTodo = useCallback((categoryId, projectId, todoId) => {
     updateProject(categoryId, projectId, proj => ({
       ...proj, todos: proj.todos.filter(t => t.id !== todoId)
@@ -627,6 +669,9 @@ export function AppProvider({ children }) {
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
       toggleProjectLinkActivated,
+      setProjectTodoScheduled,
+      setProjectNoteScheduled,
+      setProjectLinkScheduled,
       deleteProjectTodo,
       deleteProjectNote,
       deleteProjectLink,

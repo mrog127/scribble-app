@@ -1,0 +1,128 @@
+import { useRef, useCallback } from 'react'
+
+// Parse a 'YYYY-MM-DD' string as a local date (avoids UTC off-by-one).
+export function parseLocalDate(str) {
+  if (!str) return null
+  const [y, m, d] = String(str).split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(y, m - 1, d)
+}
+
+// Format a scheduled date for display. long=false → "Jun 20", long=true → "Jun 20, 2026".
+export function formatSchedule(str, long = false) {
+  const date = parseLocalDate(str)
+  if (!date) return ''
+  return date.toLocaleDateString(undefined, long
+    ? { month: 'short', day: 'numeric', year: 'numeric' }
+    : { month: 'short', day: 'numeric' })
+}
+
+// Star icon used by the Active/Inactive toggle.
+export function ActivateIcon({ activated }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <polygon
+        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+        stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
+        style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}
+      />
+    </svg>
+  )
+}
+
+// Snap a swipe row closed and clear its inline transform.
+export function closeSwipeRow(row) {
+  if (!row) return
+  row.classList.remove('swiped-left', 'swiped-right')
+  const content = row.querySelector('.swipe-content')
+  if (content) { content.style.transition = ''; content.style.transform = '' }
+}
+
+// Convert an element into a plain anchor-rect object for CalendarPopup.
+export function toAnchorRect(el) {
+  const r = el?.getBoundingClientRect()
+  return r ? { top: r.top, left: r.left, bottom: r.bottom, right: r.right, width: r.width, height: r.height } : null
+}
+
+// 1pt stroke clock icon. Inherits color via currentColor.
+export function ClockIcon({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1" />
+      <path d="M12 7.5V12L15 14" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// Distinguish a tap from a long-press on a button.
+// Returns { onPointerDown } to spread onto the element.
+// - quick release  -> onTap()
+// - held >= delay  -> onLongPress() (and the following release does NOT fire onTap)
+// - moved > 10px   -> treated as a scroll/swipe, neither fires
+export function useActivatePress({ onTap, onLongPress, delay = 500 }) {
+  const stateRef = useRef({})
+
+  const onPointerDown = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const s = stateRef.current
+    s.longFired = false
+    s.startX = e.clientX
+    s.startY = e.clientY
+
+    s.timer = setTimeout(() => {
+      s.longFired = true
+      onLongPress && onLongPress()
+    }, delay)
+
+    const onMove = (e2) => {
+      if (Math.abs(e2.clientX - s.startX) > 10 || Math.abs(e2.clientY - s.startY) > 10) {
+        clearTimeout(s.timer)
+        cleanup()
+      }
+    }
+    const onUp = () => {
+      clearTimeout(s.timer)
+      if (!s.longFired) onTap && onTap()
+      cleanup()
+    }
+    const onCancel = () => { clearTimeout(s.timer); cleanup() }
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+    }
+
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
+  }, [onTap, onLongPress, delay])
+
+  return { onPointerDown }
+}
+
+// Swipe-revealed Active button. Tap toggles active (or clears a schedule);
+// long-press opens the calendar to schedule activation. Used by project cards,
+// collapsed category views, and the homescreen activated cards.
+export function ActivateSwipeButton({ item, type, onActivateTap, onScheduleClear, onScheduleOpen }) {
+  const btnRef = useRef(null)
+  const scheduled = !!item.scheduledDate && !item.activated
+  const press = useActivatePress({
+    onTap: () => {
+      const row = btnRef.current?.closest('.swipe-row')
+      if (scheduled) onScheduleClear(type, item.id, row)
+      else onActivateTap(type, item.id, row)
+    },
+    onLongPress: () => onScheduleOpen(type, item, btnRef.current),
+  })
+  return (
+    <button ref={btnRef} className={`swipe-action-btn active-tag${item.activated ? ' activated' : ''}${scheduled ? ' scheduled' : ''}`} {...press}>
+      <div className="swipe-active-inner">
+        {scheduled ? <ClockIcon size={16}/> : <ActivateIcon activated={item.activated}/>}
+        {scheduled
+          ? <span className="swipe-action-label schedule">{formatSchedule(item.scheduledDate)}</span>
+          : <span className="swipe-action-label active-tag">{item.activated ? 'Active' : 'Inactive'}</span>}
+      </div>
+    </button>
+  )
+}

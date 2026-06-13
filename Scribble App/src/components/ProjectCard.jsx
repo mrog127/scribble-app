@@ -4,6 +4,8 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
+import { ClockIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect } from './ScheduleBits.jsx'
+import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -18,6 +20,7 @@ function displayUrl(url) {
   if (!url) return ''
   return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
 }
+
 
 // ---- Swipe hook ----
 function useSwipe() {
@@ -316,18 +319,6 @@ function TrashIcon() {
   )
 }
 
-function ActivateIcon({ activated }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <polygon
-        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-        stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
-        style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}
-      />
-    </svg>
-  )
-}
-
 function SendIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
@@ -399,6 +390,8 @@ export default function ProjectCard({ categoryId, project }) {
   const [openNoteId, setOpenNoteId] = useState(null)
   const [openTodoId, setOpenTodoId] = useState(null)
   const [addAsActive, setAddAsActive] = useState(false)
+  const [addScheduledDate, setAddScheduledDate] = useState(null)
+  const [calendarFor, setCalendarFor] = useState(null) // { type, id, current } | { type: 'create' }
   const [addType, setAddType] = useState('list')
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
@@ -420,6 +413,7 @@ export default function ProjectCard({ categoryId, project }) {
   const menuRef = useRef(null)
   const renameInputRef = useRef(null)
   const btnRef = useRef(null)
+  const addBtnRef = useRef(null)
   const showingRef = useRef(false)
   const checkTimers = useRef({})
   const checkPopping = useRef({})
@@ -430,6 +424,7 @@ export default function ProjectCard({ categoryId, project }) {
     toggleProjectTodo, deleteProjectTodo, deleteProjectNote,
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
     toggleProjectLinkActivated,
+    setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes,
     renameProject, deleteProject,
   } = useAppContext()
@@ -860,6 +855,46 @@ export default function ProjectCard({ categoryId, project }) {
     }
   }, [categoryId, project.id, categories, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated])
 
+  // ---- Scheduling ----
+  const setScheduledByType = useCallback((type, id, dateStr) => {
+    if (type === 'todo') setProjectTodoScheduled(categoryId, project.id, id, dateStr)
+    else if (type === 'note') setProjectNoteScheduled(categoryId, project.id, id, dateStr)
+    else if (type === 'link') setProjectLinkScheduled(categoryId, project.id, id, dateStr)
+  }, [categoryId, project.id, setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled])
+
+  const handleScheduleClear = useCallback((type, id, row) => {
+    closeSwipeRow(row)
+    setScheduledByType(type, id, null)
+  }, [setScheduledByType])
+
+  const handleScheduleOpen = useCallback((type, item, el) => {
+    const anchorRect = toAnchorRect(el)
+    closeSwipeRow(el?.closest('.swipe-row'))
+    setCalendarFor({ type, id: item.id, current: item.scheduledDate || null, anchorRect })
+  }, [])
+
+  const handleCalendarSelect = useCallback((dateStr) => {
+    setCalendarFor(prev => {
+      if (!prev) return null
+      if (prev.type === 'create') setAddScheduledDate(dateStr)
+      else setScheduledByType(prev.type, prev.id, dateStr)
+      return prev
+    })
+  }, [setScheduledByType])
+
+  const calAccent = useMemo(() => {
+    const idx = categories.findIndex(c => c.id === categoryId)
+    return idx === -1 ? null : getCategoryAccent(idx)
+  }, [categories, categoryId])
+
+  const addActivePress = useActivatePress({
+    onTap: () => { if (addScheduledDate) setAddScheduledDate(null); else setAddAsActive(v => !v) },
+    onLongPress: () => {
+      setAddAsActive(false)
+      setCalendarFor({ type: 'create', anchorRect: toAnchorRect(addBtnRef.current) })
+    },
+  })
+
   // Tap a link row (without swiping) to open it in a new tab
   const onLinkPointerDown = useCallback((e, url) => {
     if (e.target.closest('.swipe-action-btn')) return
@@ -944,9 +979,10 @@ export default function ProjectCard({ categoryId, project }) {
       const title = inputValue.trim()
       const inputEl = inputRef.current
       if (inputEl) pendingAnim.current = { fromRect: inputEl.getBoundingClientRect(), text: title || displayUrl(url), addType }
-      addProjectLink(categoryId, project.id, title, url, addAsActive)
+      addProjectLink(categoryId, project.id, title, url, addAsActive, addScheduledDate)
       setInputValue('')
       setLinkUrlValue('')
+      setAddScheduledDate(null)
       linkUrlRef.current?.blur()
       inputRef.current?.blur()
       return
@@ -955,11 +991,12 @@ export default function ProjectCard({ categoryId, project }) {
     if (!text) return
     const inputEl = inputRef.current
     if (inputEl) pendingAnim.current = { fromRect: inputEl.getBoundingClientRect(), text, addType }
-    if (addType === 'list') addProjectTodo(categoryId, project.id, text, addAsActive)
-    else if (addType === 'note') addProjectNote(categoryId, project.id, text, addAsActive)
+    if (addType === 'list') addProjectTodo(categoryId, project.id, text, addAsActive, addScheduledDate)
+    else if (addType === 'note') addProjectNote(categoryId, project.id, text, addAsActive, addScheduledDate)
     setInputValue('')
+    setAddScheduledDate(null)
     inputRef.current?.blur()
-  }, [inputValue, linkUrlValue, addType, addAsActive, categoryId, project.id, addProjectTodo, addProjectNote, addProjectLink])
+  }, [inputValue, linkUrlValue, addType, addAsActive, addScheduledDate, categoryId, project.id, addProjectTodo, addProjectNote, addProjectLink])
 
   // Keep the input wrap "focused" while focus moves between the title and URL fields
   const handleInputBlur = useCallback(() => {
@@ -1097,12 +1134,7 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={t.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={t.id}>
-                    <button className={`swipe-action-btn active-tag${t.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <div className="swipe-active-inner">
-                        <ActivateIcon activated={t.activated}/>
-                        <span className="swipe-action-label active-tag">{t.activated ? 'Active' : 'Inactive'}</span>
-                      </div>
-                    </button>
+                    <ActivateSwipeButton item={t} type="todo" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
                       <div className="swipe-active-inner">
                         <TrashIcon/>
@@ -1137,7 +1169,9 @@ export default function ProjectCard({ categoryId, project }) {
                         <div className="item-content">
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                         </div>
-                        {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
+                        {(t.scheduledDate && !t.activated) ? (
+                          <span className="row-schedule-indicator"><ClockIcon/></span>
+                        ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                           <span className="todo-attach-indicator">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                               <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1159,12 +1193,7 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={n.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={n.id}>
-                    <button className={`swipe-action-btn active-tag${n.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <div className="swipe-active-inner">
-                        <ActivateIcon activated={n.activated}/>
-                        <span className="swipe-action-label active-tag">{n.activated ? 'Active' : 'Inactive'}</span>
-                      </div>
-                    </button>
+                    <ActivateSwipeButton item={n} type="note" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
                       <div className="swipe-active-inner">
                         <TrashIcon/>
@@ -1188,6 +1217,9 @@ export default function ProjectCard({ categoryId, project }) {
                         <div className="item-content">
                           <NoteRowContent note={n} />
                         </div>
+                        {(n.scheduledDate && !n.activated) && (
+                          <span className="row-schedule-indicator"><ClockIcon/></span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1203,12 +1235,7 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={l.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={l.id}>
-                    <button className={`swipe-action-btn active-tag${l.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate('link', l.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <div className="swipe-active-inner">
-                        <ActivateIcon activated={l.activated}/>
-                        <span className="swipe-action-label active-tag">{l.activated ? 'Active' : 'Inactive'}</span>
-                      </div>
-                    </button>
+                    <ActivateSwipeButton item={l} type="link" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('link', l.id, e.currentTarget.closest('.swipe-row')) }}>
                       <div className="swipe-active-inner">
                         <TrashIcon/>
@@ -1229,6 +1256,9 @@ export default function ProjectCard({ categoryId, project }) {
                             <span className="note-preview-text">{displayUrl(l.url)}</span>
                           </div>
                         </div>
+                        {(l.scheduledDate && !l.activated) && (
+                          <span className="row-schedule-indicator"><ClockIcon/></span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1289,11 +1319,12 @@ export default function ProjectCard({ categoryId, project }) {
             <div className="project-footer-toolbar">
               <div className="project-toolbar-left">
                 <button
-                  className={`project-active-btn${addAsActive ? ' on' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setAddAsActive(v => !v) }}
+                  ref={addBtnRef}
+                  className={`project-active-btn${addAsActive ? ' on' : ''}${addScheduledDate ? ' scheduled' : ''}`}
+                  {...addActivePress}
                 >
-                  <ActivateIcon activated={addAsActive}/>
-                  <span>{addAsActive ? 'Active' : 'Inactive'}</span>
+                  {addScheduledDate ? <ClockIcon size={16}/> : <ActivateIcon activated={addAsActive}/>}
+                  <span>{addScheduledDate ? formatSchedule(addScheduledDate) : (addAsActive ? 'Active' : 'Inactive')}</span>
                 </button>
               </div>
               <div className="project-toolbar-divider"/>
@@ -1329,6 +1360,8 @@ export default function ProjectCard({ categoryId, project }) {
           onSave={(noteId, html, text) => updateProjectNote(openNoteCat, openNoteProj.id, noteId, html, text)}
           activated={!!openNote.activated}
           onToggleActive={() => toggleProjectNoteActivated(openNoteCat, openNoteProj.id, openNote.id)}
+          onSchedule={(date) => setProjectNoteScheduled(openNoteCat, openNoteProj.id, openNote.id, date)}
+          onClearSchedule={() => setProjectNoteScheduled(openNoteCat, openNoteProj.id, openNote.id, null)}
           projectName={openNoteProj.name}
           categoryId={openNoteCat}
           projectId={openNoteProj.id}
@@ -1346,6 +1379,16 @@ export default function ProjectCard({ categoryId, project }) {
           onClose={() => setOpenTodoId(null)}
         />,
         document.getElementById('app')
+      )}
+
+      {calendarFor && (
+        <CalendarPopup
+          anchorRect={calendarFor.anchorRect}
+          initialDate={calendarFor.type === 'create' ? addScheduledDate : calendarFor.current}
+          accent={calAccent}
+          onSelect={handleCalendarSelect}
+          onClose={() => setCalendarFor(null)}
+        />
       )}
     </>
   )

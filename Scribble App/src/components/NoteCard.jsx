@@ -194,7 +194,7 @@ function StarIcon() {
   )
 }
 
-function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, projectName, categoryId, projectId }) {
+function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId }) {
   const hasFooter = !!projectName && typeof onToggleActive === 'function'
   const { categories, moveProjectNote } = useAppContext()
   const [moveOpen, setMoveOpen] = useState(false)
@@ -693,7 +693,11 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, proj
       {hasFooter && !editing && (
         <DetailFooter
           activated={!!activated}
+          scheduledDate={note.scheduledDate}
           onToggleActive={onToggleActive}
+          onSchedule={onSchedule}
+          onClearSchedule={onClearSchedule}
+          accent={noteAccent}
           projectName={projectName}
           onProjectClick={openMove}
           menuOpen={moveOpen}

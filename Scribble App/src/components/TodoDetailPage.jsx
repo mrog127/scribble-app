@@ -289,6 +289,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     toggleProjectTodo,
     toggleProjectTodoActivated,
     toggleProjectNoteActivated,
+    setProjectTodoScheduled,
+    setProjectNoteScheduled,
     updateProjectTodoText,
     attachNoteToTodo, detachNoteFromTodo,
     attachLinkToTodo, detachLinkFromTodo,
@@ -707,7 +709,11 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
       <DetailFooter
         activated={!!todo.activated}
+        scheduledDate={todo.scheduledDate}
         onToggleActive={() => toggleProjectTodoActivated(categoryId, projectId, todo.id)}
+        onSchedule={(date) => setProjectTodoScheduled(categoryId, projectId, todo.id, date)}
+        onClearSchedule={() => setProjectTodoScheduled(categoryId, projectId, todo.id, null)}
+        accent={accent}
         projectName={projectName}
         onProjectClick={openMove}
         menuOpen={moveOpen}
@@ -720,6 +726,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           onSave={(noteId, html, text) => updateProjectNote(categoryId, projectId, noteId, html, text)}
           activated={!!openNote.activated}
           onToggleActive={() => toggleProjectNoteActivated(categoryId, projectId, openNote.id)}
+          onSchedule={(date) => setProjectNoteScheduled(categoryId, projectId, openNote.id, date)}
+          onClearSchedule={() => setProjectNoteScheduled(categoryId, projectId, openNote.id, null)}
           projectName={projectName}
           categoryId={categoryId}
           projectId={projectId}

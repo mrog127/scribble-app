@@ -1,6 +1,10 @@
 // Floating footer for the list-item and (non-edit) note detail pages.
 // Left: the Active/Inactive toggle. Right: the project this item lives in.
 
+import { useState, useRef } from 'react'
+import { ClockIcon, formatSchedule, useActivatePress } from './ScheduleBits.jsx'
+import CalendarPopup from './CalendarPopup.jsx'
+
 function FolderIcon({ active }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginRight: 8 }}>
@@ -24,16 +28,33 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent }) {
+  const [calOpen, setCalOpen] = useState(false)
+  const [anchorRect, setAnchorRect] = useState(null)
+  const btnRef = useRef(null)
+  const canSchedule = typeof onSchedule === 'function'
+  const scheduled = canSchedule && !!scheduledDate && !activated
+
+  const press = useActivatePress({
+    onTap: () => { if (scheduled) onClearSchedule(); else onToggleActive() },
+    onLongPress: () => {
+      if (!canSchedule) return
+      const r = btnRef.current?.getBoundingClientRect()
+      setAnchorRect(r ? { top: r.top, left: r.left, bottom: r.bottom, right: r.right, width: r.width, height: r.height } : null)
+      setCalOpen(true)
+    },
+  })
+
   return (
     <div className="detail-footer">
       <div className="detail-footer-cell left">
         <button
-          className={`project-active-btn${activated ? ' on' : ''}`}
-          onMouseDown={e => { e.preventDefault(); onToggleActive() }}
+          ref={btnRef}
+          className={`project-active-btn${activated ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
+          {...press}
         >
-          <ActivateIcon activated={activated}/>
-          <span>{activated ? 'Active' : 'Inactive'}</span>
+          {scheduled ? <ClockIcon size={20}/> : <ActivateIcon activated={activated}/>}
+          <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (activated ? 'Active' : 'Inactive')}</span>
         </button>
       </div>
       <div className="detail-footer-divider"/>
@@ -46,6 +67,16 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
           <span className="detail-footer-project">{projectName}</span>
         </button>
       </div>
+
+      {calOpen && (
+        <CalendarPopup
+          anchorRect={anchorRect}
+          initialDate={scheduledDate || null}
+          accent={accent}
+          onSelect={(date) => onSchedule(date)}
+          onClose={() => setCalOpen(false)}
+        />
+      )}
     </div>
   )
 }

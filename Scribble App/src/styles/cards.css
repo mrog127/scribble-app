@@ -1135,3 +1135,155 @@
   opacity: 0.85;
 }
 
+/* ---- Scheduled-activation feature ---- */
+
+/* Clock indicator on a row that is scheduled (sits where the paperclip would) */
+.row-schedule-indicator {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  color: #7A7A7A;
+}
+
+/* Scheduled state on the swipe Activate button: clock + date stacked */
+.swipe-action-btn.active-tag.scheduled .swipe-active-inner {
+  flex-direction: column;
+  gap: 2px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent-dark);
+  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  color: var(--accent-dark);
+}
+.swipe-action-btn.active-tag.scheduled .swipe-action-label.schedule {
+  display: block;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Detail-footer toggle in scheduled state: clock + date */
+.project-active-btn.scheduled { color: var(--accent-dark); }
+.project-active-btn .schedule-date { font-weight: 700; }
+
+/* ---- Calendar popup (anchored, project-card styling) ---- */
+.cal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  background: transparent;
+}
+
+.cal-card {
+  position: absolute;
+  width: 300px;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+  background: #F7F6F3;
+  border: 1px solid #C2C1BF;
+  border-radius: 8px;
+  box-shadow: 0 6px 0px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top left;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.cal-card.open { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Inner box holding the calendar — styled like an inactive text box,
+   inset 8px from the card's left, right, and bottom edges */
+.cal-body {
+  margin: 0 8px 8px;
+  padding: 10px 12px 12px;
+  background: #FAF9F7;
+  border: 1px solid #C2C1BF;
+  border-radius: 4px;
+}
+
+/* Stop iOS from selecting text / showing the copy callout on long-press */
+.swipe-row,
+.swipe-action-btn,
+.project-active-btn,
+.detail-footer,
+.detail-footer-project-btn,
+.detail-footer-project,
+.cal-card {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cal-monthnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-month {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #242424;
+}
+.cal-nav {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--accent-dark);
+}
+.cal-nav.disabled { color: #C2C1BF; pointer-events: none; }
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+.cal-weekday {
+  text-align: center;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9A9A9A;
+  padding: 4px 0;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #3D3D3D;
+}
+.cal-cell.empty { pointer-events: none; }
+.cal-cell.past { color: #C2C1BF; pointer-events: none; }
+.cal-cell.today { color: var(--accent-dark); font-weight: 700; }
+.cal-cell.selected {
+  background: var(--accent-base);
+  color: #fff;
+}
+.cal-cell.today.selected { color: #fff; }
+
+/* Header reuses .save-to-header / .save-to-title / .save-to-cancel from layout.css */
+.cal-card .save-to-header { padding: 14px 16px 8px; }
+

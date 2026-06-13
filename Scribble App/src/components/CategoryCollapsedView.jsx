@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
+import { getCategoryAccent } from '../theme.js'
+import { ActivateSwipeButton, ClockIcon, toAnchorRect } from './ScheduleBits.jsx'
+import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -342,9 +345,19 @@ function distribute(category, newOrder, type, reorderFn) {
 
 // ============ Lists (todos) ============
 function CollapsedTodosCard({ category }) {
-  const { toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderProjectTodos } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderProjectTodos, setProjectTodoScheduled } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
+  const [calFor, setCalFor] = useState(null)
+  const accent = useMemo(() => {
+    const idx = categories.findIndex(c => c.id === category.id)
+    return idx === -1 ? null : getCategoryAccent(idx)
+  }, [categories, category.id])
+  const openSchedule = useCallback((item, el) => {
+    closeSwipeRow(el?.closest('.swipe-row'))
+    setCalFor({ id: item.id, projectId: item.projectId, current: item.scheduledDate || null, anchorRect: toAnchorRect(el) })
+  }, [])
+  const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectTodoScheduled(category.id, projectId, id, null) }, [category.id, setProjectTodoScheduled])
 
   const [hideCompleted, setHideCompleted] = useState(() => {
     try { return localStorage.getItem(`hc-cat-${category.id}`) === 'true' } catch { return false }
@@ -572,9 +585,12 @@ function CollapsedTodosCard({ category }) {
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row" data-swipe-id={t.id}>
-              <button className={`swipe-action-btn active-tag${t.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate(t.id, t.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><ActivateIcon activated={t.activated}/></div>
-              </button>
+              <ActivateSwipeButton
+                item={t} type="todo"
+                onActivateTap={(_, id, row) => handleActivate(id, t.projectId, row)}
+                onScheduleClear={(_, id, row) => clearSchedule(id, t.projectId, row)}
+                onScheduleOpen={(_, item, el) => openSchedule(item, el)}
+              />
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id, t.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>
@@ -607,7 +623,9 @@ function CollapsedTodosCard({ category }) {
                       <span className="source-label-text">{t.projectName}</span>
                     </div>
                   </div>
-                  {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
+                  {(t.scheduledDate && !t.activated) ? (
+                    <span className="row-schedule-indicator"><ClockIcon/></span>
+                  ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -635,18 +653,38 @@ function CollapsedTodosCard({ category }) {
         />,
         document.getElementById('app')
       )}
+
+      {calFor && (
+        <CalendarPopup
+          anchorRect={calFor.anchorRect}
+          initialDate={calFor.current}
+          accent={accent}
+          onSelect={(d) => setProjectTodoScheduled(category.id, calFor.projectId, calFor.id, d)}
+          onClose={() => setCalFor(null)}
+        />
+      )}
     </div>
   )
 }
 
 // ============ Notes ============
 function CollapsedNotesCard({ category }) {
-  const { deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderProjectNotes } = useAppContext()
+  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderProjectNotes, setProjectNoteScheduled } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const [openNoteId, setOpenNoteId] = useState(null)
+  const [calFor, setCalFor] = useState(null)
   const cardRef = useRef(null)
   const containerRef = useRef(null)
+  const accent = useMemo(() => {
+    const idx = categories.findIndex(c => c.id === category.id)
+    return idx === -1 ? null : getCategoryAccent(idx)
+  }, [categories, category.id])
+  const openSchedule = useCallback((item, el) => {
+    closeSwipeRow(el?.closest('.swipe-row'))
+    setCalFor({ id: item.id, projectId: item.projectId, current: item.scheduledDate || null, anchorRect: toAnchorRect(el) })
+  }, [])
+  const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectNoteScheduled(category.id, projectId, id, null) }, [category.id, setProjectNoteScheduled])
 
   const allNotes = category.projects.flatMap(p =>
     p.notes.map(n => ({ ...n, projectId: p.id, projectName: p.name }))
@@ -725,9 +763,12 @@ function CollapsedNotesCard({ category }) {
           <div key={n.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row" data-swipe-id={n.id}>
-              <button className={`swipe-action-btn active-tag${n.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><ActivateIcon activated={n.activated}/></div>
-              </button>
+              <ActivateSwipeButton
+                item={n} type="note"
+                onActivateTap={(_, id, row) => handleActivate(id, n.projectId, row)}
+                onScheduleClear={(_, id, row) => clearSchedule(id, n.projectId, row)}
+                onScheduleOpen={(_, item, el) => openSchedule(item, el)}
+              />
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>
@@ -751,6 +792,9 @@ function CollapsedNotesCard({ category }) {
                       <span className="source-label-text">{n.projectName}</span>
                     </div>
                   </div>
+                  {(n.scheduledDate && !n.activated) && (
+                    <span className="row-schedule-indicator"><ClockIcon/></span>
+                  )}
                 </div>
               </div>
             </div>
@@ -771,16 +815,36 @@ function CollapsedNotesCard({ category }) {
         />,
         document.getElementById('app')
       )}
+
+      {calFor && (
+        <CalendarPopup
+          anchorRect={calFor.anchorRect}
+          initialDate={calFor.current}
+          accent={accent}
+          onSelect={(d) => setProjectNoteScheduled(category.id, calFor.projectId, calFor.id, d)}
+          onClose={() => setCalFor(null)}
+        />
+      )}
     </div>
   )
 }
 
 // ============ Links ============
 function CollapsedLinksCard({ category }) {
-  const { deleteProjectLink, toggleProjectLinkActivated } = useAppContext()
+  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled } = useAppContext()
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const linkSwipeState = useRef({})
+  const [calFor, setCalFor] = useState(null)
+  const accent = useMemo(() => {
+    const idx = categories.findIndex(c => c.id === category.id)
+    return idx === -1 ? null : getCategoryAccent(idx)
+  }, [categories, category.id])
+  const openSchedule = useCallback((item, el) => {
+    closeSwipeRow(el?.closest('.swipe-row'))
+    setCalFor({ id: item.id, projectId: item.projectId, current: item.scheduledDate || null, anchorRect: toAnchorRect(el) })
+  }, [])
+  const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectLinkScheduled(category.id, projectId, id, null) }, [category.id, setProjectLinkScheduled])
 
   const allLinks = category.projects.flatMap(p =>
     p.links.map(l => ({ ...l, projectId: p.id, projectName: p.name }))
@@ -853,9 +917,12 @@ function CollapsedLinksCard({ category }) {
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row" data-swipe-id={l.id}>
-              <button className={`swipe-action-btn active-tag${l.activated ? ' activated' : ''}`} onMouseDown={e => { e.preventDefault(); handleActivate(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><ActivateIcon activated={l.activated}/></div>
-              </button>
+              <ActivateSwipeButton
+                item={l} type="link"
+                onActivateTap={(_, id, row) => handleActivate(id, l.projectId, row)}
+                onScheduleClear={(_, id, row) => clearSchedule(id, l.projectId, row)}
+                onScheduleOpen={(_, item, el) => openSchedule(item, el)}
+              />
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>
@@ -877,12 +944,25 @@ function CollapsedLinksCard({ category }) {
                       <span className="source-label-text">{l.projectName}</span>
                     </div>
                   </div>
+                  {(l.scheduledDate && !l.activated) && (
+                    <span className="row-schedule-indicator"><ClockIcon/></span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {calFor && (
+        <CalendarPopup
+          anchorRect={calFor.anchorRect}
+          initialDate={calFor.current}
+          accent={accent}
+          onSelect={(d) => setProjectLinkScheduled(category.id, calFor.projectId, calFor.id, d)}
+          onClose={() => setCalFor(null)}
+        />
+      )}
     </div>
   )
 }

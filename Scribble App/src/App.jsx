@@ -235,18 +235,35 @@ function AppInner() {
       if (!bar) return
       const bR = bar.getBoundingClientRect()
       const tR = selected.getBoundingClientRect()
+      const vertical = window.matchMedia('(min-width: 1000px)').matches
+      const place = () => {
+        if (vertical) {
+          // Desktop: vertical stack — the selector box slides top-to-bottom, full width
+          indicator.style.top = (tR.top - bR.top) + 'px'
+          indicator.style.height = selected.offsetHeight + 'px'
+          indicator.style.left = '0px'
+          indicator.style.width = '100%'
+        } else {
+          indicator.style.left = (tR.left - bR.left) + 'px'
+          indicator.style.width = selected.offsetWidth + 'px'
+          indicator.style.top = ''
+          indicator.style.height = ''
+        }
+      }
       if (!indicatorMounted.current) {
         // Snap on first render, then enable animation
         indicator.style.transition = 'none'
-        indicator.style.left = (tR.left - bR.left) + 'px'
-        indicator.style.width = selected.offsetWidth + 'px'
+        place()
         requestAnimationFrame(() => { indicator.style.transition = ''; indicatorMounted.current = true })
       } else {
-        indicator.style.left = (tR.left - bR.left) + 'px'
-        indicator.style.width = selected.offsetWidth + 'px'
+        place()
       }
     }
     requestAnimationFrame(updateIndicator)
+    // Re-snap on resize (crossing the desktop breakpoint flips the slide axis)
+    const onResize = () => { indicatorMounted.current = false; requestAnimationFrame(updateIndicator) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [activeTab])
 
   // Update toolbar indicator
@@ -598,6 +615,11 @@ function AppInner() {
 
   const hasContent = activeTodos.length > 0 || activeNotes.length > 0
 
+  // Date for the persistent desktop sidebar header (matches the Active page)
+  const now = new Date()
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' })
+  const monthDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+
   const activeAccent = useMemo(() => {
     if (activeTab === 'star' || activeTab === 'menu') return ACCENT_COLORS[0]
     const idx = categories.findIndex(c => c.id === activeTab)
@@ -626,6 +648,12 @@ function AppInner() {
         }}
       >
 
+        {/* Persistent date header — shown in the left sidebar on desktop only */}
+        <div className="sidebar-date">
+          <p className="active-today-label">Today is</p>
+          <p className="active-day-name">{dayName},</p>
+          <p className="active-month-date">{monthDate}</p>
+        </div>
 
         {/* Entering pages — normal flex flow */}
         {activeTab === 'star' && (

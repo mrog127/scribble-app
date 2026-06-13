@@ -354,6 +354,20 @@
 }
 .note-detail-page.open { transform: translateY(0); }
 
+/* On desktop the detail page is a right-side panel that slides in
+   horizontally instead of covering the whole screen. */
+@media (min-width: 1000px) {
+  .note-detail-page {
+    left: auto;
+    right: 0;
+    width: calc((100vw - 340px) / 2);   /* half the area right of the sidebar */
+    transform: translateX(100%);
+    border-left: 1px solid #DBDAD8;
+    box-shadow: -8px 0 40px rgba(0,0,0,0.06);
+  }
+  .note-detail-page.open { transform: translateX(0); }
+}
+
 .note-detail-header {
   display: flex;
   align-items: center;

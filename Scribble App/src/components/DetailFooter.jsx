@@ -2,7 +2,7 @@
 // Left: the Active/Inactive toggle. Right: the project this item lives in.
 
 import { useState, useRef } from 'react'
-import { ClockIcon, formatSchedule, useActivatePress } from './ScheduleBits.jsx'
+import { CalendarIcon, formatSchedule, useActivatePress } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 function FolderIcon({ active }) {
@@ -53,7 +53,7 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
           className={`project-active-btn${activated ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
           {...press}
         >
-          {scheduled ? <ClockIcon size={20}/> : <ActivateIcon activated={activated}/>}
+          {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={activated}/>}
           <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (activated ? 'Active' : 'Inactive')}</span>
         </button>
       </div>

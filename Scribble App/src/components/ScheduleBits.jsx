@@ -44,12 +44,13 @@ export function toAnchorRect(el) {
   return r ? { top: r.top, left: r.left, bottom: r.bottom, right: r.right, width: r.width, height: r.height } : null
 }
 
-// 1pt stroke clock icon. Inherits color via currentColor.
-export function ClockIcon({ size = 24 }) {
+// 1pt stroke calendar icon. Inherits color via currentColor.
+export function CalendarIcon({ size = 24 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1" />
-      <path d="M12 7.5V12L15 14" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1" />
+      <path d="M3.5 9.5h17" stroke="currentColor" strokeWidth="1" />
+      <path d="M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
     </svg>
   )
 }
@@ -118,7 +119,7 @@ export function ActivateSwipeButton({ item, type, onActivateTap, onScheduleClear
   return (
     <button ref={btnRef} className={`swipe-action-btn active-tag${item.activated ? ' activated' : ''}${scheduled ? ' scheduled' : ''}`} {...press}>
       <div className="swipe-active-inner">
-        {scheduled ? <ClockIcon size={16}/> : <ActivateIcon activated={item.activated}/>}
+        {scheduled ? <CalendarIcon size={16}/> : <ActivateIcon activated={item.activated}/>}
         {scheduled
           ? <span className="swipe-action-label schedule">{formatSchedule(item.scheduledDate)}</span>
           : <span className="swipe-action-label active-tag">{item.activated ? 'Active' : 'Inactive'}</span>}

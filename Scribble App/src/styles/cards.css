@@ -584,21 +584,32 @@
 }
 
 /* Move to... card */
+.move-to-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100000; /* above the fixed detail page (z-index 50) */
+  background: transparent;
+}
+
 .move-to-card {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 88px; /* 8px above the 80px footer */
-  top: 200px;   /* default; overridden inline to sit 16px below the page title, capped at mid-screen */
+  top: 48px;
+  bottom: 48px;
+  left: 24px;
+  right: 24px;
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+  box-shadow: 0 6px 0px rgba(0,0,0,0.10);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  z-index: 30;
+  opacity: 0;
+  transform: scale(0.97);
+  transform-origin: center;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
+.move-to-card.open { opacity: 1; transform: scale(1); }
 
 .todo-detail-scroll {
   flex: 1 1 0;
@@ -1164,22 +1175,36 @@
   line-height: 1;
 }
 
-/* Detail-footer toggle in scheduled state: clock + date */
+/* Toggle in scheduled state: calendar + date */
 .project-active-btn.scheduled { color: var(--accent-dark); }
 .project-active-btn .schedule-date { font-weight: 700; }
+/* On the item detail page, the scheduled toggle reads black */
+.detail-footer .project-active-btn.scheduled { color: #242424; }
 
-/* ---- Calendar popup (anchored, project-card styling) ---- */
+/* ---- Calendar popup (centered, project-card styling) ---- */
 .cal-overlay {
   position: absolute;
   inset: 0;
   z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
 }
 
+/* While a popup is open, fade the foreground elements to 10% — but keep page
+   backgrounds opaque so pages behind (e.g. the homescreen) don't show through.
+   So we dim the *contents* of pages/detail-pages, not the page layer itself. */
+#app.dim-bg > :not(.cal-overlay):not(.move-to-overlay):not(.page):not(.note-detail-page),
+#app.dim-bg > .page > *,
+#app.dim-bg > .note-detail-page > * {
+  opacity: 0.1 !important; /* override inline opacity (e.g. scroll-driven page header) */
+  pointer-events: none; /* background is inert while a popup is open */
+  transition: opacity 180ms ease;
+}
+
 .cal-card {
-  position: absolute;
-  width: 300px;
-  max-width: calc(100% - 16px);
+  width: calc(100% - 48px); /* 24px from the left and right screen edges */
   box-sizing: border-box;
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
@@ -1187,21 +1212,13 @@
   box-shadow: 0 6px 0px rgba(0, 0, 0, 0.10);
   overflow: hidden;
   opacity: 0;
-  transform: translateY(-6px) scale(0.98);
-  transform-origin: top left;
+  transform: scale(0.97);
+  transform-origin: center;
   transition: opacity 160ms ease, transform 160ms ease;
 }
-.cal-card.open { opacity: 1; transform: translateY(0) scale(1); }
+.cal-card.open { opacity: 1; transform: scale(1); }
 
-/* Inner box holding the calendar — styled like an inactive text box,
-   inset 8px from the card's left, right, and bottom edges */
-.cal-body {
-  margin: 0 8px 8px;
-  padding: 10px 12px 12px;
-  background: #FAF9F7;
-  border: 1px solid #C2C1BF;
-  border-radius: 4px;
-}
+.cal-body { padding: 10px 16px 16px; }
 
 /* Stop iOS from selecting text / showing the copy callout on long-press */
 .swipe-row,
@@ -1279,10 +1296,10 @@
 .cal-cell.past { color: #C2C1BF; pointer-events: none; }
 .cal-cell.today { color: var(--accent-dark); font-weight: 700; }
 .cal-cell.selected {
-  background: var(--accent-base);
-  color: #fff;
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  border-radius: 4px;
 }
-.cal-cell.today.selected { color: #fff; }
 
 /* Header reuses .save-to-header / .save-to-title / .save-to-cancel from layout.css */
 .cal-card .save-to-header { padding: 14px 16px 8px; }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { parseLocalDate } from './ScheduleBits.jsx'
 
@@ -6,10 +6,10 @@ const pad = (n) => String(n).padStart(2, '0')
 const toStr = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-// Anchored date picker. Opens like a menu near anchorRect (the element it was
-// triggered from). Nothing commits until Save (mirrors the "Move to..." card).
-// Props: anchorRect (DOMRect|null), initialDate ('YYYY-MM-DD'|null), onSelect(dateStr), onClose, accent
-export default function CalendarPopup({ anchorRect, initialDate, onSelect, onClose, accent }) {
+// Centered date picker over a dim scrim. Nothing commits until Save
+// (mirrors the "Move to..." card).
+// Props: initialDate ('YYYY-MM-DD'|null), onSelect(dateStr), onClose, accent
+export default function CalendarPopup({ initialDate, onSelect, onClose, accent }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -17,30 +17,15 @@ export default function CalendarPopup({ anchorRect, initialDate, onSelect, onClo
   const init = parseLocalDate(pending) || today
   const [view, setView] = useState({ y: init.getFullYear(), m: init.getMonth() })
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState(null)
-  const cardRef = useRef(null)
 
   useEffect(() => { requestAnimationFrame(() => setOpen(true)) }, [])
 
-  // Position the card next to its anchor, flipping above if there's no room below.
-  useLayoutEffect(() => {
+  // Fade the rest of the screen to 10% while open
+  useEffect(() => {
     const app = document.getElementById('app')
-    const card = cardRef.current
-    if (!app || !card) return
-    const appRect = app.getBoundingClientRect()
-    const cardH = card.offsetHeight
-    const cardW = card.offsetWidth
-    const a = anchorRect
-    let left = a ? (a.left - appRect.left) : (appRect.width - cardW) / 2
-    left = Math.max(8, Math.min(left, appRect.width - cardW - 8))
-    const below = a ? (a.bottom - appRect.top + 6) : 80
-    const above = a ? (a.top - appRect.top - cardH - 6) : 80
-    let top
-    if (below + cardH <= appRect.height - 8) top = below
-    else if (above >= 8) top = above
-    else top = Math.max(8, appRect.height - cardH - 8)
-    setPos({ top, left })
-  }, [anchorRect, view, open])
+    app?.classList.add('dim-bg')
+    return () => app?.classList.remove('dim-bg')
+  }, [])
 
   const selected = parseLocalDate(pending)
   const startWeekday = new Date(view.y, view.m, 1).getDay()
@@ -81,12 +66,10 @@ export default function CalendarPopup({ anchorRect, initialDate, onSelect, onClo
   } : undefined
 
   return createPortal(
-    <div className="cal-overlay" onPointerDown={close} style={style}>
+    <div className={`cal-overlay${open ? ' open' : ''}`} onPointerDown={close} style={style}>
       <div
-        ref={cardRef}
         className={`cal-card${open ? ' open' : ''}`}
         onPointerDown={e => e.stopPropagation()}
-        style={pos ? { top: pos.top + 'px', left: pos.left + 'px' } : { visibility: 'hidden' }}
       >
         <div className="save-to-header">
           <p className="save-to-title">Schedule for...</p>

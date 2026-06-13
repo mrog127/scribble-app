@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { ActivateSwipeButton, ClockIcon, toAnchorRect } from './ScheduleBits.jsx'
+import { ActivateSwipeButton, CalendarIcon, toAnchorRect } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -624,7 +624,7 @@ function CollapsedTodosCard({ category }) {
                     </div>
                   </div>
                   {(t.scheduledDate && !t.activated) ? (
-                    <span className="row-schedule-indicator"><ClockIcon/></span>
+                    <span className="row-schedule-indicator"><CalendarIcon/></span>
                   ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -793,7 +793,7 @@ function CollapsedNotesCard({ category }) {
                     </div>
                   </div>
                   {(n.scheduledDate && !n.activated) && (
-                    <span className="row-schedule-indicator"><ClockIcon/></span>
+                    <span className="row-schedule-indicator"><CalendarIcon/></span>
                   )}
                 </div>
               </div>
@@ -945,7 +945,7 @@ function CollapsedLinksCard({ category }) {
                     </div>
                   </div>
                   {(l.scheduledDate && !l.activated) && (
-                    <span className="row-schedule-indicator"><ClockIcon/></span>
+                    <span className="row-schedule-indicator"><CalendarIcon/></span>
                   )}
                 </div>
               </div>

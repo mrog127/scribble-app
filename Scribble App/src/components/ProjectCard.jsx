@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { ClockIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect } from './ScheduleBits.jsx'
+import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -1170,7 +1170,7 @@ export default function ProjectCard({ categoryId, project }) {
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                         </div>
                         {(t.scheduledDate && !t.activated) ? (
-                          <span className="row-schedule-indicator"><ClockIcon/></span>
+                          <span className="row-schedule-indicator"><CalendarIcon/></span>
                         ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                           <span className="todo-attach-indicator">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -1218,7 +1218,7 @@ export default function ProjectCard({ categoryId, project }) {
                           <NoteRowContent note={n} />
                         </div>
                         {(n.scheduledDate && !n.activated) && (
-                          <span className="row-schedule-indicator"><ClockIcon/></span>
+                          <span className="row-schedule-indicator"><CalendarIcon/></span>
                         )}
                       </div>
                     </div>
@@ -1257,7 +1257,7 @@ export default function ProjectCard({ categoryId, project }) {
                           </div>
                         </div>
                         {(l.scheduledDate && !l.activated) && (
-                          <span className="row-schedule-indicator"><ClockIcon/></span>
+                          <span className="row-schedule-indicator"><CalendarIcon/></span>
                         )}
                       </div>
                     </div>
@@ -1323,7 +1323,7 @@ export default function ProjectCard({ categoryId, project }) {
                   className={`project-active-btn${addAsActive ? ' on' : ''}${addScheduledDate ? ' scheduled' : ''}`}
                   {...addActivePress}
                 >
-                  {addScheduledDate ? <ClockIcon size={16}/> : <ActivateIcon activated={addAsActive}/>}
+                  {addScheduledDate ? <CalendarIcon size={16}/> : <ActivateIcon activated={addAsActive}/>}
                   <span>{addScheduledDate ? formatSchedule(addScheduledDate) : (addAsActive ? 'Active' : 'Inactive')}</span>
                 </button>
               </div>

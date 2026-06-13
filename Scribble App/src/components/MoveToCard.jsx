@@ -1,12 +1,24 @@
-import { useState, useRef, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { getCategoryAccent } from '../theme.js'
 
 // "Move to..." card — pick a destination project. Nothing applies until Save.
-// Reuses the .save-to-* styles from the homescreen "Save to..." card.
+// Opens centered over a dim scrim. Reuses the .save-to-* styles.
 export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave }) {
   const [sel, setSel] = useState({ categoryId: currentCategoryId, projectId: currentProjectId })
   const changed = sel.projectId !== currentProjectId
   const scrollRef = useRef(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => { requestAnimationFrame(() => setOpen(true)) }, [])
+  const finish = (fn) => { setOpen(false); setTimeout(fn, 180) }
+
+  // Fade the rest of the screen to 10% while open
+  useEffect(() => {
+    const app = document.getElementById('app')
+    app?.classList.add('dim-bg')
+    return () => app?.classList.remove('dim-bg')
+  }, [])
 
   // On open, scroll so the currently selected location is centered in the view
   useLayoutEffect(() => {
@@ -20,13 +32,14 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
     scroller.scrollTop += delta
   }, [])
 
-  return (
-    <div className="move-to-card" style={topPx != null ? { top: topPx + 'px' } : undefined}>
+  return createPortal(
+    <div className={`move-to-overlay${open ? ' open' : ''}`} onPointerDown={() => finish(onCancel)}>
+    <div className={`move-to-card${open ? ' open' : ''}`} onPointerDown={e => e.stopPropagation()}>
       <div className="save-to-header">
         <p className="save-to-title">Move to...</p>
         <button
           className="save-to-cancel"
-          onMouseDown={e => { e.preventDefault(); changed ? onSave(sel) : onCancel() }}
+          onMouseDown={e => { e.preventDefault(); changed ? finish(() => onSave(sel)) : finish(onCancel) }}
         >
           {changed ? 'Save' : 'Cancel'}
         </button>
@@ -55,5 +68,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
         })}
       </div>
     </div>
+    </div>,
+    document.getElementById('app')
   )
 }

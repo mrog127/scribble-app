@@ -520,7 +520,6 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Lists</span>
-        <div className="dots-menu"><span/><span/><span/></div>
       </div>
       <div ref={containerRef}>
         {sorted.map((t, i) => {
@@ -811,7 +810,6 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
       <div className="card card-intro" ref={cardRef}>
         <div className="card-header">
           <span className="card-title">Notes</span>
-          <div className="dots-menu"><span/><span/><span/></div>
         </div>
         <div ref={containerRef}>
           {activatedNotes.map((n, i) => {
@@ -997,7 +995,6 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Links</span>
-        <div className="dots-menu"><span/><span/><span/></div>
       </div>
       <div ref={containerRef}>
         {items.map((l, i) => {

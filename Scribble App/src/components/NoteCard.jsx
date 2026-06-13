@@ -866,7 +866,6 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
       <div className="card card-intro" id="notesCard" ref={cardRef}>
         <div className="card-header">
           <span className="card-title">Notes</span>
-          <div className="dots-menu"><span/><span/><span/></div>
         </div>
 
         <div id="notes-container" ref={containerRef}>

@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { ActivateSwipeButton, CalendarIcon, toAnchorRect } from './ScheduleBits.jsx'
+import { ActivateSwipeButton, CalendarIcon, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -376,16 +376,10 @@ function CollapsedTodosCard({ category }) {
     p.todos.map(t => ({ ...t, projectId: p.id, projectName: p.name }))
   )
 
+  const uncheckedOrdered = groupByActivation(allTodos.filter(t => !t.checked))
   const sorted = hideCompleted
-    ? [
-        ...allTodos.filter(t => !t.checked && t.activated),
-        ...allTodos.filter(t => !t.checked && !t.activated),
-      ]
-    : [
-        ...allTodos.filter(t => !t.checked && t.activated),
-        ...allTodos.filter(t => !t.checked && !t.activated),
-        ...allTodos.filter(t => t.checked),
-      ]
+    ? uncheckedOrdered
+    : [...uncheckedOrdered, ...allTodos.filter(t => t.checked)]
   const uncheckedCount = allTodos.filter(t => !t.checked).length
   const hasChecked = allTodos.some(t => t.checked)
   const checkedCount = allTodos.filter(t => t.checked).length
@@ -578,7 +572,6 @@ function CollapsedTodosCard({ category }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Lists</span>
-        <div className="dots-menu"><span/><span/><span/></div>
       </div>
       <div ref={containerRef}>
         {sorted.map((t, i) => (
@@ -686,9 +679,9 @@ function CollapsedNotesCard({ category }) {
   }, [])
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectNoteScheduled(category.id, projectId, id, null) }, [category.id, setProjectNoteScheduled])
 
-  const allNotes = category.projects.flatMap(p =>
+  const allNotes = groupByActivation(category.projects.flatMap(p =>
     p.notes.map(n => ({ ...n, projectId: p.id, projectName: p.name }))
-  )
+  ))
 
   const { onPointerDown } = useSwipe()
 
@@ -756,7 +749,6 @@ function CollapsedNotesCard({ category }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Notes</span>
-        <div className="dots-menu"><span/><span/><span/></div>
       </div>
       <div ref={containerRef}>
         {allNotes.map((n, i) => (
@@ -846,9 +838,9 @@ function CollapsedLinksCard({ category }) {
   }, [])
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectLinkScheduled(category.id, projectId, id, null) }, [category.id, setProjectLinkScheduled])
 
-  const allLinks = category.projects.flatMap(p =>
+  const allLinks = groupByActivation(category.projects.flatMap(p =>
     p.links.map(l => ({ ...l, projectId: p.id, projectName: p.name }))
-  )
+  ))
 
   useEffect(() => {
     const card = cardRef.current
@@ -910,7 +902,6 @@ function CollapsedLinksCard({ category }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Links</span>
-        <div className="dots-menu"><span/><span/><span/></div>
       </div>
       <div ref={containerRef}>
         {allLinks.map((l, i) => (

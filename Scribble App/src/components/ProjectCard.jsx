@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect } from './ScheduleBits.jsx'
+import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -463,16 +463,13 @@ export default function ProjectCard({ categoryId, project }) {
   const { onPointerDown } = useSwipe()
 
   // ---- Sorted todos: activated first, then unchecked, then checked ----
+  // Order: active → scheduled → rest, with checked todos last
+  const uncheckedOrdered = groupByActivation(project.todos.filter(t => !t.checked))
   const sortedTodos = hideCompleted
-    ? [
-        ...project.todos.filter(t => !t.checked && t.activated),
-        ...project.todos.filter(t => !t.checked && !t.activated),
-      ]
-    : [
-        ...project.todos.filter(t => !t.checked && t.activated),
-        ...project.todos.filter(t => !t.checked && !t.activated),
-        ...project.todos.filter(t => t.checked),
-      ]
+    ? uncheckedOrdered
+    : [...uncheckedOrdered, ...project.todos.filter(t => t.checked)]
+  const sortedNotes = groupByActivation(project.notes)
+  const sortedLinks = groupByActivation(project.links)
   const uncheckedCount = project.todos.filter(t => !t.checked).length
   const hasChecked = project.todos.some(t => t.checked)
   const checkedCount = project.todos.filter(t => t.checked).length
@@ -599,7 +596,7 @@ export default function ProjectCard({ categoryId, project }) {
 
   // ---- Drag reorder ----
   const { onDragPointerDown: onTodoDrag } = useDragReorder(todoContainerRef, sortedTodos, handleTodoReorder, uncheckedCount)
-  const { onDragPointerDown: onNoteDrag } = useDragReorder(noteContainerRef, project.notes, handleNoteReorder, undefined)
+  const { onDragPointerDown: onNoteDrag } = useDragReorder(noteContainerRef, sortedNotes, handleNoteReorder, undefined)
 
   // ---- FLIP animation when checkbox re-sorts the list ----
   useLayoutEffect(() => {
@@ -1189,7 +1186,7 @@ export default function ProjectCard({ categoryId, project }) {
           {/* ---- Notes ---- */}
           {displayType === 'note' && (
             <div ref={noteContainerRef}>
-              {project.notes.map((n, i) => (
+              {sortedNotes.map((n, i) => (
                 <div key={n.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={n.id}>
@@ -1231,7 +1228,7 @@ export default function ProjectCard({ categoryId, project }) {
           {/* ---- Links ---- */}
           {displayType === 'link' && (
             <div ref={linkContainerRef}>
-              {project.links.map((l, i) => (
+              {sortedLinks.map((l, i) => (
                 <div key={l.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className="swipe-row" data-swipe-id={l.id}>

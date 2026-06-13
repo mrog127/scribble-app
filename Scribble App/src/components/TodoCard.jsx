@@ -573,7 +573,6 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
     <div className="card card-intro" id="listsCard" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Lists</span>
-        <div className="dots-menu"><span/><span/><span/></div>
       </div>
 
       <div id="lists-container" ref={containerRef}>

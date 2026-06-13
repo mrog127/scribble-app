@@ -17,6 +17,16 @@ export function formatSchedule(str, long = false) {
     : { month: 'short', day: 'numeric' })
 }
 
+// Order a list of items: active first, then scheduled, then the rest.
+// Stable within each group (preserves incoming order, e.g. sort_order).
+export function groupByActivation(items) {
+  return [
+    ...items.filter(i => i.activated),
+    ...items.filter(i => !i.activated && i.scheduledDate),
+    ...items.filter(i => !i.activated && !i.scheduledDate),
+  ]
+}
+
 // Star icon used by the Active/Inactive toggle.
 export function ActivateIcon({ activated }) {
   return (

@@ -162,7 +162,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .cards-area {
-  padding: 0 16px;
+  padding: 0 16px 24px;
   position: relative;
   z-index: 2;
 }

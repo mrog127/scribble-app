@@ -528,7 +528,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
           return (
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={t.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }}>
+            <div className={`swipe-row${t.id === openTodoId ? ' row-open' : ''}`} data-swipe-id={t.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }}>
               <ActivatedSwipeButton id={t.id} onTap={handleDeactivate} onLongPress={openSchedule} />
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id) }}>
                 <div className="swipe-active-inner"><TrashSvg/></div>
@@ -818,7 +818,7 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
             return (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
-              <div className="swipe-row" data-swipe-id={n.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { onNotePointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+              <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { onNotePointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
                 <ActivatedSwipeButton id={n.id} onTap={handleDeactivate} onLongPress={openSchedule} />
                 <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>
                   <div className="swipe-active-inner"><TrashSvg/></div>

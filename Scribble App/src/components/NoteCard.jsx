@@ -872,7 +872,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
           {notes.map((n, i) => (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
-              <div className="swipe-row" data-swipe-id={n.id} data-swipe-type="note" onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
+              <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id} data-swipe-type="note" onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
                 <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
                   <div className="swipe-active-inner">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

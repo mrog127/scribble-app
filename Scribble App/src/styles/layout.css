@@ -357,6 +357,18 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   85.714% { fill: #FFE1FD; }
   100%    { fill: #E1E9FF; }
 }
+/* Home label cycles through the same dark colours as the star, at the same rate */
+@keyframes home-label-cycle {
+  0%      { color: #3F5999; }
+  14.286% { color: #993F3F; }
+  28.571% { color: #229026; }
+  42.857% { color: #99633F; }
+  57.143% { color: #6B3F99; }
+  71.429% { color: #99813F; }
+  85.714% { color: #993F95; }
+  100%    { color: #3F5999; }
+}
+
 .star-active .icon-tab.selected svg {
   transform: scale(1.1);
 }
@@ -845,7 +857,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     padding-left: 340px;
     -webkit-mask-image: none;
     mask-image: none;
-    transition: padding-right 350ms ease, opacity 200ms ease;
+    transition: padding 350ms ease, opacity 200ms ease;
   }
   .cards-area {
     padding: 48px 48px 56px 28px;   /* top aligns with the sidebar "Today is" label */
@@ -873,7 +885,9 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .page-header { padding: 28px 48px 6px 28px; }
   /* Category header: the title's baseline aligns with the sidebar day-name
      ("Thursday,") baseline, and the gap to the first card is exactly 24px. */
-  .category-page .page-header { padding: 89px 48px 0 28px; }
+  /* Cap the header at the cards' width (left-aligned) so the title + icons
+     never extend past the right edge of the cards below. */
+  .category-page .page-header { padding: 89px 48px 0 28px; max-width: 880px; }
   .category-page .underline-img { margin-bottom: 24px !important; }
   .category-page .cards-area { padding-top: 0; }
 
@@ -943,6 +957,15 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .tab-bar > .icon-tab:first-of-type::after { content: 'Home'; }
   .tab-bar > .icon-tab:last-of-type::after  { content: 'Pages'; }
 
+  /* Home label: match category-tab weight, sit 8px from the star, and cycle
+     through the star's dark colours (same rate/colours) when selected. */
+  .tab-bar > .icon-tab:first-of-type { gap: 8px; }
+  .tab-bar > .icon-tab:first-of-type::after { font-weight: 500; }
+  .tab-bar.star-active .icon-tab.selected::after {
+    font-weight: 600;   /* match a selected category tab label */
+    animation: home-label-cycle 35s linear infinite;
+  }
+
   /* Categories list fills the middle; the menu (Pages) sinks to the bottom */
   .tabs-scroll {
     flex: 1;
@@ -957,6 +980,13 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
 
   /* Selected colour comes from base rules; the sliding box is the indicator */
+
+  /* Hover: neutral 2% black highlight on all tabs, 4px radius */
+  .tab-bar > .icon-tab:hover:not(.selected),
+  .tabs-scroll .text-tab:hover:not(.selected) {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
+  }
 
   /* Focused-input toolbar sits at the top of the nav area, not stretched */
   .input-toolbar {
@@ -989,7 +1019,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* ---- Detail page open: split the area right of the sidebar evenly
      between the cards column and the detail panel ---- */
   .phone:has(.note-detail-page.open) .page {
-    padding-right: calc((100vw - 340px) / 2);
+    padding-right: calc((100% - 340px) / 2);
   }
   .phone:has(.note-detail-page.open) .cards-area {
     max-width: none;   /* let the cards fill their half of the split */
@@ -998,13 +1028,60 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* "Move to" / "Schedule" popups open over the right panel only */
   .phone:has(.note-detail-page.open) .move-to-overlay,
   .phone:has(.note-detail-page.open) .cal-overlay {
-    left: calc(340px + (100vw - 340px) / 2);
+    left: calc(340px + (100% - 340px) / 2);
   }
   /* ...and only the detail panel dims behind them — sidebar + cards stay lit */
   #app.dim-bg:has(.note-detail-page.open) > .page > *,
   #app.dim-bg:has(.note-detail-page.open) > :not(.cal-overlay):not(.move-to-overlay):not(.page):not(.note-detail-page) {
     opacity: 1 !important;
     pointer-events: auto !important;
+  }
+}
+
+/* Narrower desktop (1000–1240px): there isn't room for sidebar + two columns,
+   so when a detail page opens, hide the sidebar and split the whole window
+   evenly between the cards (now the left column) and the open detail page. */
+@media (min-width: 1000px) and (max-width: 1240px) {
+  .phone:has(.note-detail-page.open) .sidebar-date,
+  .phone:has(.note-detail-page.open) .footer,
+  .phone:has(.note-detail-page.open) .save-to-panel {
+    display: none;
+  }
+  .phone:has(.note-detail-page.open) .page {
+    padding-left: 0;
+    padding-right: 50%;
+  }
+  .phone:has(.note-detail-page.open) .note-detail-page {
+    width: 50%;
+  }
+  /* Popups confined to the right (detail) half */
+  .phone:has(.note-detail-page.open) .move-to-overlay,
+  .phone:has(.note-detail-page.open) .cal-overlay {
+    left: 50%;
+  }
+}
+
+/* Beyond 1300px, stop widening the contents — cap the app at 1300px and centre
+   it. The transform makes .phone the containing block for its fixed children
+   (sidebar, detail panel, popups) so they track the centred app instead of the
+   viewport; the layout calcs above are already %-relative to the app. */
+@media (min-width: 1300px) {
+  .phone {
+    max-width: 1300px;
+    transform: translateX(0);
+  }
+  /* When a detail page is open, fill the right margin (outside the centred app)
+     with the detail page's background so it reads as extending to the window edge. */
+  .app-wrap { position: relative; }
+  .app-wrap:has(.note-detail-page.open)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: calc((100vw - 1300px) / 2);
+    background: #F7F6F3;   /* matches the detail page background */
+    pointer-events: none;
   }
 }
 

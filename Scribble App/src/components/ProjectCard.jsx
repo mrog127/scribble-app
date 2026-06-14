@@ -1130,7 +1130,7 @@ export default function ProjectCard({ categoryId, project }) {
               {sortedTodos.map((t, i) => (
                 <div key={t.id}>
                   {i > 0 && <div className="divider"/>}
-                  <div className="swipe-row" data-swipe-id={t.id}>
+                  <div className={`swipe-row${t.id === openTodoId ? ' row-open' : ''}`} data-swipe-id={t.id}>
                     <ActivateSwipeButton item={t} type="todo" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
                       <div className="swipe-active-inner">
@@ -1189,7 +1189,7 @@ export default function ProjectCard({ categoryId, project }) {
               {sortedNotes.map((n, i) => (
                 <div key={n.id}>
                   {i > 0 && <div className="divider"/>}
-                  <div className="swipe-row" data-swipe-id={n.id}>
+                  <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id}>
                     <ActivateSwipeButton item={n} type="note" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
                     <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
                       <div className="swipe-active-inner">

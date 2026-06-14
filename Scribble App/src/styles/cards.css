@@ -283,6 +283,24 @@
   transition: transform 200ms ease;
 }
 
+/* Hover (mouse only): highlight a card row in 50% of its accent light colour.
+   Same inset box as the open-row selector; an open row's full-opacity box
+   (defined later) overrides this when both apply. */
+@media (hover: hover) {
+  .swipe-row:hover .swipe-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+
 /* Hide completed button */
 .hide-completed-btn {
   display: none;
@@ -360,12 +378,39 @@
   .note-detail-page {
     left: auto;
     right: 0;
-    width: calc((100vw - 340px) / 2);   /* half the area right of the sidebar */
+    width: calc((100% - 340px) / 2);   /* half the area right of the sidebar (relative to the app) */
     transform: translateX(100%);
+    background: #F7F6F3;   /* match the project card fill */
     border-left: 1px solid #DBDAD8;
-    box-shadow: -8px 0 40px rgba(0,0,0,0.06);
+    box-shadow: -8px 0 0 rgba(0,0,0,0.06);
   }
   .note-detail-page.open { transform: translateX(0); }
+
+  /* No home-indicator gap needed on desktop — drop the 16px beneath the footer */
+  .detail-footer {
+    height: 64px;
+    padding-bottom: 0;
+  }
+
+  /* The row whose detail page is open gets a selector box: accent-light fill,
+     full row height, inset to the divider width (16px), 4px radius; label → accent-dark. */
+  .swipe-row.row-open .swipe-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    background: color-mix(in srgb, var(--accent-light) 50%, transparent);
+    border-radius: 4px;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .swipe-row.row-open .item-text,
+  .swipe-row.row-open .note-text,
+  .swipe-row.row-open .source-label-text {
+    color: var(--accent-dark);
+  }
 }
 
 .note-detail-header {
@@ -535,7 +580,7 @@
   box-sizing: border-box;
   height: 80px;
   padding-bottom: 16px;
-  background: #F2F0EB;
+  background: transparent;   /* show the page background so they always match */
   border-top: 1px solid #C2C1BF;
   box-shadow: none;
   display: flex;
@@ -810,7 +855,7 @@
 .todo-swipe-content {
   position: relative;
   z-index: 1;
-  background: #F2F0EB;
+  background: transparent;
   transform: translateX(0);
   transition: transform 200ms ease;
   touch-action: pan-y;

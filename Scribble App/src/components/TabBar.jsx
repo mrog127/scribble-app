@@ -1,4 +1,5 @@
 import { useAppContext } from '../context/AppContext.jsx'
+import { ACCENT_COLORS, getCategoryAccent } from '../theme.js'
 
 export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScroll }) {
   const { categories } = useAppContext()
@@ -9,6 +10,7 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
 
       <button
         className={`icon-tab${activeTab === 'star' ? ' selected' : ''}`}
+        style={{ '--tab-light': ACCENT_COLORS[0].light }}
         onClick={() => onSelectTab('star')}
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -22,10 +24,11 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
       </button>
 
       <div className="tabs-scroll" onScroll={onTabsScroll}>
-        {categories.map(cat => (
+        {categories.map((cat, idx) => (
           <button
             key={cat.id}
             className={`text-tab${activeTab === cat.id ? ' selected' : ''}`}
+            style={{ '--tab-light': getCategoryAccent(idx).light }}
             onClick={() => onSelectTab(cat.id)}
           >
             {cat.name}
@@ -35,6 +38,7 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
 
       <button
         className={`icon-tab${activeTab === 'menu' ? ' selected' : ''}`}
+        style={{ '--tab-light': ACCENT_COLORS[0].light }}
         onClick={() => onSelectTab('menu')}
       >
         <div className="hamburger-icon">

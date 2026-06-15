@@ -48,6 +48,12 @@ function ActivatedSwipeButton({ id, onTap, onLongPress }) {
 function openUrl(url) {
   if (!url) return
   let u = url.trim()
+  // A phone number in the link field → start a call instead of opening a URL
+  const digits = u.replace(/\D/g, '')
+  if (/^[+()\-.\s\d]+$/.test(u) && digits.length >= 7 && digits.length <= 15) {
+    window.location.href = 'tel:' + u.replace(/[^\d+]/g, '')
+    return
+  }
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
   window.open(u, '_blank', 'noopener,noreferrer')
 }
@@ -55,6 +61,15 @@ function openUrl(url) {
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
   if (!url) return ''
+  const t = url.trim()
+  const d = t.replace(/\D/g, '')
+  // Recognised phone number → format with parentheses + dash
+  if (/^[+()\-.\s\d]+$/.test(t) && d.length >= 7 && d.length <= 15) {
+    if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+    if (d.length === 11 && d[0] === '1') return `1 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+    if (d.length === 7) return `${d.slice(0, 3)}-${d.slice(3)}`
+    return t
+  }
   return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
 }
 
@@ -275,7 +290,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
 // Activated todos — aggregated from all projects into one "Lists" card
 function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
-  const { reorderProjectTodos, categories, setProjectTodoScheduled } = useAppContext()
+  const { reorderProjectTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const [calFor, setCalFor] = useState(null)
@@ -287,9 +302,10 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     setCalFor({ id, categoryId: item.categoryId, projectId: item.projectId, current: item.scheduledDate || null, anchorRect: toAnchorRect(el), accent: idx >= 0 ? getCategoryAccent(idx) : null })
   }, [items, categories])
   const [hideCompleted, setHideCompleted] = useState(() => {
-    try { return localStorage.getItem('hc-activated-todos') === 'true' } catch { return false }
+    try { return localStorage.getItem('hc-activated-todos') !== 'false' } catch { return true }
   })
-  const [openTodoId, setOpenTodoId] = useState(null)
+  const openTodoId = openDetail?.type === 'todo' ? openDetail.id : null
+  const setOpenTodoId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'todo' && prev.id === id) ? null : { type: 'todo', id }))
   const todoTapState = useRef({})
   const cardRef = useRef(null)
   const containerRef = useRef(null)
@@ -610,7 +626,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
 
 // Activated notes — aggregated from all projects into one "Notes" card
 function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
-  const { reorderProjectNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled } = useAppContext()
+  const { reorderProjectNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail } = useAppContext()
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {
     const item = items.find(t => t.id === id)
@@ -621,7 +637,8 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
   }, [items, categories])
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
-  const [openNoteId, setOpenNoteId] = useState(null)
+  const openNoteId = openDetail?.type === 'note' ? openDetail.id : null
+  const setOpenNoteId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'note' && prev.id === id) ? null : { type: 'note', id }))
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const noteSwipeState = useRef({})
@@ -876,7 +893,9 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
 
 // Activated links — aggregated from all projects into one "Links" card
 function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
-  const { categories, setProjectLinkScheduled } = useAppContext()
+  const { categories, setProjectLinkScheduled, reorderProjectLinks } = useAppContext()
+  const categoriesRef = useRef(categories)
+  categoriesRef.current = categories
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {
     const item = items.find(t => t.id === id)
@@ -923,6 +942,26 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
       }, 180)
     }, 200)
   }, [onDeactivate, items, categories])
+
+  const handleReorder = useCallback((newOrder) => {
+    const byProject = {}
+    newOrder.forEach(item => {
+      const key = `${item.categoryId}__${item.projectId}`
+      if (!byProject[key]) byProject[key] = { categoryId: item.categoryId, projectId: item.projectId, items: [] }
+      byProject[key].items.push(item)
+    })
+    Object.values(byProject).forEach(({ categoryId, projectId, items: newActivated }) => {
+      const cat = categoriesRef.current.find(c => c.id === categoryId)
+      const proj = cat?.projects.find(p => p.id === projectId)
+      if (!proj) return
+      const activatedIdSet = new Set(newActivated.map(l => l.id))
+      let ai = 0
+      const newFull = proj.links.map(l => activatedIdSet.has(l.id) ? newActivated[ai++] : l)
+      reorderProjectLinks(categoryId, projectId, newFull)
+    })
+  }, [reorderProjectLinks])
+
+  const { onDragPointerDown } = useDragReorder(containerRef, items, handleReorder)
 
   const onLinkPointerDown = useCallback((e, id, url) => {
     if (e.target.closest('.swipe-action-btn')) return
@@ -1003,7 +1042,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
           return (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={l.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => onLinkPointerDown(e, l.id, l.url)}>
+            <div className="swipe-row" data-swipe-id={l.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { onLinkPointerDown(e, l.id, l.url); onDragPointerDown(e, l.id) }}>
               <ActivatedSwipeButton id={l.id} onTap={handleDeactivate} onLongPress={openSchedule} />
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id) }}>
                 <div className="swipe-active-inner"><TrashSvg/></div>

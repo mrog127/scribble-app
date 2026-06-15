@@ -11,6 +11,12 @@ import CalendarPopup from './CalendarPopup.jsx'
 function openUrl(url) {
   if (!url) return
   let u = url.trim()
+  // A phone number in the link field → start a call instead of opening a URL
+  const digits = u.replace(/\D/g, '')
+  if (/^[+()\-.\s\d]+$/.test(u) && digits.length >= 7 && digits.length <= 15) {
+    window.location.href = 'tel:' + u.replace(/[^\d+]/g, '')
+    return
+  }
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
   window.open(u, '_blank', 'noopener,noreferrer')
 }
@@ -18,6 +24,15 @@ function openUrl(url) {
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
   if (!url) return ''
+  const t = url.trim()
+  const d = t.replace(/\D/g, '')
+  // Recognised phone number → format with parentheses + dash
+  if (/^[+()\-.\s\d]+$/.test(t) && d.length >= 7 && d.length <= 15) {
+    if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+    if (d.length === 11 && d[0] === '1') return `1 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+    if (d.length === 7) return `${d.slice(0, 3)}-${d.slice(3)}`
+    return t
+  }
   return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
 }
 
@@ -387,8 +402,6 @@ export default function ProjectCard({ categoryId, project }) {
   const [inputValue, setInputValue] = useState('')
   const [linkUrlValue, setLinkUrlValue] = useState('')
   const [inputFocused, setInputFocused] = useState(false)
-  const [openNoteId, setOpenNoteId] = useState(null)
-  const [openTodoId, setOpenTodoId] = useState(null)
   const [addAsActive, setAddAsActive] = useState(false)
   const [addScheduledDate, setAddScheduledDate] = useState(null)
   const [calendarFor, setCalendarFor] = useState(null) // { type, id, current } | { type: 'create' }
@@ -397,7 +410,7 @@ export default function ProjectCard({ categoryId, project }) {
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [hideCompleted, setHideCompleted] = useState(() => {
-    try { return localStorage.getItem(`hc-project-${project.id}`) === 'true' } catch { return false }
+    try { return localStorage.getItem(`hc-project-${project.id}`) !== 'false' } catch { return true }
   })
 
   const cardRef = useRef(null)
@@ -425,9 +438,17 @@ export default function ProjectCard({ categoryId, project }) {
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
     toggleProjectLinkActivated,
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
-    updateProjectNote, reorderProjectTodos, reorderProjectNotes,
+    updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
     renameProject, deleteProject,
+    openDetail, setOpenDetail,
   } = useAppContext()
+
+  // Open-detail state is shared (AppContext) so only one row is highlighted at a
+  // time across all cards; tapping the open row again toggles it closed.
+  const openTodoId = (openDetail?.type === 'todo' && project.todos.some(t => t.id === openDetail.id)) ? openDetail.id : null
+  const openNoteId = (openDetail?.type === 'note' && project.notes.some(n => n.id === openDetail.id)) ? openDetail.id : null
+  const setOpenTodoId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'todo' && prev.id === id) ? null : { type: 'todo', id }))
+  const setOpenNoteId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'note' && prev.id === id) ? null : { type: 'note', id }))
 
   const linkSwipeState = useRef({})
 
@@ -482,6 +503,10 @@ export default function ProjectCard({ categoryId, project }) {
   const handleNoteReorder = useCallback((newOrder) => {
     reorderProjectNotes(categoryId, project.id, newOrder)
   }, [categoryId, project.id, reorderProjectNotes])
+
+  const handleLinkReorder = useCallback((newOrder) => {
+    reorderProjectLinks(categoryId, project.id, newOrder)
+  }, [categoryId, project.id, reorderProjectLinks])
 
   // ---- Checkbox press/release animations ----
   const handleCheckboxDown = useCallback((e, id) => {
@@ -597,6 +622,7 @@ export default function ProjectCard({ categoryId, project }) {
   // ---- Drag reorder ----
   const { onDragPointerDown: onTodoDrag } = useDragReorder(todoContainerRef, sortedTodos, handleTodoReorder, uncheckedCount)
   const { onDragPointerDown: onNoteDrag } = useDragReorder(noteContainerRef, sortedNotes, handleNoteReorder, undefined)
+  const { onDragPointerDown: onLinkDrag } = useDragReorder(linkContainerRef, sortedLinks, handleLinkReorder, undefined)
 
   // ---- FLIP animation when checkbox re-sorts the list ----
   useLayoutEffect(() => {
@@ -1242,7 +1268,7 @@ export default function ProjectCard({ categoryId, project }) {
                     <div className="swipe-content">
                       <div
                         className="note-row link-row"
-                        onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url) }}
+                        onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url); onLinkDrag(e, l.id) }}
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                           <LinkRowIcon activated={l.activated}/>

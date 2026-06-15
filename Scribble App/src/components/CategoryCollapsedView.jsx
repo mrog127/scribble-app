@@ -11,12 +11,27 @@ import CalendarPopup from './CalendarPopup.jsx'
 function openUrl(url) {
   if (!url) return
   let u = url.trim()
+  // A phone number in the link field → start a call instead of opening a URL
+  const digits = u.replace(/\D/g, '')
+  if (/^[+()\-.\s\d]+$/.test(u) && digits.length >= 7 && digits.length <= 15) {
+    window.location.href = 'tel:' + u.replace(/[^\d+]/g, '')
+    return
+  }
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
   window.open(u, '_blank', 'noopener,noreferrer')
 }
 
 function displayUrl(url) {
   if (!url) return ''
+  const t = url.trim()
+  const d = t.replace(/\D/g, '')
+  // Recognised phone number → format with parentheses + dash
+  if (/^[+()\-.\s\d]+$/.test(t) && d.length >= 7 && d.length <= 15) {
+    if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+    if (d.length === 11 && d[0] === '1') return `1 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+    if (d.length === 7) return `${d.slice(0, 3)}-${d.slice(3)}`
+    return t
+  }
   return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
 }
 
@@ -360,7 +375,7 @@ function CollapsedTodosCard({ category }) {
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectTodoScheduled(category.id, projectId, id, null) }, [category.id, setProjectTodoScheduled])
 
   const [hideCompleted, setHideCompleted] = useState(() => {
-    try { return localStorage.getItem(`hc-cat-${category.id}`) === 'true' } catch { return false }
+    try { return localStorage.getItem(`hc-cat-${category.id}`) !== 'false' } catch { return true }
   })
   const [openTodoId, setOpenTodoId] = useState(null)
   const cardRef = useRef(null)

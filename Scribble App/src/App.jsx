@@ -13,6 +13,7 @@ function AppInner() {
     categories, activeTodos, activeNotes,
     addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
     addProjectTodo, addProjectNote, addProjectLink,
+    setOpenDetail,
   } = useAppContext()
   const categoryIds = categories.map(c => c.id)
   const [activeTab, setActiveTab] = useState('star')
@@ -135,6 +136,7 @@ function AppInner() {
 
   const handleTabChange = useCallback((newTab) => {
     if (newTab === activeTab) return
+    setOpenDetail(null)   // close any open detail when navigating
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
     const tabs = ['star', ...categoryIds, 'menu']
     const currentIdx = tabs.indexOf(activeTab)
@@ -225,6 +227,65 @@ function AppInner() {
     return () => document.removeEventListener('pointerdown', handler, true)
   }, [])
 
+  // Two-finger (trackpad) horizontal swipe over a row reveals the Active/Delete
+  // buttons, mirroring the one-finger pointer swipe. Trackpad swipes arrive as
+  // horizontal wheel events, so accumulate deltaX and snap when the gesture ends.
+  useEffect(() => {
+    const app = document.getElementById('app')
+    if (!app) return
+    let active = null
+    let endTimer = null
+
+    const closeRow = (r) => {
+      r.classList.remove('swiped-left', 'swiped-right')
+      const c = r.querySelector('.swipe-content')
+      if (c) { c.style.transition = ''; c.style.transform = '' }
+    }
+
+    const finish = () => {
+      if (!active) return
+      const { row, content, offset } = active
+      active = null
+      content.style.transition = ''
+      if (offset < -36 || offset > 36) {
+        document.querySelectorAll('.swipe-row.swiped-left, .swipe-row.swiped-right').forEach(r => { if (r !== row) closeRow(r) })
+        row.classList.add(offset < 0 ? 'swiped-left' : 'swiped-right')
+        row.classList.remove(offset < 0 ? 'swiped-right' : 'swiped-left')
+      } else {
+        row.classList.remove('swiped-left', 'swiped-right')
+      }
+      content.style.transform = ''
+    }
+
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return  // vertical scroll — ignore
+      const row = e.target.closest('.swipe-row')
+      if (!row) return
+      const content = row.querySelector('.swipe-content')
+      if (!content) return
+      e.preventDefault()
+      if (active && active.row !== row) finish()
+      if (!active) {
+        const base = row.classList.contains('swiped-left') ? -84 : row.classList.contains('swiped-right') ? 84 : 0
+        active = { row, content, offset: base }
+        content.style.transition = 'none'
+      }
+      active.offset = Math.max(-84, Math.min(84, active.offset - e.deltaX))
+      content.style.transform = `translateX(${active.offset}px)`
+      // Reveal the button live (its opacity is tied to the swiped class) so it
+      // appears as you cross the threshold instead of waiting for the gesture —
+      // and trackpad momentum — to fully settle.
+      if (active.offset < -36) { row.classList.add('swiped-left'); row.classList.remove('swiped-right') }
+      else if (active.offset > 36) { row.classList.add('swiped-right'); row.classList.remove('swiped-left') }
+      else { row.classList.remove('swiped-left', 'swiped-right') }
+      clearTimeout(endTimer)
+      endTimer = setTimeout(finish, 120)
+    }
+
+    app.addEventListener('wheel', onWheel, { passive: false })
+    return () => { app.removeEventListener('wheel', onWheel); clearTimeout(endTimer) }
+  }, [])
+
   // Update tab indicator position
   useEffect(() => {
     const updateIndicator = () => {
@@ -236,10 +297,13 @@ function AppInner() {
       const bR = bar.getBoundingClientRect()
       const tR = selected.getBoundingClientRect()
       const vertical = window.matchMedia('(min-width: 1000px)').matches
+      const scroller = bar.querySelector('.tab-scroll')
       const place = () => {
-        if (vertical) {
-          // Desktop: vertical stack — the selector box slides top-to-bottom, full width
-          indicator.style.top = (tR.top - bR.top) + 'px'
+        if (vertical && scroller) {
+          // Desktop: vertical stack — the selector box slides top-to-bottom, full
+          // width. Positioned within the scroll container so it tracks scrolling.
+          const sR = scroller.getBoundingClientRect()
+          indicator.style.top = (tR.top - sR.top + scroller.scrollTop) + 'px'
           indicator.style.height = selected.offsetHeight + 'px'
           indicator.style.left = '0px'
           indicator.style.width = '100%'
@@ -258,6 +322,18 @@ function AppInner() {
       } else {
         place()
       }
+      // Desktop: toggle the edge fade when the list overflows, and scroll a
+      // partially-hidden selected tab fully into view (clearing the 12px fade).
+      // The indicator's top is content-relative, so it stays put after scrolling.
+      if (vertical && scroller) {
+        const pad = 12
+        const sRect = scroller.getBoundingClientRect()
+        const tRect = selected.getBoundingClientRect()
+        let delta = 0
+        if (tRect.top < sRect.top + pad) delta = tRect.top - (sRect.top + pad)
+        else if (tRect.bottom > sRect.bottom - pad) delta = tRect.bottom - (sRect.bottom - pad)
+        if (delta) scroller.scrollBy({ top: delta, behavior: 'smooth' })
+      }
     }
     requestAnimationFrame(updateIndicator)
     // Re-snap on resize (crossing the desktop breakpoint flips the slide axis)
@@ -265,6 +341,24 @@ function AppInner() {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [activeTab])
+
+  // Desktop nav edges: fade an edge only when there's content beyond it
+  useEffect(() => {
+    const scroller = document.querySelector('.tab-scroll')
+    if (!scroller) return
+    const update = () => {
+      const overflow = scroller.scrollHeight - scroller.clientHeight > 1
+      scroller.classList.toggle('fade-top', overflow && scroller.scrollTop > 1)
+      scroller.classList.toggle('fade-bottom', overflow && scroller.scrollTop < scroller.scrollHeight - scroller.clientHeight - 1)
+    }
+    update()
+    scroller.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      scroller.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [activeTab, categories.length])
 
   // Update toolbar indicator
   useEffect(() => {

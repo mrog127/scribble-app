@@ -333,7 +333,7 @@ function ActiveTagIcon() {
 
 export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
   const [hideCompleted, setHideCompleted] = useState(() => {
-    try { return localStorage.getItem('hc-active-todos') === 'true' } catch { return false }
+    try { return localStorage.getItem('hc-active-todos') !== 'false' } catch { return true }
   })
   const containerRef = useRef(null)
   const handleDelete = useCallback((id) => {

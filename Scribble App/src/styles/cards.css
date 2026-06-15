@@ -4,7 +4,7 @@
   border-radius: 8px;
   margin-bottom: 14px;
   overflow: hidden;
-  box-shadow: 0 6px 0px rgba(0,0,0,0.10);
+  box-shadow: none;
   padding-bottom: 8px;
 }
 
@@ -381,8 +381,7 @@
     width: calc((100% - 340px) / 2);   /* half the area right of the sidebar (relative to the app) */
     transform: translateX(100%);
     background: #F7F6F3;   /* match the project card fill */
-    border-left: 1px solid #DBDAD8;
-    box-shadow: -8px 0 0 rgba(0,0,0,0.06);
+    border-left: 1px solid #C2C1BF;   /* match the project card stroke */
   }
   .note-detail-page.open { transform: translateX(0); }
 
@@ -401,15 +400,10 @@
     bottom: 0;
     left: 16px;
     right: 16px;
-    background: color-mix(in srgb, var(--accent-light) 50%, transparent);
+    background: rgba(0, 0, 0, 0.04);
     border-radius: 4px;
     z-index: -1;
     pointer-events: none;
-  }
-  .swipe-row.row-open .item-text,
-  .swipe-row.row-open .note-text,
-  .swipe-row.row-open .source-label-text {
-    color: var(--accent-dark);
   }
 }
 
@@ -533,8 +527,8 @@
 
 /* Note paragraph styles */
 .note-para { margin: 0; padding: 0; }
-.note-para.style-title { font-family: 'Momo Signature', cursive; font-size: 56px; font-weight: 700; line-height: 72px; color: #242424; margin-bottom: 32px; overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
-.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
+.note-para.style-title { font-family: 'Momo Signature', cursive; font-size: 56px; font-weight: 700; line-height: 72px; color: #242424; margin-bottom: 32px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
 .note-para.style-bold { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
 .note-para.style-body { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; }
 .note-para.style-italic { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }

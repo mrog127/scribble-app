@@ -811,6 +811,10 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 /* The persistent date header only appears in the desktop sidebar */
 .sidebar-date { display: none; }
 
+/* The tab-scroll wrapper is layout-neutral except in the desktop sidebar, where
+   it becomes the scrollable, bottom-anchored container for Home + categories. */
+.tab-scroll { display: contents; }
+
 /* Below the desktop breakpoint: cap page + footer contents at 800px
    and centre them. The containers stay edge-to-edge; only their
    contents are constrained. */
@@ -913,31 +917,69 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     flex: 1;
     height: auto;
     min-height: 0;
-    margin-top: 20px;
+    margin-top: 12px;   /* with the add-row's 12px margin = 24px below the textbox */
+  }
+  /* Reserve the textbox's space even on category pages (where it's hidden) so the
+     nav below it keeps a fixed position relative to the textbox location. */
+  .footer.category-mode .add-row {
+    max-height: 150px;
+    margin-bottom: 12px;
   }
 
-  /* Selector box: a single sliding box (positioned vertically by JS).
-     4px radius + accent colours come from the base .tab-indicator rules. */
+  /* Selector box: a single sliding box, positioned vertically by JS inside the
+     scroll container so it tracks scrolling. 4px radius + accent colours come
+     from the base .tab-indicator rules. */
   .tab-indicator {
     transition: top 170ms ease, height 170ms ease, left 120ms ease, width 120ms ease;
   }
 
-  /* Vertical tab stack — position:relative so the indicator anchors to it */
+  /* Vertical tab stack */
   .tab-bar {
     position: relative;
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
+    gap: 0;
     clip-path: none;
     transform: none;
     height: 100%;
     overflow: visible;
   }
 
-  .tab-bar > .icon-tab,
+  /* Home + categories: one scrollable container, bottom-anchored, ending 24px
+     above the Pages tab. Overflowing tabs scroll (default scrolled to the top,
+     i.e. Home visible). */
+  .tab-scroll {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    position: relative;
+    margin-bottom: 24px;
+    gap: 4px;
+    scrollbar-width: none;
+  }
+  .tab-scroll::-webkit-scrollbar { display: none; }
+  /* 12px fade only on an edge that has content beyond it (set by JS on scroll) */
+  .tab-scroll.fade-top {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 100%);
+  }
+  .tab-scroll.fade-bottom {
+    -webkit-mask-image: linear-gradient(to top, transparent 0, #000 12px, #000 100%);
+    mask-image: linear-gradient(to top, transparent 0, #000 12px, #000 100%);
+  }
+  .tab-scroll.fade-top.fade-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  }
+  .tab-home { margin-top: auto; }   /* bottom-anchor the stack */
+
+  .tab-bar .icon-tab,
   .tabs-scroll .text-tab {
     width: 100%;
     height: 52px;
+    flex-shrink: 0;
     justify-content: flex-start;
     gap: 14px;
     padding: 0 14px;
@@ -945,30 +987,30 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     border-radius: 8px;
     box-sizing: border-box;
   }
-  .tab-bar > .icon-tab { background: transparent; }
+  .tab-bar .icon-tab { background: transparent; }
 
   /* Labels for the two icon tabs */
-  .tab-bar > .icon-tab::after {
+  .tab-bar .icon-tab::after {
     font-family: 'Merriweather', Georgia, serif;
     font-size: 16px;
     font-weight: 600;
     color: #333333;
   }
-  .tab-bar > .icon-tab:first-of-type::after { content: 'Home'; }
-  .tab-bar > .icon-tab:last-of-type::after  { content: 'Pages'; }
+  .tab-home::after  { content: 'Home'; }
+  .tab-pages::after { content: 'Pages'; }
 
   /* Home label: match category-tab weight, sit 8px from the star, and cycle
      through the star's dark colours (same rate/colours) when selected. */
-  .tab-bar > .icon-tab:first-of-type { gap: 8px; }
-  .tab-bar > .icon-tab:first-of-type::after { font-weight: 500; }
-  .tab-bar.star-active .icon-tab.selected::after {
+  .tab-bar .tab-home { gap: 8px; }
+  .tab-bar .tab-home::after { font-weight: 500; }
+  .tab-bar.star-active .tab-home.selected::after {
     font-weight: 600;   /* match a selected category tab label */
     animation: home-label-cycle 35s linear infinite;
   }
 
-  /* Categories list fills the middle; the menu (Pages) sinks to the bottom */
+  /* Categories stack at natural height within the scroll container */
   .tabs-scroll {
-    flex: 1;
+    flex: 0 0 auto;
     flex-direction: column;
     align-items: stretch;
     overflow: visible;
@@ -982,7 +1024,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* Selected colour comes from base rules; the sliding box is the indicator */
 
   /* Hover: neutral 2% black highlight on all tabs, 4px radius */
-  .tab-bar > .icon-tab:hover:not(.selected),
+  .tab-bar .icon-tab:hover:not(.selected),
   .tabs-scroll .text-tab:hover:not(.selected) {
     background: rgba(0, 0, 0, 0.02);
     border-radius: 4px;
@@ -995,17 +1037,18 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
 
   /* ---- "Save to..." picker opens below the textbox + send settings ----
-     Footer top 224 + input 48 + 12 margin + 20 tab-area margin + 52 toolbar
-     = 356 (send-settings bottom); menu top = +8 = 364, bottom = 24 above window. */
+     Footer top 224 + input 48 + 12 margin + 12 tab-area margin + 52 toolbar
+     = 348 (send-settings bottom); menu top = +8 = 356, bottom = 24 above window. */
   .save-to-panel.visible {
     position: fixed;
     left: 0;
-    top: 364px;
+    top: 356px;
     bottom: 24px;
-    width: 344px;   /* card right edge at 344 = 24px gap to the cards (which start at 368) */
-    box-sizing: border-box;   /* so the 28px left padding is inside the 344, not added to it */
+    width: 340px;   /* same box as the footer; with 28px side padding the card
+                       matches the textbox + send button (28 → 312) */
+    box-sizing: border-box;
     z-index: 46;
-    padding: 0 0 0 28px;
+    padding: 0 28px;
   }
   /* Keep the cards in place but dim them to 20% while the picker is open */
   .phone.save-panel-open .page {
@@ -1030,11 +1073,17 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .phone:has(.note-detail-page.open) .cal-overlay {
     left: calc(340px + (100% - 340px) / 2);
   }
-  /* ...and only the detail panel dims behind them — sidebar + cards stay lit */
+  /* Move-to / schedule menu open in the right panel: dim the sidebar, the cards,
+     and the detail behind the menu to 20% (overriding the base 10%). */
   #app.dim-bg:has(.note-detail-page.open) > .page > *,
-  #app.dim-bg:has(.note-detail-page.open) > :not(.cal-overlay):not(.move-to-overlay):not(.page):not(.note-detail-page) {
-    opacity: 1 !important;
-    pointer-events: auto !important;
+  #app.dim-bg:has(.note-detail-page.open) > :not(.cal-overlay):not(.move-to-overlay):not(.page):not(.note-detail-page),
+  #app.dim-bg:has(.note-detail-page.open) > .note-detail-page > * {
+    opacity: 0.2 !important;
+  }
+  /* The sticky category header sits behind the cards; once they go translucent it
+     would show through, so hide it entirely while dimmed. */
+  #app.dim-bg:has(.note-detail-page.open) > .page > .page-header {
+    opacity: 0 !important;
   }
 }
 

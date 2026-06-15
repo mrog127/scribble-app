@@ -710,7 +710,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 export { NoteDetailPage }
 
 export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
-  const [openNoteId, setOpenNoteId] = useState(null)
+  const { openDetail, setOpenDetail } = useAppContext()
+  // Local active notes use their own type so their ids can't collide with project notes
+  const openNoteId = openDetail?.type === 'local-note' ? openDetail.id : null
+  const setOpenNoteId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'local-note' && prev.id === id) ? null : { type: 'local-note', id }))
   const swipeState = useRef({})
   const cardRef = useRef(null)
   const containerRef = useRef(null)

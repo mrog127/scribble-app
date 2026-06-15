@@ -35,6 +35,9 @@ export function AppProvider({ children }) {
   const [activeTodos, setActiveTodos] = useState([])
   const [activeNotes, setActiveNotes] = useState([])
   const [loading, setLoading] = useState(true)
+  // Single source of truth for which detail page is open, so only one row is
+  // highlighted at a time across all cards. Shape: { type, id } | null
+  const [openDetail, setOpenDetail] = useState(null)
 
   // Refs so toggle/delete callbacks can read current state without stale closures
   const activeTodosRef = useRef([])
@@ -559,6 +562,11 @@ export function AppProvider({ children }) {
     Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ sort_order: i }).eq('id', n.id)))
   }, [updateProject])
 
+  const reorderProjectLinks = useCallback((categoryId, projectId, newOrder) => {
+    updateProject(categoryId, projectId, proj => ({ ...proj, links: newOrder }))
+    Promise.all(newOrder.map((l, i) => supabase.from('links').update({ sort_order: i }).eq('id', l.id)))
+  }, [updateProject])
+
   const reorderProjects = useCallback((categoryId, newOrder) => {
     setCategories(prev => prev.map(cat =>
       cat.id !== categoryId ? cat : { ...cat, projects: newOrder }
@@ -638,6 +646,8 @@ export function AppProvider({ children }) {
       activeTodos,
       activeNotes,
       loading,
+      openDetail,
+      setOpenDetail,
       addCategory,
       renameCategory,
       deleteCategory,
@@ -677,6 +687,7 @@ export function AppProvider({ children }) {
       deleteProjectLink,
       reorderProjectTodos,
       reorderProjectNotes,
+      reorderProjectLinks,
       reorderProjects,
       renameProject,
       deleteProject,

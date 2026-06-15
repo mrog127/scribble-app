@@ -6,38 +6,41 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
 
   return (
     <div className={`tab-bar${inputFocused ? ' hidden' : ''}${activeTab === 'star' ? ' star-active' : ''}`}>
-      <div className="tab-indicator" id="tabIndicator"></div>
+      {/* Home + categories live in one scrollable, bottom-anchored container */}
+      <div className="tab-scroll">
+        <div className="tab-indicator" id="tabIndicator"></div>
 
-      <button
-        className={`icon-tab${activeTab === 'star' ? ' selected' : ''}`}
-        style={{ '--tab-light': ACCENT_COLORS[0].light }}
-        onClick={() => onSelectTab('star')}
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <polygon
-            points="10,2 12.5,7.5 18.5,8 14,12.5 15.5,18.5 10,15.5 4.5,18.5 6,12.5 1.5,8 7.5,7.5"
-            strokeWidth="1"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+        <button
+          className={`icon-tab tab-home${activeTab === 'star' ? ' selected' : ''}`}
+          style={{ '--tab-light': ACCENT_COLORS[0].light }}
+          onClick={() => onSelectTab('star')}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <polygon
+              points="10,2 12.5,7.5 18.5,8 14,12.5 15.5,18.5 10,15.5 4.5,18.5 6,12.5 1.5,8 7.5,7.5"
+              strokeWidth="1"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
 
-      <div className="tabs-scroll" onScroll={onTabsScroll}>
-        {categories.map((cat, idx) => (
-          <button
-            key={cat.id}
-            className={`text-tab${activeTab === cat.id ? ' selected' : ''}`}
-            style={{ '--tab-light': getCategoryAccent(idx).light }}
-            onClick={() => onSelectTab(cat.id)}
-          >
-            {cat.name}
-          </button>
-        ))}
+        <div className="tabs-scroll" onScroll={onTabsScroll}>
+          {categories.map((cat, idx) => (
+            <button
+              key={cat.id}
+              className={`text-tab${activeTab === cat.id ? ' selected' : ''}`}
+              style={{ '--tab-light': getCategoryAccent(idx).light }}
+              onClick={() => onSelectTab(cat.id)}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <button
-        className={`icon-tab${activeTab === 'menu' ? ' selected' : ''}`}
+        className={`icon-tab tab-pages${activeTab === 'menu' ? ' selected' : ''}`}
         style={{ '--tab-light': ACCENT_COLORS[0].light }}
         onClick={() => onSelectTab('menu')}
       >

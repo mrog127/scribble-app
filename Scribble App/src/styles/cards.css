@@ -337,7 +337,7 @@
 
 /* Note rows */
 .note-row { display: flex; align-items: flex-start; padding: 10px 24px; }
-.note-text { display: block; width: 100%; font-size: 16px; font-weight: 300; color: #3D3D3D; line-height: 1.4; word-wrap: break-word; }
+.note-text { display: block; width: 100%; font-size: 16px; font-weight: 400; color: #3D3D3D; line-height: 1.4; word-wrap: break-word; }
 .note-text.accent { color: #7069FE; }
 
 .note-preview-text {
@@ -535,11 +535,11 @@
 /* Note paragraph styles */
 .note-para { margin: 0; padding: 0; }
 .note-para.style-title { font-family: 'Momo Signature', cursive; font-size: 56px; font-weight: 700; line-height: 72px; color: #242424; margin-bottom: 32px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
-.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 700; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
-.note-para.style-bold { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 700; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
-.note-para.style-body { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; }
+.note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 22px; font-weight: 500; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+.note-para.style-bold { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
+.note-para.style-body { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 300; line-height: 26px; color: #575757; }
 .note-para.style-italic { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }
-.note-para.style-bullet { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
+.note-para.style-bullet { font-family: 'Merriweather Sans', system-ui, sans-serif; font-size: 16px; font-weight: 300; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
 .note-para.style-bullet::before { content: "•"; position: absolute; left: 0; }
 
 .note-detail-body {
@@ -780,7 +780,7 @@
 
 .todo-section-title {
   font-family: 'Merriweather', Georgia, serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 500;
   color: #242424;
 }
@@ -1014,8 +1014,8 @@
 }
 
 /* Project card row heights */
-.project-card .todo-row { min-height: 40px; align-items: center; padding: 8px 24px; }
-.project-card .note-row { min-height: 40px; align-items: center; padding: 8px 24px; }
+.project-card .todo-row { min-height: 40px; align-items: center; padding: 10px 24px; }
+.project-card .note-row { min-height: 40px; align-items: center; padding: 10px 24px; }
 .project-card .item-content { flex-direction: row; align-items: center; flex-wrap: nowrap; }
 .project-card .item-text,
 .project-card .note-text { width: auto; display: inline; }

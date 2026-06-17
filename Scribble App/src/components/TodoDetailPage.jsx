@@ -575,6 +575,62 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     document.addEventListener('pointercancel', settle)
   }, [])
 
+  // Two-finger (trackpad) horizontal swipe over an attached row reveals its Unattach button.
+  // Wheel events have no clean "end", so we debounce a settle after the gesture stops.
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+    const states = new Map()
+
+    const onWheel = (e) => {
+      // Only act on predominantly-horizontal gestures (a two-finger sideways swipe)
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+      const content = e.target.closest && e.target.closest('.todo-swipe-content')
+      if (!content || !scroll.contains(content)) return
+      const row = content.closest('.todo-swipe-row')
+      if (!row) return
+      e.preventDefault()
+
+      let s = states.get(row)
+      if (!s) {
+        s = { x: row.classList.contains('swiped-left') ? -84 : 0, timer: null }
+        states.set(row, s)
+      }
+      s.x = Math.max(-84, Math.min(0, s.x - e.deltaX))
+      content.style.transition = 'none'
+      content.style.transform = `translateX(${s.x}px)`
+      // Reveal the button live, tracking the swipe — don't wait for the settle class
+      const btn = row.querySelector('.todo-unattach-btn')
+      if (btn) {
+        btn.style.transition = 'none'
+        btn.style.opacity = String(Math.min(1, -s.x / 84))
+      }
+
+      clearTimeout(s.timer)
+      s.timer = setTimeout(() => {
+        content.style.transition = ''
+        content.style.transform = ''
+        if (btn) { btn.style.transition = ''; btn.style.opacity = '' }
+        if (s.x < -36) {
+          // Only one row open at a time — close any other open row first
+          document.querySelectorAll('.todo-swipe-row.swiped-left').forEach(r => {
+            if (r === row) return
+            r.classList.remove('swiped-left')
+            const c = r.querySelector('.todo-swipe-content')
+            if (c) { c.style.transition = ''; c.style.transform = '' }
+          })
+          row.classList.add('swiped-left')
+        } else {
+          row.classList.remove('swiped-left')
+        }
+        states.delete(row)
+      }, 90)
+    }
+
+    scroll.addEventListener('wheel', onWheel, { passive: false })
+    return () => scroll.removeEventListener('wheel', onWheel)
+  }, [])
+
   const openNote = attachedNotes.find(n => n.id === openNoteId)
 
   return (

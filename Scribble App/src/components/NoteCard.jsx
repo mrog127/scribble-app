@@ -210,6 +210,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const editingRef = useRef(false)
   const [currentStyle, setCurrentStyle] = useState('body')
   const [isOpen, setIsOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const contentRef = useRef(null)
   const styleBarRef = useRef(null)
   const indicatorRef = useRef(null)
@@ -621,6 +622,74 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     })
   }, [currentStyle, updateStyleIndicator])
 
+  // Copy the note's text WITH styling so it can be pasted into the iOS Notes app.
+  // Builds an HTML payload (h1/h2/h3, <ul><li> for bullets) plus a plain-text
+  // fallback. H2 (heading) lines get a blank line above; bullets become bullet points.
+  const handleCopy = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+    const paras = [...content.querySelectorAll('.note-para')]
+    const htmlParts = []
+    const textParts = []
+    let i = 0
+    while (i < paras.length) {
+      const m = paras[i].className.match(/style-(\w+)/)
+      const style = m ? m[1] : 'body'
+      const txt = (paras[i].textContent || '').replace(/ /g, ' ').trim()
+
+      if (style === 'bullet') {
+        const items = []
+        while (i < paras.length && /style-bullet/.test(paras[i].className)) {
+          items.push((paras[i].textContent || '').replace(/ /g, ' ').trim())
+          i++
+        }
+        htmlParts.push('<ul>' + items.map(t => `<li>${escapeHtml(t)}</li>`).join('') + '</ul>')
+        items.forEach(t => textParts.push('• ' + t))
+        continue
+      }
+
+      if (style === 'title') {
+        htmlParts.push(`<h1>${escapeHtml(txt)}</h1>`)
+        textParts.push(txt)
+      } else if (style === 'heading') {
+        htmlParts.push('<br>')                 // line break above H2
+        htmlParts.push(`<h2>${escapeHtml(txt)}</h2>`)
+        textParts.push('')                     // blank line above
+        textParts.push(txt)
+      } else if (style === 'bold') {
+        htmlParts.push(`<div><b>${escapeHtml(txt)}</b></div>`)
+        textParts.push(txt)
+      } else if (style === 'italic') {
+        htmlParts.push(`<div><i>${escapeHtml(txt)}</i></div>`)
+        textParts.push(txt)
+      } else {
+        htmlParts.push(txt ? `<div>${escapeHtml(txt)}</div>` : '<div><br></div>')
+        textParts.push(txt)
+      }
+      i++
+    }
+
+    const html = `<meta charset="utf-8">${htmlParts.join('')}`
+    const text = textParts.join('\n')
+    const flash = () => { setCopied(true); setTimeout(() => setCopied(false), 1200) }
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const item = new window.ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        })
+        navigator.clipboard.write([item]).then(flash).catch(() => {
+          navigator.clipboard.writeText(text).then(flash).catch(() => {})
+        })
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(flash).catch(() => {})
+      }
+    } catch {
+      navigator.clipboard?.writeText(text).then(flash).catch(() => {})
+    }
+  }, [])
+
   return (
     <div
       ref={pageRef}
@@ -701,6 +770,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           projectName={projectName}
           onProjectClick={openMove}
           menuOpen={moveOpen}
+          onCopy={handleCopy}
+          copied={copied}
         />
       )}
     </div>

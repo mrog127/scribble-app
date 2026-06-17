@@ -343,6 +343,57 @@ function SendIcon() {
   )
 }
 
+// Inline editor shown in a link row after a long-press: stacked title + url with a send button.
+function LinkRowEditor({ link, onSave, onCancel }) {
+  const [title, setTitle] = useState(link.title === link.url ? '' : (link.title || ''))
+  const [url, setUrl] = useState(link.url || '')
+  const wrapRef = useRef(null)
+  const titleRef = useRef(null)
+  const urlRef = useRef(null)
+
+  useEffect(() => { titleRef.current?.focus() }, [])
+
+  // Cancel when tapping outside the editor
+  useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) onCancel() }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [onCancel])
+
+  const submit = () => {
+    const u = url.trim()
+    if (!u) { onCancel(); return }
+    onSave(title.trim(), u)
+  }
+
+  return (
+    <div className="link-row-editor" ref={wrapRef} onPointerDown={e => e.stopPropagation()}>
+      <div className="link-row-editor-fields">
+        <input
+          ref={titleRef}
+          className="project-input"
+          placeholder="Title your link"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); urlRef.current?.focus() } if (e.key === 'Escape') onCancel() }}
+        />
+        <div className="project-input-divider" />
+        <input
+          ref={urlRef}
+          className="project-input"
+          placeholder="Add link"
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } if (e.key === 'Escape') onCancel() }}
+        />
+      </div>
+      <button className="project-send-btn visible" onMouseDown={e => { e.preventDefault(); submit() }}>
+        <SendIcon/>
+      </button>
+    </div>
+  )
+}
+
 // ---- Note preview helpers ----
 
 // Extract plain text from all note-para elements after the first (the title).
@@ -404,6 +455,7 @@ export default function ProjectCard({ categoryId, project }) {
   const [inputFocused, setInputFocused] = useState(false)
   const [addAsActive, setAddAsActive] = useState(false)
   const [addScheduledDate, setAddScheduledDate] = useState(null)
+  const [editingLinkId, setEditingLinkId] = useState(null)
   const [calendarFor, setCalendarFor] = useState(null) // { type, id, current } | { type: 'create' }
   const [addType, setAddType] = useState('list')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -436,7 +488,7 @@ export default function ProjectCard({ categoryId, project }) {
     addProjectTodo, addProjectNote, addProjectLink,
     toggleProjectTodo, deleteProjectTodo, deleteProjectNote,
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
-    toggleProjectLinkActivated,
+    toggleProjectLinkActivated, updateProjectLink,
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
     renameProject, deleteProject,
@@ -918,32 +970,36 @@ export default function ProjectCard({ categoryId, project }) {
     },
   })
 
-  // Tap a link row (without swiping) to open it in a new tab
-  const onLinkPointerDown = useCallback((e, url) => {
+  // Tap a link row to open it; hold for 1s (without dragging) to edit it inline.
+  const onLinkPointerDown = useCallback((e, link) => {
     if (e.target.closest('.swipe-action-btn')) return
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
     if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
-    linkSwipeState.current = { startX: e.clientX, startY: e.clientY, dir: null }
+    const s = { startX: e.clientX, startY: e.clientY, dir: null, longFired: false }
+    const longTimer = setTimeout(() => { s.longFired = true; setEditingLinkId(link.id) }, 1000)
     const onMove = (e2) => {
-      const s = linkSwipeState.current
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir) {
-        if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
+      if (!s.dir && (Math.abs(dx) > 10 || Math.abs(dy) > 8)) {
+        s.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : 'scroll'
+        clearTimeout(longTimer)
       }
     }
     const onUp = (e2) => {
-      const s = linkSwipeState.current
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      if (!s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8) openUrl(url)
+      clearTimeout(longTimer)
+      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
+      if (!s.dir && !s.longFired && Math.abs(dx) < 8 && Math.abs(dy) < 8) openUrl(link.url)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
   }, [])
+
+  const saveLinkEdit = useCallback((linkId, title, url) => {
+    updateProjectLink(categoryId, project.id, linkId, title, url)
+    setEditingLinkId(null)
+  }, [updateProjectLink, categoryId, project.id])
 
   const handleNoteSave = useCallback((noteId, html, text) => {
     updateProjectNote(categoryId, project.id, noteId, html, text)
@@ -1266,9 +1322,16 @@ export default function ProjectCard({ categoryId, project }) {
                       </div>
                     </button>
                     <div className="swipe-content">
+                      {editingLinkId === l.id ? (
+                        <LinkRowEditor
+                          link={l}
+                          onSave={(t, u) => saveLinkEdit(l.id, t, u)}
+                          onCancel={() => setEditingLinkId(null)}
+                        />
+                      ) : (
                       <div
                         className="note-row link-row"
-                        onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url); onLinkDrag(e, l.id) }}
+                        onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l); onLinkDrag(e, l.id) }}
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                           <LinkRowIcon activated={l.activated}/>
@@ -1283,6 +1346,7 @@ export default function ProjectCard({ categoryId, project }) {
                           <span className="row-schedule-indicator"><CalendarIcon/></span>
                         )}
                       </div>
+                      )}
                     </div>
                   </div>
                 </div>

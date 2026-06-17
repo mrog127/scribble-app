@@ -627,7 +627,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 .save-to-title {
   font-family: 'Merriweather', Georgia, serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 500;
   color: #242424;
   padding: 0;
@@ -666,7 +666,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   align-items: center;
   gap: 12px;
   width: 100%;
-  height: 56px;
+  height: 44px;
   padding: 0 16px;
   background: none;
   border: none;
@@ -674,7 +674,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   text-align: left;
   font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 300;
   color: #242424;
   position: relative;
   box-sizing: border-box;
@@ -978,7 +978,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .tab-bar .icon-tab,
   .tabs-scroll .text-tab {
     width: 100%;
-    height: 52px;
+    height: 44px;
     flex-shrink: 0;
     justify-content: flex-start;
     gap: 14px;
@@ -986,13 +986,14 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     border: 1px solid transparent;   /* reserve space so selection adds no shift */
     border-radius: 8px;
     box-sizing: border-box;
+    font-size: 15px;
   }
   .tab-bar .icon-tab { background: transparent; }
 
   /* Labels for the two icon tabs */
   .tab-bar .icon-tab::after {
     font-family: 'Merriweather', Georgia, serif;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: #333333;
   }

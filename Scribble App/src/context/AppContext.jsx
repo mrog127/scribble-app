@@ -475,6 +475,15 @@ export function AppProvider({ children }) {
     db(supabase.from('notes').update({ activated: newActivated }).eq('id', noteId))
   }, [updateProject])
 
+  const updateProjectLink = useCallback((categoryId, projectId, linkId, title, url) => {
+    const finalUrl = (url || '').trim()
+    const finalTitle = (title && title.trim()) || finalUrl
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, links: proj.links.map(l => l.id !== linkId ? l : { ...l, title: finalTitle, url: finalUrl })
+    }))
+    db(supabase.from('links').update({ title: finalTitle, url: finalUrl }).eq('id', linkId))
+  }, [updateProject])
+
   const toggleProjectLinkActivated = useCallback((categoryId, projectId, linkId) => {
     const cat = categoriesRef.current.find(c => c.id === categoryId)
     const proj = cat?.projects.find(p => p.id === projectId)
@@ -679,6 +688,7 @@ export function AppProvider({ children }) {
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
       toggleProjectLinkActivated,
+      updateProjectLink,
       setProjectTodoScheduled,
       setProjectNoteScheduled,
       setProjectLinkScheduled,

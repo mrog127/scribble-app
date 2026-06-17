@@ -17,7 +17,7 @@
 
 .card-title {
   font-family: 'Merriweather', Georgia, serif;
-  font-size: 20px;
+  font-size: 18px;
   color: #242424;
   font-weight: 500;
   flex: 1;
@@ -81,7 +81,7 @@
 .todo-row {
   display: flex;
   align-items: flex-start;
-  padding: 12px 24px;
+  padding: 10px 24px;
   min-height: unset;
   cursor: default;
   transition: background 0.15s;
@@ -103,6 +103,13 @@
   justify-content: center;
   cursor: pointer;
   position: relative;
+}
+
+/* Content type cards: vertically center the leading checkbox / note / link icon */
+.todo-row .checkbox-wrap,
+.note-row .checkbox-wrap {
+  align-self: center;
+  margin-top: 0;
 }
 
 .checkbox-wrap::before {
@@ -136,8 +143,8 @@
 }
 
 .checkbox {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 2px;
   border: 1px solid #B8B8B8;
   background: #FAF9F7;
@@ -174,7 +181,7 @@
   display: block;
   width: 100%;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 300;
   color: #3D3D3D;
   line-height: 1.4;
   word-wrap: break-word;
@@ -188,7 +195,7 @@
 .source-label-text {
   font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 300;
   color: #7A7A7A;
   margin-left: 0;
 }
@@ -232,7 +239,7 @@
   align-items: center;
   justify-content: center;
   width: 64px;
-  height: 52px;
+  height: 44px;
   border-radius: 4px;
 }
 
@@ -329,14 +336,14 @@
 }
 
 /* Note rows */
-.note-row { display: flex; align-items: flex-start; padding: 12px 24px; }
-.note-text { display: block; width: 100%; font-size: 16px; font-weight: 400; color: #3D3D3D; line-height: 1.4; word-wrap: break-word; }
+.note-row { display: flex; align-items: flex-start; padding: 10px 24px; }
+.note-text { display: block; width: 100%; font-size: 16px; font-weight: 300; color: #3D3D3D; line-height: 1.4; word-wrap: break-word; }
 .note-text.accent { color: #7069FE; }
 
 .note-preview-text {
   font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 300;
   color: #7A7A7A;
   display: block;
   overflow: hidden;
@@ -612,6 +619,49 @@
   background: #DBDAD8;
 }
 
+.detail-footer-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 24px 0 12px;
+  flex-shrink: 0;
+}
+
+.detail-footer-copy-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detail-footer-copy-flash {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 2px;
+  background: var(--accent-light);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.detail-footer-copy-icon-wrap > svg {
+  position: relative;
+  z-index: 1;
+}
+.detail-footer-copy-btn.copied .detail-footer-copy-flash,
+.detail-footer-copy-btn.copied .detail-footer-copy-icon-wrap > svg {
+  animation: copyFlash 1100ms ease forwards;
+}
+@keyframes copyFlash {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .detail-footer-project-btn {
   display: flex;
   align-items: center;
@@ -680,10 +730,10 @@
 .todo-detail-underline { display: block; margin: 24px 0 14px; }
 
 .todo-detail-title {
-  font-family: 'Momo Signature', cursive;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 32px;
-  font-weight: 700;
-  line-height: 40px;
+  font-weight: 500;
+  line-height: 44px;
   color: #242424;
   outline: none;
   caret-color: var(--accent-base);
@@ -900,7 +950,7 @@
   display: block;
   font-family: 'Merriweather Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 300;
   color: #242424;
   line-height: 1.4;
   word-wrap: break-word;
@@ -912,8 +962,8 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-family: 'Merriweather Sans', system-ui, sans-serif;
-  font-size: 16px;
-  font-weight: 400;
+  font-size: 14px;
+  font-weight: 300;
   color: #7A7A7A;
   line-height: 1.5;
   margin-top: 4px;
@@ -922,7 +972,8 @@
 .todo-attached-link-url {
   display: block;
   font-family: 'Merriweather Sans', system-ui, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 300;
   color: var(--accent-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -963,8 +1014,8 @@
 }
 
 /* Project card row heights */
-.project-card .todo-row { min-height: 48px; align-items: center; }
-.project-card .note-row { min-height: 48px; align-items: center; }
+.project-card .todo-row { min-height: 40px; align-items: center; padding: 8px 24px; }
+.project-card .note-row { min-height: 40px; align-items: center; padding: 8px 24px; }
 .project-card .item-content { flex-direction: row; align-items: center; flex-wrap: nowrap; }
 .project-card .item-text,
 .project-card .note-text { width: auto; display: inline; }
@@ -1200,6 +1251,26 @@
 }
 
 /* ---- Scheduled-activation feature ---- */
+
+/* Inline link-row editor (revealed on long-press) */
+.link-row-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 8px 40px;
+}
+.link-row-editor-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.link-row-editor .project-input {
+  padding: 5px 0;
+  background: none;
+  border: none;
+  width: 100%;
+}
 
 /* Clock indicator on a row that is scheduled (sits where the paperclip would) */
 .row-schedule-indicator {

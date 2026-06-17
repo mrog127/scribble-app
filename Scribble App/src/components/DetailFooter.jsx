@@ -16,6 +16,22 @@ function FolderIcon({ active }) {
   )
 }
 
+function CopyIcon({ copied }) {
+  if (copied) {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M5 13l4 4L19 7" stroke="var(--accent-base)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  }
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="9" y="9" width="11" height="11" rx="2" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M5 15V5a2 2 0 012-2h8" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 function ActivateIcon({ activated }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -28,7 +44,7 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
@@ -67,6 +83,21 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
           <span className="detail-footer-project">{projectName}</span>
         </button>
       </div>
+      {typeof onCopy === 'function' && (
+        <>
+          <div className="detail-footer-divider"/>
+          <button
+            className={`detail-footer-copy-btn${copied ? ' copied' : ''}`}
+            aria-label="Copy note"
+            onMouseDown={e => { e.preventDefault(); onCopy() }}
+          >
+            <span className="detail-footer-copy-icon-wrap">
+              <span className="detail-footer-copy-flash"/>
+              <CopyIcon copied={copied}/>
+            </span>
+          </button>
+        </>
+      )}
 
       {calOpen && (
         <CalendarPopup

@@ -14,13 +14,13 @@
 .card-header {
   display: flex;
   align-items: center;
-  padding: 22px 8px 10px 24px;
+  padding: 22px 8px 10px 22px;
   gap: 10px;
 }
 
 .card-title {
   font-family: 'Merriweather', Georgia, serif;
-  font-size: 18px;
+  font-size: 20px;
   color: #242424;
   font-weight: 500;
   flex: 1;

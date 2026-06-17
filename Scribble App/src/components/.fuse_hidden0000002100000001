@@ -378,11 +378,10 @@ function CollapsedTodosCard({ category }) {
     try { return localStorage.getItem(`hc-cat-${category.id}`) !== 'false' } catch { return true }
   })
   const [openTodoId, setOpenTodoId] = useState(null)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const sortFlipRef = useRef(null)
+  const btnRef = useRef(null)
   const showingRef = useRef(false)
   const checkTimers = useRef({})
   const checkPopping = useRef({})
@@ -448,13 +447,16 @@ function CollapsedTodosCard({ category }) {
   }, [hideCompleted]) // eslint-disable-line
 
   useEffect(() => {
-    if (!menuOpen) return
-    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    document.addEventListener('pointerdown', handler)
-    return () => document.removeEventListener('pointerdown', handler)
-  }, [menuOpen])
-
-  useEffect(() => { if (!hasChecked) setMenuOpen(false) }, [hasChecked])
+    const btn = btnRef.current
+    if (!btn) return
+    if (hasChecked) {
+      btn.style.display = 'block'
+      requestAnimationFrame(() => { btn.classList.add('visible') })
+    } else {
+      btn.classList.remove('visible')
+      setTimeout(() => { if (btnRef.current) btnRef.current.style.display = '' }, 210)
+    }
+  }, [hasChecked])
 
   const snapshotForFlip = () => {
     if (containerRef.current) {
@@ -585,26 +587,6 @@ function CollapsedTodosCard({ category }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Lists</span>
-        {hasChecked && (
-          <div className="dots-menu-wrap" ref={menuRef}>
-            <div
-              className="dots-menu dots-menu-btn"
-              onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
-            >
-              <span/><span/><span/>
-            </div>
-            {menuOpen && (
-              <div className="card-context-menu">
-                <button
-                  className="card-context-item"
-                  onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
-                >
-                  {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
       <div ref={containerRef}>
         {sorted.map((t, i) => (
@@ -650,10 +632,10 @@ function CollapsedTodosCard({ category }) {
                     </div>
                   </div>
                   {(t.scheduledDate && !t.activated) ? (
-                    <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><CalendarIcon size={18}/></span>
                   ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </span>
@@ -664,6 +646,9 @@ function CollapsedTodosCard({ category }) {
           </div>
         ))}
       </div>
+      <button ref={btnRef} className="hide-completed-btn" style={{ display: 'none' }} onClick={handleToggleHideCompleted}>
+        {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
+      </button>
 
       {openTodo && openTodoProj && createPortal(
         <TodoDetailPage
@@ -815,7 +800,7 @@ function CollapsedNotesCard({ category }) {
                     </div>
                   </div>
                   {(n.scheduledDate && !n.activated) && (
-                    <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><CalendarIcon size={18}/></span>
                   )}
                 </div>
               </div>
@@ -966,7 +951,7 @@ function CollapsedLinksCard({ category }) {
                     </div>
                   </div>
                   {(l.scheduledDate && !l.activated) && (
-                    <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><CalendarIcon size={18}/></span>
                   )}
                 </div>
               </div>

@@ -335,6 +335,8 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
   const [hideCompleted, setHideCompleted] = useState(() => {
     try { return localStorage.getItem('hc-active-todos') !== 'false' } catch { return true }
   })
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   const containerRef = useRef(null)
   const handleDelete = useCallback((id) => {
     const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
@@ -369,11 +371,21 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
   const cardRef = useRef(null)
   const { onDragPointerDown } = useDragReorder(containerRef, todos, onReorder)
   const toggleFlipRef = useRef(null)
-  const btnRef = useRef(null)
   const showingRef = useRef(false)
 
   // Compute before early return so hooks can use it
   const hasChecked = todos.some(t => t.checked)
+
+  // Close the three-dot menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [menuOpen])
+
+  // Close the menu if the last completed item goes away (menu hides entirely)
+  useEffect(() => { if (!hasChecked) setMenuOpen(false) }, [hasChecked])
 
   useLayoutEffect(() => {
     const card = cardRef.current
@@ -430,19 +442,6 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       }), 220)
     })
   }, [hideCompleted, todos])
-
-  // Animate the Hide/Show button in and out
-  useEffect(() => {
-    const btn = btnRef.current
-    if (!btn) return
-    if (hasChecked) {
-      btn.style.display = 'block'
-      requestAnimationFrame(() => { btn.classList.add('visible') })
-    } else {
-      btn.classList.remove('visible')
-      setTimeout(() => { if (btnRef.current) btnRef.current.style.display = '' }, 210)
-    }
-  }, [hasChecked])
 
   if (todos.length === 0) return null
 
@@ -505,7 +504,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       // Row flash in accent color
       const todoRow = e.currentTarget.closest('.todo-row')
       if (todoRow) {
-        const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+        const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
         todoRow.animate(
           [
             { background: `rgba(${rgb},0)` },
@@ -573,6 +572,26 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
     <div className="card card-intro" id="listsCard" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Lists</span>
+        {hasChecked && (
+          <div className="dots-menu-wrap" ref={menuRef}>
+            <div
+              className="dots-menu dots-menu-btn"
+              onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
+            >
+              <span/><span/><span/>
+            </div>
+            {menuOpen && (
+              <div className="card-context-menu">
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
+                >
+                  {hideCompleted ? 'Show Completed' : 'Hide Completed'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div id="lists-container" ref={containerRef}>
@@ -628,14 +647,6 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
           </div>
         ))}
       </div>
-
-      <button
-        ref={btnRef}
-        className="hide-completed-btn"
-        onClick={handleToggleHideCompleted}
-      >
-        {hideCompleted ? 'Show Completed' : 'Hide Completed'}
-      </button>
     </div>
   )
 }

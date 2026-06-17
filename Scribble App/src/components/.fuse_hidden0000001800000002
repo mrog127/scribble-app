@@ -312,9 +312,8 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
   const checkTimers = useRef({})
   const checkPopping = useRef({})
   const toggleFlipRef = useRef(null)
+  const btnRef = useRef(null)
   const showingRef = useRef(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
 
   const hasChecked = items.some(t => t.checked)
   const sorted = hideCompleted
@@ -421,16 +420,18 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     })
   }, [hideCompleted, sorted])
 
-  // Close the three-dot menu on outside click
+  // Animate the Hide/Show button in and out
   useEffect(() => {
-    if (!menuOpen) return
-    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
-    document.addEventListener('pointerdown', handler)
-    return () => document.removeEventListener('pointerdown', handler)
-  }, [menuOpen])
-
-  // Hide the menu (and close it) when there are no completed items
-  useEffect(() => { if (!hasChecked) setMenuOpen(false) }, [hasChecked])
+    const btn = btnRef.current
+    if (!btn) return
+    if (hasChecked) {
+      btn.style.display = 'block'
+      requestAnimationFrame(() => { btn.classList.add('visible') })
+    } else {
+      btn.classList.remove('visible')
+      setTimeout(() => { if (btnRef.current) btnRef.current.style.display = '' }, 210)
+    }
+  }, [hasChecked])
 
   // Look the open todo up from the full data so it survives being deactivated (and removed from this card's items)
   let openTodo = null, openTodoCat = null, openTodoProj = null
@@ -535,26 +536,6 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Lists</span>
-        {hasChecked && (
-          <div className="dots-menu-wrap" ref={menuRef}>
-            <div
-              className="dots-menu dots-menu-btn"
-              onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
-            >
-              <span/><span/><span/>
-            </div>
-            {menuOpen && (
-              <div className="card-context-menu">
-                <button
-                  className="card-context-item"
-                  onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
-                >
-                  {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
       <div ref={containerRef}>
         {sorted.map((t, i) => {
@@ -602,7 +583,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                   </div>
                   {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </span>
@@ -614,6 +595,9 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
           )
         })}
       </div>
+      <button ref={btnRef} className="hide-completed-btn" style={{ color: '#3D3D3D' }} onClick={handleToggleHideCompleted}>
+        {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
+      </button>
 
       {openTodo && createPortal(
         <TodoDetailPage

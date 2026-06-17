@@ -375,7 +375,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
       )
     }
     if (!todo.checked && flashRef.current) {
-      const rgb = getComputedStyle(flashRef.current).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+      const rgb = getComputedStyle(flashRef.current).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
       flashRef.current.animate(
         [{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.18)`, offset: 0.2 }, { background: `rgba(${rgb},0)` }],
         { duration: 500, easing: 'ease', fill: 'none' }
@@ -492,7 +492,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     const content = row.querySelector('.todo-swipe-content')
     if (content) { content.style.transition = ''; content.style.transform = '' }
     const flashEl = row.querySelector('.todo-attached-row') || row
-    const rgb = getComputedStyle(row).getPropertyValue('--accent-base-rgb').trim() || '105,147,254'
+    const rgb = getComputedStyle(row).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
     setTimeout(() => {
       flashEl.animate(
         [{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.25)`, offset: 0.4 }, { background: `rgba(${rgb},0)` }],

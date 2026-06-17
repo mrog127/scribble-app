@@ -1,5 +1,8 @@
 html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0EB; }
 
+/* Disable the dark tap-flash mobile browsers paint over buttons/links on touch */
+* { -webkit-tap-highlight-color: transparent; }
+
 
 .app-wrap {
   display: flex;
@@ -22,7 +25,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   display: flex;
   flex-direction: column;
   position: relative;
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   box-shadow: none;
 }
 
@@ -72,9 +75,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .category-page .page-header { padding-top: 131px; padding-right: 24px; }
 
 .active-title {
-  font-family: 'Momo Signature', cursive;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 500;
   color: #333333;
   line-height: 1.1;
   margin: 0 0 8px 8px;
@@ -91,9 +94,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .active-today-label {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: #7A7A7A;
   margin: 0 0 12px 8px;
   line-height: 1.2;
@@ -102,9 +105,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .active-day-name {
-  font-family: 'Momo Signature', cursive;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 40px;
-  font-weight: 700;
+  font-weight: 500;
   color: #333333;
   margin: 8px 0 0 8px;
   line-height: 1.2;
@@ -113,9 +116,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .active-month-date {
-  font-family: 'Momo Signature', cursive;
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 40px;
-  font-weight: 700;
+  font-weight: 500;
   color: #333333;
   margin: 0 0 24px 8px;
   line-height: 1.2;
@@ -140,11 +143,12 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .category-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .category-header-btn {
+  position: relative;
   width: 36px;
   height: 36px;
   display: flex;
@@ -156,6 +160,23 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   padding: 0;
   border-radius: 8px;
   transition: background 120ms ease;
+}
+
+.category-header-btn > * { position: relative; z-index: 1; }
+
+@media (hover: hover) {
+  .category-header-btn:hover::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.04);
+    z-index: 0;
+  }
 }
 
 .category-header-btn:active {
@@ -219,7 +240,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   padding: 0 16px;
   color: #242424;
   outline: none;
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-weight: 400;
   font-size: 16px;
   box-shadow: none;
@@ -231,34 +252,37 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   box-shadow: 0 4px 0px rgba(0,0,0,0.10);
 }
 
+/* All placeholder text: 16px, content-row sublabel weight */
+::placeholder { font-size: 16px; font-weight: 500; }
+
 .add-input::placeholder { color: #B5B4B2; transition: opacity 100ms ease; }
 .add-input.focused::placeholder { opacity: 0; }
 
 .send-btn {
-  height: 48px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  height: 32px;
+  width: 32px;
   padding: 0;
-  border-radius: 4px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   opacity: 0;
   pointer-events: none;
-  width: 0;
-  overflow: hidden;
-  transition: width 100ms ease, margin-left 100ms ease, opacity 100ms ease;
+  z-index: 2;
+  transition: opacity 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .send-btn.visible {
   opacity: 1;
   pointer-events: auto;
-  width: 48px;
-  margin-left: 8px;
   background: var(--accent-light);
-  border: 1px solid var(--accent-dark);
+  border-color: var(--accent-dark);
   box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
 }
 
@@ -266,6 +290,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 
 /* Link mode — stacked title + URL inputs sharing one bordered box */
 .link-input-stack {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -276,6 +301,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   overflow: hidden;
   transition: box-shadow 150ms ease;
 }
+
+/* Leave room for the in-box send button on the title row */
+.link-input-stack > .add-input { padding-right: 52px; }
 
 .link-input-stack:focus-within { box-shadow: 0 4px 0px rgba(0,0,0,0.10); }
 
@@ -338,35 +366,35 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .icon-tab.selected .mline-el { background: var(--accent-dark); }
 
 @keyframes star-stroke-cycle {
-  0%      { stroke: #3F5999; }
-  14.286% { stroke: #993F3F; }
-  28.571% { stroke: #229026; }
-  42.857% { stroke: #99633F; }
-  57.143% { stroke: #6B3F99; }
-  71.429% { stroke: #99813F; }
-  85.714% { stroke: #993F95; }
-  100%    { stroke: #3F5999; }
+  0%      { stroke: #607787; }
+  14.286% { stroke: #8A6262; }
+  28.571% { stroke: #608766; }
+  42.857% { stroke: #8A745E; }
+  57.143% { stroke: #746087; }
+  71.429% { stroke: #8A8160; }
+  85.714% { stroke: #876079; }
+  100%    { stroke: #607787; }
 }
 @keyframes star-fill-cycle {
-  0%      { fill: #E1E9FF; }
-  14.286% { fill: #FFE1E1; }
-  28.571% { fill: #CEF4CC; }
-  42.857% { fill: #FFEDE1; }
-  57.143% { fill: #EFE1FF; }
-  71.429% { fill: #FFF7E1; }
-  85.714% { fill: #FFE1FD; }
-  100%    { fill: #E1E9FF; }
+  0%      { fill: #D8E6F0; }
+  14.286% { fill: #F0D8D8; }
+  28.571% { fill: #D8F0DC; }
+  42.857% { fill: #F2E7DA; }
+  57.143% { fill: #E5DAF0; }
+  71.429% { fill: #F2ECD5; }
+  85.714% { fill: #F0D8E7; }
+  100%    { fill: #D8E6F0; }
 }
 /* Home label cycles through the same dark colours as the star, at the same rate */
 @keyframes home-label-cycle {
-  0%      { color: #3F5999; }
-  14.286% { color: #993F3F; }
-  28.571% { color: #229026; }
-  42.857% { color: #99633F; }
-  57.143% { color: #6B3F99; }
-  71.429% { color: #99813F; }
-  85.714% { color: #993F95; }
-  100%    { color: #3F5999; }
+  0%      { color: #607787; }
+  14.286% { color: #8A6262; }
+  28.571% { color: #608766; }
+  42.857% { color: #8A745E; }
+  57.143% { color: #746087; }
+  71.429% { color: #8A8160; }
+  85.714% { color: #876079; }
+  100%    { color: #607787; }
 }
 
 .star-active .icon-tab.selected svg {
@@ -428,14 +456,14 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   z-index: 0;
   left: 0;
   width: 40px;
-  border: 1px solid var(--accent-dark);
-  box-shadow: 0 3px 0px rgba(var(--accent-base-rgb), 0.40);
+  border: 1px solid var(--accent-base);
+  box-shadow: none;
 }
 
 .tab-bar.star-active .tab-indicator {
   background: #FAF9F7;
-  border: 1px solid #B8B8B8;
-  box-shadow: 0 3px 0px rgba(0,0,0,0.10);
+  border: 1px solid #C2C1BF;
+  box-shadow: none;
 }
 
 .tab-area { position: relative; height: 40px; overflow: visible; }
@@ -472,9 +500,9 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .toolbar-source-label {
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent-dark);
 }
 
@@ -494,8 +522,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   background: rgba(var(--accent-base-rgb),0.2);
   border-radius: 4px;
   pointer-events: none;
@@ -513,20 +541,24 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   border: none;
   cursor: pointer;
   padding: 0;
-  border-radius: 2px;
-  width: 40px;
-  height: 40px;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
+}
+
+@media (hover: hover) {
+  .toolbar-icon-btn:hover:not(.selected) { background: rgba(0, 0, 0, 0.04); }
 }
 
 .toolbar-icon-btn svg line,
 .toolbar-icon-btn svg path,
-.toolbar-icon-btn svg polygon { stroke: #3D3D3D; }
-.toolbar-icon-btn svg circle { fill: #3D3D3D; }
+.toolbar-icon-btn svg polygon { stroke: #242424; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.toolbar-icon-btn svg circle { fill: #242424; }
 .toolbar-icon-btn.selected svg line,
 .toolbar-icon-btn.selected svg path,
-.toolbar-icon-btn.selected svg polygon { stroke: var(--accent-dark); }
-.toolbar-icon-btn.selected svg circle { fill: var(--accent-dark); }
+.toolbar-icon-btn.selected svg polygon { stroke: #242424; }
+.toolbar-icon-btn.selected svg circle { fill: #242424; }
 
 .home-indicator {
   width: 120px;
@@ -634,10 +666,10 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   margin: 0;
 }
 .save-to-cancel {
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 700;
-  color: #3F5999;
+  font-weight: 500;
+  color: var(--accent-dark);
   background: none;
   border: none;
   cursor: pointer;
@@ -646,16 +678,16 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   flex-shrink: 0;
 }
 .save-to-empty {
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 14px;
   color: #959493;
   padding: 4px 16px 16px;
   margin: 0;
 }
 .save-to-category {
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--cb-dark);
   padding: 8px 16px 2px;
   text-transform: uppercase;
@@ -666,16 +698,16 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   align-items: center;
   gap: 12px;
   width: 100%;
-  height: 44px;
+  height: 52px;
   padding: 0 16px;
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: 'Merriweather Sans', system-ui, sans-serif;
+  font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 300;
-  color: #242424;
+  font-weight: 500;
+  color: #494949;
   position: relative;
   box-sizing: border-box;
 }
@@ -899,7 +931,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .footer {
     position: fixed;
     left: 0;
-    top: 224px;
+    top: 199px;
     bottom: 0;
     width: 340px;
     box-sizing: border-box;
@@ -917,7 +949,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     flex: 1;
     height: auto;
     min-height: 0;
-    margin-top: 12px;   /* with the add-row's 12px margin = 24px below the textbox */
+    margin-top: 4px;   /* with the add-row's 12px margin = 16px below the textbox */
   }
   /* Reserve the textbox's space even on category pages (where it's hidden) so the
      nav below it keeps a fixed position relative to the textbox location. */
@@ -1003,6 +1035,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* Home label: match category-tab weight, sit 8px from the star, and cycle
      through the star's dark colours (same rate/colours) when selected. */
   .tab-bar .tab-home { gap: 8px; }
+  .tab-bar .tab-home svg { width: 12px; height: 12px; }   /* desktop star stays 12 */
   .tab-bar .tab-home::after { font-weight: 500; }
   .tab-bar.star-active .tab-home.selected::after {
     font-weight: 600;   /* match a selected category tab label */
@@ -1038,19 +1071,23 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
 
   /* ---- "Save to..." picker opens below the textbox + send settings ----
-     Footer top 224 + input 48 + 12 margin + 12 tab-area margin + 52 toolbar
-     = 348 (send-settings bottom); menu top = +8 = 356, bottom = 24 above window. */
+     Footer top 199 + input 48 + 12 add-row margin + 4 tab-area margin + 52 toolbar
+     = 315 (send-settings bottom); menu top = +8 = 323, bottom = 24 above window.
+     In link mode the textbox grows by 49px (second row), so the menu drops to 372. */
   .save-to-panel.visible {
     position: fixed;
     left: 0;
-    top: 356px;
+    top: 323px;
     bottom: 24px;
     width: 340px;   /* same box as the footer; with 28px side padding the card
                        matches the textbox + send button (28 → 312) */
     box-sizing: border-box;
     z-index: 46;
     padding: 0 28px;
+    transition: top 200ms ease;
   }
+  /* Link mode adds a second input row — push the menu down so it stays below it */
+  #app:has(.add-link-url-wrap.open) .save-to-panel.visible { top: 372px; }
   /* Keep the cards in place but dim them to 20% while the picker is open */
   .phone.save-panel-open .page {
     flex: 1;

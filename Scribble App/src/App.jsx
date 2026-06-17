@@ -833,7 +833,15 @@ function AppInner() {
 
         {/* Save to… panel — homescreen & collapsed category pages, flex sibling to footer */}
         {footerInputMode && (
-          <div className={`save-to-panel${inputFocused ? ' visible' : ''}`}>
+          <div
+            className={`save-to-panel${inputFocused ? ' visible' : ''}`}
+            style={{
+              '--accent-base': footerAccent.base,
+              '--accent-dark': footerAccent.dark,
+              '--accent-light': footerAccent.light,
+              '--accent-base-rgb': footerAccent.baseRgb,
+            }}
+          >
             <div className="save-to-card">
               <div className="save-to-header">
                 <p className="save-to-title">Save to...</p>
@@ -917,16 +925,16 @@ function AppInner() {
                   tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
                 />
               </div>
+              <button
+                className={`send-btn${inputFocused || inputValue.trim() || (toolbarType === 'link' && linkUrlValue.trim()) ? ' visible' : ''}`}
+                onMouseDown={e => { e.preventDefault(); addItem() }}
+              >
+                <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
+                  <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             </div>
-            <button
-              className={`send-btn${inputFocused || inputValue.trim() || (toolbarType === 'link' && linkUrlValue.trim()) ? ' visible' : ''}`}
-              onMouseDown={e => { e.preventDefault(); addItem() }}
-            >
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-                <path d="M10 16 L10 4" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
-                <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
           </div>
 
           <div className="tab-area">
@@ -950,33 +958,33 @@ function AppInner() {
                   className={`toolbar-icon-btn${toolbarType === 'list' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setToolbarType('list') }}
                 >
-                  <svg width="24" height="24" viewBox="0 0 22 22" fill="none">
-                    <circle cx="5" cy="7" r="1.5" fill={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'}/>
-                    <line x1="9" y1="7" x2="19" y2="7" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                    <circle cx="5" cy="12" r="1.5" fill={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'}/>
-                    <line x1="9" y1="12" x2="19" y2="12" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                    <circle cx="5" cy="17" r="1.5" fill={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'}/>
-                    <line x1="9" y1="17" x2="14" y2="17" stroke={toolbarType === 'list' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
+                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+                    <circle cx="5" cy="7" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
+                    <line x1="9" y1="7" x2="19" y2="7" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
+                    <circle cx="5" cy="12" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
+                    <line x1="9" y1="12" x2="19" y2="12" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
+                    <circle cx="5" cy="17" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
+                    <line x1="9" y1="17" x2="14" y2="17" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                   </svg>
                 </button>
                 <button
                   className={`toolbar-icon-btn${toolbarType === 'note' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setToolbarType('note') }}
                 >
-                  <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-                    <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round" fill="none"/>
-                    <path d="M12 3v5h5" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round"/>
-                    <line x1="5" y1="13" x2="15" y2="13" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                    <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={toolbarType === 'note' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
+                  <svg width="20" height="20" viewBox="0 0 20 22" fill="none">
+                    <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round" fill="none"/>
+                    <path d="M12 3v5h5" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round"/>
+                    <line x1="5" y1="13" x2="15" y2="13" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                   </svg>
                 </button>
                 <button
                   className={`toolbar-icon-btn${toolbarType === 'link' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setToolbarType('link') }}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={toolbarType === 'link' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={toolbarType === 'link' ? '#3F5999' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={toolbarType === 'link' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={toolbarType === 'link' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
               </div>

@@ -44,7 +44,7 @@ export default function AuthScreen() {
           <p style={{
             fontFamily: "'Open Sans', system-ui, sans-serif",
             fontSize: 14,
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#959493',
             margin: '0 0 40px 0',
           }}>
@@ -77,7 +77,7 @@ export default function AuthScreen() {
               </p>
             )}
             {message && (
-              <p style={{ fontFamily: "'Open Sans', system-ui, sans-serif", fontSize: 13, color: '#3F5999', margin: 0 }}>
+              <p style={{ fontFamily: "'Open Sans', system-ui, sans-serif", fontSize: 13, color: '#607787', margin: 0 }}>
                 {message}
               </p>
             )}
@@ -88,12 +88,12 @@ export default function AuthScreen() {
               style={{
                 height: 48,
                 borderRadius: 4,
-                background: '#3F5999',
+                background: '#607787',
                 border: 'none',
                 color: '#fff',
                 fontFamily: "'Open Sans', system-ui, sans-serif",
                 fontSize: 16,
-                fontWeight: 600,
+                fontWeight: 500,
                 cursor: loading ? 'default' : 'pointer',
                 opacity: loading ? 0.6 : 1,
                 marginTop: 4,
@@ -111,8 +111,8 @@ export default function AuthScreen() {
               border: 'none',
               fontFamily: "'Open Sans', system-ui, sans-serif",
               fontSize: 14,
-              fontWeight: 600,
-              color: '#6993FE',
+              fontWeight: 500,
+              color: '#607787',
               cursor: 'pointer',
               padding: 0,
             }}

@@ -10,7 +10,7 @@ function FolderIcon({ active }) {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginRight: 8 }}>
       <path
         d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
-        stroke={active ? 'var(--accent-base)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
+        stroke={active ? 'var(--accent-base)' : 'var(--accent-dark)'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
       />
     </svg>
   )
@@ -26,8 +26,8 @@ function CopyIcon({ copied }) {
   }
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <rect x="9" y="9" width="11" height="11" rx="2" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M5 15V5a2 2 0 012-2h8" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="9" y="9" width="11" height="11" rx="2" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M5 15V5a2 2 0 012-2h8" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }

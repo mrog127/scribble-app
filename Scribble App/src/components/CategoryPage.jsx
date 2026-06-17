@@ -7,7 +7,7 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
 // outward to the corners (Collapsed → expand). The two glyphs crossfade.
 function CollapseToggleIcon({ collapsed }) {
-  const common = { stroke: 'var(--accent-dark)', strokeWidth: 1, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }
+  const common = { stroke: '#242424', strokeWidth: 1, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }
   const layer = (show) => ({
     position: 'absolute', inset: 0,
     opacity: show ? 1 : 0,
@@ -15,16 +15,16 @@ function CollapseToggleIcon({ collapsed }) {
     transition: 'opacity 220ms ease, transform 240ms cubic-bezier(0.4,0,0.2,1)',
   })
   return (
-    <span style={{ position: 'relative', width: 24, height: 24, display: 'block' }}>
+    <span style={{ position: 'relative', width: 20, height: 20, display: 'block' }}>
       {/* Collapse (inward) — shown in the Expanded state */}
-      <svg width="24" height="24" viewBox="0 0 22 22" fill="none" style={layer(!collapsed)}>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none" style={layer(!collapsed)}>
         <polyline points="18 9.5 12.5 9.5 12.5 4" {...common}/>
         <path d="M12.5 9.5 L20.5 1.5" {...common}/>
         <polyline points="4 12.5 9.5 12.5 9.5 18" {...common}/>
         <path d="M9.5 12.5 L1.5 20.5" {...common}/>
       </svg>
       {/* Expand (outward) — shown in the Collapsed state */}
-      <svg width="24" height="24" viewBox="0 0 22 22" fill="none" style={layer(collapsed)}>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none" style={layer(collapsed)}>
         <polyline points="13.5 1.5 20.5 1.5 20.5 8.5" {...common}/>
         <path d="M20.5 1.5 L12 10" {...common}/>
         <polyline points="8.5 20.5 1.5 20.5 1.5 13.5" {...common}/>
@@ -36,9 +36,9 @@ function CollapseToggleIcon({ collapsed }) {
 
 function AddIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
-      <rect x="1.5" y="1.5" width="19" height="19" rx="4.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1"/>
-      <path d="M11 6v10M6 11h10" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round"/>
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+      <rect x="1.5" y="1.5" width="19" height="19" rx="4.5" style={{ stroke: '#242424' }} strokeWidth="1"/>
+      <path d="M11 6v10M6 11h10" style={{ stroke: '#242424' }} strokeWidth="1" strokeLinecap="round"/>
     </svg>
   )
 }

@@ -7,6 +7,8 @@ import { getCategoryAccent } from '../theme.js'
 export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave }) {
   const [sel, setSel] = useState({ categoryId: currentCategoryId, projectId: currentProjectId })
   const changed = sel.projectId !== currentProjectId
+  const selCatIdx = categories.findIndex(c => c.id === sel.categoryId)
+  const selAccent = selCatIdx !== -1 ? getCategoryAccent(selCatIdx) : null
   const scrollRef = useRef(null)
   const [open, setOpen] = useState(false)
 
@@ -34,7 +36,11 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
 
   return createPortal(
     <div className={`move-to-overlay${open ? ' open' : ''}`} onPointerDown={() => finish(onCancel)}>
-    <div className={`move-to-card${open ? ' open' : ''}`} onPointerDown={e => e.stopPropagation()}>
+    <div
+      className={`move-to-card${open ? ' open' : ''}`}
+      onPointerDown={e => e.stopPropagation()}
+      style={selAccent ? { '--accent-dark': selAccent.dark } : undefined}
+    >
       <div className="save-to-header">
         <p className="save-to-title">Move to...</p>
         <button

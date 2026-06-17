@@ -310,7 +310,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 6, padding: 0,
-                fontFamily: "'Merriweather Sans', sans-serif",
+                fontFamily: "'Open Sans', sans-serif",
                 fontSize: 16, fontWeight: 400, color: '#242424',
               }}
             >
@@ -362,14 +362,14 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                     onBlur={() => handleRenameSubmit(cat.id)}
                     style={{
                       flex: 1, border: 'none', background: 'transparent', outline: 'none', padding: 0,
-                      fontFamily: "'Merriweather Sans', sans-serif",
+                      fontFamily: "'Open Sans', sans-serif",
                       fontSize: 16, fontWeight: 400, color: '#333333',
                     }}
                   />
                 ) : (
                   <span style={{
                     flex: 1,
-                    fontFamily: "'Merriweather Sans', sans-serif",
+                    fontFamily: "'Open Sans', sans-serif",
                     fontSize: 16, fontWeight: 400, color: '#333333',
                   }}>
                     {cat.name}
@@ -422,7 +422,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                               width: '100%', padding: '12px 16px',
                               background: 'none', border: 'none', borderBottom: '1px solid #DBDAD8',
                               textAlign: 'left', cursor: 'pointer', whiteSpace: 'nowrap',
-                              fontFamily: "'Merriweather Sans', sans-serif",
+                              fontFamily: "'Open Sans', sans-serif",
                               fontSize: 16, fontWeight: 400, color: '#242424',
                             }}
                           >
@@ -453,7 +453,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                           display: 'block', width: '100%', padding: '12px 16px',
                           background: 'none', border: 'none', borderBottom: '1px solid #DBDAD8',
                           textAlign: 'left', cursor: 'pointer',
-                          fontFamily: "'Merriweather Sans', sans-serif",
+                          fontFamily: "'Open Sans', sans-serif",
                           fontSize: 16, fontWeight: 400, color: '#242424',
                         }}
                       >
@@ -464,7 +464,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         style={{
                           display: 'block', width: '100%', padding: '12px 16px',
                           background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer',
-                          fontFamily: "'Merriweather Sans', sans-serif",
+                          fontFamily: "'Open Sans', sans-serif",
                           fontSize: 16, fontWeight: 400, color: '#B24A4A',
                         }}
                       >
@@ -497,7 +497,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                   onBlur={handleAddSubmit}
                   style={{
                     flex: 1, border: 'none', background: 'transparent', outline: 'none', padding: 0,
-                    fontFamily: "'Merriweather Sans', sans-serif",
+                    fontFamily: "'Open Sans', sans-serif",
                     fontSize: 16, fontWeight: 400, color: '#333333',
                   }}
                 />
@@ -510,7 +510,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
         <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <p style={{
             fontFamily: "'Open Sans', system-ui, sans-serif",
-            fontSize: 14, fontWeight: 600, color: '#959493', margin: 0,
+            fontSize: 14, fontWeight: 500, color: '#959493', margin: 0,
           }}>
             {user?.email}
           </p>
@@ -521,7 +521,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
               border: '1.5px solid #C2C1BF', cursor: 'pointer',
               textAlign: 'left', padding: '0 16px',
               fontFamily: "'Open Sans', system-ui, sans-serif",
-              fontSize: 16, fontWeight: 600, color: '#B24A4A',
+              fontSize: 16, fontWeight: 500, color: '#B24A4A',
             }}
           >
             Log out

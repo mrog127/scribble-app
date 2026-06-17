@@ -15,10 +15,11 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
           style={{ '--tab-light': ACCENT_COLORS[0].light }}
           onClick={() => onSelectTab('star')}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <polygon
               points="10,2 12.5,7.5 18.5,8 14,12.5 15.5,18.5 10,15.5 4.5,18.5 6,12.5 1.5,8 7.5,7.5"
               strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
               strokeLinejoin="round"
               strokeLinecap="round"
             />

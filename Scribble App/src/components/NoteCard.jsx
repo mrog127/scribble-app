@@ -790,6 +790,18 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   const containerRef = useRef(null)
   const { onDragPointerDown } = useDragReorder(containerRef, notes, onReorder)
 
+  // Three-dot header menu (mirrors the Lists card / project cards).
+  // Notes has no menu actions yet, so the menu stays hidden until menuItems has entries.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  const menuItems = []
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [menuOpen])
+
   useEffect(() => {
     const themeTag = document.querySelector('meta[name="theme-color"]')
     if (openNoteId) {
@@ -940,6 +952,29 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
       <div className="card card-intro" id="notesCard" ref={cardRef}>
         <div className="card-header">
           <span className="card-title">Notes</span>
+          {menuItems.length > 0 && (
+            <div className="dots-menu-wrap" ref={menuRef}>
+              <div
+                className="dots-menu dots-menu-btn"
+                onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
+              >
+                <span/><span/><span/>
+              </div>
+              {menuOpen && (
+                <div className="card-context-menu">
+                  {menuItems.map(item => (
+                    <button
+                      key={item.label}
+                      className={`card-context-item${item.danger ? ' danger' : ''}`}
+                      onMouseDown={e => { e.preventDefault(); item.onSelect(); setMenuOpen(false) }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div id="notes-container" ref={containerRef}>

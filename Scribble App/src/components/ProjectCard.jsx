@@ -478,6 +478,11 @@ export default function ProjectCard({ categoryId, project }) {
   const menuRef = useRef(null)
   const renameInputRef = useRef(null)
   const addBtnRef = useRef(null)
+  const tabBarRef = useRef(null)
+  const tabIndicatorRef = useRef(null)
+  const itemsRef = useRef(null)
+  const itemsHeightRef = useRef(null)
+  const tabMountedRef = useRef(false)
   const showingRef = useRef(false)
   const checkTimers = useRef({})
   const checkPopping = useRef({})
@@ -727,6 +732,52 @@ export default function ProjectCard({ categoryId, project }) {
   )
   const showTabs = typesWithItems.length > 1
   const displayType = showTabs ? activeTab : (typesWithItems[0] || 'list')
+
+  // ---- Slide the tab selector box to the active tab ----
+  useLayoutEffect(() => {
+    const bar = tabBarRef.current
+    const ind = tabIndicatorRef.current
+    if (!bar || !ind) return
+    const sel = bar.querySelector('.project-tab-btn.selected')
+    if (!sel) { ind.style.opacity = '0'; return }
+    if (!tabMountedRef.current) ind.style.transition = 'none'
+    ind.style.opacity = '1'
+    ind.style.left = sel.offsetLeft + 'px'
+    if (!tabMountedRef.current) {
+      // enable transition after the initial position is set
+      requestAnimationFrame(() => { ind.style.transition = ''; tabMountedRef.current = true })
+    }
+  }, [activeTab, showTabs, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- Animate the items area height when switching tabs ----
+  useLayoutEffect(() => {
+    const el = itemsRef.current
+    if (!el) return
+    const newH = el.scrollHeight
+    const prevH = itemsHeightRef.current
+    itemsHeightRef.current = newH
+    if (prevH == null || prevH === newH) return
+    el.style.height = prevH + 'px'
+    el.style.overflow = 'hidden'
+    el.offsetHeight // force reflow
+    el.style.transition = 'height 250ms ease'
+    el.style.height = newH + 'px'
+    const done = (e) => {
+      if (e && e.propertyName !== 'height') return
+      el.style.height = ''
+      el.style.overflow = ''
+      el.style.transition = ''
+      el.removeEventListener('transitionend', done)
+    }
+    el.addEventListener('transitionend', done)
+  }, [displayType])
+
+  // Capture the current items height before switching tabs so the height
+  // animation starts from the right place (even if content changed in between).
+  const switchTab = useCallback((type) => {
+    if (itemsRef.current) itemsHeightRef.current = itemsRef.current.scrollHeight
+    setActiveTab(type)
+  }, [])
 
   // ---- Card intro animation ----
   useEffect(() => {
@@ -1130,29 +1181,30 @@ export default function ProjectCard({ categoryId, project }) {
           )}
           <div className="project-header-actions">
           {showTabs && (
-            <div className="project-tab-bar">
+            <div className="project-tab-bar" ref={tabBarRef}>
+              <div className="project-tab-indicator" ref={tabIndicatorRef}/>
               {typesWithItems.includes('list') && (
                 <button
                   className={`project-tab-btn${activeTab === 'list' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setActiveTab('list') }}
+                  onMouseDown={e => { e.preventDefault(); switchTab('list') }}
                 >
-                  <ListIcon size={20} color="#242424"/>
+                  <ListIcon size={20} color={activeTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
                 </button>
               )}
               {typesWithItems.includes('note') && (
                 <button
                   className={`project-tab-btn${activeTab === 'note' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setActiveTab('note') }}
+                  onMouseDown={e => { e.preventDefault(); switchTab('note') }}
                 >
-                  <NoteIcon size={20} color="#242424"/>
+                  <NoteIcon size={20} color={activeTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
                 </button>
               )}
               {typesWithItems.includes('link') && (
                 <button
                   className={`project-tab-btn${activeTab === 'link' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setActiveTab('link') }}
+                  onMouseDown={e => { e.preventDefault(); switchTab('link') }}
                 >
-                  <LinkIcon size={20} color="#242424"/>
+                  <LinkIcon size={20} color={activeTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
                 </button>
               )}
             </div>
@@ -1198,7 +1250,7 @@ export default function ProjectCard({ categoryId, project }) {
         </div>
 
         {/* Items */}
-        <div className="project-items">
+        <div className="project-items" ref={itemsRef}>
 
           {/* ---- List (todos) ---- */}
           {displayType === 'list' && (

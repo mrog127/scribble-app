@@ -7,6 +7,7 @@ import AuthScreen from './components/AuthScreen.jsx'
 import MenuPage from './components/MenuPage.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
+import { useScrollable } from './useScrollable.js'
 
 function AppInner() {
   const {
@@ -729,6 +730,12 @@ function AppInner() {
     return activeAccent
   }, [activeTab, saveToProject, categories, activeAccent])
 
+  // Footer drop shadow only when the active page actually scrolls
+  const pageScrollable = useScrollable(
+    () => document.querySelector('#app .page:not(.page-exiting)'),
+    [activeTab, categories, activeTodos, activeNotes, inputFocused, footerInputMode]
+  )
+
   return (
     <div className="app-wrap">
       <div
@@ -879,7 +886,7 @@ function AppInner() {
 
         {/* Footer */}
         <div
-          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}`}
+          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
           style={{
             '--accent-base': footerAccent.base,
             '--accent-dark': footerAccent.dark,

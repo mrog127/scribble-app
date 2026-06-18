@@ -6,6 +6,7 @@ import { getCategoryAccent } from '../theme.js'
 import { NoteDetailPage } from './NoteCard.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
+import { useScrollable } from '../useScrollable.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -633,6 +634,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   const openNote = attachedNotes.find(n => n.id === openNoteId)
 
+  // Footer drop shadow only when the content can scroll
+  const contentScrollable = useScrollable(scrollRef, [todo, attachedNotes.length, attachedLinks.length])
+
   return (
     <div
       ref={pageRef}
@@ -789,6 +793,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             {todo.checked ? (<><CheckIcon/> Complete!</>) : 'Mark as Complete'}
           </button>
         }
+        scrollable={contentScrollable}
       />
 
       {openNote && createPortal(

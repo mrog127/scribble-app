@@ -4,6 +4,7 @@ import underlineUrl from '../assets/Underline.svg?url'
 import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
+import { useScrollable } from '../useScrollable.js'
 import MoveToCard from './MoveToCard.jsx'
 
 function escapeHtml(str) {
@@ -352,25 +353,34 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   }, [])
 
   // Detect the paragraph style at the current cursor position
-  const detectCursorStyle = useCallback(() => {
+  // Find the note-para the caret is in. Handles the case where the caret is
+  // collapsed directly on the content div (e.g. at the end of the note), where
+  // anchorNode is the content element rather than a node inside a paragraph.
+  const getCursorPara = useCallback(() => {
     const content = contentRef.current
-    if (!content) return
     const sel = window.getSelection()
-    if (!sel || sel.rangeCount === 0) return
-    let el = sel.anchorNode
-    while (el && el !== content) {
-      if (el.nodeType === 1 && el.classList && el.classList.contains('note-para')) {
-        lastCursorParaRef.current = el
-        const match = el.className.match(/style-(\w+)/)
-        if (match) {
-          setCurrentStyle(match[1])
-          updateStyleIndicator(match[1])
-        }
-        return
-      }
-      el = el.parentNode
+    if (!content || !sel || sel.rangeCount === 0) return null
+    let node = sel.anchorNode
+    if (node === content) {
+      node = content.childNodes[sel.anchorOffset] || content.childNodes[sel.anchorOffset - 1] || content.lastChild
     }
-  }, [updateStyleIndicator])
+    while (node && node !== content) {
+      if (node.nodeType === 1 && node.classList && node.classList.contains('note-para')) return node
+      node = node.parentNode
+    }
+    return null
+  }, [])
+
+  const detectCursorStyle = useCallback(() => {
+    const para = getCursorPara()
+    if (!para) return
+    lastCursorParaRef.current = para
+    const match = para.className.match(/style-(\w+)/)
+    if (match) {
+      setCurrentStyle(match[1])
+      updateStyleIndicator(match[1])
+    }
+  }, [getCursorPara, updateStyleIndicator])
 
   // Update style indicator whenever selection changes (cursor moves)
   useEffect(() => {
@@ -420,19 +430,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     updateStyleIndicator(style)
     const content = contentRef.current
     if (!content || !editingRef.current) return
-    let target = null
-    const sel = window.getSelection()
-    if (sel && sel.rangeCount > 0) {
-      let el = sel.anchorNode
-      while (el && el !== content) {
-        if (el.nodeType === 1 && el.classList?.contains('note-para')) { target = el; break }
-        el = el.parentNode
-      }
-    }
-    if (!target) target = lastCursorParaRef.current
-    if (!target) target = content.querySelector('.note-para:last-of-type')
+    const target = getCursorPara() || lastCursorParaRef.current || content.querySelector('.note-para:last-of-type')
     if (target && content.contains(target)) target.className = 'note-para style-' + style
-  }, [updateStyleIndicator])
+  }, [getCursorPara, updateStyleIndicator])
 
   const enterEdit = useCallback((savedRange) => {
     editingRef.current = true
@@ -612,6 +612,38 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     })
   }, [currentStyle, updateStyleIndicator])
 
+  // Auto-capitalize the first letter of each line/paragraph as it's typed.
+  // (iOS contenteditable autocapitalize doesn't reliably fire after a newline.)
+  const handleInput = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    const range = sel.getRangeAt(0)
+    let para = range.startContainer
+    while (para && para !== content && !(para.nodeType === 1 && para.classList && para.classList.contains('note-para'))) {
+      para = para.parentNode
+    }
+    if (!para || para === content || !para.classList?.contains('note-para')) return
+    // Only act when the paragraph holds exactly its first character and it's a lowercase letter
+    if (para.textContent.length !== 1 || !/[a-z]/.test(para.textContent)) return
+    const walker = document.createTreeWalker(para, NodeFilter.SHOW_TEXT)
+    const tn = walker.nextNode()
+    if (!tn || !tn.textContent) return
+    tn.textContent = tn.textContent[0].toUpperCase() + tn.textContent.slice(1)
+    const r = document.createRange()
+    r.setStart(tn, 1)
+    r.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(r)
+  }, [])
+
+  // Keep the bottom fade in sync while typing (clear it when the last line is the end)
+  const handleEditorInput = useCallback(() => {
+    handleInput()
+    if (editorRef.current) checkBottomOverflow(editorRef.current)
+  }, [handleInput, checkBottomOverflow])
+
   // Copy the note's text WITH styling so it can be pasted into the iOS Notes app.
   // Builds an HTML payload (h1/h2/h3, <ul><li> for bullets) plus a plain-text
   // fallback. H2 (heading) lines get a blank line above; bullets become bullet points.
@@ -647,7 +679,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         textParts.push('')                     // blank line above
         textParts.push(txt)
       } else if (style === 'bold') {
-        htmlParts.push(`<div><b>${escapeHtml(txt)}</b></div>`)
+        htmlParts.push(`<h3>${escapeHtml(txt)}</h3>`)   // iOS Notes: h3 → Subheading
         textParts.push(txt)
       } else if (style === 'italic') {
         htmlParts.push(`<div><i>${escapeHtml(txt)}</i></div>`)
@@ -679,6 +711,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       navigator.clipboard?.writeText(text).then(flash).catch(() => {})
     }
   }, [])
+
+  // Footer drop shadow only when the note content can scroll
+  const contentScrollable = useScrollable(editorRef, [editing, isOpen, note])
 
   return (
     <div
@@ -715,6 +750,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           autoCapitalize="sentences"
           contentEditable={false}
           onKeyDown={handleKeyDown}
+          onInput={handleEditorInput}
           onClick={handleContentClick}
         />
         <div
@@ -762,6 +798,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           menuOpen={moveOpen}
           onCopy={handleCopy}
           copied={copied}
+          scrollable={contentScrollable}
         />
       )}
     </div>

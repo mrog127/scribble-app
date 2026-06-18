@@ -213,7 +213,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .footer {
   background: #F7F6F3;
   border-top: 1px solid #C2C1BF;
-  box-shadow: 0 -4px 0px rgba(0,0,0,0.08);
+  box-shadow: none;
   padding: 10px 16px 28px;
   flex-shrink: 0;
   position: relative;
@@ -557,8 +557,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .toolbar-icon-btn svg circle { fill: #242424; }
 .toolbar-icon-btn.selected svg line,
 .toolbar-icon-btn.selected svg path,
-.toolbar-icon-btn.selected svg polygon { stroke: #242424; }
-.toolbar-icon-btn.selected svg circle { fill: #242424; }
+.toolbar-icon-btn.selected svg polygon { stroke: var(--accent-dark); }
+.toolbar-icon-btn.selected svg circle { fill: var(--accent-dark); }
 
 .home-indicator {
   width: 120px;
@@ -851,6 +851,9 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
    and centre them. The containers stay edge-to-edge; only their
    contents are constrained. */
 @media (max-width: 999.98px) {
+  /* Footer drop shadow only when the page content is scrollable */
+  .footer.has-scroll { box-shadow: 0 -4px 0px rgba(0,0,0,0.08); }
+
   .page.active > * {
     max-width: 800px;
     width: 100%;

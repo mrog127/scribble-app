@@ -44,7 +44,7 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
@@ -62,7 +62,7 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
   })
 
   return (
-    <div className="detail-footer">
+    <div className={`detail-footer${scrollable ? ' has-shadow' : ''}`}>
       {completeButton && (
         <div className="detail-footer-complete">{completeButton}</div>
       )}

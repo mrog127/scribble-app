@@ -2,7 +2,7 @@
 // Left: the Active/Inactive toggle. Right: the project this item lives in.
 
 import { useState, useRef } from 'react'
-import { CalendarIcon, formatSchedule, useActivatePress } from './ScheduleBits.jsx'
+import { CalendarIcon, formatSchedule, useActivatePress, isScheduleReached } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 function FolderIcon({ active }) {
@@ -49,10 +49,14 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
   const canSchedule = typeof onSchedule === 'function'
-  const scheduled = canSchedule && !!scheduledDate && !activated
+  const hasSchedule = canSchedule && !!scheduledDate && !activated
+  // Once the scheduled day arrives, the item reads as plain "active".
+  const reached = hasSchedule && isScheduleReached(scheduledDate)
+  const active = activated || reached
+  const scheduled = hasSchedule && !reached   // still upcoming → show the date
 
   const press = useActivatePress({
-    onTap: () => { if (scheduled) onClearSchedule(); else onToggleActive() },
+    onTap: () => { if (hasSchedule) onClearSchedule(); else onToggleActive() },
     onLongPress: () => {
       if (!canSchedule) return
       const r = btnRef.current?.getBoundingClientRect()
@@ -70,11 +74,11 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
         <div className="detail-footer-cell left">
           <button
             ref={btnRef}
-            className={`project-active-btn${activated ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
+            className={`project-active-btn${active ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
             {...press}
           >
-            {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={activated}/>}
-            <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (activated ? 'Active' : 'Inactive')}</span>
+            {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={active}/>}
+            <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (active ? 'Active' : 'Inactive')}</span>
           </button>
         </div>
         <div className="detail-footer-divider"/>

@@ -17,6 +17,15 @@ export function formatSchedule(str, long = false) {
     : { month: 'short', day: 'numeric' })
 }
 
+// True once a scheduled item's day has arrived (scheduled date is today or earlier).
+export function isScheduleReached(str) {
+  const date = parseLocalDate(str)
+  if (!date) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date <= today
+}
+
 // Order a list of items: active first, then scheduled, then the rest.
 // Stable within each group (preserves incoming order, e.g. sort_order).
 export function groupByActivation(items) {
@@ -117,22 +126,26 @@ export function useActivatePress({ onTap, onLongPress, delay = 500 }) {
 // collapsed category views, and the homescreen activated cards.
 export function ActivateSwipeButton({ item, type, onActivateTap, onScheduleClear, onScheduleOpen }) {
   const btnRef = useRef(null)
-  const scheduled = !!item.scheduledDate && !item.activated
+  const hasSchedule = !!item.scheduledDate && !item.activated
+  // Once the scheduled day arrives, the item reads as plain "active".
+  const reached = hasSchedule && isScheduleReached(item.scheduledDate)
+  const active = item.activated || reached
+  const scheduled = hasSchedule && !reached   // still upcoming → show the date
   const press = useActivatePress({
     onTap: () => {
       const row = btnRef.current?.closest('.swipe-row')
-      if (scheduled) onScheduleClear(type, item.id, row)
+      if (hasSchedule) onScheduleClear(type, item.id, row)
       else onActivateTap(type, item.id, row)
     },
     onLongPress: () => onScheduleOpen(type, item, btnRef.current),
   })
   return (
-    <button ref={btnRef} className={`swipe-action-btn active-tag${item.activated ? ' activated' : ''}${scheduled ? ' scheduled' : ''}`} {...press}>
+    <button ref={btnRef} className={`swipe-action-btn active-tag${active ? ' activated' : ''}${scheduled ? ' scheduled' : ''}`} {...press}>
       <div className="swipe-active-inner">
-        {scheduled ? <CalendarIcon size={16}/> : <ActivateIcon activated={item.activated}/>}
+        {scheduled ? <CalendarIcon size={16}/> : <ActivateIcon activated={active}/>}
         {scheduled
           ? <span className="swipe-action-label schedule">{formatSchedule(item.scheduledDate)}</span>
-          : <span className="swipe-action-label active-tag">{item.activated ? 'Active' : 'Inactive'}</span>}
+          : <span className="swipe-action-label active-tag">{active ? 'Active' : 'Inactive'}</span>}
       </div>
     </button>
   )

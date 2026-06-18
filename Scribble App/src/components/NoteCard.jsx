@@ -679,7 +679,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         textParts.push('')                     // blank line above
         textParts.push(txt)
       } else if (style === 'bold') {
-        htmlParts.push(`<h3>${escapeHtml(txt)}</h3>`)   // iOS Notes: h3 → Subheading
+        htmlParts.push(`<div><b>${escapeHtml(txt)}</b></div>`)   // paste as bold body text
         textParts.push(txt)
       } else if (style === 'italic') {
         htmlParts.push(`<div><i>${escapeHtml(txt)}</i></div>`)

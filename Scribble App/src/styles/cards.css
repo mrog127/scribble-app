@@ -555,6 +555,7 @@
   width: 42px;
   height: 11px;
   margin-top: 12px;
+  margin-left: -5px;
   background-color: var(--accent-base);
   -webkit-mask: var(--underline-url) no-repeat left center / contain;
   mask: var(--underline-url) no-repeat left center / contain;
@@ -762,7 +763,7 @@
 }
 .todo-detail-scroll::-webkit-scrollbar { display: none; }
 
-.todo-detail-underline { display: block; margin: 0 0 24px; }
+.todo-detail-underline { display: block; margin: 0 0 24px -5px; }
 
 .todo-detail-title {
   font-family: 'Merriweather', Georgia, serif;

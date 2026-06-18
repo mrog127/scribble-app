@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import UnderlineSvg from '../assets/Underline.svg?react'
+import underlineUrl from '../assets/Underline.svg?url'
 import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
@@ -217,7 +217,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const pageRef = useRef(null)
   const editorRef = useRef(null)
   const scrollTitleRef = useRef(null)
-  const underlineRef = useRef(null)
   const lastCursorParaRef = useRef(null)
 
   // Check whether the last paragraph is below the style bar.
@@ -309,7 +308,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const check = () => {
       const content = contentRef.current
       const titleEl = scrollTitleRef.current
-      const underlineEl = underlineRef.current
       const editorTop = editor.getBoundingClientRect().top
 
       // Scroll title: fade + float
@@ -322,14 +320,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           titleEl.style.transform = shouldShow ? 'translateY(0)' : 'translateY(8px)'
           if (shouldShow) titleEl.textContent = firstPara.textContent.trim()
         }
-      }
-
-      // Underline SVG: fade as it scrolls from natural position to bounding box top
-      if (underlineEl) {
-        const rect = underlineEl.getBoundingClientRect()
-        const bottomRelative = rect.bottom - editorTop
-        const opacity = Math.max(0, Math.min(1, (bottomRelative - 32) / rect.height))
-        underlineEl.style.opacity = opacity
       }
 
       // Bottom overflow: show fade only when the last paragraph is below the style bar,
@@ -694,12 +684,15 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     <div
       ref={pageRef}
       className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}${hasFooter ? ' has-footer' : ''}`}
-      style={noteAccent ? {
-        '--accent-base': noteAccent.base,
-        '--accent-dark': noteAccent.dark,
-        '--accent-light': noteAccent.light,
-        '--accent-base-rgb': noteAccent.baseRgb,
-      } : undefined}
+      style={{
+        '--underline-url': `url(${underlineUrl})`,
+        ...(noteAccent ? {
+          '--accent-base': noteAccent.base,
+          '--accent-dark': noteAccent.dark,
+          '--accent-light': noteAccent.light,
+          '--accent-base-rgb': noteAccent.baseRgb,
+        } : {}),
+      }}
     >
       <div className="note-detail-header">
         <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
@@ -715,9 +708,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       </div>
 
       <div className="note-editor" id="noteEditor" ref={editorRef}>
-        <div ref={underlineRef} style={{ display: 'block', marginTop: '32px', marginLeft: '32px', marginBottom: '32px' }}>
-          <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
-        </div>
         <div
           ref={contentRef}
           id="noteEditorContent"

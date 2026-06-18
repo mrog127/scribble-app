@@ -652,10 +652,6 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
       </div>
 
       <div className="todo-detail-scroll" ref={scrollRef}>
-        <div className="todo-detail-underline">
-          <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
-        </div>
-
         <div
           ref={titleRef}
           className="todo-detail-title"
@@ -667,16 +663,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           onBlur={saveTitle}
         />
 
-        <button
-          ref={completeBtnRef}
-          className={`mark-complete-btn${todo.checked ? ' done' : ''}`}
-          onPointerDown={completeDown}
-          onPointerUp={completeUp}
-          onPointerLeave={completeCancel}
-          onPointerCancel={completeCancel}
-        >
-          {todo.checked ? (<><CheckIcon/> Complete!</>) : 'Mark as Complete'}
-        </button>
+        <div className="todo-detail-underline">
+          <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
+        </div>
 
         {/* ---- Notes ---- */}
         <div className="todo-section">
@@ -788,6 +777,18 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         projectName={projectName}
         onProjectClick={openMove}
         menuOpen={moveOpen}
+        completeButton={
+          <button
+            ref={completeBtnRef}
+            className={`mark-complete-btn${todo.checked ? ' done' : ''}`}
+            onPointerDown={completeDown}
+            onPointerUp={completeUp}
+            onPointerLeave={completeCancel}
+            onPointerCancel={completeCancel}
+          >
+            {todo.checked ? (<><CheckIcon/> Complete!</>) : 'Mark as Complete'}
+          </button>
+        }
       />
 
       {openNote && createPortal(

@@ -398,7 +398,6 @@
 
   /* No home-indicator gap needed on desktop — drop the 16px beneath the footer */
   .detail-footer {
-    height: 64px;
     padding-bottom: 0;
   }
 
@@ -474,8 +473,8 @@
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 28px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - 24px), transparent calc(100% - 8px));
-  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black calc(100% - 24px), transparent calc(100% - 8px));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 16px, black 32px, black 100%);
 }
 .note-editor::-webkit-scrollbar { display: none; }
 
@@ -538,13 +537,30 @@
 
 /* Note paragraph styles */
 .note-para { margin: 0; padding: 0; }
-.note-para.style-title { font-family: 'Merriweather', Georgia, serif; font-size: 48px; font-weight: 500; line-height: 56px; color: #242424; margin-bottom: 24px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+.note-para.style-title { font-family: 'Merriweather', Georgia, serif; font-size: 48px; font-weight: 500; line-height: 56px; color: #242424; margin-top: 32px; margin-bottom: 24px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
 .note-para.style-heading { font-family: 'Merriweather', Georgia, serif; font-size: 22px; font-weight: 500; line-height: 30px; color: #242424; margin-top: 32px; margin-bottom: 12px; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
-.note-para.style-bold { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; line-height: 26px; color: #3D3D3D; margin-top: 12px; }
+.note-para.style-bold { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; line-height: 26px; color: #3D3D3D; margin-top: 8px; }
 .note-para.style-body { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; }
 .note-para.style-italic { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }
 .note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
 .note-para.style-bullet::before { content: "•"; position: absolute; left: 0; }
+
+/* The underline decoration is an artifact of the Title style: it sits 8pt under
+   the title text, and the title's 24px margin-bottom spaces it from the next para. */
+.note-para.style-title::after {
+  content: '';
+  display: block;
+  width: 42px;
+  height: 11px;
+  margin-top: 12px;
+  background-color: var(--accent-base);
+  -webkit-mask: var(--underline-url) no-repeat left center / contain;
+  mask: var(--underline-url) no-repeat left center / contain;
+}
+
+/* First paragraph always sits 24pt below the top; uses margin-top so it doesn't
+   stack with the title style's own 24pt top margin when the first para is a title. */
+#noteEditorContent > .note-para:first-child { margin-top: 32px; }
 
 .note-detail-body {
   font-family: 'Open Sans', system-ui, sans-serif;
@@ -583,14 +599,24 @@
   position: relative;
   z-index: 3;
   box-sizing: border-box;
-  height: 80px;
-  padding-bottom: 16px;
+  padding: 0 16px 16px;
   background: transparent;   /* show the page background so they always match */
   border-top: 1px solid #C2C1BF;
-  box-shadow: none;
+  box-shadow: 0 -4px 0px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+/* The Active | Project (| Copy) row — the original footer body */
+.detail-footer-controls {
   display: flex;
   align-items: stretch;
+  height: 64px;
 }
+
+/* Mark-as-complete button section: 8pt below the footer top, 8pt above the divider */
+.detail-footer-complete { padding: 8px 0 0; }
+.detail-footer-hdivider { height: 1px; background: #DBDAD8; }
 
 .detail-footer-cell {
   flex: 1;
@@ -726,12 +752,12 @@
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   padding: 0 32px 24px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 6px, black 28px, black calc(100% - 24px), transparent calc(100% - 8px));
-  mask-image: linear-gradient(to bottom, transparent 0px, transparent 6px, black 28px, black calc(100% - 24px), transparent calc(100% - 8px));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 6px, black 28px, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0px, transparent 6px, black 28px, black 100%);
 }
 .todo-detail-scroll::-webkit-scrollbar { display: none; }
 
-.todo-detail-underline { display: block; margin: 24px 0 14px; }
+.todo-detail-underline { display: block; margin: 0 0 24px; }
 
 .todo-detail-title {
   font-family: 'Merriweather', Georgia, serif;
@@ -742,7 +768,8 @@
   outline: none;
   caret-color: var(--accent-base);
   word-wrap: break-word;
-  margin-bottom: 28px;
+  margin-top: 24px;
+  margin-bottom: 8px;
   cursor: text;
 }
 

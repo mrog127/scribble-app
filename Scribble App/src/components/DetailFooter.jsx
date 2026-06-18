@@ -44,7 +44,7 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
@@ -63,41 +63,46 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
 
   return (
     <div className="detail-footer">
-      <div className="detail-footer-cell left">
-        <button
-          ref={btnRef}
-          className={`project-active-btn${activated ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
-          {...press}
-        >
-          {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={activated}/>}
-          <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (activated ? 'Active' : 'Inactive')}</span>
-        </button>
-      </div>
-      <div className="detail-footer-divider"/>
-      <div className={`detail-footer-cell right${menuOpen ? ' active' : ''}`}>
-        <button
-          className="detail-footer-project-btn"
-          onMouseDown={e => { e.preventDefault(); onProjectClick && onProjectClick() }}
-        >
-          <FolderIcon active={menuOpen}/>
-          <span className="detail-footer-project">{projectName}</span>
-        </button>
-      </div>
-      {typeof onCopy === 'function' && (
-        <>
-          <div className="detail-footer-divider"/>
-          <button
-            className={`detail-footer-copy-btn${copied ? ' copied' : ''}`}
-            aria-label="Copy note"
-            onMouseDown={e => { e.preventDefault(); onCopy() }}
-          >
-            <span className="detail-footer-copy-icon-wrap">
-              <span className="detail-footer-copy-flash"/>
-              <CopyIcon copied={copied}/>
-            </span>
-          </button>
-        </>
+      {completeButton && (
+        <div className="detail-footer-complete">{completeButton}</div>
       )}
+      <div className="detail-footer-controls">
+        <div className="detail-footer-cell left">
+          <button
+            ref={btnRef}
+            className={`project-active-btn${activated ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
+            {...press}
+          >
+            {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={activated}/>}
+            <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (activated ? 'Active' : 'Inactive')}</span>
+          </button>
+        </div>
+        <div className="detail-footer-divider"/>
+        <div className={`detail-footer-cell right${menuOpen ? ' active' : ''}`}>
+          <button
+            className="detail-footer-project-btn"
+            onMouseDown={e => { e.preventDefault(); onProjectClick && onProjectClick() }}
+          >
+            <FolderIcon active={menuOpen}/>
+            <span className="detail-footer-project">{projectName}</span>
+          </button>
+        </div>
+        {typeof onCopy === 'function' && (
+          <>
+            <div className="detail-footer-divider"/>
+            <button
+              className={`detail-footer-copy-btn${copied ? ' copied' : ''}`}
+              aria-label="Copy note"
+              onMouseDown={e => { e.preventDefault(); onCopy() }}
+            >
+              <span className="detail-footer-copy-icon-wrap">
+                <span className="detail-footer-copy-flash"/>
+                <CopyIcon copied={copied}/>
+              </span>
+            </button>
+          </>
+        )}
+      </div>
 
       {calOpen && (
         <CalendarPopup

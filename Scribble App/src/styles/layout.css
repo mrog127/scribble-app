@@ -456,7 +456,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   z-index: 0;
   left: 0;
   width: 40px;
-  border: 1px solid var(--accent-base);
+  border: 1px solid var(--accent-dark);
   box-shadow: none;
 }
 
@@ -502,7 +502,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .toolbar-source-label {
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--accent-dark);
 }
 
@@ -668,7 +668,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .save-to-cancel {
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--accent-dark);
   background: none;
   border: none;

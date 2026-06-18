@@ -449,7 +449,7 @@
   cursor: pointer;
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--accent-dark);
 }
 
@@ -614,7 +614,7 @@
   z-index: 0;
 }
 
-.detail-footer .project-active-btn { font-size: 16px; }
+.detail-footer .project-active-btn { font-size: 16px; font-weight: 600; }
 
 .detail-footer-divider {
   width: 1px;
@@ -682,7 +682,7 @@
 .detail-footer-project {
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--accent-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -757,7 +757,7 @@
   cursor: pointer;
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   background: var(--accent-light);
   border: 1px solid var(--accent-dark);
   color: var(--accent-dark);
@@ -1282,7 +1282,7 @@
   border-radius: 4px;
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: #242424;
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease;

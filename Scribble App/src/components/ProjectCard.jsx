@@ -483,6 +483,9 @@ export default function ProjectCard({ categoryId, project }) {
   const itemsRef = useRef(null)
   const itemsHeightRef = useRef(null)
   const tabMountedRef = useRef(false)
+  const typeBarRef = useRef(null)
+  const typeIndicatorRef = useRef(null)
+  const typeMountedRef = useRef(false)
   const showingRef = useRef(false)
   const checkTimers = useRef({})
   const checkPopping = useRef({})
@@ -748,6 +751,21 @@ export default function ProjectCard({ categoryId, project }) {
       requestAnimationFrame(() => { ind.style.transition = ''; tabMountedRef.current = true })
     }
   }, [activeTab, showTabs, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- Slide the composer type-selector box to the active add-type ----
+  useLayoutEffect(() => {
+    const bar = typeBarRef.current
+    const ind = typeIndicatorRef.current
+    if (!bar || !ind) return
+    const sel = bar.querySelector('.project-type-btn.selected')
+    if (!sel) { ind.style.opacity = '0'; return }
+    if (!typeMountedRef.current) ind.style.transition = 'none'
+    ind.style.opacity = '1'
+    ind.style.left = sel.offsetLeft + 'px'
+    if (!typeMountedRef.current) {
+      requestAnimationFrame(() => { ind.style.transition = ''; typeMountedRef.current = true })
+    }
+  }, [addType, inputFocused])
 
   // ---- Animate the items area height when switching tabs ----
   useLayoutEffect(() => {
@@ -1216,8 +1234,7 @@ export default function ProjectCard({ categoryId, project }) {
             >
               <span/><span/><span/>
             </div>
-            {menuOpen && (
-              <div className="card-context-menu">
+              <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
                 {displayType === 'list' && hasChecked && (
                   <button
                     className="card-context-item"
@@ -1244,7 +1261,6 @@ export default function ProjectCard({ categoryId, project }) {
                   Delete Project
                 </button>
               </div>
-            )}
           </div>
           </div>
         </div>
@@ -1449,24 +1465,25 @@ export default function ProjectCard({ categoryId, project }) {
                 </button>
               </div>
               <div className="project-toolbar-divider"/>
-              <div className="project-toolbar-right">
+              <div className="project-toolbar-right" ref={typeBarRef}>
+                <div className="project-type-indicator" ref={typeIndicatorRef}/>
                 <button
                   className={`project-type-btn${addType === 'list' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setAddType('list') }}
                 >
-                  <ListIcon active={addType === 'list'}/>
+                  <ListIcon size={20} color={addType === 'list' ? 'var(--accent-dark)' : '#242424'}/>
                 </button>
                 <button
                   className={`project-type-btn${addType === 'note' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setAddType('note') }}
                 >
-                  <NoteIcon active={addType === 'note'}/>
+                  <NoteIcon size={20} color={addType === 'note' ? 'var(--accent-dark)' : '#242424'}/>
                 </button>
                 <button
                   className={`project-type-btn${addType === 'link' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setAddType('link') }}
                 >
-                  <LinkIcon active={addType === 'link'}/>
+                  <LinkIcon size={20} color={addType === 'link' ? 'var(--accent-dark)' : '#242424'}/>
                 </button>
               </div>
             </div>

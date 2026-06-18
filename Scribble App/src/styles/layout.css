@@ -482,15 +482,37 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .input-toolbar.faded-in { opacity: 1; transform: translateY(0); }
 
 .toolbar-left {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+@media (hover: hover) {
+  .toolbar-left:hover::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    right: 8px;
+    transform: translateY(-50%);
+    height: 32px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
 .toolbar-source-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  align-self: stretch;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   background: none;
   border: none;
@@ -666,6 +688,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   margin: 0;
 }
 .save-to-cancel {
+  position: relative;
+  isolation: isolate;
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
@@ -713,6 +737,10 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 .save-to-option { isolation: isolate; }
 .save-to-option.selected { color: var(--cb-dark); }
+/* Full-width hover, matching project card rows */
+@media (hover: hover) {
+  .save-to-option:hover:not(.selected) { background: rgba(0, 0, 0, 0.02); }
+}
 /* Accent highlight box — full row height, 8px inset L/R, 4px radius */
 .save-to-option.selected::before {
   content: '';
@@ -852,7 +880,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
    contents are constrained. */
 @media (max-width: 999.98px) {
   /* Footer drop shadow only when the page content is scrollable */
-  .footer.has-scroll { box-shadow: 0 -4px 0px rgba(0,0,0,0.08); }
+  .footer.has-scroll { box-shadow: 0 -2px 24px rgba(0,0,0,0.04); }
 
   .page.active > * {
     max-width: 800px;
@@ -990,6 +1018,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     min-height: 0;
     overflow-y: auto;
     position: relative;
+    margin-top: 24px;
     margin-bottom: 24px;
     gap: 4px;
     scrollbar-width: none;

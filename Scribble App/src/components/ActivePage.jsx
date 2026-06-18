@@ -543,8 +543,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
             >
               <span/><span/><span/>
             </div>
-            {menuOpen && (
-              <div className="card-context-menu">
+              <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
                 <button
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
@@ -552,7 +551,6 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                   {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
                 </button>
               </div>
-            )}
           </div>
         )}
       </div>
@@ -1109,6 +1107,14 @@ export default function ActivePage({
   const pageRef = useRef(null)
   const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated } = useAppContext()
 
+  // Fade a drop shadow in behind the cards over the first 56px of scrolling (0% → 4%)
+  const handleScroll = useCallback((e) => {
+    if (onScroll) onScroll(e)
+    const y = e.target.scrollTop
+    const opacity = Math.min(0.04, Math.max(0, (y / 56) * 0.04))
+    if (pageRef.current) pageRef.current.style.setProperty('--card-scroll-shadow', String(opacity))
+  }, [onScroll])
+
   const [underlineColorIdx, setUnderlineColorIdx] = useState(0)
   useEffect(() => {
     const id = setInterval(() => {
@@ -1143,7 +1149,7 @@ export default function ActivePage({
   const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
 
   return (
-    <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-star'} ref={pageRef} onScroll={onScroll}>
+    <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-star'} ref={pageRef} onScroll={handleScroll}>
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
         <p className="active-today-label">Today is</p>
         <p className="active-day-name">{dayName},</p>

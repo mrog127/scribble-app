@@ -9,7 +9,13 @@
 }
 
 /* When a three-dot menu is open, let it overflow the card instead of being clipped */
-.card:has(.card-context-menu) { overflow: visible; }
+.card:has(.card-context-menu.open) { overflow: visible; }
+
+/* Home & category pages: a drop shadow behind the cards that fades in on scroll
+   (opacity driven by JS via --card-scroll-shadow, 0 → 0.04 over 56px) */
+.cards-area .card {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, var(--card-scroll-shadow, 0));
+}
 
 .card-header {
   display: flex;
@@ -45,6 +51,15 @@
   min-width: 184px;
   z-index: 100;
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.card-context-menu.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .card-context-item {
@@ -393,6 +408,7 @@
     transform: translateX(100%);
     background: #F7F6F3;   /* match the project card fill */
     border-left: 1px solid #C2C1BF;   /* match the project card stroke */
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.04);   /* soft shadow to the left */
   }
   .note-detail-page.open { transform: translateX(0); }
 
@@ -443,6 +459,8 @@
 }
 
 .note-detail-done {
+  position: relative;
+  isolation: isolate;
   background: none;
   border: none;
   cursor: pointer;
@@ -602,7 +620,7 @@
   position: relative;
   z-index: 3;
   box-sizing: border-box;
-  padding: 0 16px 16px;
+  padding: 0 24px 16px;
   background: transparent;   /* show the page background so they always match */
   border-top: 1px solid #C2C1BF;
   box-shadow: none;
@@ -611,7 +629,7 @@
 }
 
 /* Drop shadow only when the content above can actually scroll */
-.detail-footer.has-shadow { box-shadow: 0 -4px 0px rgba(0,0,0,0.08); }
+.detail-footer.has-shadow { box-shadow: 0 -2px 24px rgba(0,0,0,0.04); }
 
 /* The Active | Project (| Copy) row — the original footer body */
 .detail-footer-controls {
@@ -625,6 +643,7 @@
 .detail-footer-hdivider { height: 1px; background: #DBDAD8; }
 
 .detail-footer-cell {
+  position: relative;
   flex: 1;
   min-width: 0;
   align-self: stretch;
@@ -632,7 +651,7 @@
   align-items: center;
   justify-content: center;
 }
-.detail-footer-cell.right { padding: 0 16px; position: relative; }
+.detail-footer-cell.right { padding: 0; position: relative; }
 /* Selector box: inset 8px from top/right/bottom and from the centre divider */
 .detail-footer-cell.right.active::before {
   content: '';
@@ -656,10 +675,11 @@
 }
 
 .detail-footer-copy-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
+  align-self: stretch;
   background: none;
   border: none;
   cursor: pointer;
@@ -669,6 +689,7 @@
 
 .detail-footer-copy-icon-wrap {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -699,6 +720,8 @@
 }
 
 .detail-footer-project-btn {
+  flex: 1;
+  align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -706,7 +729,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 0 8px;
   position: relative;
   z-index: 1;
 }
@@ -823,6 +846,8 @@
 }
 
 .todo-attach-btn {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -834,6 +859,26 @@
   font-weight: 500;
   color: var(--accent-dark);
   padding: 4px;
+}
+
+/* 4% hover box, 32px tall, extending 4px to either side of the label (+icon) */
+@media (hover: hover) {
+  .note-detail-done:hover::after,
+  .save-to-cancel:hover::after,
+  .todo-attach-btn:hover::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 32px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .note-detail-done:hover::after,
+  .save-to-cancel:hover::after { left: -4px; right: -4px; }
+  .todo-attach-btn:hover::after { left: 0; right: 0; }
 }
 
 .todo-attach-anchor {
@@ -1290,6 +1335,24 @@
   padding: 0 16px;
 }
 
+/* New-project card: no inner box; title is typed in the project-card header style */
+.new-project-card .project-input-wrap {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+.new-project-card .project-input {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #242424;
+}
+.new-project-card .project-input::placeholder {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+
 /* Project footer toolbar */
 .project-footer-toolbar {
   display: flex;
@@ -1297,11 +1360,32 @@
 }
 
 .project-toolbar-left {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 6px 0;
+}
+
+/* 4% hover box over the active / location / copy buttons:
+   24px tall (divider height), inset 8px from the bounding dividers/edges, 4px radius */
+@media (hover: hover) {
+  .detail-footer-cell:hover::after,
+  .detail-footer-copy-btn:hover::after,
+  .project-toolbar-left:hover::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    right: 8px;
+    transform: translateY(-50%);
+    height: 32px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
 .project-toolbar-divider {
@@ -1311,6 +1395,7 @@
 }
 
 .project-toolbar-right {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -1318,9 +1403,30 @@
   padding: 6px 0;
 }
 
+/* Single sliding selector box that animates between the type icons */
+.project-type-indicator {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: rgba(var(--accent-base-rgb), 0.2);
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: left 170ms ease;
+}
+
 .project-active-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  align-self: stretch;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 6px 10px;
   border: none;
@@ -1339,8 +1445,10 @@
 }
 
 .project-type-btn {
-  width: 36px;
-  height: 36px;
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1352,9 +1460,12 @@
   transition: background 120ms ease;
 }
 
-.project-type-btn.selected {
-  background: rgba(var(--accent-base-rgb),0.2);
+@media (hover: hover) {
+  .project-type-btn:hover:not(.selected) { background: rgba(0, 0, 0, 0.04); }
 }
+.project-type-btn svg line,
+.project-type-btn svg path,
+.project-type-btn svg polygon { vector-effect: non-scaling-stroke; }
 
 /* Activated indicator badge (star icon on items in project card) */
 .activated-indicator {

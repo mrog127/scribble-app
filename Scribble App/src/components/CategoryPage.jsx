@@ -416,6 +416,14 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
     reorderProjects(categoryId, newOrder)
   }, [categoryId, reorderProjects])
 
+  // Fade a drop shadow in behind the cards over the first 56px of scrolling (0% → 4%)
+  const handleScroll = useCallback((e) => {
+    if (onScroll) onScroll(e)
+    const y = e.target.scrollTop
+    const opacity = Math.min(0.04, Math.max(0, (y / 56) * 0.04))
+    if (cardsAreaRef.current) cardsAreaRef.current.style.setProperty('--card-scroll-shadow', String(opacity))
+  }, [onScroll])
+
   const { onCardHeaderPointerDown } = useCardDragReorder(
     cardsAreaRef,
     category?.projects ?? [],
@@ -475,7 +483,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   if (!category) return null
 
   return (
-    <div className={`page active category-page${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : `page-${categoryId}`} onScroll={onScroll}>
+    <div className={`page active category-page${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : `page-${categoryId}`} onScroll={handleScroll}>
       <div
         className="page-header"
         style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}
@@ -511,7 +519,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                 <input
                   ref={inputRef}
                   className="project-input"
-                  placeholder="Project name..."
+                  placeholder="Name canvas"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}

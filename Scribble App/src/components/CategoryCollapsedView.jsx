@@ -593,8 +593,7 @@ function CollapsedTodosCard({ category }) {
             >
               <span/><span/><span/>
             </div>
-            {menuOpen && (
-              <div className="card-context-menu">
+              <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
                 <button
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
@@ -602,7 +601,6 @@ function CollapsedTodosCard({ category }) {
                   {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
                 </button>
               </div>
-            )}
           </div>
         )}
       </div>

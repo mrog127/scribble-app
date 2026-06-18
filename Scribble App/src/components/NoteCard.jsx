@@ -987,19 +987,17 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
               >
                 <span/><span/><span/>
               </div>
-              {menuOpen && (
-                <div className="card-context-menu">
-                  {menuItems.map(item => (
-                    <button
-                      key={item.label}
-                      className={`card-context-item${item.danger ? ' danger' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); item.onSelect(); setMenuOpen(false) }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
+                {menuItems.map(item => (
+                  <button
+                    key={item.label}
+                    className={`card-context-item${item.danger ? ' danger' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); item.onSelect(); setMenuOpen(false) }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -580,8 +580,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
             >
               <span/><span/><span/>
             </div>
-            {menuOpen && (
-              <div className="card-context-menu">
+              <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
                 <button
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
@@ -589,7 +588,6 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
                   {hideCompleted ? 'Show Completed' : 'Hide Completed'}
                 </button>
               </div>
-            )}
           </div>
         )}
       </div>

@@ -15,14 +15,14 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
           style={{ '--tab-light': ACCENT_COLORS[0].light }}
           onClick={() => onSelectTab('star')}
         >
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <polygon
-              points="10,2 12.5,7.5 18.5,8 14,12.5 15.5,18.5 10,15.5 4.5,18.5 6,12.5 1.5,8 7.5,7.5"
-              strokeWidth="1"
-              vectorEffect="non-scaling-stroke"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <polyline className="museum" points="3,6.8 10,2.6 17,6.8" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+            <line className="museum" x1="5" y1="7.6" x2="5" y2="14" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+            <line className="museum" x1="8.33" y1="7.6" x2="8.33" y2="14" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+            <line className="museum" x1="11.67" y1="7.6" x2="11.67" y2="14" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+            <line className="museum" x1="15" y1="7.6" x2="15" y2="14" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+            <line className="museum" x1="3.5" y1="14" x2="16.5" y2="14" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+            <line className="museum" x1="3" y1="17" x2="17" y2="17" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
           </svg>
         </button>
 

@@ -376,9 +376,13 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 }
 
 .icon-tab.selected { background: transparent; border-radius: 4px; }
-.icon-tab svg polygon, .icon-tab svg .mline-el { stroke: #242424; }
+.icon-tab svg polygon, .icon-tab svg .museum, .icon-tab svg .mline-el { stroke: #242424; }
 .icon-tab.selected svg polygon { stroke: var(--accent-dark); }
 .icon-tab.selected .mline-el { background: var(--accent-dark); }
+
+/* Gallery icon: always black. Mobile sizes 20px → 22px (selected); desktop fixed 18px. */
+.tab-home svg { width: 20px; height: 20px; transition: width 0.18s ease, height 0.18s ease; }
+.tab-home.selected svg { width: 22px; height: 22px; }
 
 @keyframes star-stroke-cycle {
   0%      { stroke: #607787; }
@@ -412,11 +416,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   100%    { color: #607787; }
 }
 
-.star-active .icon-tab.selected svg {
-  transform: scale(1.1);
-}
 .star-active .icon-tab.selected svg polygon {
-  animation: star-stroke-cycle 35s linear infinite, star-fill-cycle 35s linear infinite;
+  animation: star-stroke-cycle 35s linear infinite;
 }
 
 .mline-el { width: 18px; height: 2px; background: #242424; border-radius: 1px; }
@@ -1076,17 +1077,17 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     font-weight: 600;
     color: #333333;
   }
-  .tab-home::after  { content: 'Home'; }
+  .tab-home::after  { content: 'Gallery'; }
   .tab-pages::after { content: 'Pages'; }
 
   /* Home label: match category-tab weight, sit 8px from the star, and cycle
      through the star's dark colours (same rate/colours) when selected. */
-  .tab-bar .tab-home { gap: 8px; }
-  .tab-bar .tab-home svg { width: 12px; height: 12px; }   /* desktop star stays 12 */
-  .tab-bar .tab-home::after { font-weight: 500; }
+  .tab-bar .tab-home { gap: 6px; }
+  .tab-bar .tab-home svg,
+  .tab-bar .tab-home.selected svg { width: 18px; height: 18px; }
+  .tab-bar .tab-home::after { font-weight: 500; color: #242424; }
   .tab-bar.star-active .tab-home.selected::after {
     font-weight: 600;   /* match a selected category tab label */
-    animation: home-label-cycle 35s linear infinite;
   }
 
   /* Categories stack at natural height within the scroll container */

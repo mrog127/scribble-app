@@ -39,12 +39,14 @@ export function groupByActivation(items) {
 // Star icon used by the Active/Inactive toggle.
 export function ActivateIcon({ activated }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <polygon
-        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-        stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"
-        style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}
-      />
+    <svg width="16" height="16" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}>
+      <polyline points="3,6.8 10,2.6 17,6.8" vectorEffect="non-scaling-stroke"/>
+      <line x1="5" y1="7.6" x2="5" y2="14" vectorEffect="non-scaling-stroke"/>
+      <line x1="8.33" y1="7.6" x2="8.33" y2="14" vectorEffect="non-scaling-stroke"/>
+      <line x1="11.67" y1="7.6" x2="11.67" y2="14" vectorEffect="non-scaling-stroke"/>
+      <line x1="15" y1="7.6" x2="15" y2="14" vectorEffect="non-scaling-stroke"/>
+      <line x1="3.5" y1="14" x2="16.5" y2="14" vectorEffect="non-scaling-stroke"/>
+      <line x1="3" y1="17" x2="17" y2="17" vectorEffect="non-scaling-stroke"/>
     </svg>
   )
 }
@@ -145,7 +147,7 @@ export function ActivateSwipeButton({ item, type, onActivateTap, onScheduleClear
         {scheduled ? <CalendarIcon size={16}/> : <ActivateIcon activated={active}/>}
         {scheduled
           ? <span className="swipe-action-label schedule">{formatSchedule(item.scheduledDate)}</span>
-          : <span className="swipe-action-label active-tag">{active ? 'Active' : 'Inactive'}</span>}
+          : <span className="swipe-action-label active-tag">{active ? 'On Display' : 'Display'}</span>}
       </div>
     </button>
   )

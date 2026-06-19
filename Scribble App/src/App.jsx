@@ -973,10 +973,16 @@ function AppInner() {
                   className={`toolbar-source-btn${addAsActiveFlag ? '' : ' inactive'}`}
                   onMouseDown={e => { e.preventDefault(); setAddAsActiveFlag(v => !v) }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1L7.27 4.27L10.85 4.63L8.3 6.9L9.09 10.4L6 8.5L2.91 10.4L3.7 6.9L1.15 4.63L4.73 4.27L6 1Z" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#242424' }} strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"/>
+                  <svg width="16" height="16" viewBox="0 0 20 20" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#242424' }}>
+                    <polyline points="3,6.8 10,2.6 17,6.8" vectorEffect="non-scaling-stroke"/>
+                    <line x1="5" y1="7.6" x2="5" y2="14" vectorEffect="non-scaling-stroke"/>
+                    <line x1="8.33" y1="7.6" x2="8.33" y2="14" vectorEffect="non-scaling-stroke"/>
+                    <line x1="11.67" y1="7.6" x2="11.67" y2="14" vectorEffect="non-scaling-stroke"/>
+                    <line x1="15" y1="7.6" x2="15" y2="14" vectorEffect="non-scaling-stroke"/>
+                    <line x1="3.5" y1="14" x2="16.5" y2="14" vectorEffect="non-scaling-stroke"/>
+                    <line x1="3" y1="17" x2="17" y2="17" vectorEffect="non-scaling-stroke"/>
                   </svg>
-                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>{addAsActiveFlag ? 'Active' : 'Inactive'}</span>
+                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>{addAsActiveFlag ? 'On Display' : 'Display'}</span>
                 </button>
               </div>
               <div className="toolbar-divider"></div>

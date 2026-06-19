@@ -165,12 +165,12 @@
   height: 18px;
   border-radius: 2px;
   border: 1px solid #B8B8B8;
-  background: #FAF9F7;
+  background: #FFFFFF;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 0px rgba(0,0,0,0.1);
+  box-shadow: none;
   transition: background 150ms ease, border-color 150ms ease;
   transform-origin: center;
 }
@@ -184,9 +184,15 @@
 
 /* Category-colored checkbox (activated items on homescreen & project cards) */
 .checkbox.activated-checkbox {
-  background: var(--cb-light, var(--accent-light));
-  border-color: var(--cb-dark, var(--accent-dark));
-  box-shadow: 0 3px 0px rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.40);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(to bottom,
+      hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.2) l),
+      var(--cb-dark, var(--accent-dark))) border-box;
+  box-shadow:
+    0 4px 4px color-mix(in srgb, var(--cb-light, var(--accent-light)) 88%, transparent),
+    inset 4px 8px 8px var(--cb-light, var(--accent-light));
 }
 .checkbox.activated-checkbox.checked,
 .checkbox.activated-checkbox.animating-check {

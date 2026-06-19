@@ -20,13 +20,13 @@
 .card-header {
   display: flex;
   align-items: center;
-  padding: 18px 4px 10px 18px;
+  padding: 12px 4px 0px 18px;
   gap: 10px;
 }
 
 .card-title {
   font-family: 'Merriweather', Georgia, serif;
-  font-size: 20px;
+  font-size: 18px;
   color: #242424;
   font-weight: 500;
   flex: 1;
@@ -47,7 +47,7 @@
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  box-shadow: 0 4px 0px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
   min-width: 184px;
   z-index: 100;
   overflow: hidden;
@@ -184,14 +184,10 @@
 
 /* Category-colored checkbox (activated items on homescreen & project cards) */
 .checkbox.activated-checkbox {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
-    linear-gradient(to bottom,
-      hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.2) l),
-      var(--cb-dark, var(--accent-dark))) border-box;
+  border: 1px solid color-mix(in srgb, var(--cb-dark, var(--accent-dark)) 60%, transparent);
+  background: #F7F6F3;
   box-shadow:
-    0 4px 4px color-mix(in srgb, var(--cb-light, var(--accent-light)) 88%, transparent),
+    0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent),
     inset 4px 8px 8px var(--cb-light, var(--accent-light));
 }
 .checkbox.activated-checkbox.checked,
@@ -263,15 +259,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
+  width: 44px;
   height: 44px;
   border-radius: 4px;
 }
 
 .swipe-action-btn.delete .swipe-active-inner {
-  background: #F5DDDD;
-  border: 1px solid #8B3333;
-  box-shadow: 0 4px 0 rgba(178,74,74,0.40);
+  background: #F7F6F3;
+  border: 1px solid color-mix(in srgb, #8B3333 60%, transparent);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, #B24A4A 20%, transparent),
+    inset 6px 14px 12px #F5DDDD;
   color: #8B3333;
 }
 
@@ -289,15 +287,19 @@
 
 .swipe-action-btn.active-tag .swipe-active-inner {
   background: #F7F6F3;
-  border: 1px solid #C2C1BF;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.10);
+  border: 1px solid color-mix(in srgb, #595959 60%, transparent);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, #595959 20%, transparent),
+    inset 6px 14px 12px #EBE8E1;
   color: #595959;
 }
 
 .swipe-action-btn.active-tag.activated .swipe-active-inner {
-  background: var(--accent-light);
-  border: 1px solid var(--accent-dark);
-  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  background: #F7F6F3;
+  border: 1px solid color-mix(in srgb, var(--accent-dark) 60%, transparent);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
+    inset 6px 14px 12px var(--accent-light);
   color: var(--accent-dark);
 }
 
@@ -509,7 +511,7 @@
   background: #F7F6F3;
   border: 1px solid #DBDAD8;
   border-radius: 8px;
-  box-shadow: 0 4px 0px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
   justify-content: space-evenly;
@@ -768,7 +770,7 @@
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  box-shadow: 0 6px 0px rgba(0,0,0,0.10);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.10);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -820,10 +822,14 @@
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
-  background: var(--accent-light);
-  border: 1px solid var(--accent-dark);
+  background:
+    linear-gradient(color-mix(in srgb, var(--accent-light) 40%, transparent), color-mix(in srgb, var(--accent-light) 40%, transparent)),
+    #F7F6F3;
+  border: 1px solid color-mix(in srgb, var(--accent-dark) 60%, transparent);
   color: var(--accent-dark);
-  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
+    inset 10px 12px 12px var(--accent-light);
   transform-origin: center;
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
@@ -901,7 +907,7 @@
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   background: #FAF9F7;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.10);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
   overflow: hidden;
   max-height: 0;
   opacity: 0;
@@ -1019,11 +1025,14 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 72px;
+  width: auto;
+  aspect-ratio: 1;
   border-radius: 4px;
-  background: var(--accent-light);
-  border: 1px solid var(--accent-dark);
-  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  background: #F7F6F3;
+  border: 1px solid color-mix(in srgb, var(--accent-dark) 60%, transparent);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
+    inset 6px 14px 12px var(--accent-light);
   color: var(--accent-dark);
 }
 .todo-unattach-label {
@@ -1099,7 +1108,7 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  background: var(--accent-light);
+  background: rgba(var(--accent-base-rgb), 0.2);
   z-index: 0;
   opacity: 0;
   pointer-events: none;
@@ -1200,7 +1209,7 @@
 }
 
 .project-input-wrap {
-  margin: 12px 16px 12px;
+  margin: 8px 16px 12px;
   border: 1px solid #C2C1BF;
   border-radius: 4px;
   background: #FAF9F7;
@@ -1212,22 +1221,22 @@
 }
 
 .project-input-wrap.focused {
-  box-shadow: 0 4px 0px rgba(0,0,0,0.10);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
 }
 
 .project-input-row {
   position: relative;
   display: flex;
   align-items: center;
-  height: 48px;
+  height: 40px;
 }
 
 .project-input {
   flex: 1;
-  height: 48px;
+  height: 40px;
   border: none;
   background: transparent;
-  padding: 0 52px 0 16px;
+  padding: 0 52px 0 12px;
   color: #242424;
   outline: none;
   font-family: 'Open Sans', system-ui, sans-serif;
@@ -1240,8 +1249,8 @@
 
 .project-send-btn {
   position: absolute;
-  right: 8px;
-  top: 8px;
+  right: 4px;
+  top: 4px;
   height: 32px;
   width: 32px;
   padding: 0;
@@ -1260,9 +1269,11 @@
 .project-send-btn.visible {
   opacity: 1;
   pointer-events: auto;
-  background: var(--accent-light);
-  border-color: var(--accent-dark);
-  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  background: #F7F6F3;
+  border-color: color-mix(in srgb, var(--accent-dark) 60%, transparent);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
+    inset 6px 14px 12px var(--accent-light);
 }
 
 .project-cancel-btn {
@@ -1279,7 +1290,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
 
 .project-input-bottom {
@@ -1520,7 +1531,7 @@
   gap: 2px;
   background: var(--accent-light);
   border: 1px solid var(--accent-dark);
-  box-shadow: 0 4px 0 rgba(var(--accent-base-rgb), 0.40);
+  box-shadow: 0 4px 20px rgba(var(--accent-base-rgb), 0.40);
   color: var(--accent-dark);
 }
 .swipe-action-btn.active-tag.scheduled .swipe-action-label.schedule {
@@ -1565,7 +1576,7 @@
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  box-shadow: 0 6px 0px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
   overflow: hidden;
   opacity: 0;
   transform: scale(0.97);

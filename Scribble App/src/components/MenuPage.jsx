@@ -431,7 +431,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                               width: 20, height: 20, flexShrink: 0,
                               borderRadius: 2, border: `1px solid ${sendOn ? '#000000' : '#B8B8B8'}`,
                               background: sendOn ? '#737373' : '#FAF9F7',
-                              boxShadow: sendOn ? 'none' : '0 3px 0px rgba(0,0,0,0.1)',
+                              boxShadow: sendOn ? 'none' : '0 3px 20px rgba(0,0,0,0.1)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                               {sendOn && (

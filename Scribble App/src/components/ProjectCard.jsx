@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
@@ -314,9 +314,22 @@ function LinkIcon({ active, size = 24, color }) {
 // Row icon for a link item. When active, a 16x16 light-colored circle sits behind it.
 function LinkRowIcon({ activated }) {
   const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
+  const fid = useId()
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      {activated && <circle cx="12" cy="12" r="8" fill="var(--accent-light)"/>}
+      {activated && (
+        <defs>
+          <filter id={`li-${fid}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feOffset dx="4" dy="8"/>
+            <feGaussianBlur stdDeviation="4" result="ob"/>
+            <feComposite operator="out" in="SourceGraphic" in2="ob" result="inv"/>
+            <feFlood style={{ floodColor: 'var(--accent-light)', floodOpacity: 1 }} result="col"/>
+            <feComposite operator="in" in="col" in2="inv" result="sh"/>
+            <feComposite operator="over" in="sh" in2="SourceGraphic"/>
+          </filter>
+        </defs>
+      )}
+      {activated && <circle cx="12" cy="12" r="8" fill="#F7F6F3" filter={`url(#li-${fid})`}/>}
       <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
@@ -1349,7 +1362,20 @@ export default function ProjectCard({ categoryId, project }) {
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                           <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-                            <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill={n.activated ? 'var(--accent-light)' : 'none'}/>
+                            {n.activated && (
+                              <defs>
+                                <filter id={`ni-${n.id}`} x="-50%" y="-50%" width="200%" height="200%">
+                                  <feOffset dx="4" dy="8"/>
+                                  <feGaussianBlur stdDeviation="4" result="ob"/>
+                                  <feComposite operator="out" in="SourceGraphic" in2="ob" result="inv"/>
+                                  <feFlood style={{ floodColor: 'var(--accent-light)', floodOpacity: 1 }} result="col"/>
+                                  <feComposite operator="in" in="col" in2="inv" result="sh"/>
+                                  <feComposite operator="over" in="sh" in2="SourceGraphic"/>
+                                </filter>
+                              </defs>
+                            )}
+                            {n.activated && <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#F7F6F3" filter={`url(#ni-${n.id})`}/>}
+                            <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill="none"/>
                             <path d="M12 3v5h5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill="none"/>
                             <line x1="5" y1="13" x2="15" y2="13" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
                             <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>

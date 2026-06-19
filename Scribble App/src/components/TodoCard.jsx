@@ -612,7 +612,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
               <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
                 <div className="swipe-active-inner">
                   <ActiveTagIcon/>
-                  <span className="swipe-action-label">On Display</span>
+                  <span className="swipe-action-label">Displayed</span>
                 </div>
               </button>
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id) }}>

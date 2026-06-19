@@ -1461,7 +1461,7 @@ export default function ProjectCard({ categoryId, project }) {
                   {...addActivePress}
                 >
                   {addScheduledDate ? <CalendarIcon size={16}/> : <ActivateIcon activated={addAsActive}/>}
-                  <span>{addScheduledDate ? formatSchedule(addScheduledDate) : (addAsActive ? 'On Display' : 'Display')}</span>
+                  <span>{addScheduledDate ? formatSchedule(addScheduledDate) : (addAsActive ? 'Displayed' : 'Display')}</span>
                 </button>
               </div>
               <div className="project-toolbar-divider"/>

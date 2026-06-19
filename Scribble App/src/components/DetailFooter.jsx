@@ -80,7 +80,7 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
             {...press}
           >
             {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={active}/>}
-            <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (active ? 'On Display' : 'Display')}</span>
+            <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (active ? 'Displayed' : 'Display')}</span>
           </button>
         </div>
         <div className="detail-footer-divider"/>

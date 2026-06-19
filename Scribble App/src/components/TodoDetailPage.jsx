@@ -170,7 +170,7 @@ function NoteComposer({ onAdd }) {
               onMouseDown={e => { e.preventDefault(); setActive(v => !v) }}
             >
               <ActivateIcon activated={active}/>
-              <span>{active ? 'On Display' : 'Display'}</span>
+              <span>{active ? 'Displayed' : 'Display'}</span>
             </button>
           </div>
         </div>
@@ -246,7 +246,7 @@ function LinkComposer({ onAdd }) {
               onMouseDown={e => { e.preventDefault(); setActive(v => !v) }}
             >
               <ActivateIcon activated={active}/>
-              <span>{active ? 'On Display' : 'Display'}</span>
+              <span>{active ? 'Displayed' : 'Display'}</span>
             </button>
           </div>
         </div>

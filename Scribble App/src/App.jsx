@@ -982,7 +982,7 @@ function AppInner() {
                     <line x1="3.5" y1="14" x2="16.5" y2="14" vectorEffect="non-scaling-stroke"/>
                     <line x1="3" y1="17" x2="17" y2="17" vectorEffect="non-scaling-stroke"/>
                   </svg>
-                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>{addAsActiveFlag ? 'On Display' : 'Display'}</span>
+                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>{addAsActiveFlag ? 'Displayed' : 'Display'}</span>
                 </button>
               </div>
               <div className="toolbar-divider"></div>

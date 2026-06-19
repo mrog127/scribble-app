@@ -147,7 +147,7 @@ export function ActivateSwipeButton({ item, type, onActivateTap, onScheduleClear
         {scheduled ? <CalendarIcon size={16}/> : <ActivateIcon activated={active}/>}
         {scheduled
           ? <span className="swipe-action-label schedule">{formatSchedule(item.scheduledDate)}</span>
-          : <span className="swipe-action-label active-tag">{active ? 'On Display' : 'Display'}</span>}
+          : <span className="swipe-action-label active-tag">{active ? 'Displayed' : 'Display'}</span>}
       </div>
     </button>
   )

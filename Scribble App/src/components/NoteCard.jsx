@@ -1024,7 +1024,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
                       <line x1="3.5" y1="14" x2="16.5" y2="14" vectorEffect="non-scaling-stroke"/>
                       <line x1="3" y1="17" x2="17" y2="17" vectorEffect="non-scaling-stroke"/>
                     </svg>
-                    <span className="swipe-action-label">On Display</span>
+                    <span className="swipe-action-label">Displayed</span>
                   </div>
                 </button>
                 <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>

@@ -165,7 +165,7 @@
   height: 18px;
   border-radius: 2px;
   border: 1px solid #B8B8B8;
-  background: #FFFFFF;
+  background: #FAF9F7;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -188,13 +188,24 @@
   background: #F7F6F3;
   box-shadow:
     0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent),
-    inset 4px 8px 8px var(--cb-light, var(--accent-light));
+    inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l);
+  animation: cb-inner-orbit 2.5s linear infinite;
 }
+
+@keyframes cb-inner-orbit {
+  0%   { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
+  25%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
+  50%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset -4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
+  75%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px -8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
+  100% { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
+}
+
 .checkbox.activated-checkbox.checked,
 .checkbox.activated-checkbox.animating-check {
   background: var(--cb-base, var(--accent-base));
   border-color: var(--cb-dark, var(--accent-dark));
   box-shadow: none;
+  animation: none;
 }
 
 .item-text {
@@ -829,11 +840,21 @@
   color: var(--accent-dark);
   box-shadow:
     0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
-    inset 10px 12px 12px var(--accent-light);
+    inset 10px 12px 12px hsl(from var(--accent-light) h calc(s * 1.1) l);
   transform-origin: center;
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  animation: mc-inner-orbit 5.33s linear infinite;
+}
+
+@keyframes mc-inner-orbit {
+  0%   { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
+  25%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 0px 12px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
+  50%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset -10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
+  75%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 0px -12px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
+  100% { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
 }
 .mark-complete-btn.done {
+  animation: none;
   background: var(--accent-base);
   border-color: var(--accent-dark);
   color: #FFFFFF;
@@ -1274,6 +1295,7 @@
   box-shadow:
     0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
     inset 6px 14px 12px var(--accent-light);
+  animation: mc-inner-orbit 5.33s linear infinite;
 }
 
 .project-cancel-btn {

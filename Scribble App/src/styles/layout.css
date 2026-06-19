@@ -301,6 +301,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   box-shadow:
     0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
     inset 6px 14px 12px var(--accent-light);
+  animation: mc-inner-orbit 5.33s linear infinite;
 }
 
 .send-btn svg { flex-shrink: 0; width: 24px; }

@@ -637,7 +637,8 @@ function CollapsedTodosCard({ category }) {
                       }
                     }}
                   >
-                    <div className={`checkbox${t.activated ? ' activated-checkbox' : ''}${t.checked ? ' checked' : ''}`}>
+                    <div className={`checkbox${t.activated ? ' activated-checkbox' : ''}${t.checked ? ' checked' : ''}`}
+                      style={{ animationDelay: `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}>
                       <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>

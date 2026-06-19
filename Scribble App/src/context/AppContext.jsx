@@ -85,13 +85,14 @@ export function AppProvider({ children }) {
           name: proj.name,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
             id: t.id, text: t.text, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
+            homeSortOrder: t.home_sort_order ?? null,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
           notes: (notes || []).filter(n => n.project_id === proj.id).map(n => ({
-            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, editorHTML: n.editor_html
+            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, editorHTML: n.editor_html
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
-            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date
+            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null
           })),
         }))
     }))
@@ -576,6 +577,47 @@ export function AppProvider({ children }) {
     Promise.all(newOrder.map((l, i) => supabase.from('links').update({ sort_order: i }).eq('id', l.id)))
   }, [updateProject])
 
+  // ---- Cross-project home-screen ordering ----
+  // newOrder is the full reordered list of activated items shown in a home card
+  // (across every category/project). We stamp each item's home_sort_order by its
+  // index so the intermixed order survives reload. Local state is updated in place
+  // so the aggregated home cards (sorted by homeSortOrder) re-flow immediately.
+  const reorderHomeTodos = useCallback((newOrder) => {
+    const orderMap = new Map(newOrder.map((t, i) => [t.id, i]))
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      projects: cat.projects.map(proj => ({
+        ...proj,
+        todos: proj.todos.map(t => orderMap.has(t.id) ? { ...t, homeSortOrder: orderMap.get(t.id) } : t)
+      }))
+    })))
+    Promise.all(newOrder.map((t, i) => supabase.from('todos').update({ home_sort_order: i }).eq('id', t.id)))
+  }, [])
+
+  const reorderHomeNotes = useCallback((newOrder) => {
+    const orderMap = new Map(newOrder.map((n, i) => [n.id, i]))
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      projects: cat.projects.map(proj => ({
+        ...proj,
+        notes: proj.notes.map(n => orderMap.has(n.id) ? { ...n, homeSortOrder: orderMap.get(n.id) } : n)
+      }))
+    })))
+    Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ home_sort_order: i }).eq('id', n.id)))
+  }, [])
+
+  const reorderHomeLinks = useCallback((newOrder) => {
+    const orderMap = new Map(newOrder.map((l, i) => [l.id, i]))
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      projects: cat.projects.map(proj => ({
+        ...proj,
+        links: proj.links.map(l => orderMap.has(l.id) ? { ...l, homeSortOrder: orderMap.get(l.id) } : l)
+      }))
+    })))
+    Promise.all(newOrder.map((l, i) => supabase.from('links').update({ home_sort_order: i }).eq('id', l.id)))
+  }, [])
+
   const reorderProjects = useCallback((categoryId, newOrder) => {
     setCategories(prev => prev.map(cat =>
       cat.id !== categoryId ? cat : { ...cat, projects: newOrder }
@@ -698,6 +740,9 @@ export function AppProvider({ children }) {
       reorderProjectTodos,
       reorderProjectNotes,
       reorderProjectLinks,
+      reorderHomeTodos,
+      reorderHomeNotes,
+      reorderHomeLinks,
       reorderProjects,
       renameProject,
       deleteProject,

@@ -297,7 +297,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
 // Activated todos — aggregated from all projects into one "Lists" card
 function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
-  const { reorderProjectTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail } = useAppContext()
+  const { reorderHomeTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const [calFor, setCalFor] = useState(null)
@@ -367,23 +367,9 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
   }, [onDeactivate, items, categories])
 
   const handleReorder = useCallback((newOrder) => {
-    // Distribute reordered items back to their respective projects
-    const byProject = {}
-    newOrder.forEach(item => {
-      const key = `${item.categoryId}__${item.projectId}`
-      if (!byProject[key]) byProject[key] = { categoryId: item.categoryId, projectId: item.projectId, items: [] }
-      byProject[key].items.push(item)
-    })
-    Object.values(byProject).forEach(({ categoryId, projectId, items: newActivated }) => {
-      const cat = categoriesRef.current.find(c => c.id === categoryId)
-      const proj = cat?.projects.find(p => p.id === projectId)
-      if (!proj) return
-      const activatedIdSet = new Set(newActivated.map(t => t.id))
-      let ai = 0
-      const newFull = proj.todos.map(t => activatedIdSet.has(t.id) ? newActivated[ai++] : t)
-      reorderProjectTodos(categoryId, projectId, newFull)
-    })
-  }, [reorderProjectTodos])
+    // Single cross-project order for the home Lists card.
+    reorderHomeTodos(newOrder)
+  }, [reorderHomeTodos])
 
   const { onPointerDown } = useSwipe()
   const { onDragPointerDown } = useDragReorder(containerRef, sorted, handleReorder, uncheckedCount)
@@ -647,7 +633,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
 
 // Activated notes — aggregated from all projects into one "Notes" card
 function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
-  const { reorderProjectNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail } = useAppContext()
+  const { reorderHomeNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail } = useAppContext()
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {
     const item = items.find(t => t.id === id)
@@ -704,22 +690,9 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
   }, [onDeactivate, items, categories])
 
   const handleReorder = useCallback((newOrder) => {
-    const byProject = {}
-    newOrder.forEach(item => {
-      const key = `${item.categoryId}__${item.projectId}`
-      if (!byProject[key]) byProject[key] = { categoryId: item.categoryId, projectId: item.projectId, items: [] }
-      byProject[key].items.push(item)
-    })
-    Object.values(byProject).forEach(({ categoryId, projectId, items: newActivated }) => {
-      const cat = categoriesRef.current.find(c => c.id === categoryId)
-      const proj = cat?.projects.find(p => p.id === projectId)
-      if (!proj) return
-      const activatedIdSet = new Set(newActivated.map(n => n.id))
-      let ai = 0
-      const newFull = proj.notes.map(n => activatedIdSet.has(n.id) ? newActivated[ai++] : n)
-      reorderProjectNotes(categoryId, projectId, newFull)
-    })
-  }, [reorderProjectNotes])
+    // Single cross-project order for the home Notes card.
+    reorderHomeNotes(newOrder)
+  }, [reorderHomeNotes])
 
   const handleNoteSave = useCallback((noteId, html, text) => {
     const item = items.find(n => n.id === noteId)
@@ -914,7 +887,7 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
 
 // Activated links — aggregated from all projects into one "Links" card
 function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
-  const { categories, setProjectLinkScheduled, reorderProjectLinks } = useAppContext()
+  const { categories, setProjectLinkScheduled, reorderHomeLinks } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const [calFor, setCalFor] = useState(null)
@@ -965,22 +938,9 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
   }, [onDeactivate, items, categories])
 
   const handleReorder = useCallback((newOrder) => {
-    const byProject = {}
-    newOrder.forEach(item => {
-      const key = `${item.categoryId}__${item.projectId}`
-      if (!byProject[key]) byProject[key] = { categoryId: item.categoryId, projectId: item.projectId, items: [] }
-      byProject[key].items.push(item)
-    })
-    Object.values(byProject).forEach(({ categoryId, projectId, items: newActivated }) => {
-      const cat = categoriesRef.current.find(c => c.id === categoryId)
-      const proj = cat?.projects.find(p => p.id === projectId)
-      if (!proj) return
-      const activatedIdSet = new Set(newActivated.map(l => l.id))
-      let ai = 0
-      const newFull = proj.links.map(l => activatedIdSet.has(l.id) ? newActivated[ai++] : l)
-      reorderProjectLinks(categoryId, projectId, newFull)
-    })
-  }, [reorderProjectLinks])
+    // Single cross-project order for the home Links card.
+    reorderHomeLinks(newOrder)
+  }, [reorderHomeLinks])
 
   const { onDragPointerDown } = useDragReorder(containerRef, items, handleReorder)
 
@@ -1137,21 +1097,24 @@ export default function ActivePage({
   // Collect all activated items across all categories/projects as flat tagged arrays.
   // Categories with sendToHomescreen === false keep their active items off the homescreen.
   const homescreenCats = categories.filter(cat => cat.sendToHomescreen !== false)
+  // Stable sort by the cross-project home order. Items without a value (freshly
+  // activated, never manually ordered) fall back to the aggregation order (end).
+  const byHomeOrder = (a, b) => (a.homeSortOrder ?? Infinity) - (b.homeSortOrder ?? Infinity)
   const allActivatedTodos = homescreenCats.flatMap(cat =>
     cat.projects.flatMap(proj =>
       proj.todos.filter(t => t.activated).map(t => ({ ...t, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
-  )
+  ).sort(byHomeOrder)
   const allActivatedNotes = homescreenCats.flatMap(cat =>
     cat.projects.flatMap(proj =>
       proj.notes.filter(n => n.activated).map(n => ({ ...n, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
-  )
+  ).sort(byHomeOrder)
   const allActivatedLinks = homescreenCats.flatMap(cat =>
     cat.projects.flatMap(proj =>
       proj.links.filter(l => l.activated).map(l => ({ ...l, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
-  )
+  ).sort(byHomeOrder)
 
   // Decoration colour = base colour of the category contributing the most items to the Lists card
   const listCatCounts = {}

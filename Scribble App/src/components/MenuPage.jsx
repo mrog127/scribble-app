@@ -291,7 +291,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
         <p className="active-title">Menu</p>
       </div>
 
-      <div style={{ padding: '16px', overflowY: 'auto' }}>
+      <div style={{ padding: '16px 12px', overflowY: 'auto' }}>
 
         {/* Categories list card */}
         <div

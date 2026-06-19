@@ -126,6 +126,21 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   z-index: 1;
 }
 
+/* Squiggle decoration sits between the day name and date, layered above both.
+   Negative margins keep it overlapping without taking vertical space. */
+.active-date-decoration {
+  display: block;
+  position: relative;
+  z-index: 2;
+  width: 148px;
+  height: 55px;
+  margin: -33px 0 -22px -1px;
+  opacity: 0.75;
+  transform: scale(0.9);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
 .underline-img {
   display: block;
   margin: 0 0 24px 8px;
@@ -880,7 +895,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
    contents are constrained. */
 @media (max-width: 999.98px) {
   /* Footer drop shadow only when the page content is scrollable */
-  .footer.has-scroll { box-shadow: 0 -2px 24px rgba(0,0,0,0.04); }
+  .footer.has-scroll { box-shadow: 0 -2px 24px rgba(0,0,0,0.06); }
 
   .page.active > * {
     max-width: 800px;

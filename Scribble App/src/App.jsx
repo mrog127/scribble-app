@@ -8,6 +8,7 @@ import MenuPage from './components/MenuPage.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
+import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
 
 function AppInner() {
   const {
@@ -715,6 +716,25 @@ function AppInner() {
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' })
   const monthDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
+  // Decoration colour: on a category page use that category's base colour;
+  // on the homescreen use the base colour of the category with the most Lists items.
+  const decorationColor = useMemo(() => {
+    if (activeTab !== 'star' && activeTab !== 'menu') {
+      const selIdx = categories.findIndex(c => c.id === activeTab)
+      if (selIdx >= 0) return getCategoryAccent(selIdx).base
+    }
+    const counts = {}
+    categories.filter(cat => cat.sendToHomescreen !== false).forEach(cat => {
+      cat.projects.forEach(proj => {
+        proj.todos.forEach(t => { if (t.activated) counts[cat.id] = (counts[cat.id] || 0) + 1 })
+      })
+    })
+    let domId = null, domMax = 0
+    for (const cid in counts) { if (counts[cid] > domMax) { domMax = counts[cid]; domId = cid } }
+    const idx = domId ? categories.findIndex(c => c.id === domId) : -1
+    return idx >= 0 ? getCategoryAccent(idx).base : ACCENT_COLORS[0].base
+  }, [categories, activeTab])
+
   const activeAccent = useMemo(() => {
     if (activeTab === 'star' || activeTab === 'menu') return ACCENT_COLORS[0]
     const idx = categories.findIndex(c => c.id === activeTab)
@@ -753,6 +773,7 @@ function AppInner() {
         <div className="sidebar-date">
           <p className="active-today-label">Today is</p>
           <p className="active-day-name">{dayName},</p>
+          <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
           <p className="active-month-date">{monthDate}</p>
         </div>
 

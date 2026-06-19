@@ -5,7 +5,7 @@
   margin-bottom: 14px;
   overflow: hidden;
   box-shadow: none;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 /* When a three-dot menu is open, let it overflow the card instead of being clipped */
@@ -20,7 +20,7 @@
 .card-header {
   display: flex;
   align-items: center;
-  padding: 22px 8px 10px 22px;
+  padding: 18px 4px 10px 18px;
   gap: 10px;
 }
 
@@ -99,7 +99,7 @@
 .todo-row {
   display: flex;
   align-items: flex-start;
-  padding: 10px 24px;
+  padding: 10px 20px;
   min-height: unset;
   cursor: default;
   transition: background 0.15s;
@@ -108,7 +108,7 @@
 .todo-row.checked .item-text,
 .todo-row.checked .source-label { opacity: 0.5; }
 
-.divider { height: 1px; background: #DBDAD8; margin: 0 24px; }
+.divider { height: 1px; background: #DBDAD8; margin: 0 20px; }
 
 .checkbox-wrap {
   width: 20px;
@@ -355,7 +355,7 @@
 }
 
 /* Note rows */
-.note-row { display: flex; align-items: flex-start; padding: 10px 24px; }
+.note-row { display: flex; align-items: flex-start; padding: 10px 20px; }
 .note-text { display: block; width: 100%; font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; color: #1a1a1a; line-height: 1.4; word-wrap: break-word; }
 .note-text.accent { color: #7069FE; }
 
@@ -629,7 +629,7 @@
 }
 
 /* Drop shadow only when the content above can actually scroll */
-.detail-footer.has-shadow { box-shadow: 0 -2px 24px rgba(0,0,0,0.04); }
+.detail-footer.has-shadow { box-shadow: 0 -2px 24px rgba(0,0,0,0.06); }
 
 /* The Active | Project (| Copy) row — the original footer body */
 .detail-footer-controls {
@@ -1135,7 +1135,7 @@
 }
 
 /* Project card header gets a touch more right padding past the three-dot menu */
-.project-card .card-header { padding-right: 16px; }
+.project-card .card-header { padding-right: 12px; }
 
 /* Three-dot menu trigger styled as a 32x32 button matching the tabs */
 .dots-menu-btn {
@@ -1174,8 +1174,8 @@
 }
 
 /* Project card row heights */
-.project-card .todo-row { min-height: 40px; align-items: center; padding: 10px 24px; }
-.project-card .note-row { min-height: 40px; align-items: center; padding: 10px 24px; }
+.project-card .todo-row { min-height: 40px; align-items: center; padding: 10px 20px; }
+.project-card .note-row { min-height: 40px; align-items: center; padding: 10px 20px; }
 .project-card .item-content { flex-direction: row; align-items: center; flex-wrap: nowrap; }
 .project-card .item-text,
 .project-card .note-text { width: auto; display: inline; }
@@ -1189,7 +1189,7 @@
   font-size: 14px;
   font-weight: 500;
   color: #B5B4B2;
-  padding: 16px 24px;
+  padding: 16px 20px;
   text-align: center;
 }
 

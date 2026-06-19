@@ -5,6 +5,7 @@ import NoteCard, { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
+import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import homepageDecoration from '../assets/Homepage decoration.png'
 import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
 import { useActivatePress, toAnchorRect } from './ScheduleBits.jsx'
@@ -1111,7 +1112,7 @@ export default function ActivePage({
   const handleScroll = useCallback((e) => {
     if (onScroll) onScroll(e)
     const y = e.target.scrollTop
-    const opacity = Math.min(0.04, Math.max(0, (y / 56) * 0.04))
+    const opacity = Math.min(0.06, Math.max(0, (y / 56) * 0.06))
     if (pageRef.current) pageRef.current.style.setProperty('--card-scroll-shadow', String(opacity))
   }, [onScroll])
 
@@ -1146,6 +1147,18 @@ export default function ActivePage({
     )
   )
 
+  // Decoration colour = base colour of the category contributing the most items to the Lists card
+  const listCatCounts = {}
+  ;[...allActivatedTodos, ...todos].forEach(t => {
+    if (t.categoryId) listCatCounts[t.categoryId] = (listCatCounts[t.categoryId] || 0) + 1
+  })
+  let domCatId = null, domCatMax = 0
+  for (const cid in listCatCounts) {
+    if (listCatCounts[cid] > domCatMax) { domCatMax = listCatCounts[cid]; domCatId = cid }
+  }
+  const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
+  const decorationColor = domCatIdx >= 0 ? getCategoryAccent(domCatIdx).base : ACCENT_COLORS[0].base
+
   const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
 
   return (
@@ -1153,6 +1166,7 @@ export default function ActivePage({
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
         <p className="active-today-label">Today is</p>
         <p className="active-day-name">{dayName},</p>
+        <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
         <p className="active-month-date">{monthDate}</p>
       </div>
 

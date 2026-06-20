@@ -503,10 +503,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .tab-bar.star-active .tab-indicator {
   background: #FAF9F7;
   border: 1px solid #C2C1BF;
-  box-shadow:
-    0 2px 16px color-mix(in srgb, var(--glow-base) 25%, transparent),
-    inset var(--glow-x) var(--glow-y) 12px color-mix(in srgb, var(--glow) 50%, transparent);
-  animation: gallery-orbit 5.33s linear infinite, gallery-rainbow 37.31s linear 1.33s infinite;
+  box-shadow: 0 1px 16px color-mix(in srgb, var(--glow-base) 16%, transparent);
+  animation: gallery-rainbow 37.31s linear infinite;
 }
 
 /* Orbit drives the inner-shadow offset through custom properties, leaving

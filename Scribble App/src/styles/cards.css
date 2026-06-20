@@ -188,16 +188,16 @@
   background: #F7F6F3;
   box-shadow:
     0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent),
-    inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l);
+    inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96));
   animation: cb-inner-orbit 2.5s linear infinite;
 }
 
 @keyframes cb-inner-orbit {
-  0%   { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
-  25%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
-  50%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset -4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
-  75%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px -8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
-  100% { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.1) l); }
+  0%   { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  25%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  50%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset -4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  75%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px -8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  100% { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
 }
 
 .checkbox.activated-checkbox.checked,
@@ -840,10 +840,10 @@
   color: var(--accent-dark);
   box-shadow:
     0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
-    inset 10px 12px 12px hsl(from var(--accent-light) h calc(s * 1.1) l);
+    inset 10px 12px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96));
   transform-origin: center;
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
-  animation: mc-inner-orbit 5.33s linear infinite;
+  animation: mc-complete-orbit 5.33s linear infinite;
 }
 
 @keyframes mc-inner-orbit {
@@ -852,6 +852,14 @@
   50%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset -10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
   75%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 0px -12px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
   100% { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.1) l); }
+}
+
+@keyframes mc-complete-orbit {
+  0%   { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96)); }
+  25%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 0px 12px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96)); }
+  50%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset -10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96)); }
+  75%  { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 0px -12px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96)); }
+  100% { box-shadow: 0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent), inset 10px 0px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96)); }
 }
 .mark-complete-btn.done {
   animation: none;

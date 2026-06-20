@@ -479,10 +479,57 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   box-shadow: none;
 }
 
+@property --glow {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #F4E4E4;
+}
+@property --glow-base {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #D76969;
+}
+@property --glow-x {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 10px;
+}
+@property --glow-y {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
 .tab-bar.star-active .tab-indicator {
   background: #FAF9F7;
   border: 1px solid #C2C1BF;
-  box-shadow: none;
+  box-shadow:
+    0 2px 16px color-mix(in srgb, var(--glow-base) 25%, transparent),
+    inset var(--glow-x) var(--glow-y) 12px color-mix(in srgb, var(--glow) 50%, transparent);
+  animation: gallery-orbit 5.33s linear infinite, gallery-rainbow 37.31s linear 1.33s infinite;
+}
+
+/* Orbit drives the inner-shadow offset through custom properties, leaving
+   box-shadow itself un-animated so the separately-animated --glow colour
+   actually updates each frame */
+@keyframes gallery-orbit {
+  0%   { --glow-x: 10px;  --glow-y: 0px; }
+  25%  { --glow-x: 0px;   --glow-y: 12px; }
+  50%  { --glow-x: -10px; --glow-y: 0px; }
+  75%  { --glow-x: 0px;   --glow-y: -12px; }
+  100% { --glow-x: 10px;  --glow-y: 0px; }
+}
+
+/* red → orange → yellow → green → blue → purple → pink → red */
+@keyframes gallery-rainbow {
+  0%     { --glow: #F4E4E4; --glow-base: #D76969; }
+  14.29% { --glow: #F6EEE5; --glow-base: #E2AA6A; }
+  28.57% { --glow: #F6F2E2; --glow-base: #E1CB76; }
+  42.86% { --glow: #E4F4E6; --glow-base: #7CBE87; }
+  57.14% { --glow: #E4EEF4; --glow-base: #78A4C2; }
+  71.43% { --glow: #EDE5F4; --glow-base: #9F7AC2; }
+  85.71% { --glow: #F4E4EE; --glow-base: #D177B0; }
+  100%   { --glow: #F4E4E4; --glow-base: #D76969; }
 }
 
 .tab-area { position: relative; height: 40px; overflow: visible; }

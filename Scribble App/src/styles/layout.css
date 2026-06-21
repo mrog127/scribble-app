@@ -75,7 +75,7 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
 .category-page .page-header { padding-top: 131px; padding-right: 24px; }
 
 /* Homepage header (mobile only — hidden on desktop): extra space above/below */
-#page-star > .page-header { padding: 139px 16px 8px; }
+#page-star > .page-header { padding: 64px 16px 8px; }
 
 .active-title {
   font-family: 'Merriweather', Georgia, serif;

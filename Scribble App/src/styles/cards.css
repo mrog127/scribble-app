@@ -1,5 +1,5 @@
 .card {
-  background: #F7F6F3;
+  background: hsl(from #F7F6F3 h s calc(l * 1.01));
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   margin-bottom: 10px;
@@ -1179,7 +1179,7 @@
 }
 
 /* Project card header gets a touch more right padding past the three-dot menu */
-.project-card .card-header { padding-right: 12px; }
+.project-card .card-header { padding-right: 12px; padding-bottom: 2px; }
 
 /* Three-dot menu trigger styled as a 32x32 button matching the tabs */
 .dots-menu-btn {

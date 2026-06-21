@@ -14,7 +14,7 @@
 /* Home & category pages: a drop shadow behind the cards that fades in on scroll
    (opacity driven by JS via --card-scroll-shadow, 0 → 0.04 over 56px) */
 .cards-area .card {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, var(--card-scroll-shadow, 0));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, var(--card-scroll-shadow, 0.04));
 }
 
 .card-header {
@@ -404,7 +404,7 @@
 .note-detail-page {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: #F2F0EB;
+  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.9) calc(l * 1.03)), 20%, hsl(from #F2F0EB h calc(s * 1.5) l));
   border-radius: 0;
   z-index: 50;
   transform: translateY(100%);
@@ -489,7 +489,7 @@
   color: var(--accent-dark);
 }
 
-.note-detail-page.editing { background: #F2F0EB; }
+.note-detail-page.editing { background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.9) calc(l * 1.03)), 20%, hsl(from #F2F0EB h calc(s * 1.5) l)); }
 
 .note-detail-page.editing .note-editor {
   padding-bottom: calc(var(--kbh, 0px) + 128px);

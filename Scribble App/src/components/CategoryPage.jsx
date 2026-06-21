@@ -420,7 +420,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   const handleScroll = useCallback((e) => {
     if (onScroll) onScroll(e)
     const y = e.target.scrollTop
-    const opacity = Math.min(0.06, Math.max(0, (y / 56) * 0.06))
+    const opacity = Math.min(0.10, Math.max(0.04, 0.04 + (y / 56) * 0.06))
     if (cardsAreaRef.current) cardsAreaRef.current.style.setProperty('--card-scroll-shadow', String(opacity))
   }, [onScroll])
 

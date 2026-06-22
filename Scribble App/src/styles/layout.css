@@ -1,4 +1,6 @@
-html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0EB; }
+/* Background gradient lives on the root surface so it always fills the entire
+   viewport (and beyond) — no hard clip line where a smaller element would end. */
+html, body, #root { overflow: hidden; height: 100%; margin: 0; background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l)); }
 
 /* Disable the dark tap-flash mobile browsers paint over buttons/links on touch */
 * { -webkit-tap-highlight-color: transparent; }
@@ -19,7 +21,8 @@ html, body, #root { overflow: hidden; height: 100%; margin: 0; background: #F2F0
   -webkit-user-select: none;
   width: 100%;
   height: 100vh;
-  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
+  /* Transparent so the root's gradient shows through continuously (no clip line). */
+  background: transparent;
   border-radius: 0;
   overflow: hidden;
   display: flex;

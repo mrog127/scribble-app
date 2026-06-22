@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
+import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
 
 function useSwipe(onDelete, onTagActive) {
   const swipeState = useRef({})
@@ -597,6 +598,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
                 >
+                  {hideCompleted ? <EyeIcon/> : <EyeOffIcon/>}
                   {hideCompleted ? 'Show Completed' : 'Hide Completed'}
                 </button>
               </div>

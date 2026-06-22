@@ -4,6 +4,7 @@ import TodoCard from './TodoCard.jsx'
 import NoteCard, { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
+import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import homepageDecoration from '../assets/Homepage decoration.png'
@@ -541,6 +542,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
                 >
+                  {hideCompleted ? <EyeIcon/> : <EyeOffIcon/>}
                   {hideCompleted ? `Show ${items.filter(t => t.checked).length} Completed` : 'Hide Completed'}
                 </button>
               </div>

@@ -542,13 +542,6 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                 <span/><span/><span/>
               </div>
               <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
-                <button
-                  className="card-context-item"
-                  onMouseDown={e => { e.preventDefault(); setMenuOpen(false) }}
-                >
-                  <ArchiveMenuIcon/>
-                  Archive Easel
-                </button>
                 {!collapsed && archivedCanvasCount > 0 && (
                   <button
                     className="card-context-item"
@@ -558,6 +551,13 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                     {showArchivedCanvases ? 'Hide Archived Canvases' : `Show ${archivedCanvasCount} Archived Canvases`}
                   </button>
                 )}
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => { e.preventDefault(); setMenuOpen(false) }}
+                >
+                  <ArchiveMenuIcon/>
+                  Archive Easel
+                </button>
               </div>
             </div>
           </div>

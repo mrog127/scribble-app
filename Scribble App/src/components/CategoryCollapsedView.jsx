@@ -6,6 +6,7 @@ import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { ActivateSwipeButton, CalendarIcon, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
+import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -629,6 +630,7 @@ function CollapsedTodosCard({ category }) {
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
                 >
+                  {hideCompleted ? <EyeIcon/> : <EyeOffIcon/>}
                   {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
                 </button>
               </div>

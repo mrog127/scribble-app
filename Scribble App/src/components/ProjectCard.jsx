@@ -593,6 +593,24 @@ export default function ProjectCard({ categoryId, project }) {
     deleteProject(categoryId, project.id)
   }, [categoryId, project.id, deleteProject])
 
+  // Archiving a canvas: collapse the card vertically + fade it out (like a row
+  // disappearing) before flagging it archived and moving it out of the stack.
+  const handleArchiveProject = useCallback(() => {
+    setMenuOpen(false)
+    const card = cardRef.current
+    if (!card) { archiveProject(categoryId, project.id); return }
+    const h = card.getBoundingClientRect().height
+    card.style.height = h + 'px'
+    card.style.overflow = 'hidden'
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      card.style.transition = 'height 220ms ease, opacity 180ms ease, margin 220ms ease'
+      card.style.height = '0'
+      card.style.opacity = '0'
+      card.style.marginBottom = '0'
+    }))
+    setTimeout(() => archiveProject(categoryId, project.id), 240)
+  }, [categoryId, project.id, archiveProject])
+
   const { onPointerDown } = useSwipe()
 
   // ---- Sorted todos: activated first, then unchecked, then checked ----
@@ -1440,7 +1458,7 @@ export default function ProjectCard({ categoryId, project }) {
                 ) : (
                   <button
                     className="card-context-item"
-                    onMouseDown={e => { e.preventDefault(); setMenuOpen(false); archiveProject(categoryId, project.id) }}
+                    onMouseDown={e => { e.preventDefault(); handleArchiveProject() }}
                   >
                     <ArchiveMenuIcon/>
                     Archive Project

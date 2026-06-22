@@ -1,6 +1,14 @@
 /* Background gradient lives on the root surface so it always fills the entire
-   viewport (and beyond) — no hard clip line where a smaller element would end. */
-html, body, #root { overflow: hidden; height: 100%; margin: 0; background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l)); }
+   viewport (and beyond) — no hard clip line where a smaller element would end.
+   The background-color matches the gradient's top edge so iOS standalone fills the
+   status-bar / safe-area strip with the same color (no white band at the top). */
+html, body, #root {
+  overflow: hidden;
+  height: 100%;
+  margin: 0;
+  background-color: hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08));
+  background-image: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
+}
 
 /* Disable the dark tap-flash mobile browsers paint over buttons/links on touch */
 * { -webkit-tap-highlight-color: transparent; }

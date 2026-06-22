@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react
 import { useAppContext } from '../context/AppContext.jsx'
 import ProjectCard from './ProjectCard.jsx'
 import CategoryCollapsedView from './CategoryCollapsedView.jsx'
+import { EyeIcon, EyeOffIcon, ArchiveMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
@@ -545,6 +546,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                   className="card-context-item"
                   onMouseDown={e => { e.preventDefault(); setMenuOpen(false) }}
                 >
+                  <ArchiveMenuIcon/>
                   Archive Easel
                 </button>
                 {!collapsed && archivedCanvasCount > 0 && (
@@ -552,6 +554,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                     className="card-context-item"
                     onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedCanvases(); setMenuOpen(false) }}
                   >
+                    {showArchivedCanvases ? <EyeOffIcon/> : <EyeIcon/>}
                     {showArchivedCanvases ? 'Hide Archived Canvases' : `Show ${archivedCanvasCount} Archived Canvases`}
                   </button>
                 )}

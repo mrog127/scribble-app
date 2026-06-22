@@ -5,6 +5,7 @@ import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
+import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon } from './MenuIcons.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -1392,6 +1393,7 @@ export default function ProjectCard({ categoryId, project }) {
                     className="card-context-item"
                     onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
                   >
+                    {hideCompleted ? <EyeIcon/> : <EyeOffIcon/>}
                     {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
                   </button>
                 )}
@@ -1400,6 +1402,7 @@ export default function ProjectCard({ categoryId, project }) {
                     className="card-context-item"
                     onMouseDown={e => { e.preventDefault(); handleToggleShowArchived(); setMenuOpen(false) }}
                   >
+                    {showArchived ? <EyeOffIcon/> : <EyeIcon/>}
                     {showArchived ? 'Hide Archived' : `Show ${archivedNoteCount} Archived`}
                   </button>
                 )}
@@ -1408,6 +1411,7 @@ export default function ProjectCard({ categoryId, project }) {
                     className="card-context-item"
                     onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedLinks(); setMenuOpen(false) }}
                   >
+                    {showArchivedLinks ? <EyeOffIcon/> : <EyeIcon/>}
                     {showArchivedLinks ? 'Hide Archived' : `Show ${archivedLinkCount} Archived`}
                   </button>
                 )}
@@ -1421,6 +1425,7 @@ export default function ProjectCard({ categoryId, project }) {
                       setRenaming(true)
                     }}
                   >
+                    <EditIcon/>
                     Rename Project
                   </button>
                 )}
@@ -1429,6 +1434,7 @@ export default function ProjectCard({ categoryId, project }) {
                     className="card-context-item"
                     onMouseDown={e => { e.preventDefault(); setMenuOpen(false); unarchiveProject(categoryId, project.id) }}
                   >
+                    <RetrieveMenuIcon/>
                     Unarchive Canvas
                   </button>
                 ) : (
@@ -1436,6 +1442,7 @@ export default function ProjectCard({ categoryId, project }) {
                     className="card-context-item"
                     onMouseDown={e => { e.preventDefault(); setMenuOpen(false); archiveProject(categoryId, project.id) }}
                   >
+                    <ArchiveMenuIcon/>
                     Archive Project
                   </button>
                 )}
@@ -1443,6 +1450,7 @@ export default function ProjectCard({ categoryId, project }) {
                   className="card-context-item danger"
                   onMouseDown={e => { e.preventDefault(); handleDeleteProject() }}
                 >
+                  <TrashMenuIcon/>
                   Delete Project
                 </button>
               </div>
@@ -1488,7 +1496,7 @@ export default function ProjectCard({ categoryId, project }) {
                         >
                           <div
                             className={`checkbox${t.activated ? ' activated-checkbox' : ''}${t.checked ? ' checked' : ''}`}
-                            style={{ '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}
+                            style={{ '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s`, '--cb-dir': (String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 2 ? 'reverse' : 'normal') }}
                           >
                             <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                               <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>

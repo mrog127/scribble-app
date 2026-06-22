@@ -204,14 +204,18 @@ function useSwipe() {
   return { onPointerDown }
 }
 
-// ---- Drag reorder hook (unchecked-region aware) ----
-function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
+// ---- Drag reorder hook (group-aware) ----
+// groupKeysProp: optional array aligned to `items`. Items sharing a contiguous key
+// form an independent reorderable group; an item whose key is null/undefined is
+// locked (not draggable). Dragging is confined within the dragged item's group, so
+// e.g. active items only reorder among active, inactive among inactive.
+function useDragReorder(containerRef, items, onReorder, groupKeysProp) {
   const dragRef = useRef(null)
   const flipRef = useRef(null)
   const itemsRef = useRef(items)
   itemsRef.current = items
-  const ucRef = useRef(uncheckedCountProp)
-  ucRef.current = uncheckedCountProp
+  const gkRef = useRef(groupKeysProp)
+  gkRef.current = groupKeysProp
 
   useLayoutEffect(() => {
     const flip = flipRef.current
@@ -242,21 +246,30 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
         const sr = w.querySelector('.swipe-row[data-swipe-id]')
         return sr ? { el: sr, wrapper: w, id: sr.dataset.swipeId, rect: sr.getBoundingClientRect() } : null
       }).filter(Boolean)
-      const dragIdx = snapshots.findIndex(s => s.id === id)
+      const dragIdx = snapshots.findIndex(s => String(s.id) === String(id))
       if (dragIdx < 0) return false
-      const uc = ucRef.current
-      const uncheckedCount = uc !== undefined ? uc : snapshots.length
-      if (uc !== undefined && dragIdx >= uncheckedCount) return false
+      // Determine the contiguous group the dragged row belongs to.
+      const groupKeys = gkRef.current
+      let groupStart = 0, groupEnd = snapshots.length
+      if (groupKeys) {
+        const key = groupKeys[dragIdx]
+        if (key == null) return false   // locked row (e.g. completed todo)
+        groupStart = dragIdx
+        while (groupStart > 0 && groupKeys[groupStart - 1] === key) groupStart--
+        groupEnd = dragIdx + 1
+        while (groupEnd < snapshots.length && groupKeys[groupEnd] === key) groupEnd++
+      }
       const dragged = snapshots[dragIdx]
       const appEl = document.getElementById('app'), portal = document.getElementById('animation-portal')
       if (!appEl || !portal) return false
       const appRect = appEl.getBoundingClientRect()
       const cloneTop = dragged.rect.top - appRect.top - 4
+      const draggedH = dragged.wrapper.getBoundingClientRect().height
       let topBound = -Infinity, bottomBound = Infinity
-      if (uc !== undefined && uncheckedCount > 0) {
-        topBound = snapshots[0].rect.top - appRect.top - 4
-        const lastUnchecked = snapshots[uncheckedCount - 1]
-        bottomBound = (lastUnchecked.rect.top + lastUnchecked.rect.height) - appRect.top - dragged.wrapper.getBoundingClientRect().height - 4
+      if (groupKeys && groupEnd - groupStart > 0) {
+        topBound = snapshots[groupStart].rect.top - appRect.top - 4
+        const lastInGroup = snapshots[groupEnd - 1]
+        bottomBound = (lastInGroup.rect.top + lastInGroup.rect.height) - appRect.top - draggedH - 4
       }
       const cloneInner = dragged.el.cloneNode(true)
       cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
@@ -265,7 +278,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       clone.appendChild(cloneInner)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
-      dragRef.current = { clone, snapshots, dragIdx, currentIdx: dragIdx, cloneTop, startY: clientY, draggedH: dragged.wrapper.getBoundingClientRect().height, uncheckedCount, topBound, bottomBound }
+      dragRef.current = { clone, snapshots, dragIdx, currentIdx: dragIdx, cloneTop, startY: clientY, draggedH, groupStart, groupEnd, topBound, bottomBound }
       return true
     }
 
@@ -280,10 +293,10 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
     longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY, true) }, 250)
     document.addEventListener('touchmove', preventScroll, { passive: false })
 
-    const applyShifts = (snapshots, dragIdx, newIdx, draggedH, uncheckedCount) => {
+    const applyShifts = (snapshots, dragIdx, newIdx, draggedH, groupStart, groupEnd) => {
       snapshots.forEach((snap, i) => {
         if (i === dragIdx) return
-        if (i >= uncheckedCount) return
+        if (i < groupStart || i >= groupEnd) return
         let dy = 0
         if (newIdx < dragIdx && i >= newIdx && i < dragIdx) dy = draggedH
         if (newIdx > dragIdx && i > dragIdx && i <= newIdx) dy = -draggedH
@@ -301,12 +314,13 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       if (!s) return
       const rawTop = s.cloneTop + (e2.clientY - s.startY)
       s.clone.style.top = (s.topBound > -Infinity ? Math.max(s.topBound, Math.min(s.bottomBound, rawTop)) : rawTop) + 'px'
-      const targetSnaps = s.snapshots.slice(0, s.uncheckedCount)
-      const nonDragged = targetSnaps.filter((_, i) => i !== s.dragIdx)
+      const targetSnaps = s.snapshots.slice(s.groupStart, s.groupEnd)
+      const dragLocal = s.dragIdx - s.groupStart
+      const nonDragged = targetSnaps.filter((_, i) => i !== dragLocal)
       let insertAt = nonDragged.length
       for (let j = 0; j < nonDragged.length; j++) { if (e2.clientY < nonDragged[j].rect.top + nonDragged[j].rect.height / 2) { insertAt = j; break } }
-      const newIdx = Math.min(insertAt, s.uncheckedCount - 1)
-      if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH, s.uncheckedCount) }
+      const newIdx = s.groupStart + Math.min(insertAt, (s.groupEnd - s.groupStart) - 1)
+      if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s.snapshots, s.dragIdx, s.currentIdx, s.draggedH, s.groupStart, s.groupEnd) }
     }
 
     const onCancel = () => {
@@ -364,7 +378,7 @@ function distribute(category, newOrder, type, reorderFn) {
   Object.entries(byProj).forEach(([projectId, list]) => {
     const proj = category.projects.find(p => p.id === projectId)
     if (!proj) return
-    const src = type === 'todo' ? proj.todos : proj.notes
+    const src = type === 'todo' ? proj.todos : type === 'link' ? proj.links : proj.notes
     const ordered = list.map(it => src.find(x => x.id === it.id)).filter(Boolean)
     src.forEach(x => { if (!ordered.includes(x)) ordered.push(x) })
     reorderFn(category.id, projectId, ordered)
@@ -419,7 +433,10 @@ function CollapsedTodosCard({ category }) {
     distribute(categoryRef.current, newOrder, 'todo', reorderProjectTodos)
   }, [reorderProjectTodos])
 
-  const { onDragPointerDown } = useDragReorder(containerRef, sorted, handleReorder, hideCompleted ? uncheckedCount : uncheckedCount)
+  // Reorder groups: active (activated) and inactive (unchecked, not activated) each
+  // reorder among themselves; completed todos are locked (null key).
+  const todoGroupKeys = sorted.map(t => t.checked ? null : (t.activated ? 'active' : 'inactive'))
+  const { onDragPointerDown } = useDragReorder(containerRef, sorted, handleReorder, todoGroupKeys)
 
   useEffect(() => {
     const card = cardRef.current
@@ -650,7 +667,7 @@ function CollapsedTodosCard({ category }) {
                     }}
                   >
                     <div className={`checkbox${t.activated ? ' activated-checkbox' : ''}${t.checked ? ' checked' : ''}`}
-                      style={{ '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}>
+                      style={{ '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s`, '--cb-dir': (String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 2 ? 'reverse' : 'normal') }}>
                       <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -734,7 +751,8 @@ function CollapsedNotesCard({ category }) {
     distribute(categoryRef.current, newOrder, 'note', reorderProjectNotes)
   }, [reorderProjectNotes])
 
-  const { onDragPointerDown } = useDragReorder(containerRef, allNotes, handleReorder, undefined)
+  const noteGroupKeys = allNotes.map(n => n.activated ? 'active' : 'inactive')
+  const { onDragPointerDown } = useDragReorder(containerRef, allNotes, handleReorder, noteGroupKeys)
 
   useEffect(() => {
     const card = cardRef.current
@@ -890,7 +908,9 @@ function CollapsedNotesCard({ category }) {
 
 // ============ Links ============
 function CollapsedLinksCard({ category }) {
-  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink } = useAppContext()
+  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, reorderProjectLinks } = useAppContext()
+  const categoryRef = useRef(category)
+  categoryRef.current = category
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const linkSwipeState = useRef({})
@@ -910,6 +930,12 @@ function CollapsedLinksCard({ category }) {
   const allLinks = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
     p.links.filter(l => !l.archived).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
   ))
+
+  const handleReorder = useCallback((newOrder) => {
+    distribute(categoryRef.current, newOrder, 'link', reorderProjectLinks)
+  }, [reorderProjectLinks])
+  const linkGroupKeys = allLinks.map(l => l.activated ? 'active' : 'inactive')
+  const { onDragPointerDown } = useDragReorder(containerRef, allLinks, handleReorder, linkGroupKeys)
 
   useEffect(() => {
     const card = cardRef.current
@@ -1011,7 +1037,7 @@ function CollapsedLinksCard({ category }) {
               <div className="swipe-content">
                 <div
                   className="note-row link-row"
-                  onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url) }}
+                  onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url); onDragPointerDown(e, l.id) }}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">

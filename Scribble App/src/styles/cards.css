@@ -48,11 +48,12 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: #F7F6F3;
+  background: hsl(from #F7F6F3 h s calc(l * 1.01));
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-  min-width: 184px;
+  width: max-content;
+  min-width: 180px;
   z-index: 100;
   overflow: hidden;
   opacity: 0;
@@ -69,9 +70,11 @@
 .card-context-item {
   display: flex;
   align-items: center;
+  gap: 8px;
   width: 100%;
   height: 48px;
-  padding: 0 16px;
+  padding: 0 40px 0 16px;
+  white-space: nowrap;
   text-align: left;
   background: none;
   border: none;
@@ -86,15 +89,11 @@
   border-top: 1px solid #DBDAD8;
 }
 
-/* Category-header menu: size to the longest label on one line, with 24px to the
-   right of it (16px left inset kept). */
-.category-header-actions .card-context-menu {
-  width: max-content;
-  min-width: 0;
-}
-.category-header-actions .card-context-item {
-  white-space: nowrap;
-  padding-right: 24px;
+.card-context-item svg { flex-shrink: 0; }
+
+@media (hover: hover) {
+  .card-context-item:hover { background: rgba(0, 0, 0, 0.02); }
+  .card-context-item.danger:hover { background: rgba(178, 74, 74, 0.04); }
 }
 
 .card-context-item.danger { color: #B24A4A; }
@@ -193,7 +192,7 @@
 .checkbox.animating-check   { animation: checkbox-bounce-in  320ms ease forwards; }
 .checkbox.animating-uncheck { animation: checkbox-bounce-out 200ms ease forwards; }
 
-.checkbox.checked { background: var(--accent-base); border-color: var(--accent-dark); box-shadow: none; }
+.checkbox.checked { background: var(--accent-base); border-color: transparent; box-shadow: none; }
 .checkmark { opacity: 0; transition: opacity 80ms ease 60ms; display: block; }
 .checkbox.checked .checkmark { opacity: 1; }
 
@@ -216,6 +215,10 @@
     inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96));
   animation: cb-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
   animation-delay: var(--cb-delay, 0s), var(--cb-delay, 0s);
+  /* Orbit direction (clockwise/counterclockwise) is randomly assigned per checkbox
+     via --cb-dir; both the inner-shadow and stroke-gradient orbits share it so they
+     stay in sync. */
+  animation-direction: var(--cb-dir, normal), var(--cb-dir, normal);
 }
 
 /* Stroke gradient orbits in sync with the inner shadow: darker end tracks the
@@ -236,9 +239,52 @@
 .checkbox.activated-checkbox.checked,
 .checkbox.activated-checkbox.animating-check {
   background: var(--cb-base, var(--accent-base));
-  border-color: var(--cb-dark, var(--accent-dark));
+  border-color: transparent;
   box-shadow: none;
   animation: none;
+}
+
+/* ---- Hover tint overlays ----
+   Active checkboxes, send buttons and mark-complete buttons get a 6% base-color
+   overlay; inactive checkboxes get a 4% black overlay. Implemented as an ::after
+   layer so it doesn't disturb the animated backgrounds/box-shadows. */
+.checkbox { position: relative; }
+.mark-complete-btn { position: relative; }
+
+.checkbox::after,
+.send-btn::after,
+.project-send-btn::after,
+.mark-complete-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+/* Active (category-coloured) checkboxes + send/complete buttons → 6% base colour */
+.checkbox.activated-checkbox::after { background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.06); }
+.send-btn::after,
+.project-send-btn::after,
+.mark-complete-btn::after { background: rgba(var(--accent-base-rgb), 0.06); }
+
+/* Inactive checkboxes → 2% black */
+.checkbox:not(.activated-checkbox)::after { background: rgba(0, 0, 0, 0.02); }
+
+@media (hover: hover) {
+  .checkbox:hover::after,
+  .send-btn.visible:hover::after,
+  .project-send-btn.visible:hover::after,
+  .mark-complete-btn:hover::after { opacity: 1; }
+
+  /* Text input boxes get the same 2% black tint on hover. Inputs can't host an
+     ::after, so layer a tint as a background-image over their existing fill. */
+  .project-input-wrap:not(.focused):hover,
+  .add-input:hover {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02));
+  }
 }
 
 .item-text {
@@ -1421,6 +1467,12 @@
 
 @media (hover: hover) {
   .dots-menu-btn:hover::before { background: rgba(0, 0, 0, 0.04); }
+}
+
+/* When the menu is open, the dots button shows a selector box matching a project
+   card's tab selector (accent base at 12%). */
+.dots-menu-wrap:has(.card-context-menu.open) .dots-menu-btn::before {
+  background: rgba(var(--accent-base-rgb), 0.12);
 }
 
 /* Project card row heights */

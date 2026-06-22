@@ -578,7 +578,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                   >
                     <div
                       className={`checkbox activated-checkbox${t.checked ? ' checked' : ''}`}
-                      style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb, '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}
+                      style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb, '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s`, '--cb-dir': (String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 2 ? 'reverse' : 'normal') }}
                     >
                       <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>

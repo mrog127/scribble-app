@@ -208,10 +208,10 @@
   background:
     linear-gradient(#F7F6F3, #F7F6F3) padding-box,
     linear-gradient(var(--cb-stroke-angle),
-      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 1.5) / 0.6),
-      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 0.6) / 0.6)) border-box;
+      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 1.53) / 0.6),
+      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 0.576) / 0.6)) border-box;
   box-shadow:
-    0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent),
+    0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent),
     inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96));
   animation: cb-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
   animation-delay: var(--cb-delay, 0s), var(--cb-delay, 0s);
@@ -229,11 +229,11 @@
 }
 
 @keyframes cb-inner-orbit {
-  0%   { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  25%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  50%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset -4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  75%  { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 0px -8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  100% { box-shadow: 0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  0%   { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  25%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 0px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  50%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset -4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  75%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 0px -8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  100% { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
 }
 
 .checkbox.activated-checkbox.checked,

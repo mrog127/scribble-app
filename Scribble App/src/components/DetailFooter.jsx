@@ -46,7 +46,7 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
@@ -76,8 +76,8 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
         <div className="detail-footer-cell left">
           <button
             ref={btnRef}
-            className={`project-active-btn${active ? ' on' : ''}${scheduled ? ' scheduled' : ''}`}
-            {...press}
+            className={`project-active-btn${active ? ' on' : ''}${scheduled ? ' scheduled' : ''}${disabledActive ? ' disabled' : ''}`}
+            {...(disabledActive ? {} : press)}
           >
             {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={active}/>}
             <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (active ? 'Displayed' : 'Display')}</span>

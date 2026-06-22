@@ -395,11 +395,32 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   const { categories, addProject, reorderProjects } = useAppContext()
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [showArchivedCanvases, setShowArchivedCanvases] = useState(() => {
+    try { return localStorage.getItem(`arch-canvases-${categoryId}`) === 'true' } catch { return false }
+  })
   const creationCardRef = useRef(null)
   const inputRef = useRef(null)
   const cardsAreaRef = useRef(null)
+  const menuRef = useRef(null)
 
   const category = categories.find(c => c.id === categoryId)
+
+  // Close the header menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const handleToggleShowArchivedCanvases = useCallback(() => {
+    setShowArchivedCanvases(v => {
+      const next = !v
+      try { localStorage.setItem(`arch-canvases-${categoryId}`, next ? 'true' : 'false') } catch {}
+      return next
+    })
+  }, [categoryId])
 
   // Fade the cards area out, flip the (lifted) collapse state, then fade back in
   const toggleCollapsed = useCallback(() => {
@@ -413,8 +434,10 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   }, [onToggleCollapsed])
 
   const handleReorderProjects = useCallback((newOrder) => {
-    reorderProjects(categoryId, newOrder)
-  }, [categoryId, reorderProjects])
+    const cat = categories.find(c => c.id === categoryId)
+    const archived = cat ? cat.projects.filter(p => p.archived) : []
+    reorderProjects(categoryId, [...newOrder, ...archived])
+  }, [categoryId, reorderProjects, categories])
 
   // Fade a drop shadow in behind the cards over the first 56px of scrolling (0% → 4%)
   const handleScroll = useCallback((e) => {
@@ -426,7 +449,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
 
   const { onCardHeaderPointerDown } = useCardDragReorder(
     cardsAreaRef,
-    category?.projects ?? [],
+    (category?.projects ?? []).filter(p => !p.archived),
     handleReorderProjects
   )
 
@@ -482,6 +505,10 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
 
   if (!category) return null
 
+  const activeProjects = category.projects.filter(p => !p.archived)
+  const archivedProjects = category.projects.filter(p => p.archived)
+  const archivedCanvasCount = archivedProjects.length
+
   return (
     <div className={`page active category-page${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : `page-${categoryId}`} onScroll={handleScroll}>
       <div
@@ -506,6 +533,30 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
             >
               <AddIcon/>
             </button>
+            <div className="dots-menu-wrap" ref={menuRef}>
+              <div
+                className="dots-menu dots-menu-btn"
+                onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
+              >
+                <span/><span/><span/>
+              </div>
+              <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => { e.preventDefault(); setMenuOpen(false) }}
+                >
+                  Archive Easel
+                </button>
+                {!collapsed && archivedCanvasCount > 0 && (
+                  <button
+                    className="card-context-item"
+                    onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedCanvases(); setMenuOpen(false) }}
+                  >
+                    {showArchivedCanvases ? 'Hide Archived Canvases' : `Show ${archivedCanvasCount} Archived Canvases`}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
         <UnderlineSvg className="underline-img" style={{ marginTop: '8px', marginBottom: '18px', color: 'var(--accent-base)' }} />
@@ -554,8 +605,17 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
           </div>
         )}
 
-        {category.projects.map(project => (
+        {activeProjects.map(project => (
           <div key={project.id} data-project-id={project.id}>
+            <ProjectCard
+              categoryId={categoryId}
+              project={project}
+            />
+          </div>
+        ))}
+
+        {showArchivedCanvases && archivedProjects.map(project => (
+          <div key={project.id} data-archived-id={project.id}>
             <ProjectCard
               categoryId={categoryId}
               project={project}

@@ -201,8 +201,9 @@ function StarIcon() {
   )
 }
 
-function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId }) {
-  const hasFooter = !!projectName && typeof onToggleActive === 'function'
+function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
+  // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
+  const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
   const { categories, moveProjectNote } = useAppContext()
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
@@ -481,7 +482,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
   // Click on the text content — capture caret position then enter edit mode
   const handleContentClick = useCallback((e) => {
-    if (editing) return
+    if (editing || archived) return
     let savedRange = null
     if (document.caretRangeFromPoint) {
       savedRange = document.caretRangeFromPoint(e.clientX, e.clientY)
@@ -494,10 +495,11 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       }
     }
     enterEdit(savedRange)
-  }, [editing, enterEdit])
+  }, [editing, enterEdit, archived])
 
   // Click on empty area below text — place cursor at end
   const handleEmptyAreaClick = useCallback(() => {
+    if (archived) return
     const content = contentRef.current
     if (!content) return
     if (!editing) {
@@ -515,7 +517,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       sel.addRange(range)
       detectCursorStyle()
     })
-  }, [editing, enterEdit, detectCursorStyle])
+  }, [editing, enterEdit, detectCursorStyle, archived])
 
   // Save exits edit mode but keeps note open; Done closes the note
   const handleButtonClick = useCallback(() => {
@@ -742,6 +744,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           <line x1="5" y1="13" x2="15" y2="13" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
           <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
         </svg>
+        {archived && <span className="detail-archived-label">Archived</span>}
         <span ref={scrollTitleRef} className="note-scroll-title" />
         <button className="note-detail-done" onClick={handleButtonClick}>
           {editing ? 'Save' : 'Done'}

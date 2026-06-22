@@ -83,16 +83,17 @@ export function AppProvider({ children }) {
         .map(proj => ({
           id: proj.id,
           name: proj.name,
+          archived: proj.archived === true,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
             id: t.id, text: t.text, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
             homeSortOrder: t.home_sort_order ?? null,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
           notes: (notes || []).filter(n => n.project_id === proj.id).map(n => ({
-            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, editorHTML: n.editor_html
+            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, editorHTML: n.editor_html, archived: n.archived === true
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
-            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null
+            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, archived: l.archived === true
           })),
         }))
     }))
@@ -476,6 +477,66 @@ export function AppProvider({ children }) {
     db(supabase.from('notes').update({ activated: newActivated }).eq('id', noteId))
   }, [updateProject])
 
+  // ---- Archive / retrieve a project note ----
+  // Archiving clears the note from its zones: it stops showing on the homescreen
+  // (activated → false) and is hidden from the project note list unless "Show Archived".
+  const archiveProjectNote = useCallback((categoryId, projectId, noteId) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, notes: proj.notes.map(n => n.id !== noteId ? n : { ...n, archived: true, activated: false })
+    }))
+    dbw(supabase.from('notes').update({ archived: true, activated: false }).eq('id', noteId), 'archiveNote')
+  }, [updateProject])
+
+  const unarchiveProjectNote = useCallback((categoryId, projectId, noteId) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, notes: proj.notes.map(n => n.id !== noteId ? n : { ...n, archived: false })
+    }))
+    dbw(supabase.from('notes').update({ archived: false }).eq('id', noteId), 'unarchiveNote')
+  }, [updateProject])
+
+  // Archive several notes in one project at once (used when completing a todo
+  // whose attached notes should be archived alongside it).
+  const archiveProjectNotes = useCallback((categoryId, projectId, noteIds) => {
+    const ids = (noteIds || []).filter(Boolean)
+    if (!ids.length) return
+    const idSet = new Set(ids.map(String))
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, notes: proj.notes.map(n => idSet.has(String(n.id)) ? { ...n, archived: true, activated: false } : n)
+    }))
+    dbw(supabase.from('notes').update({ archived: true, activated: false }).in('id', ids), 'archiveNotesBatch')
+  }, [updateProject])
+
+  // ---- Archive / retrieve a project link ----
+  const archiveProjectLink = useCallback((categoryId, projectId, linkId) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, links: proj.links.map(l => l.id !== linkId ? l : { ...l, archived: true, activated: false })
+    }))
+    dbw(supabase.from('links').update({ archived: true, activated: false }).eq('id', linkId), 'archiveLink')
+  }, [updateProject])
+
+  const unarchiveProjectLink = useCallback((categoryId, projectId, linkId) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, links: proj.links.map(l => l.id !== linkId ? l : { ...l, archived: false })
+    }))
+    dbw(supabase.from('links').update({ archived: false }).eq('id', linkId), 'unarchiveLink')
+  }, [updateProject])
+
+  // Modal prompt: "archive this completed todo's attached notes?" The check
+  // handlers call promptArchiveAttachments; a single global modal resolves it.
+  const [archivePrompt, setArchivePrompt] = useState(null)
+  const archivePromptRef = useRef(null)
+  useEffect(() => { archivePromptRef.current = archivePrompt }, [archivePrompt])
+  const promptArchiveAttachments = useCallback((categoryId, projectId, noteIds) => {
+    const ids = (noteIds || []).filter(Boolean)
+    if (!ids.length) return
+    setArchivePrompt({ categoryId, projectId, noteIds: ids })
+  }, [])
+  const resolveArchivePrompt = useCallback((confirm) => {
+    const p = archivePromptRef.current
+    if (p && confirm) archiveProjectNotes(p.categoryId, p.projectId, p.noteIds)
+    setArchivePrompt(null)
+  }, [archiveProjectNotes])
+
   const updateProjectLink = useCallback((categoryId, projectId, linkId, title, url) => {
     const finalUrl = (url || '').trim()
     const finalTitle = (title && title.trim()) || finalUrl
@@ -678,6 +739,37 @@ export function AppProvider({ children }) {
     db(supabase.from('projects').update({ name: newName }).eq('id', projectId))
   }, [])
 
+  // Archive a project (canvas): flag it archived and move it to the bottom of the
+  // category's project array so it sits beneath the active stack. Read-only is
+  // handled in the UI; its items are also hidden from the homescreen/collapsed cards.
+  const archiveProject = useCallback((categoryId, projectId) => {
+    const cat = categoriesRef.current.find(c => c.id === categoryId)
+    if (!cat) return
+    const proj = cat.projects.find(p => p.id === projectId)
+    if (!proj) return
+    const rest = cat.projects.filter(p => p.id !== projectId)
+    const newProjects = [...rest, { ...proj, archived: true }]
+    setCategories(prev => prev.map(c => c.id !== categoryId ? c : { ...c, projects: newProjects }))
+    dbw(supabase.from('projects').update({ archived: true }).eq('id', projectId), 'archiveProject')
+    Promise.all(newProjects.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
+  }, [])
+
+  // Unarchive: clear the flag and place it at the bottom of the ACTIVE stack
+  // (after the last non-archived project, before any archived ones).
+  const unarchiveProject = useCallback((categoryId, projectId) => {
+    const cat = categoriesRef.current.find(c => c.id === categoryId)
+    if (!cat) return
+    const proj = cat.projects.find(p => p.id === projectId)
+    if (!proj) return
+    const rest = cat.projects.filter(p => p.id !== projectId)
+    let lastActiveIdx = -1
+    rest.forEach((p, i) => { if (!p.archived) lastActiveIdx = i })
+    const newProjects = [...rest.slice(0, lastActiveIdx + 1), { ...proj, archived: false }, ...rest.slice(lastActiveIdx + 1)]
+    setCategories(prev => prev.map(c => c.id !== categoryId ? c : { ...c, projects: newProjects }))
+    dbw(supabase.from('projects').update({ archived: false }).eq('id', projectId), 'unarchiveProject')
+    Promise.all(newProjects.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
+  }, [])
+
   const deleteProject = useCallback(async (categoryId, projectId) => {
     setCategories(prev => prev.map(cat =>
       cat.id !== categoryId ? cat : {
@@ -729,6 +821,14 @@ export function AppProvider({ children }) {
       moveProjectNote,
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
+      archiveProjectNote,
+      unarchiveProjectNote,
+      archiveProjectNotes,
+      archiveProjectLink,
+      unarchiveProjectLink,
+      archivePrompt,
+      promptArchiveAttachments,
+      resolveArchivePrompt,
       toggleProjectLinkActivated,
       updateProjectLink,
       setProjectTodoScheduled,
@@ -745,6 +845,8 @@ export function AppProvider({ children }) {
       reorderHomeLinks,
       reorderProjects,
       renameProject,
+      archiveProject,
+      unarchiveProject,
       deleteProject,
     }}>
       {children}

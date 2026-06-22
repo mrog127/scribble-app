@@ -54,6 +54,16 @@ function TrashIcon() {
   )
 }
 
+function ArchiveIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="4" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+      <path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+      <path d="M10 12h4" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 function ActivateIcon({ activated }) {
   return (
     <svg width="16" height="16" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}>
@@ -116,7 +126,8 @@ function useSwipe() {
     if (!row) return
     const wasLeft = row.classList.contains('swiped-left')
     const wasRight = row.classList.contains('swiped-right')
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null }
+    const leftMax = parseInt(row.dataset.leftMax, 10) || 84
+    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null, leftMax }
 
     const onMove = (e2) => {
       const s = swipeState.current
@@ -129,10 +140,10 @@ function useSwipe() {
       }
       const content = s.row.querySelector('.swipe-content')
       if (!content) return
-      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const base = s.wasLeft ? -s.leftMax : s.wasRight ? 84 : 0
       const proposed = base + dx
       if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
-      let newX = Math.max(-84, Math.min(84, proposed))
+      let newX = Math.max(-s.leftMax, Math.min(84, proposed))
       if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
       if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
       content.style.transition = 'none'
@@ -154,7 +165,7 @@ function useSwipe() {
         cleanup()
         return
       }
-      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
+      const base = s.wasLeft ? -s.leftMax : s.wasRight ? 84 : 0
       const rawTotal = base + dx
       let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
       if (s.lockSign === 1) total = Math.max(0, total)
@@ -362,7 +373,7 @@ function distribute(category, newOrder, type, reorderFn) {
 
 // ============ Lists (todos) ============
 function CollapsedTodosCard({ category }) {
-  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderProjectTodos, setProjectTodoScheduled } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderProjectTodos, setProjectTodoScheduled, promptArchiveAttachments } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const [calFor, setCalFor] = useState(null)
@@ -390,7 +401,7 @@ function CollapsedTodosCard({ category }) {
   const checkPopping = useRef({})
   const todoTapState = useRef({})
 
-  const allTodos = category.projects.flatMap(p =>
+  const allTodos = category.projects.filter(p => !p.archived).flatMap(p =>
     p.todos.map(t => ({ ...t, projectId: p.id, projectName: p.name }))
   )
 
@@ -476,7 +487,7 @@ function CollapsedTodosCard({ category }) {
     checkPopping.current[id] = false
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
     if (checkboxEl) {
-      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
       checkboxEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }], { duration: 100, fill: 'forwards' })
     }
     checkTimers.current[id] = setTimeout(() => {}, 300)
@@ -489,13 +500,14 @@ function CollapsedTodosCard({ category }) {
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
     const item = allTodos.find(t => t.id === id)
     const isChecked = item?.checked
-    if (!checkboxEl) { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id); return }
+    const attachedNoteIds = item?.linkedNoteIds || []
+    if (!checkboxEl) { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id); if (!isChecked) promptArchiveAttachments(category.id, projectId, attachedNoteIds); return }
     checkPopping.current[id] = true
     const popAnim = checkboxEl.animate(
       [{ transform: 'scale(0.82)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }],
       { duration: 320, easing: 'ease', fill: 'forwards' }
     )
-    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => a.cancel())
+    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
     if (!isChecked) {
       checkboxEl.classList.add('checked')
       const todoRow = e.currentTarget.closest('.todo-row')
@@ -504,12 +516,12 @@ function CollapsedTodosCard({ category }) {
         const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
         todoRow.animate([{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.18)`, offset: 0.2 }, { background: `rgba(${rgb},0)` }], { duration: 500, easing: 'ease', fill: 'none' })
       }
-      setTimeout(() => { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id) }, 500)
+      setTimeout(() => { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id); promptArchiveAttachments(category.id, projectId, attachedNoteIds) }, 500)
     } else {
       snapshotForFlip()
       toggleProjectTodo(category.id, projectId, id)
     }
-  }, [allTodos, category.id, toggleProjectTodo])
+  }, [allTodos, category.id, toggleProjectTodo, promptArchiveAttachments])
 
   const handleActivate = useCallback((id, projectId, row) => {
     closeSwipeRow(row)
@@ -633,12 +645,12 @@ function CollapsedTodosCard({ category }) {
                     onPointerLeave={e => {
                       clearTimeout(checkTimers.current[t.id])
                       if (!checkPopping.current[t.id]) {
-                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
                       }
                     }}
                   >
                     <div className={`checkbox${t.activated ? ' activated-checkbox' : ''}${t.checked ? ' checked' : ''}`}
-                      style={{ animationDelay: `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}>
+                      style={{ '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}>
                       <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -693,7 +705,7 @@ function CollapsedTodosCard({ category }) {
 
 // ============ Notes ============
 function CollapsedNotesCard({ category }) {
-  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderProjectNotes, setProjectNoteScheduled } = useAppContext()
+  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderProjectNotes, setProjectNoteScheduled, archiveProjectNote } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const [openNoteId, setOpenNoteId] = useState(null)
@@ -710,8 +722,10 @@ function CollapsedNotesCard({ category }) {
   }, [])
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectNoteScheduled(category.id, projectId, id, null) }, [category.id, setProjectNoteScheduled])
 
-  const allNotes = groupByActivation(category.projects.flatMap(p =>
-    p.notes.map(n => ({ ...n, projectId: p.id, projectName: p.name }))
+  // Archived notes are hidden from the aggregated collapsed view (retrieval happens
+  // in the expanded project's "Show Archived" menu).
+  const allNotes = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
+    p.notes.filter(n => !n.archived).map(n => ({ ...n, projectId: p.id, projectName: p.name }))
   ))
 
   const { onPointerDown } = useSwipe()
@@ -738,6 +752,25 @@ function CollapsedNotesCard({ category }) {
     }
     toggleProjectNoteActivated(category.id, projectId, id)
   }, [category.id, toggleProjectNoteActivated])
+
+  const handleArchive = useCallback((id, projectId, row) => {
+    closeSwipeRow(row)
+    const wrapper = row?.parentElement
+    const finish = () => archiveProjectNote(category.id, projectId, id)
+    if (wrapper) {
+      wrapper.animate(
+        [{ background: 'rgba(var(--accent-base-rgb),0)' }, { background: 'rgba(var(--accent-base-rgb),0.55)', offset: 0.4 }, { background: 'rgba(var(--accent-base-rgb),0)' }],
+        { duration: 280, fill: 'none' }
+      )
+    }
+    if (!wrapper) { finish(); return }
+    setTimeout(() => {
+      const height = wrapper.getBoundingClientRect().height
+      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+      setTimeout(finish, 250)
+    }, 180)
+  }, [category.id, archiveProjectNote])
 
   const handleDelete = useCallback((id, projectId, row) => {
     const wrapper = row?.parentElement
@@ -785,13 +818,16 @@ function CollapsedNotesCard({ category }) {
         {allNotes.map((n, i) => (
           <div key={n.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={n.id}>
+            <div className="swipe-row archivable" data-swipe-id={n.id} data-left-max="148">
               <ActivateSwipeButton
                 item={n} type="note"
                 onActivateTap={(_, id, row) => handleActivate(id, n.projectId, row)}
                 onScheduleClear={(_, id, row) => clearSchedule(id, n.projectId, row)}
                 onScheduleOpen={(_, item, el) => openSchedule(item, el)}
               />
+              <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
+                <div className="swipe-active-inner"><ArchiveIcon/></div>
+              </button>
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>
@@ -854,7 +890,7 @@ function CollapsedNotesCard({ category }) {
 
 // ============ Links ============
 function CollapsedLinksCard({ category }) {
-  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled } = useAppContext()
+  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink } = useAppContext()
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const linkSwipeState = useRef({})
@@ -869,8 +905,10 @@ function CollapsedLinksCard({ category }) {
   }, [])
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectLinkScheduled(category.id, projectId, id, null) }, [category.id, setProjectLinkScheduled])
 
-  const allLinks = groupByActivation(category.projects.flatMap(p =>
-    p.links.map(l => ({ ...l, projectId: p.id, projectName: p.name }))
+  // Archived links are hidden from the aggregated collapsed view (retrieval happens
+  // in the expanded project's "Show Archived" menu).
+  const allLinks = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
+    p.links.filter(l => !l.archived).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
   ))
 
   useEffect(() => {
@@ -889,6 +927,25 @@ function CollapsedLinksCard({ category }) {
     }
     toggleProjectLinkActivated(category.id, projectId, id)
   }, [category.id, toggleProjectLinkActivated])
+
+  const handleArchive = useCallback((id, projectId, row) => {
+    closeSwipeRow(row)
+    const wrapper = row?.parentElement
+    const finish = () => archiveProjectLink(category.id, projectId, id)
+    if (wrapper) {
+      wrapper.animate(
+        [{ background: 'rgba(var(--accent-base-rgb),0)' }, { background: 'rgba(var(--accent-base-rgb),0.55)', offset: 0.4 }, { background: 'rgba(var(--accent-base-rgb),0)' }],
+        { duration: 280, fill: 'none' }
+      )
+    }
+    if (!wrapper) { finish(); return }
+    setTimeout(() => {
+      const height = wrapper.getBoundingClientRect().height
+      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+      setTimeout(finish, 250)
+    }, 180)
+  }, [category.id, archiveProjectLink])
 
   const handleDelete = useCallback((id, projectId, row) => {
     const wrapper = row?.parentElement
@@ -938,13 +995,16 @@ function CollapsedLinksCard({ category }) {
         {allLinks.map((l, i) => (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={l.id}>
+            <div className="swipe-row archivable" data-swipe-id={l.id} data-left-max="148">
               <ActivateSwipeButton
                 item={l} type="link"
                 onActivateTap={(_, id, row) => handleActivate(id, l.projectId, row)}
                 onScheduleClear={(_, id, row) => clearSchedule(id, l.projectId, row)}
                 onScheduleOpen={(_, item, el) => openSchedule(item, el)}
               />
+              <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
+                <div className="swipe-active-inner"><ArchiveIcon/></div>
+              </button>
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>

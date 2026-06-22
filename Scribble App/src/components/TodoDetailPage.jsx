@@ -301,10 +301,11 @@ function AttachedLinkRow({ link, onUnattach, onPointerDown }) {
   )
 }
 
-export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose }) {
+export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose, archived = false }) {
   const {
     categories,
     toggleProjectTodo,
+    promptArchiveAttachments,
     toggleProjectTodoActivated,
     toggleProjectNoteActivated,
     setProjectTodoScheduled,
@@ -356,22 +357,24 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   // Press down: shrink (subtly) and hold while pressed, drop the shadow
   const completeDown = useCallback(() => {
+    if (archived) return
     const el = completeBtnRef.current
     if (!el) return
     completePressed.current = true
     el.style.boxShadow = 'none'
-    el.getAnimations().forEach(a => a.cancel())
+    el.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
     el.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.91)' }], { duration: 100, fill: 'forwards' })
-  }, [])
+  }, [archived])
 
   // Release: spring big -> settle back, toggle, and flash the page on check
   const completeUp = useCallback(() => {
+    if (archived) return
     if (!completePressed.current) return
     completePressed.current = false
     const el = completeBtnRef.current
     if (el) {
       el.style.boxShadow = ''
-      el.getAnimations().forEach(a => a.cancel())
+      el.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
       el.animate(
         [{ transform: 'scale(0.91)' }, { transform: 'scale(1.125)', offset: 0.5 }, { transform: 'scale(0.95)', offset: 0.78 }, { transform: 'scale(1)' }],
         { duration: 340, easing: 'ease', fill: 'none' }
@@ -384,8 +387,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         { duration: 500, easing: 'ease', fill: 'none' }
       )
     }
+    const wasChecked = todo.checked
     toggleProjectTodo(categoryId, projectId, todo.id)
-  }, [todo.checked, todo.id, categoryId, projectId, toggleProjectTodo])
+    if (!wasChecked) promptArchiveAttachments(categoryId, projectId, todo.linkedNoteIds || [])
+  }, [archived, todo.checked, todo.id, todo.linkedNoteIds, categoryId, projectId, toggleProjectTodo, promptArchiveAttachments])
 
   // Pointer left the button before release: restore size, don't toggle
   const completeCancel = useCallback(() => {
@@ -394,7 +399,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     const el = completeBtnRef.current
     if (el) {
       el.style.boxShadow = ''
-      el.getAnimations().forEach(a => a.cancel())
+      el.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
       el.animate([{ transform: 'scale(0.91)' }, { transform: 'scale(1)' }], { duration: 120, fill: 'forwards' })
     }
   }, [])
@@ -642,7 +647,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${isOpen ? ' open' : ''}`}
+      className={`note-detail-page${isOpen ? ' open' : ''}${archived ? ' archived' : ''}`}
       style={accent ? {
         '--accent-base': accent.base,
         '--accent-dark': accent.dark,
@@ -653,6 +658,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
       <div className="todo-complete-flash" ref={flashRef} />
       <div className="note-detail-header">
         <NoteListIcon/>
+        {archived && <span className="detail-archived-label">Archived</span>}
         <span className="note-scroll-title" ref={scrollTitleRef} />
         <button className="note-detail-done" onMouseDown={handleTopButton}>{editingTitle ? 'Save' : 'Done'}</button>
       </div>
@@ -661,7 +667,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <div
           ref={titleRef}
           className="todo-detail-title"
-          contentEditable
+          contentEditable={!archived}
           suppressContentEditableWarning
           autoCapitalize="sentences"
           onFocus={() => setEditingTitle(true)}
@@ -677,7 +683,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <div className="todo-section">
           <div className="todo-section-header">
             <span className="todo-section-title">Notes</span>
-            {attachableNotes.length > 0 && (
+            {attachableNotes.length > 0 && !archived && (
               <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteAttachOpen(v => !v) }}>
                 <PaperclipIcon/><span>Attach</span>
               </button>
@@ -714,7 +720,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             />
           ))}
 
-          <div className="todo-composer">
+          <div className={`todo-composer${archived ? ' disabled' : ''}`}>
             <NoteComposer onAdd={(text, active) => addTodoNote(categoryId, projectId, todo.id, text, active)} />
           </div>
         </div>
@@ -723,7 +729,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <div className="todo-section">
           <div className="todo-section-header">
             <span className="todo-section-title">Links</span>
-            {attachableLinks.length > 0 && (
+            {attachableLinks.length > 0 && !archived && (
               <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(v => !v) }}>
                 <PaperclipIcon/><span>Attach</span>
               </button>
@@ -756,7 +762,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             />
           ))}
 
-          <div className="todo-composer">
+          <div className={`todo-composer${archived ? ' disabled' : ''}`}>
             <LinkComposer onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />
           </div>
         </div>
@@ -783,6 +789,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         projectName={projectName}
         onProjectClick={openMove}
         menuOpen={moveOpen}
+        disabledActive={archived}
         completeButton={
           <button
             ref={completeBtnRef}
@@ -810,6 +817,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           projectName={projectName}
           categoryId={categoryId}
           projectId={projectId}
+          archived={archived || !!openNote.archived}
         />,
         document.getElementById('app')
       )}

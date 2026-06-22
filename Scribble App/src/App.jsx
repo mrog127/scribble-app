@@ -5,6 +5,7 @@ import CategoryPage from './components/CategoryPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import AuthScreen from './components/AuthScreen.jsx'
 import MenuPage from './components/MenuPage.jsx'
+import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
@@ -1031,6 +1032,7 @@ function AppInner() {
         </div>
 
         <div id="animation-portal"></div>
+        <ArchiveAttachmentsModal />
       </div>
     </div>
   )

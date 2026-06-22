@@ -11,6 +11,10 @@
 /* When a three-dot menu is open, let it overflow the card instead of being clipped */
 .card:has(.card-context-menu.open) { overflow: visible; }
 
+/* Each card is its own stacking context, so an open menu would paint behind the
+   next card down. Lift the card whose menu is open above its siblings. */
+.cards-area .card:has(.card-context-menu.open) { position: relative; z-index: 40; }
+
 /* Home & category pages: a drop shadow behind the cards that fades in on scroll
    (opacity driven by JS via --card-scroll-shadow, 0 → 0.04 over 56px) */
 .cards-area .card {
@@ -80,6 +84,17 @@
 
 .card-context-item + .card-context-item {
   border-top: 1px solid #DBDAD8;
+}
+
+/* Category-header menu: size to the longest label on one line, with 24px to the
+   right of it (16px left inset kept). */
+.category-header-actions .card-context-menu {
+  width: max-content;
+  min-width: 0;
+}
+.category-header-actions .card-context-item {
+  white-space: nowrap;
+  padding-right: 24px;
 }
 
 .card-context-item.danger { color: #B24A4A; }
@@ -183,13 +198,31 @@
 .checkbox.checked .checkmark { opacity: 1; }
 
 /* Category-colored checkbox (activated items on homescreen & project cards) */
+@property --cb-stroke-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 270deg;
+}
+
 .checkbox.activated-checkbox {
-  border: 1px solid color-mix(in srgb, var(--cb-dark, var(--accent-dark)) 60%, transparent);
-  background: #F7F6F3;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 0.6) / 0.6)) border-box;
   box-shadow:
     0 4px 4px color-mix(in srgb, var(--cb-base, var(--accent-base)) 20%, transparent),
     inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96));
-  animation: cb-inner-orbit 2.5s linear infinite;
+  animation: cb-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
+  animation-delay: var(--cb-delay, 0s), var(--cb-delay, 0s);
+}
+
+/* Stroke gradient orbits in sync with the inner shadow: darker end tracks the
+   shadow side, lighter end the opposite side */
+@keyframes cb-stroke-orbit {
+  from { --cb-stroke-angle: 270deg; }
+  to   { --cb-stroke-angle: 630deg; }
 }
 
 @keyframes cb-inner-orbit {
@@ -253,6 +286,15 @@
   transition: opacity 150ms ease;
 }
 
+/* Generic inner-shadow orbit for swipe buttons; colours come from per-button vars */
+@keyframes ob-inner-orbit {
+  0%   { box-shadow: 0 6px 6px var(--ob-drop), inset 10px 0px 12px var(--ob-light); }
+  25%  { box-shadow: 0 6px 6px var(--ob-drop), inset 0px 12px 12px var(--ob-light); }
+  50%  { box-shadow: 0 6px 6px var(--ob-drop), inset -10px 0px 12px var(--ob-light); }
+  75%  { box-shadow: 0 6px 6px var(--ob-drop), inset 0px -12px 12px var(--ob-light); }
+  100% { box-shadow: 0 6px 6px var(--ob-drop), inset 10px 0px 12px var(--ob-light); }
+}
+
 .swipe-action-btn.delete {
   right: 16px;
   width: 64px;
@@ -276,12 +318,18 @@
 }
 
 .swipe-action-btn.delete .swipe-active-inner {
-  background: #F7F6F3;
-  border: 1px solid color-mix(in srgb, #8B3333 60%, transparent);
-  box-shadow:
-    0 6px 6px color-mix(in srgb, #B24A4A 20%, transparent),
-    inset 6px 14px 12px #F5DDDD;
+  --ob-light: #F5DDDD;
+  --ob-drop: color-mix(in srgb, #B24A4A 20%, transparent);
+  --ob-stroke: #8B3333;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--ob-stroke) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--ob-stroke) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow: 0 6px 6px var(--ob-drop), inset 6px 14px 12px var(--ob-light);
   color: #8B3333;
+  animation: ob-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 
 .swipe-action-btn.active-tag {
@@ -297,21 +345,64 @@
 }
 
 .swipe-action-btn.active-tag .swipe-active-inner {
-  background: #F7F6F3;
-  border: 1px solid color-mix(in srgb, #595959 60%, transparent);
-  box-shadow:
-    0 6px 6px color-mix(in srgb, #595959 20%, transparent),
-    inset 6px 14px 12px #EBE8E1;
+  --ob-light: #EBE8E1;
+  --ob-drop: color-mix(in srgb, #595959 20%, transparent);
+  --ob-stroke: #595959;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--ob-stroke) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--ob-stroke) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow: 0 6px 6px var(--ob-drop), inset 6px 14px 12px var(--ob-light);
   color: #595959;
+  animation: ob-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 
 .swipe-action-btn.active-tag.activated .swipe-active-inner {
-  background: #F7F6F3;
-  border: 1px solid color-mix(in srgb, var(--accent-dark) 60%, transparent);
-  box-shadow:
-    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
-    inset 6px 14px 12px var(--accent-light);
+  --ob-light: var(--accent-light);
+  --ob-drop: color-mix(in srgb, var(--accent-base) 20%, transparent);
+  --ob-stroke: var(--accent-dark);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--ob-stroke) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--ob-stroke) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow: 0 6px 6px var(--ob-drop), inset 6px 14px 12px var(--ob-light);
   color: var(--accent-dark);
+  animation: ob-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
+}
+
+/* Archive / Retrieve button — same shape/size/stroke/inner-shadow as Delete, but
+   in project accent colours, sitting just to the LEFT of Delete. The orbit
+   animations are offset half a cycle so they don't move in lockstep with Delete. */
+.swipe-action-btn.archive {
+  right: 80px;
+  width: 64px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  height: auto;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.swipe-action-btn.archive .swipe-active-inner {
+  --ob-light: var(--accent-light);
+  --ob-drop: color-mix(in srgb, var(--accent-base) 20%, transparent);
+  --ob-stroke: var(--accent-dark);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--ob-stroke) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--ob-stroke) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow: 0 6px 6px var(--ob-drop), inset 6px 14px 12px var(--ob-light);
+  color: var(--accent-dark);
+  animation: ob-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
+  animation-delay: -1.25s, -1.25s;
 }
 
 .swipe-action-label { display: none; }
@@ -320,6 +411,118 @@
 .swipe-row.swiped-right .swipe-content { transform: translateX(84px); pointer-events: none; }
 .swipe-row.swiped-left .swipe-action-btn.delete { opacity: 1; pointer-events: auto; }
 .swipe-row.swiped-right .swipe-action-btn.active-tag { opacity: 1; pointer-events: auto; }
+
+/* Archivable rows (project notes) reveal a two-button left tray: [Archive][Delete] */
+.swipe-row.archivable.swiped-left .swipe-content { transform: translateX(-148px); pointer-events: none; }
+.swipe-row.archivable.swiped-left .swipe-action-btn.archive { opacity: 1; pointer-events: auto; }
+
+/* Archived rows (notes & links): primary + secondary labels match a checked-off
+   list item's label (#595959 at 50% opacity); the icon is faded; the primary
+   label (title) also gets a strikethrough. */
+.note-row.archived .note-text,
+.note-row.archived .note-preview-text { color: #595959; opacity: 0.5; }
+.note-row.archived .note-text { text-decoration: line-through; }
+.note-row.archived .checkbox-wrap { opacity: 0.5; }
+
+/* Archived project card: 2% black overlay on the card's background fill. */
+.card.project-card.archived {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02));
+}
+
+/* Archived canvas: dim the list-item checkbox (row) and the open page's
+   mark-complete button to 60% opacity. */
+.card.project-card.archived .todo-row .checkbox { opacity: 0.6; }
+.note-detail-page.archived .mark-complete-btn { opacity: 0.6; }
+
+/* Archived list-item page: disable + dim the add-note/add-link composers and the
+   Display toggle (attachments stay openable). */
+.todo-composer.disabled { opacity: 0.5; pointer-events: none; }
+.project-active-btn.disabled { opacity: 0.5; pointer-events: none; }
+
+/* Archived canvas (project) card title: matches a checked-off list item label
+   (#595959 at 50% opacity) with a strikethrough. */
+.card-title.archived-title {
+  color: #595959;
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* "Archived" indicator in a note/list detail page header — Open Sans Bold 16,
+   dark gray, 8px to the right of the note/list icon. */
+.detail-archived-label {
+  margin-left: 8px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #595959;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- Archive-attached-notes confirmation modal ---- */
+.archive-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+  background: rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.archive-modal-backdrop.visible { opacity: 1; }
+
+.archive-modal {
+  width: 100%;
+  max-width: 300px;
+  background: #F7F6F3;
+  border: 1px solid #C2C1BF;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  padding: 20px;
+  transform: scale(0.94);
+  transition: transform 160ms ease;
+}
+.archive-modal-backdrop.visible .archive-modal { transform: scale(1); }
+
+.archive-modal-title {
+  margin: 0 0 8px;
+  font-family: 'Baskerville', 'Libre Baskerville', Georgia, serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: #242424;
+}
+.archive-modal-body {
+  margin: 0 0 18px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #595959;
+}
+.archive-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+.archive-modal-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #C2C1BF;
+  background: #F2F0EB;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #3D3D3D;
+  cursor: pointer;
+}
+.archive-modal-btn.primary {
+  border-color: transparent;
+  background: var(--accent-dark, #3F5999);
+  color: #F7F6F3;
+}
 
 .swipe-content {
   position: relative;
@@ -833,17 +1036,20 @@
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
+  border: 1px solid transparent;
   background:
-    linear-gradient(color-mix(in srgb, var(--accent-light) 40%, transparent), color-mix(in srgb, var(--accent-light) 40%, transparent)),
-    #F7F6F3;
-  border: 1px solid color-mix(in srgb, var(--accent-dark) 60%, transparent);
+    linear-gradient(color-mix(in srgb, var(--accent-light) 40%, transparent), color-mix(in srgb, var(--accent-light) 40%, transparent)) padding-box,
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--accent-dark) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--accent-dark) h s calc(l * 0.6) / 0.6)) border-box;
   color: var(--accent-dark);
   box-shadow:
     0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
     inset 10px 12px 12px hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.96));
   transform-origin: center;
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
-  animation: mc-complete-orbit 5.33s linear infinite;
+  animation: mc-complete-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 
 @keyframes mc-inner-orbit {
@@ -1137,7 +1343,7 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  background: rgba(var(--accent-base-rgb), 0.2);
+  background: rgba(var(--accent-base-rgb), 0.12);
   z-index: 0;
   opacity: 0;
   pointer-events: none;
@@ -1298,12 +1504,16 @@
 .project-send-btn.visible {
   opacity: 1;
   pointer-events: auto;
-  background: #F7F6F3;
-  border-color: color-mix(in srgb, var(--accent-dark) 60%, transparent);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--accent-dark) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--accent-dark) h s calc(l * 0.6) / 0.6)) border-box;
   box-shadow:
     0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
     inset 6px 14px 12px var(--accent-light);
-  animation: mc-inner-orbit 5.33s linear infinite;
+  animation: mc-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 
 .project-cancel-btn {
@@ -1488,7 +1698,7 @@
 }
 
 .project-active-btn.on {
-  color: var(--accent-dark);
+  color: var(--accent-base);
 }
 
 .project-type-btn {
@@ -1559,10 +1769,18 @@
 .swipe-action-btn.active-tag.scheduled .swipe-active-inner {
   flex-direction: column;
   gap: 2px;
-  background: var(--accent-light);
-  border: 1px solid var(--accent-dark);
-  box-shadow: 0 4px 20px rgba(var(--accent-base-rgb), 0.40);
+  --ob-light: var(--accent-light);
+  --ob-drop: color-mix(in srgb, var(--accent-base) 20%, transparent);
+  --ob-stroke: var(--accent-dark);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--ob-stroke) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--ob-stroke) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow: 0 6px 6px var(--ob-drop), inset 6px 14px 12px var(--ob-light);
   color: var(--accent-dark);
+  animation: ob-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 .swipe-action-btn.active-tag.scheduled .swipe-action-label.schedule {
   display: block;

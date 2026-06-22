@@ -475,7 +475,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
     checkPopping.current[id] = false
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
     if (checkboxEl) {
-      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
       checkboxEl.animate(
         [{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }],
         { duration: 100, fill: 'forwards' }
@@ -506,7 +506,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       ],
       { duration: 350, easing: 'ease', fill: 'forwards' }
     )
-    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => a.cancel())
+    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
 
     if (!isChecked) {
       // Apply checked visual immediately so color/checkmark appear during the pop
@@ -634,7 +634,7 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
                     onPointerLeave={e => {
                       clearTimeout(checkTimers.current[t.id])
                       if (!checkPopping.current[t.id]) {
-                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
                       }
                     }}
                   >

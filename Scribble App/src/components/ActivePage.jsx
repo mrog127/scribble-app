@@ -444,7 +444,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     checkPopping.current[id] = false
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
     if (checkboxEl) {
-      checkboxEl.getAnimations().forEach(a => a.cancel())
+      checkboxEl.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
       checkboxEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(0.82)' }], { duration: 100, fill: 'forwards' })
     }
     checkTimers.current[id] = setTimeout(() => {}, 300)
@@ -463,7 +463,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
       [{ transform: 'scale(0.82)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }],
       { duration: 350, easing: 'ease', fill: 'forwards' }
     )
-    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => a.cancel())
+    popAnim.onfinish = () => checkboxEl.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
     if (!isChecked) {
       checkboxEl.classList.add('checked')
       e.currentTarget.closest('.todo-row')?.classList.add('checked')
@@ -572,13 +572,13 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                     onPointerLeave={e => {
                       clearTimeout(checkTimers.current[t.id])
                       if (!checkPopping.current[t.id]) {
-                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => a.cancel())
+                        e.currentTarget.querySelector('.checkbox')?.getAnimations().forEach(a => { if (!(a.animationName || '').includes('orbit')) a.cancel() })
                       }
                     }}
                   >
                     <div
                       className={`checkbox activated-checkbox${t.checked ? ' checked' : ''}`}
-                      style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb, animationDelay: `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}
+                      style={{ '--cb-base': a.base, '--cb-light': a.light, '--cb-dark': a.dark, '--cb-base-rgb': a.baseRgb, '--cb-delay': `-${(String(t.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 80) / 10}s` }}
                     >
                       <svg className="checkmark" width="16" height="16" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1122,17 +1122,17 @@ export default function ActivePage({
   // activated, never manually ordered) fall back to the aggregation order (end).
   const byHomeOrder = (a, b) => (a.homeSortOrder ?? Infinity) - (b.homeSortOrder ?? Infinity)
   const allActivatedTodos = homescreenCats.flatMap(cat =>
-    cat.projects.flatMap(proj =>
+    cat.projects.filter(proj => !proj.archived).flatMap(proj =>
       proj.todos.filter(t => t.activated).map(t => ({ ...t, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   ).sort(byHomeOrder)
   const allActivatedNotes = homescreenCats.flatMap(cat =>
-    cat.projects.flatMap(proj =>
+    cat.projects.filter(proj => !proj.archived).flatMap(proj =>
       proj.notes.filter(n => n.activated).map(n => ({ ...n, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   ).sort(byHomeOrder)
   const allActivatedLinks = homescreenCats.flatMap(cat =>
-    cat.projects.flatMap(proj =>
+    cat.projects.filter(proj => !proj.archived).flatMap(proj =>
       proj.links.filter(l => l.activated).map(l => ({ ...l, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   ).sort(byHomeOrder)

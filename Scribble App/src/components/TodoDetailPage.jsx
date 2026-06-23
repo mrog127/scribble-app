@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { useAppContext } from '../context/AppContext.jsx'
@@ -266,12 +266,12 @@ function UnattachButton({ onUnattach }) {
   )
 }
 
-function AttachedNoteRow({ note, onOpen, onUnattach, onPointerDown }) {
+function AttachedNoteRow({ note, onOpen, onUnattach, onPointerDown, onDragPointerDown }) {
   const preview = useMemo(() => extractNotePreview(note.editorHTML), [note.editorHTML])
   return (
-    <div className="todo-swipe-row">
+    <div className="todo-swipe-row" data-attach-id={note.id}>
       <UnattachButton onUnattach={onUnattach} />
-      <div className="todo-swipe-content" onPointerDown={e => onPointerDown(e, onOpen)}>
+      <div className="todo-swipe-content" onPointerDown={e => { onPointerDown(e, onOpen); onDragPointerDown && onDragPointerDown(e, note.id) }}>
         <div className="todo-attached-row">
           <div className="todo-attached-icon"><NoteRowIcon activated={note.activated}/></div>
           <div className="todo-attached-text">
@@ -284,11 +284,11 @@ function AttachedNoteRow({ note, onOpen, onUnattach, onPointerDown }) {
   )
 }
 
-function AttachedLinkRow({ link, onUnattach, onPointerDown }) {
+function AttachedLinkRow({ link, onUnattach, onPointerDown, onDragPointerDown }) {
   return (
-    <div className="todo-swipe-row">
+    <div className="todo-swipe-row" data-attach-id={link.id}>
       <UnattachButton onUnattach={onUnattach} />
-      <div className="todo-swipe-content" onPointerDown={e => onPointerDown(e, () => openUrl(link.url))}>
+      <div className="todo-swipe-content" onPointerDown={e => { onPointerDown(e, () => openUrl(link.url)); onDragPointerDown && onDragPointerDown(e, link.id) }}>
         <div className="todo-attached-row">
           <div className="todo-attached-icon"><LinkRowIcon activated={link.activated}/></div>
           <div className="todo-attached-text">
@@ -299,6 +299,122 @@ function AttachedLinkRow({ link, onUnattach, onPointerDown }) {
       </div>
     </div>
   )
+}
+
+// Long-press drag-reorder for a todo's attached note/link rows (a flat list).
+// Operates on `.todo-swipe-row[data-attach-id]` children of containerRef.
+function useAttachDrag(containerRef, items, onReorder) {
+  const dragRef = useRef(null)
+  const flipRef = useRef(null)
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+
+  useLayoutEffect(() => {
+    const flip = flipRef.current
+    if (!flip) return
+    flipRef.current = null
+    flip.forEach(({ el }) => { el.style.transition = 'none'; el.style.transform = ''; el.style.opacity = '' })
+    document.body.offsetHeight
+    const frames = flip.map(({ el, fromTop }) => ({ el, dy: fromTop - el.getBoundingClientRect().top })).filter(f => Math.abs(f.dy) > 1)
+    if (!frames.length) return
+    frames.forEach(({ el, dy }) => { el.style.transition = 'none'; el.style.transform = `translateY(${dy}px)` })
+    document.body.offsetHeight
+    requestAnimationFrame(() => {
+      frames.forEach(({ el }) => { el.style.transition = 'transform 250ms ease'; el.style.transform = '' })
+      setTimeout(() => frames.forEach(({ el }) => { el.style.transition = '' }), 250)
+    })
+  }, [items])
+
+  const onDragPointerDown = useCallback((e, id) => {
+    if (e.target.closest('.todo-unattach-btn')) return
+    const startX = e.clientX, startY = e.clientY
+    let started = false, longPressTimer = null
+    const preventScroll = (ev) => { if (started) ev.preventDefault() }
+
+    const start = () => {
+      const container = containerRef.current
+      if (!container) return false
+      const rows = [...container.children].filter(c => c.classList && c.classList.contains('todo-swipe-row'))
+      const snapshots = rows.map(el => ({ el, id: el.dataset.attachId, rect: el.getBoundingClientRect() }))
+      const dragIdx = snapshots.findIndex(s => String(s.id) === String(id))
+      if (dragIdx < 0) return false
+      const dragged = snapshots[dragIdx]
+      const appEl = document.getElementById('app'), portal = document.getElementById('animation-portal')
+      if (!appEl || !portal) return false
+      const appRect = appEl.getBoundingClientRect()
+      const cloneTop = dragged.rect.top - appRect.top - 4
+      const cloneInner = dragged.el.cloneNode(true)
+      cloneInner.style.cssText = 'pointer-events:none;background:#F2F0EB;'
+      const clone = document.createElement('div')
+      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 4}px`, `top:${cloneTop}px`, `width:${dragged.rect.width + 8}px`, 'padding:4px 0', 'pointer-events:none', 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px', 'border:1px solid #C2C1BF', 'background:#F2F0EB', 'overflow:hidden', 'z-index:999'].join(';')
+      clone.appendChild(cloneInner)
+      portal.appendChild(clone)
+      dragged.el.style.opacity = '0'
+      dragRef.current = { clone, snapshots, dragIdx, currentIdx: dragIdx, cloneTop, startY, draggedH: dragged.rect.height }
+      return true
+    }
+
+    longPressTimer = setTimeout(() => { longPressTimer = null; started = start() }, 250)
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+
+    const applyShifts = (s) => {
+      s.snapshots.forEach((snap, i) => {
+        if (i === s.dragIdx) return
+        let dy = 0
+        if (s.currentIdx < s.dragIdx && i >= s.currentIdx && i < s.dragIdx) dy = s.draggedH
+        if (s.currentIdx > s.dragIdx && i > s.dragIdx && i <= s.currentIdx) dy = -s.draggedH
+        snap.el.style.transition = 'transform 180ms ease'
+        snap.el.style.transform = dy ? `translateY(${dy}px)` : ''
+      })
+    }
+
+    const onMove = (e2) => {
+      const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
+      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll) }
+      if (!started) return
+      e2.preventDefault()
+      const s = dragRef.current
+      if (!s) return
+      s.clone.style.top = (s.cloneTop + (e2.clientY - s.startY)) + 'px'
+      const nonDragged = s.snapshots.filter((_, i) => i !== s.dragIdx)
+      let insertAt = nonDragged.length
+      for (let j = 0; j < nonDragged.length; j++) { if (e2.clientY < nonDragged[j].rect.top + nonDragged[j].rect.height / 2) { insertAt = j; break } }
+      const newIdx = Math.min(insertAt, s.snapshots.length - 1)
+      if (newIdx !== s.currentIdx) { s.currentIdx = newIdx; applyShifts(s) }
+    }
+
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
+    }
+    const reset = (s) => s.snapshots.forEach(snap => { snap.el.style.transition = ''; snap.el.style.transform = ''; snap.el.style.opacity = '' })
+    const onCancel = () => {
+      clearTimeout(longPressTimer); longPressTimer = null; cleanup()
+      const s = dragRef.current; if (!s) return; dragRef.current = null
+      s.clone.remove(); reset(s)
+    }
+    const onUp = () => {
+      clearTimeout(longPressTimer); longPressTimer = null; cleanup()
+      const s = dragRef.current; if (!s || !started) return; dragRef.current = null
+      if (s.currentIdx === s.dragIdx) { s.clone.remove(); reset(s); return }
+      const cloneReleaseTop = s.clone.getBoundingClientRect().top
+      const fromTops = s.snapshots.map((snap, i) => i === s.dragIdx ? cloneReleaseTop : snap.el.getBoundingClientRect().top)
+      s.clone.remove()
+      const ids = s.snapshots.map(sn => sn.id)
+      const [moved] = ids.splice(s.dragIdx, 1)
+      ids.splice(s.currentIdx, 0, moved)
+      flipRef.current = s.snapshots.map((snap, i) => ({ el: snap.el, fromTop: fromTops[i] }))
+      onReorder(ids)
+    }
+
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
+  }, [containerRef, onReorder])
+
+  return { onDragPointerDown }
 }
 
 export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose, archived = false }) {
@@ -314,8 +430,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     attachNoteToTodo, detachNoteFromTodo,
     attachLinkToTodo, detachLinkFromTodo,
     addTodoNote, addTodoLink,
+    reorderTodoNotes, reorderTodoLinks,
     moveProjectTodo,
     updateProjectNote,
+    setAutoEditNoteId,
   } = useAppContext()
 
   const projectName = useMemo(
@@ -462,6 +580,14 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   )
   const attachableNotes = projectNotes.filter(n => !linkedNoteIds.includes(String(n.id)))
   const attachableLinks = projectLinks.filter(l => !linkedLinkIds.includes(String(l.id)))
+
+  // Drag-reorder for attached notes / links
+  const noteAttachRef = useRef(null)
+  const linkAttachRef = useRef(null)
+  const handleNoteReorder = useCallback((newIds) => reorderTodoNotes(categoryId, projectId, todo.id, newIds), [reorderTodoNotes, categoryId, projectId, todo.id])
+  const handleLinkReorder = useCallback((newIds) => reorderTodoLinks(categoryId, projectId, todo.id, newIds), [reorderTodoLinks, categoryId, projectId, todo.id])
+  const { onDragPointerDown: onNoteAttachDrag } = useAttachDrag(noteAttachRef, attachedNotes, handleNoteReorder)
+  const { onDragPointerDown: onLinkAttachDrag } = useAttachDrag(linkAttachRef, attachedLinks, handleLinkReorder)
 
   const saveTitle = useCallback(() => {
     const text = (titleRef.current?.textContent || '').trim()
@@ -710,18 +836,25 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             </div>
           </div>
 
-          {attachedNotes.map(n => (
-            <AttachedNoteRow
-              key={n.id}
-              note={n}
-              onOpen={() => setOpenNoteId(n.id)}
-              onUnattach={(btnEl) => handleUnattach(btnEl, () => detachNoteFromTodo(categoryId, projectId, todo.id, n.id))}
-              onPointerDown={onRowPointerDown}
-            />
-          ))}
+          <div ref={noteAttachRef}>
+            {attachedNotes.map(n => (
+              <AttachedNoteRow
+                key={n.id}
+                note={n}
+                onOpen={() => setOpenNoteId(n.id)}
+                onUnattach={(btnEl) => handleUnattach(btnEl, () => detachNoteFromTodo(categoryId, projectId, todo.id, n.id))}
+                onPointerDown={onRowPointerDown}
+                onDragPointerDown={onNoteAttachDrag}
+              />
+            ))}
+          </div>
 
           <div className={`todo-composer${archived ? ' disabled' : ''}`}>
-            <NoteComposer onAdd={(text, active) => addTodoNote(categoryId, projectId, todo.id, text, active)} />
+            <NoteComposer onAdd={(text, active) => {
+              const holder = { id: null }
+              holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId })
+              setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenNoteId(holder.id) } }, 650)
+            }} />
           </div>
         </div>
 
@@ -753,14 +886,17 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             </div>
           </div>
 
-          {attachedLinks.map(l => (
-            <AttachedLinkRow
-              key={l.id}
-              link={l}
-              onUnattach={(btnEl) => handleUnattach(btnEl, () => detachLinkFromTodo(categoryId, projectId, todo.id, l.id))}
-              onPointerDown={onRowPointerDown}
-            />
-          ))}
+          <div ref={linkAttachRef}>
+            {attachedLinks.map(l => (
+              <AttachedLinkRow
+                key={l.id}
+                link={l}
+                onUnattach={(btnEl) => handleUnattach(btnEl, () => detachLinkFromTodo(categoryId, projectId, todo.id, l.id))}
+                onPointerDown={onRowPointerDown}
+                onDragPointerDown={onLinkAttachDrag}
+              />
+            ))}
+          </div>
 
           <div className={`todo-composer${archived ? ' disabled' : ''}`}>
             <LinkComposer onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />

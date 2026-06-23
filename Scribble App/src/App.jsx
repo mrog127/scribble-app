@@ -16,7 +16,7 @@ function AppInner() {
     categories, activeTodos, activeNotes,
     addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
     addProjectTodo, addProjectNote, addProjectLink,
-    setOpenDetail,
+    setOpenDetail, setAutoEditNoteId,
   } = useAppContext()
   const categoryIds = categories.map(c => c.id)
   const [activeTab, setActiveTab] = useState('star')
@@ -629,6 +629,10 @@ function AppInner() {
     const text = inputValue.trim()
     if (!text) return
 
+    // After a new note flies into place, auto-open its editor. The holder tracks
+    // the note's id (temp → real) so we open whichever is current.
+    const openNoteSoon = (type, holder) => setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenDetail({ type, id: holder.id }) } }, 750)
+
     // Homescreen or collapsed category: route into the selected project
     if (footerInputMode && saveToProject) {
       const { categoryId, projectId } = saveToProject
@@ -645,9 +649,15 @@ function AppInner() {
           ? { left: addRowRect.left, top: inputRect.top, width: addRowRect.width, height: inputRect.height }
           : inputRect
 
-        const newId = toolbarType === 'list'
-          ? addProjectTodo(categoryId, projectId, text, true)
-          : addProjectNote(categoryId, projectId, text, true)
+        let newId
+        if (toolbarType === 'list') {
+          newId = addProjectTodo(categoryId, projectId, text, true)
+        } else {
+          const holder = { id: null }
+          newId = addProjectNote(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
+          holder.id = newId
+          openNoteSoon('note', holder)
+        }
 
         if (animRect && appRect && newId != null) {
           pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
@@ -655,7 +665,11 @@ function AppInner() {
       } else {
         // Inactive: add without animation
         if (toolbarType === 'list') addProjectTodo(categoryId, projectId, text, addAsActiveFlag)
-        else if (toolbarType === 'note') addProjectNote(categoryId, projectId, text, addAsActiveFlag)
+        else if (toolbarType === 'note') {
+          const holder = { id: null }
+          holder.id = addProjectNote(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
+          openNoteSoon('note', holder)
+        }
       }
 
       setInputValue('')
@@ -682,13 +696,16 @@ function AppInner() {
       const newId = addActiveTodo(text)
       if (animRect && appRect) pendingAnimRef.current = { id: newId, type: 'list', text, inputRect: animRect, appRect }
     } else if (toolbarType === 'note') {
-      const newId = addActiveNote(text)
+      const holder = { id: null }
+      const newId = addActiveNote(text, (rid) => { holder.id = rid })
+      holder.id = newId
       if (animRect && appRect) pendingAnimRef.current = { id: newId, type: 'note', text, inputRect: animRect, appRect }
+      openNoteSoon('local-note', holder)
     }
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
-  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {

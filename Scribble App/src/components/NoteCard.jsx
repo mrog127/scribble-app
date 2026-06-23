@@ -204,7 +204,7 @@ function StarIcon() {
 function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
-  const { categories, moveProjectNote } = useAppContext()
+  const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId } = useAppContext()
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
   const noteAccent = useMemo(() => {
@@ -479,6 +479,25 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       editor.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
     }, 300)
   }, [detectCursorStyle, checkBottomOverflow])
+
+  // A freshly-created note auto-enters edit mode once it opens, with the cursor
+  // placed in the Body paragraph beneath the title.
+  useEffect(() => {
+    if (autoEditNoteId == null || String(autoEditNoteId) !== String(note?.id)) return
+    setAutoEditNoteId(null)
+    if (archived) return
+    const t = setTimeout(() => {
+      const content = contentRef.current
+      if (!content) return
+      const paras = [...content.querySelectorAll('.note-para')]
+      const target = paras.find(p => /style-body/.test(p.className)) || paras[paras.length - 1]
+      let range = null
+      if (target) { range = document.createRange(); range.setStart(target, 0); range.collapse(true) }
+      enterEdit(range)
+    }, 400)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Click on the text content — capture caret position then enter edit mode
   const handleContentClick = useCallback((e) => {

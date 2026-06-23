@@ -65,6 +65,17 @@ function ArchiveIcon() {
   )
 }
 
+function RetrieveIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="4" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+      <path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+      <path d="M12 18v-6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+      <path d="M9.5 14.5L12 12l2.5 2.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 function ActivateIcon({ activated }) {
   return (
     <svg width="16" height="16" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ fill: activated ? 'rgba(var(--accent-base-rgb),0.3)' : 'none' }}>
@@ -369,6 +380,10 @@ function useDragReorder(containerRef, items, onReorder, groupKeysProp) {
   return { onDragPointerDown }
 }
 
+// Sort by the per-category global order (cat_sort_order). Items without one keep
+// their incoming (project-major) order via the stable sort + Infinity fallback.
+const byCatOrder = (a, b) => (a.catSortOrder ?? Infinity) - (b.catSortOrder ?? Infinity)
+
 // Distribute a reordered aggregate list back into its source projects
 function distribute(category, newOrder, type, reorderFn) {
   const byProj = {}
@@ -388,7 +403,7 @@ function distribute(category, newOrder, type, reorderFn) {
 
 // ============ Lists (todos) ============
 function CollapsedTodosCard({ category }) {
-  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderProjectTodos, setProjectTodoScheduled, promptArchiveAttachments } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderCategoryTodos, setProjectTodoScheduled, promptArchiveAttachments } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const [calFor, setCalFor] = useState(null)
@@ -418,7 +433,7 @@ function CollapsedTodosCard({ category }) {
 
   const allTodos = category.projects.filter(p => !p.archived).flatMap(p =>
     p.todos.map(t => ({ ...t, projectId: p.id, projectName: p.name }))
-  )
+  ).sort(byCatOrder)
 
   const uncheckedOrdered = groupByActivation(allTodos.filter(t => !t.checked))
   const sorted = hideCompleted
@@ -431,8 +446,8 @@ function CollapsedTodosCard({ category }) {
   const { onPointerDown } = useSwipe()
 
   const handleReorder = useCallback((newOrder) => {
-    distribute(categoryRef.current, newOrder, 'todo', reorderProjectTodos)
-  }, [reorderProjectTodos])
+    reorderCategoryTodos(category.id, newOrder)
+  }, [reorderCategoryTodos, category.id])
 
   // Reorder groups: active (activated) and inactive (unchecked, not activated) each
   // reorder among themselves; completed todos are locked (null key).
@@ -724,11 +739,18 @@ function CollapsedTodosCard({ category }) {
 
 // ============ Notes ============
 function CollapsedNotesCard({ category }) {
-  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderProjectNotes, setProjectNoteScheduled, archiveProjectNote } = useAppContext()
+  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderCategoryNotes, setProjectNoteScheduled, archiveProjectNote, unarchiveProjectNote, openDetail, setOpenDetail } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
-  const [openNoteId, setOpenNoteId] = useState(null)
+  // Open-note state is shared via AppContext so footer-added notes can auto-open here.
+  const openNoteId = openDetail?.type === 'note' ? openDetail.id : null
+  const setOpenNoteId = (id) => setOpenDetail(id == null ? null : { type: 'note', id })
   const [calFor, setCalFor] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  const [showArchived, setShowArchived] = useState(() => {
+    try { return localStorage.getItem(`arch-cat-note-${category.id}`) === 'true' } catch { return false }
+  })
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const accent = useMemo(() => {
@@ -741,25 +763,58 @@ function CollapsedNotesCard({ category }) {
   }, [])
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectNoteScheduled(category.id, projectId, id, null) }, [category.id, setProjectNoteScheduled])
 
-  // Archived notes are hidden from the aggregated collapsed view (retrieval happens
-  // in the expanded project's "Show Archived" menu).
+  // Active notes across non-archived projects; archived ones are collected
+  // separately and shown only when "Show Archived" is toggled on.
   const allNotes = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
     p.notes.filter(n => !n.archived).map(n => ({ ...n, projectId: p.id, projectName: p.name }))
-  ))
+  ).sort(byCatOrder))
+  const archivedNotes = category.projects.filter(p => !p.archived).flatMap(p =>
+    p.notes.filter(n => n.archived).map(n => ({ ...n, projectId: p.id, projectName: p.name }))
+  ).sort(byCatOrder)
+  const archivedNoteCount = archivedNotes.length
+  const sortedNotes = showArchived ? [...allNotes, ...archivedNotes] : allNotes
 
   const { onPointerDown } = useSwipe()
 
   const handleReorder = useCallback((newOrder) => {
-    distribute(categoryRef.current, newOrder, 'note', reorderProjectNotes)
-  }, [reorderProjectNotes])
+    reorderCategoryNotes(category.id, newOrder)
+  }, [reorderCategoryNotes, category.id])
 
-  const noteGroupKeys = allNotes.map(n => n.activated ? 'active' : 'inactive')
-  const { onDragPointerDown } = useDragReorder(containerRef, allNotes, handleReorder, noteGroupKeys)
+  // Archived rows are locked (null key) so they can't be dragged or mixed.
+  const noteGroupKeys = sortedNotes.map(n => n.archived ? null : (n.activated ? 'active' : 'inactive'))
+  const { onDragPointerDown } = useDragReorder(containerRef, sortedNotes, handleReorder, noteGroupKeys)
 
   useEffect(() => {
     const card = cardRef.current
     if (card) requestAnimationFrame(() => card.classList.add('visible'))
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const handleToggleShowArchived = useCallback(() => {
+    setShowArchived(v => {
+      const next = !v
+      try { localStorage.setItem(`arch-cat-note-${category.id}`, next ? 'true' : 'false') } catch {}
+      return next
+    })
+  }, [category.id])
+
+  const handleRetrieve = useCallback((id, projectId, row) => {
+    closeSwipeRow(row)
+    const wrapper = row?.parentElement
+    if (wrapper) {
+      wrapper.animate(
+        [{ background: 'rgba(var(--accent-base-rgb),0)' }, { background: 'rgba(var(--accent-base-rgb),0.55)', offset: 0.4 }, { background: 'rgba(var(--accent-base-rgb),0)' }],
+        { duration: 280, fill: 'none' }
+      )
+    }
+    unarchiveProjectNote(category.id, projectId, id)
+  }, [category.id, unarchiveProjectNote])
 
   const handleActivate = useCallback((id, projectId, row) => {
     closeSwipeRow(row)
@@ -833,27 +888,48 @@ function CollapsedNotesCard({ category }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Notes</span>
+        {archivedNoteCount > 0 && (
+          <div className="dots-menu-wrap" ref={menuRef}>
+            <div className="dots-menu dots-menu-btn" onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}>
+              <span/><span/><span/>
+            </div>
+            <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
+              <button className="card-context-item" onMouseDown={e => { e.preventDefault(); handleToggleShowArchived(); setMenuOpen(false) }}>
+                {showArchived ? <EyeOffIcon/> : <EyeIcon/>}
+                {showArchived ? 'Hide Archived' : `Show ${archivedNoteCount} Archived`}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div ref={containerRef}>
-        {allNotes.map((n, i) => (
+        {sortedNotes.map((n, i) => (
           <div key={n.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row archivable" data-swipe-id={n.id} data-left-max="148">
-              <ActivateSwipeButton
-                item={n} type="note"
-                onActivateTap={(_, id, row) => handleActivate(id, n.projectId, row)}
-                onScheduleClear={(_, id, row) => clearSchedule(id, n.projectId, row)}
-                onScheduleOpen={(_, item, el) => openSchedule(item, el)}
-              />
-              <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><ArchiveIcon/></div>
-              </button>
+              {!n.archived && (
+                <ActivateSwipeButton
+                  item={n} type="note"
+                  onActivateTap={(_, id, row) => handleActivate(id, n.projectId, row)}
+                  onScheduleClear={(_, id, row) => clearSchedule(id, n.projectId, row)}
+                  onScheduleOpen={(_, item, el) => openSchedule(item, el)}
+                />
+              )}
+              {n.archived ? (
+                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleRetrieve(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
+                  <div className="swipe-active-inner"><RetrieveIcon/></div>
+                </button>
+              ) : (
+                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
+                  <div className="swipe-active-inner"><ArchiveIcon/></div>
+                </button>
+              )}
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>
               <div className="swipe-content">
                 <div
-                  className="note-row"
+                  className={`note-row${n.archived ? ' archived' : ''}`}
                   data-note-id={n.id}
                   onPointerDown={e => { onPointerDown(e, n.id); onNoteTap(e, n.id); onDragPointerDown(e, n.id) }}
                 >
@@ -910,13 +986,18 @@ function CollapsedNotesCard({ category }) {
 
 // ============ Links ============
 function CollapsedLinksCard({ category }) {
-  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, reorderProjectLinks } = useAppContext()
+  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, unarchiveProjectLink, reorderCategoryLinks } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const cardRef = useRef(null)
   const containerRef = useRef(null)
   const linkSwipeState = useRef({})
   const [calFor, setCalFor] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  const [showArchived, setShowArchived] = useState(() => {
+    try { return localStorage.getItem(`arch-cat-link-${category.id}`) === 'true' } catch { return false }
+  })
   const accent = useMemo(() => {
     const idx = categories.findIndex(c => c.id === category.id)
     return idx === -1 ? null : getCategoryAccent(idx)
@@ -927,22 +1008,53 @@ function CollapsedLinksCard({ category }) {
   }, [])
   const clearSchedule = useCallback((id, projectId, row) => { closeSwipeRow(row); setProjectLinkScheduled(category.id, projectId, id, null) }, [category.id, setProjectLinkScheduled])
 
-  // Archived links are hidden from the aggregated collapsed view (retrieval happens
-  // in the expanded project's "Show Archived" menu).
+  // Active links across non-archived projects; archived shown only when toggled on.
   const allLinks = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
     p.links.filter(l => !l.archived).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
-  ))
+  ).sort(byCatOrder))
+  const archivedLinks = category.projects.filter(p => !p.archived).flatMap(p =>
+    p.links.filter(l => l.archived).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
+  ).sort(byCatOrder)
+  const archivedLinkCount = archivedLinks.length
+  const sortedLinks = showArchived ? [...allLinks, ...archivedLinks] : allLinks
 
   const handleReorder = useCallback((newOrder) => {
-    distribute(categoryRef.current, newOrder, 'link', reorderProjectLinks)
-  }, [reorderProjectLinks])
-  const linkGroupKeys = allLinks.map(l => l.activated ? 'active' : 'inactive')
-  const { onDragPointerDown } = useDragReorder(containerRef, allLinks, handleReorder, linkGroupKeys)
+    reorderCategoryLinks(category.id, newOrder)
+  }, [reorderCategoryLinks, category.id])
+  const linkGroupKeys = sortedLinks.map(l => l.archived ? null : (l.activated ? 'active' : 'inactive'))
+  const { onDragPointerDown } = useDragReorder(containerRef, sortedLinks, handleReorder, linkGroupKeys)
 
   useEffect(() => {
     const card = cardRef.current
     if (card) requestAnimationFrame(() => card.classList.add('visible'))
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const handleToggleShowArchived = useCallback(() => {
+    setShowArchived(v => {
+      const next = !v
+      try { localStorage.setItem(`arch-cat-link-${category.id}`, next ? 'true' : 'false') } catch {}
+      return next
+    })
+  }, [category.id])
+
+  const handleRetrieve = useCallback((id, projectId, row) => {
+    closeSwipeRow(row)
+    const wrapper = row?.parentElement
+    if (wrapper) {
+      wrapper.animate(
+        [{ background: 'rgba(var(--accent-base-rgb),0)' }, { background: 'rgba(var(--accent-base-rgb),0.55)', offset: 0.4 }, { background: 'rgba(var(--accent-base-rgb),0)' }],
+        { duration: 280, fill: 'none' }
+      )
+    }
+    unarchiveProjectLink(category.id, projectId, id)
+  }, [category.id, unarchiveProjectLink])
 
   const handleActivate = useCallback((id, projectId, row) => {
     closeSwipeRow(row)
@@ -1018,27 +1130,48 @@ function CollapsedLinksCard({ category }) {
     <div className="card card-intro" ref={cardRef}>
       <div className="card-header">
         <span className="card-title">Links</span>
+        {archivedLinkCount > 0 && (
+          <div className="dots-menu-wrap" ref={menuRef}>
+            <div className="dots-menu dots-menu-btn" onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}>
+              <span/><span/><span/>
+            </div>
+            <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
+              <button className="card-context-item" onMouseDown={e => { e.preventDefault(); handleToggleShowArchived(); setMenuOpen(false) }}>
+                {showArchived ? <EyeOffIcon/> : <EyeIcon/>}
+                {showArchived ? 'Hide Archived' : `Show ${archivedLinkCount} Archived`}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div ref={containerRef}>
-        {allLinks.map((l, i) => (
+        {sortedLinks.map((l, i) => (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row archivable" data-swipe-id={l.id} data-left-max="148">
-              <ActivateSwipeButton
-                item={l} type="link"
-                onActivateTap={(_, id, row) => handleActivate(id, l.projectId, row)}
-                onScheduleClear={(_, id, row) => clearSchedule(id, l.projectId, row)}
-                onScheduleOpen={(_, item, el) => openSchedule(item, el)}
-              />
-              <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><ArchiveIcon/></div>
-              </button>
+              {!l.archived && (
+                <ActivateSwipeButton
+                  item={l} type="link"
+                  onActivateTap={(_, id, row) => handleActivate(id, l.projectId, row)}
+                  onScheduleClear={(_, id, row) => clearSchedule(id, l.projectId, row)}
+                  onScheduleOpen={(_, item, el) => openSchedule(item, el)}
+                />
+              )}
+              {l.archived ? (
+                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleRetrieve(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
+                  <div className="swipe-active-inner"><RetrieveIcon/></div>
+                </button>
+              ) : (
+                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
+                  <div className="swipe-active-inner"><ArchiveIcon/></div>
+                </button>
+              )}
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
                 <div className="swipe-active-inner"><TrashIcon/></div>
               </button>
               <div className="swipe-content">
                 <div
-                  className="note-row link-row"
+                  className={`note-row link-row${l.archived ? ' archived' : ''}`}
                   onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url); onDragPointerDown(e, l.id) }}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>

@@ -38,6 +38,8 @@ export function AppProvider({ children }) {
   // Single source of truth for which detail page is open, so only one row is
   // highlighted at a time across all cards. Shape: { type, id } | null
   const [openDetail, setOpenDetail] = useState(null)
+  // Id of a freshly-created note that should auto-enter edit mode when its page opens.
+  const [autoEditNoteId, setAutoEditNoteId] = useState(null)
 
   // Refs so toggle/delete callbacks can read current state without stale closures
   const activeTodosRef = useRef([])
@@ -86,14 +88,14 @@ export function AppProvider({ children }) {
           archived: proj.archived === true,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
             id: t.id, text: t.text, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
-            homeSortOrder: t.home_sort_order ?? null,
+            homeSortOrder: t.home_sort_order ?? null, catSortOrder: t.cat_sort_order ?? null,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
           notes: (notes || []).filter(n => n.project_id === proj.id).map(n => ({
-            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, editorHTML: n.editor_html, archived: n.archived === true
+            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, catSortOrder: n.cat_sort_order ?? null, editorHTML: n.editor_html, archived: n.archived === true
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
-            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, archived: l.archived === true
+            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true
           })),
         }))
     }))
@@ -197,13 +199,14 @@ export function AppProvider({ children }) {
   }, [])
 
   // ---- Active notes ----
-  const addActiveNote = useCallback((text) => {
+  const addActiveNote = useCallback((text, onCreated) => {
     const tempId = Date.now()
     setActiveNotes(prev => [...prev, { id: tempId, text, activated: false, editorHTML: null, source: 'Active', accent: false }])
     supabase.from('notes')
       .insert({ user_id: user.id, project_id: null, text, activated: false, editor_html: null, sort_order: 0 })
       .select().single().then(({ data }) => {
         if (data) setActiveNotes(prev => prev.map(n => n.id === tempId ? { ...n, id: data.id } : n))
+        if (data && onCreated) onCreated(data.id)
       })
     return tempId
   }, [user])
@@ -258,7 +261,7 @@ export function AppProvider({ children }) {
     return tempId
   }, [user, updateProject])
 
-  const addProjectNote = useCallback((categoryId, projectId, text, activated = false, scheduledDate = null) => {
+  const addProjectNote = useCallback((categoryId, projectId, text, activated = false, scheduledDate = null, onCreated) => {
     if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
@@ -274,6 +277,7 @@ export function AppProvider({ children }) {
           ...proj,
           notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n)
         }))
+        if (data && onCreated) onCreated(data.id)
       })
     return tempId
   }, [user, updateProject])
@@ -371,8 +375,23 @@ export function AppProvider({ children }) {
     dbw(supabase.from('todos').update({ linked_link_ids: newIds }).eq('id', todoId), 'detachLink')
   }, [updateProject])
 
+  // Reorder a todo's attached notes / links (sets the linked id arrays' order)
+  const reorderTodoNotes = useCallback((categoryId, projectId, todoId, newIds) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: newIds })
+    }))
+    dbw(supabase.from('todos').update({ linked_note_ids: newIds }).eq('id', todoId), 'reorderTodoNotes')
+  }, [updateProject])
+
+  const reorderTodoLinks = useCallback((categoryId, projectId, todoId, newIds) => {
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: newIds })
+    }))
+    dbw(supabase.from('todos').update({ linked_link_ids: newIds }).eq('id', todoId), 'reorderTodoLinks')
+  }, [updateProject])
+
   // Create a new note in the project AND attach it to the todo
-  const addTodoNote = useCallback((categoryId, projectId, todoId, text, activated = false) => {
+  const addTodoNote = useCallback((categoryId, projectId, todoId, text, activated = false, onCreated) => {
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
     const sortOrder = proj?.notes.length || 0
@@ -393,6 +412,7 @@ export function AppProvider({ children }) {
           todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: (t.linkedNoteIds || []).map(x => x === tempId ? data.id : x) })
         }))
         dbw(supabase.from('todos').update({ linked_note_ids: realIds }).eq('id', todoId), 'addTodoNote')
+        if (onCreated) onCreated(data.id)
       })
     return tempId
   }, [user, updateProject])
@@ -679,6 +699,46 @@ export function AppProvider({ children }) {
     Promise.all(newOrder.map((l, i) => supabase.from('links').update({ home_sort_order: i }).eq('id', l.id)))
   }, [])
 
+  // ---- Collapsed-category ordering (cat_sort_order) ----
+  // newOrder is the full reordered aggregate of a category's items (across projects).
+  // We stamp each item's cat_sort_order by index so the intermixed order survives reload
+  // and a drag can freely mix items from different projects within its activation group.
+  const reorderCategoryTodos = useCallback((categoryId, newOrder) => {
+    const orderMap = new Map(newOrder.map((t, i) => [String(t.id), i]))
+    setCategories(prev => prev.map(cat => cat.id !== categoryId ? cat : {
+      ...cat,
+      projects: cat.projects.map(proj => ({
+        ...proj,
+        todos: proj.todos.map(t => orderMap.has(String(t.id)) ? { ...t, catSortOrder: orderMap.get(String(t.id)) } : t)
+      }))
+    }))
+    Promise.all(newOrder.map((t, i) => supabase.from('todos').update({ cat_sort_order: i }).eq('id', t.id)))
+  }, [])
+
+  const reorderCategoryNotes = useCallback((categoryId, newOrder) => {
+    const orderMap = new Map(newOrder.map((n, i) => [String(n.id), i]))
+    setCategories(prev => prev.map(cat => cat.id !== categoryId ? cat : {
+      ...cat,
+      projects: cat.projects.map(proj => ({
+        ...proj,
+        notes: proj.notes.map(n => orderMap.has(String(n.id)) ? { ...n, catSortOrder: orderMap.get(String(n.id)) } : n)
+      }))
+    }))
+    Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ cat_sort_order: i }).eq('id', n.id)))
+  }, [])
+
+  const reorderCategoryLinks = useCallback((categoryId, newOrder) => {
+    const orderMap = new Map(newOrder.map((l, i) => [String(l.id), i]))
+    setCategories(prev => prev.map(cat => cat.id !== categoryId ? cat : {
+      ...cat,
+      projects: cat.projects.map(proj => ({
+        ...proj,
+        links: proj.links.map(l => orderMap.has(String(l.id)) ? { ...l, catSortOrder: orderMap.get(String(l.id)) } : l)
+      }))
+    }))
+    Promise.all(newOrder.map((l, i) => supabase.from('links').update({ cat_sort_order: i }).eq('id', l.id)))
+  }, [])
+
   const reorderProjects = useCallback((categoryId, newOrder) => {
     setCategories(prev => prev.map(cat =>
       cat.id !== categoryId ? cat : { ...cat, projects: newOrder }
@@ -791,6 +851,8 @@ export function AppProvider({ children }) {
       loading,
       openDetail,
       setOpenDetail,
+      autoEditNoteId,
+      setAutoEditNoteId,
       addCategory,
       renameCategory,
       deleteCategory,
@@ -817,6 +879,8 @@ export function AppProvider({ children }) {
       detachLinkFromTodo,
       addTodoNote,
       addTodoLink,
+      reorderTodoNotes,
+      reorderTodoLinks,
       moveProjectTodo,
       moveProjectNote,
       toggleProjectTodoActivated,
@@ -843,6 +907,9 @@ export function AppProvider({ children }) {
       reorderHomeTodos,
       reorderHomeNotes,
       reorderHomeLinks,
+      reorderCategoryTodos,
+      reorderCategoryNotes,
+      reorderCategoryLinks,
       reorderProjects,
       renameProject,
       archiveProject,

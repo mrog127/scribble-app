@@ -547,7 +547,7 @@ export default function ProjectCard({ categoryId, project }) {
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
     renameProject, archiveProject, unarchiveProject, deleteProject,
-    openDetail, setOpenDetail,
+    openDetail, setOpenDetail, setAutoEditNoteId,
   } = useAppContext()
 
   // Archived canvases are read-only: tabs + opening pages work, but checkboxes,
@@ -1297,11 +1297,17 @@ export default function ProjectCard({ categoryId, project }) {
     const inputEl = inputRef.current
     if (inputEl) pendingAnim.current = { fromRect: inputEl.getBoundingClientRect(), text, addType }
     if (addType === 'list') addProjectTodo(categoryId, project.id, text, addAsActive, addScheduledDate)
-    else if (addType === 'note') addProjectNote(categoryId, project.id, text, addAsActive, addScheduledDate)
+    else if (addType === 'note') {
+      // After the new note flies into place, auto-open its editor. The id holder
+      // tracks the note's id (temp → real) so we open whichever is current.
+      const holder = { id: null }
+      holder.id = addProjectNote(categoryId, project.id, text, addAsActive, addScheduledDate, (realId) => { holder.id = realId })
+      setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenDetail({ type: 'note', id: holder.id }) } }, 650)
+    }
     setInputValue('')
     setAddScheduledDate(null)
     inputRef.current?.blur()
-  }, [inputValue, linkUrlValue, addType, addAsActive, addScheduledDate, categoryId, project.id, addProjectTodo, addProjectNote, addProjectLink])
+  }, [inputValue, linkUrlValue, addType, addAsActive, addScheduledDate, categoryId, project.id, addProjectTodo, addProjectNote, addProjectLink, setOpenDetail, setAutoEditNoteId])
 
   // Keep the input wrap "focused" while focus moves between the title and URL fields
   const handleInputBlur = useCallback(() => {

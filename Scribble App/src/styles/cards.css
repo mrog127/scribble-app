@@ -11,6 +11,11 @@
 /* When a three-dot menu is open, let it overflow the card instead of being clipped */
 .card:has(.card-context-menu.open) { overflow: visible; }
 
+/* Empty card (e.g. a content-type card whose only items are hidden/archived):
+   match the space below the title to the space above it (12px header top padding). */
+.card:has(> div:empty:last-child) { padding-bottom: 0; }
+.card:has(> div:empty:last-child) .card-header { padding-bottom: 12px; }
+
 /* Each card is its own stacking context, so an open menu would paint behind the
    next card down. Lift the card whose menu is open above its siblings. */
 .cards-area .card:has(.card-context-menu.open) { position: relative; z-index: 40; }
@@ -470,9 +475,10 @@
 .note-row.archived .note-text { text-decoration: line-through; }
 .note-row.archived .checkbox-wrap { opacity: 0.5; }
 
-/* Archived project card: 2% black overlay on the card's background fill. */
+/* Archived project card: 2% black overlay on the card's background fill, no shadow. */
 .card.project-card.archived {
   background-image: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02));
+  box-shadow: none;
 }
 
 /* Archived canvas: dim the list-item checkbox (row) and the open page's
@@ -653,7 +659,7 @@
 .note-detail-page {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.9) calc(l * 1.03)), 20%, hsl(from #F2F0EB h calc(s * 1.5) l));
+  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
   border-radius: 0;
   z-index: 50;
   transform: translateY(100%);
@@ -738,7 +744,7 @@
   color: var(--accent-dark);
 }
 
-.note-detail-page.editing { background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.9) calc(l * 1.03)), 20%, hsl(from #F2F0EB h calc(s * 1.5) l)); }
+.note-detail-page.editing { background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l)); }
 
 .note-detail-page.editing .note-editor {
   padding-bottom: calc(var(--kbh, 0px) + 128px);
@@ -1268,7 +1274,9 @@
 }
 
 /* Swipe-to-unattach on attached note/link rows */
-.todo-swipe-row { position: relative; overflow: hidden; }
+/* Attachment rows aren't text-selectable, so dragging to reorder doesn't highlight
+   the text of rows the floating row passes over (the page itself is selectable). */
+.todo-swipe-row { position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; }
 .todo-swipe-row + .todo-swipe-row { border-top: 1px solid #DBDAD8; }
 
 .todo-swipe-content {

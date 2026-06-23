@@ -6,8 +6,15 @@ html, body, #root {
   overflow: hidden;
   height: 100%;
   margin: 0;
+  /* Hold the light tone flat across the top (well past the safe-area inset) so the
+     iOS status-bar / safe-area strip — which is filled with the background-COLOR —
+     blends seamlessly into the gradient instead of meeting it at a hard line. The
+     gradient then transitions into the darker beige below. */
   background-color: hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08));
-  background-image: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
+  background-image: linear-gradient(160deg,
+    hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)) 0%,
+    hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)) 12%,
+    hsl(from #F2F0EB h calc(s * 1.62) l) 28%);
 }
 
 /* Disable the dark tap-flash mobile browsers paint over buttons/links on touch */

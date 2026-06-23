@@ -2,20 +2,13 @@
    viewport (and beyond) — no hard clip line where a smaller element would end.
    The background-color matches the gradient's top edge so iOS standalone fills the
    status-bar / safe-area strip with the same color (no white band at the top). */
+/* Solid fallback = the midpoint of the gradient's two colors, so the status-bar /
+   safe-area strip quasi-blends with the gradient. */
 html, body, #root {
   overflow: hidden;
   height: 100%;
   margin: 0;
-  /* The iOS status-bar / safe-area strip is filled with the background-COLOR (a flat
-     color), so the gradient holds its light tone flat across just the top ~10%
-     (past the safe-area inset) to blend into that strip with no hard line — then
-     runs the full original gradient (light → darker beige) down the whole page. */
-  background-color: hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08));
-  background-image: linear-gradient(160deg,
-    hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)) 0%,
-    hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)) 10%,
-    20%,
-    hsl(from #F2F0EB h calc(s * 1.62) l) 100%);
+  background: color-mix(in srgb, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), hsl(from #F2F0EB h calc(s * 1.62) l));
 }
 
 /* Disable the dark tap-flash mobile browsers paint over buttons/links on touch */
@@ -37,8 +30,7 @@ html, body, #root {
   -webkit-user-select: none;
   width: 100%;
   height: 100vh;
-  /* Transparent so the root's gradient shows through continuously (no clip line). */
-  background: transparent;
+  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
   border-radius: 0;
   overflow: hidden;
   display: flex;

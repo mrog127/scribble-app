@@ -5,6 +5,8 @@ import NoteCard, { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
+import OutlinkButton from './OutlinkButton.jsx'
+import LinkDetailPage from './LinkDetailPage.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import homepageDecoration from '../assets/Homepage decoration.png'
@@ -900,9 +902,12 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
 
 // Activated links — aggregated from all projects into one "Links" card
 function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
-  const { categories, setProjectLinkScheduled, reorderHomeLinks } = useAppContext()
+  const { categories, setProjectLinkScheduled, reorderHomeLinks, openDetail, setOpenDetail } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
+  const openLinkId = openDetail?.type === 'link' ? openDetail.id : null
+  const setOpenLinkId = (id) => setOpenDetail(id == null ? null : { type: 'link', id })
+  const openLink = openLinkId != null ? items.find(l => l.id === openLinkId) : null
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {
     const item = items.find(t => t.id === id)
@@ -958,7 +963,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
   const { onDragPointerDown } = useDragReorder(containerRef, items, handleReorder)
 
   const onLinkPointerDown = useCallback((e, id, url) => {
-    if (e.target.closest('.swipe-action-btn')) return
+    if (e.target.closest('.swipe-action-btn') || e.target.closest('.link-outlink-btn')) return
     const row = e.currentTarget
     if (!row) return
     if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) {
@@ -998,7 +1003,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
       if (!content) { cleanup(); return }
       content.style.transition = ''
       const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
-      if (isTap) { openUrl(url); cleanup(); return }
+      if (isTap) { setOpenLinkId(id); cleanup(); return }
       let total = dx
       if (s.lockSign === 1) total = Math.max(0, total)
       if (s.lockSign === -1) total = Math.min(0, total)
@@ -1036,7 +1041,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
           return (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={l.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { onLinkPointerDown(e, l.id, l.url); onDragPointerDown(e, l.id) }}>
+            <div className={`swipe-row${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { onLinkPointerDown(e, l.id, l.url); onDragPointerDown(e, l.id) }}>
               <ActivatedSwipeButton id={l.id} onTap={handleDeactivate} onLongPress={openSchedule} />
               <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id) }}>
                 <div className="swipe-active-inner"><TrashSvg/></div>
@@ -1066,6 +1071,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
                       <span className="source-label-text">{l.projectName}</span>
                     </div>
                   </div>
+                  <OutlinkButton onOpen={() => openUrl(l.url)} />
                 </div>
               </div>
             </div>
@@ -1073,6 +1079,16 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
           )
         })}
       </div>
+
+      {openLink && createPortal(
+        <LinkDetailPage
+          link={openLink}
+          categoryId={openLink.categoryId}
+          projectId={openLink.projectId}
+          onClose={() => setOpenLinkId(null)}
+        />,
+        document.getElementById('app')
+      )}
 
       {calFor && (
         <CalendarPopup

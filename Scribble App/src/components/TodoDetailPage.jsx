@@ -4,6 +4,8 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { NoteDetailPage } from './NoteCard.jsx'
+import LinkDetailPage from './LinkDetailPage.jsx'
+import OutlinkButton from './OutlinkButton.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { useScrollable } from '../useScrollable.js'
@@ -284,17 +286,18 @@ function AttachedNoteRow({ note, onOpen, onUnattach, onPointerDown, onDragPointe
   )
 }
 
-function AttachedLinkRow({ link, onUnattach, onPointerDown, onDragPointerDown }) {
+function AttachedLinkRow({ link, onUnattach, onPointerDown, onDragPointerDown, onOpen }) {
   return (
     <div className="todo-swipe-row" data-attach-id={link.id}>
       <UnattachButton onUnattach={onUnattach} />
-      <div className="todo-swipe-content" onPointerDown={e => { onPointerDown(e, () => openUrl(link.url)); onDragPointerDown && onDragPointerDown(e, link.id) }}>
+      <div className="todo-swipe-content" onPointerDown={e => { onPointerDown(e, onOpen); onDragPointerDown && onDragPointerDown(e, link.id) }}>
         <div className="todo-attached-row">
           <div className="todo-attached-icon"><LinkRowIcon activated={link.activated}/></div>
           <div className="todo-attached-text">
             <span className="todo-attached-link-title">{link.title}</span>
             <span className="todo-attached-link-url">{displayUrl(link.url)}</span>
           </div>
+          <OutlinkButton onOpen={() => openUrl(link.url)} />
         </div>
       </div>
     </div>
@@ -445,6 +448,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [noteAttachOpen, setNoteAttachOpen] = useState(false)
   const [linkAttachOpen, setLinkAttachOpen] = useState(false)
   const [openNoteId, setOpenNoteId] = useState(null)
+  const [openAttachLinkId, setOpenAttachLinkId] = useState(null)
   const titleRef = useRef(null)
   const completeBtnRef = useRef(null)
   const flashRef = useRef(null)
@@ -647,7 +651,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   // Swipe-left to reveal the Unattach button (and tap to open when closed)
   const onRowPointerDown = useCallback((e, onTap) => {
-    if (e.target.closest('.todo-unattach-btn')) return
+    if (e.target.closest('.todo-unattach-btn') || e.target.closest('.link-outlink-btn')) return
     const row = e.currentTarget.closest('.todo-swipe-row')
     if (!row) return
     const content = row.querySelector('.todo-swipe-content')
@@ -894,6 +898,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 onUnattach={(btnEl) => handleUnattach(btnEl, () => detachLinkFromTodo(categoryId, projectId, todo.id, l.id))}
                 onPointerDown={onRowPointerDown}
                 onDragPointerDown={onLinkAttachDrag}
+                onOpen={() => setOpenAttachLinkId(l.id)}
               />
             ))}
           </div>
@@ -954,6 +959,16 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           categoryId={categoryId}
           projectId={projectId}
           archived={archived || !!openNote.archived}
+        />,
+        document.getElementById('app')
+      )}
+
+      {openAttachLinkId != null && attachedLinks.find(l => l.id === openAttachLinkId) && createPortal(
+        <LinkDetailPage
+          link={attachedLinks.find(l => l.id === openAttachLinkId)}
+          categoryId={categoryId}
+          projectId={projectId}
+          onClose={() => setOpenAttachLinkId(null)}
         />,
         document.getElementById('app')
       )}

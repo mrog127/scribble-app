@@ -6,6 +6,8 @@ import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
 import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon } from './MenuIcons.jsx'
+import OutlinkButton from './OutlinkButton.jsx'
+import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -559,8 +561,10 @@ export default function ProjectCard({ categoryId, project }) {
   // time across all cards; tapping the open row again toggles it closed.
   const openTodoId = (openDetail?.type === 'todo' && project.todos.some(t => t.id === openDetail.id)) ? openDetail.id : null
   const openNoteId = (openDetail?.type === 'note' && project.notes.some(n => n.id === openDetail.id)) ? openDetail.id : null
+  const openLinkId = (openDetail?.type === 'link' && project.links.some(l => l.id === openDetail.id)) ? openDetail.id : null
   const setOpenTodoId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'todo' && prev.id === id) ? null : { type: 'todo', id }))
   const setOpenNoteId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'note' && prev.id === id) ? null : { type: 'note', id }))
+  const setOpenLinkId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'link' && prev.id === id) ? null : { type: 'link', id }))
 
   const linkSwipeState = useRef({})
 
@@ -1198,7 +1202,7 @@ export default function ProjectCard({ categoryId, project }) {
 
   // Tap a link row to open it; hold for 1s (without dragging) to edit it inline.
   const onLinkPointerDown = useCallback((e, link) => {
-    if (e.target.closest('.swipe-action-btn')) return
+    if (e.target.closest('.swipe-action-btn') || e.target.closest('.link-outlink-btn')) return
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
     if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
@@ -1214,13 +1218,13 @@ export default function ProjectCard({ categoryId, project }) {
     const onUp = (e2) => {
       clearTimeout(longTimer)
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir && !s.longFired && Math.abs(dx) < 8 && Math.abs(dy) < 8) openUrl(link.url)
+      if (!s.dir && !s.longFired && Math.abs(dx) < 8 && Math.abs(dy) < 8) setOpenLinkId(link.id)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
-  }, [archived])
+  }, [archived, setOpenLinkId])
 
   const saveLinkEdit = useCallback((linkId, title, url) => {
     updateProjectLink(categoryId, project.id, linkId, title, url)
@@ -1339,6 +1343,13 @@ export default function ProjectCard({ categoryId, project }) {
     for (const cat of categories) {
       const p = cat.projects.find(pr => pr.todos.some(t => t.id === openTodoId))
       if (p) { openTodo = p.todos.find(t => t.id === openTodoId); openTodoCat = cat.id; openTodoProj = p; break }
+    }
+  }
+  let openLink = null, openLinkCat = categoryId, openLinkProj = project
+  if (openLinkId != null) {
+    for (const cat of categories) {
+      const p = cat.projects.find(pr => pr.links.some(l => l.id === openLinkId))
+      if (p) { openLink = p.links.find(l => l.id === openLinkId); openLinkCat = cat.id; openLinkProj = p; break }
     }
   }
 
@@ -1625,7 +1636,7 @@ export default function ProjectCard({ categoryId, project }) {
               {sortedLinks.map((l, i) => (
                 <div key={l.id}>
                   {i > 0 && <div className="divider"/>}
-                  <div className={`swipe-row${archived ? '' : ' archivable'}`} data-swipe-id={l.id} data-left-max={archived ? undefined : '148'}>
+                  <div className={`swipe-row${archived ? '' : ' archivable'}${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id} data-left-max={archived ? undefined : '148'}>
                     {!l.archived && !archived && (
                       <ActivateSwipeButton item={l} type="link" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
                     )}
@@ -1674,6 +1685,7 @@ export default function ProjectCard({ categoryId, project }) {
                         {(l.scheduledDate && !l.activated) && (
                           <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
                         )}
+                        <OutlinkButton onOpen={() => openUrl(l.url)} />
                       </div>
                       )}
                     </div>
@@ -1786,6 +1798,16 @@ export default function ProjectCard({ categoryId, project }) {
           projectLinks={openTodoProj.links}
           onClose={() => setOpenTodoId(null)}
           archived={!!openTodoProj?.archived}
+        />,
+        document.getElementById('app')
+      )}
+
+      {openLink && createPortal(
+        <LinkDetailPage
+          link={openLink}
+          categoryId={openLinkCat}
+          projectId={openLinkProj.id}
+          onClose={() => setOpenLinkId(null)}
         />,
         document.getElementById('app')
       )}

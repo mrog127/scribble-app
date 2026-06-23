@@ -558,25 +558,70 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   }, [editing, note, onSave, onClose])
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key !== 'Enter') return
     const content = contentRef.current
     if (!content) return
-    e.preventDefault()
     const sel = window.getSelection()
     if (!sel || sel.rangeCount === 0) return
     const range = sel.getRangeAt(0)
 
-    // Delete any selected content first
-    if (!range.collapsed) range.deleteContents()
+    // Resolve the .note-para containing a given boundary (handles the case where the
+    // boundary is the editor root itself, with an offset into its child paragraphs).
+    const findPara = (node, offset) => {
+      let n = node
+      if (n === content) n = content.childNodes[offset] || content.childNodes[offset - 1] || content.lastChild
+      while (n && n !== content && !(n.nodeType === 1 && n.classList?.contains('note-para'))) n = n.parentNode
+      return (n && n !== content) ? n : null
+    }
+    const styleOf = (para) => (para.className.match(/style-(\w+)/) || [null, 'body'])[1]
 
-    let currentPara = range.startContainer
-    while (currentPara && currentPara !== content) {
-      if (currentPara.nodeType === 1 && currentPara.classList && currentPara.classList.contains('note-para')) break
-      currentPara = currentPara.parentNode
+    // ---- Backspace at the very start of a paragraph: merge it into the previous
+    // paragraph, which keeps the previous (upper) paragraph's type style. ----
+    if (e.key === 'Backspace' && range.collapsed) {
+      const para = findPara(range.startContainer, range.startOffset)
+      if (!para) return
+      // Cursor is at the start only if there's no text between the para start and it.
+      const probe = document.createRange()
+      probe.selectNodeContents(para)
+      probe.setEnd(range.startContainer, range.startOffset)
+      if (probe.toString().length !== 0) return  // not at start → let default backspace run
+      const prev = para.previousElementSibling
+      if (!prev || !prev.classList?.contains('note-para')) return
+      e.preventDefault()
+      if (prev.innerHTML.trim() === '<br>') prev.innerHTML = ''
+      // Cursor lands at the junction (end of prev's original content).
+      const junction = document.createRange()
+      junction.selectNodeContents(prev)
+      junction.collapse(false)
+      const paraEmpty = para.textContent.trim() === '' && /^(<br>)?$/.test(para.innerHTML.trim())
+      if (!paraEmpty) { while (para.firstChild) prev.appendChild(para.firstChild) }
+      if (!prev.textContent && !prev.querySelector('br')) prev.innerHTML = '<br>'
+      para.remove()
+      sel.removeAllRanges()
+      sel.addRange(junction)
+      const ps = styleOf(prev)
+      setCurrentStyle(ps)
+      updateStyleIndicator(ps)
+      return
     }
 
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    if (!range.collapsed) range.deleteContents()
+
+    const currentPara = findPara(range.startContainer, range.startOffset)
+    if (!currentPara) {
+      const p = document.createElement('div')
+      p.className = 'note-para style-body'
+      p.innerHTML = '<br>'
+      content.appendChild(p)
+      const r = document.createRange(); r.setStart(p, 0); r.collapse(true)
+      sel.removeAllRanges(); sel.addRange(r)
+      return
+    }
+    const paraStyle = styleOf(currentPara)
+
     // Empty bullet + Enter → revert current paragraph to Body
-    if (currentStyle === 'bullet' && currentPara && currentPara.classList?.contains('note-para')) {
+    if (paraStyle === 'bullet') {
       const isEmpty = currentPara.textContent.trim() === '' || currentPara.innerHTML.trim() === '<br>'
       if (isEmpty) {
         currentPara.className = 'note-para style-body'
@@ -591,39 +636,28 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       }
     }
 
-    const newStyle = currentStyle === 'bullet' ? 'bullet' : 'body'
+    // Split at the cursor into a new paragraph that keeps the same type style.
     const newPara = document.createElement('div')
-    newPara.className = 'note-para style-' + newStyle
-
-    if (currentPara && currentPara !== content && currentPara.parentNode === content) {
-      // Extract content from cursor to end of currentPara into the new para
-      const afterRange = document.createRange()
-      afterRange.setStart(range.startContainer, range.startOffset)
-      afterRange.setEnd(currentPara, currentPara.childNodes.length)
-      const fragment = afterRange.extractContents()
-
-      if (fragment.textContent) {
-        newPara.appendChild(fragment)
-      } else {
-        newPara.innerHTML = '<br>'
-      }
-
-      // Ensure currentPara isn't left empty
-      if (!currentPara.textContent && !currentPara.querySelector('br')) {
-        currentPara.innerHTML = '<br>'
-      }
-
-      currentPara.after(newPara)
+    newPara.className = 'note-para style-' + paraStyle
+    const afterRange = document.createRange()
+    afterRange.setStart(range.startContainer, range.startOffset)
+    afterRange.setEnd(currentPara, currentPara.childNodes.length)
+    const fragment = afterRange.extractContents()
+    if (fragment.textContent || (fragment.querySelector && fragment.querySelector('br'))) {
+      newPara.appendChild(fragment)
     } else {
       newPara.innerHTML = '<br>'
-      content.appendChild(newPara)
     }
+    if (!currentPara.textContent && !currentPara.querySelector('br')) currentPara.innerHTML = '<br>'
+    currentPara.after(newPara)
 
     const newRange = document.createRange()
     newRange.setStart(newPara, 0)
     newRange.collapse(true)
     sel.removeAllRanges()
     sel.addRange(newRange)
+    setCurrentStyle(paraStyle)
+    updateStyleIndicator(paraStyle)
     // Scroll editor so new paragraph is visible above the style bar
     requestAnimationFrame(() => {
       const editor = editorRef.current
@@ -637,7 +671,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         editor.scrollTop += paraRect.bottom - visibleBottom
       }
     })
-  }, [currentStyle, updateStyleIndicator])
+  }, [updateStyleIndicator])
 
   // Auto-capitalize the first letter of each line/paragraph as it's typed.
   // (iOS contenteditable autocapitalize doesn't reliably fire after a newline.)
@@ -677,7 +711,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const handleCopy = useCallback(() => {
     const content = contentRef.current
     if (!content) return
-    const paras = [...content.querySelectorAll('.note-para')]
+    // Only leaf paragraphs: if the content ever ends up with a paragraph nested inside
+    // another (e.g. from a contenteditable quirk), the outer wrapper's textContent would
+    // otherwise be emitted as one unformatted block in addition to the formatted leaves.
+    const paras = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para'))
     const htmlParts = []
     const textParts = []
     let i = 0

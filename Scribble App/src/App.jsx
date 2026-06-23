@@ -11,13 +11,137 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
 import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
 
+// Pull-to-refresh: pull down at the top of the active page to re-fetch data.
+// Touch-only; drives a spinner via direct DOM for smoothness.
+function usePullToRefresh(onRefresh) {
+  const spinnerRef = useRef(null)
+  const onRefreshRef = useRef(onRefresh)
+  onRefreshRef.current = onRefresh
+
+  useEffect(() => {
+    const app = document.getElementById('app')
+    if (!app) return
+    const THRESHOLD = 64, MAX = 96
+    const s = { active: false, startY: 0, page: null, dist: 0, refreshing: false }
+
+    const setSpinner = (dist) => {
+      const el = spinnerRef.current
+      if (!el) return
+      const t = Math.min(dist, MAX)
+      el.style.opacity = String(Math.min(1, dist / THRESHOLD))
+      el.style.transform = `translateX(-50%) translateY(${Math.min(t, 56) - 40}px) rotate(${dist * 2.5}deg)`
+    }
+    const reset = () => {
+      s.active = false; s.dist = 0
+      const el = spinnerRef.current
+      if (!el) return
+      el.style.transition = 'transform 250ms ease, opacity 250ms ease'
+      el.style.transform = 'translateX(-50%) translateY(-40px)'
+      el.style.opacity = '0'
+      el.classList.remove('spinning')
+      setTimeout(() => { if (el) el.style.transition = '' }, 250)
+    }
+    const onStart = (e) => {
+      if (s.refreshing) return
+      if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
+      const page = document.querySelector('#app .page:not(.page-exiting)')
+      if (!page || page.scrollTop > 0) return
+      s.page = page; s.startY = e.touches[0].clientY; s.active = true; s.dist = 0
+      const el = spinnerRef.current; if (el) el.style.transition = ''
+    }
+    const onMove = (e) => {
+      if (!s.active || s.refreshing) return
+      if (!s.page || s.page.scrollTop > 0) { s.active = false; setSpinner(0); return }
+      const dy = e.touches[0].clientY - s.startY
+      if (dy <= 0) { s.dist = 0; setSpinner(0); return }
+      s.dist = dy * 0.5
+      e.preventDefault()
+      setSpinner(s.dist)
+    }
+    const startRefresh = () => {
+      s.refreshing = true; s.active = false; wheelDist = 0
+      const el = spinnerRef.current
+      if (el) {
+        el.style.transition = 'transform 200ms ease, opacity 200ms ease'
+        el.style.transform = 'translateX(-50%) translateY(16px)'
+        el.style.opacity = '1'
+        el.classList.add('spinning')
+        setTimeout(() => { if (el) el.style.transition = '' }, 200)
+      }
+      const done = () => setTimeout(() => { s.refreshing = false; reset() }, 500)
+      Promise.resolve(onRefreshRef.current && onRefreshRef.current()).then(done, done)
+    }
+    const onEnd = () => {
+      if (!s.active || s.refreshing) return
+      if (s.dist >= THRESHOLD) startRefresh()
+      else reset()
+    }
+
+    // Desktop trackpad: a pull only counts after the page has come to REST at the top
+    // (no wheel activity for 300ms while at scrollTop 0), then a deliberate scroll-up.
+    // Momentum from scrolling up into the top keeps resetting the idle timer, so it
+    // never arms — preventing accidental refreshes just from reaching the top.
+    let wheelDist = 0, wheelTimer = null, idleTimer = null, topIdle = true
+    const scheduleIdle = () => {
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        if (s.refreshing) return
+        const p = document.querySelector('#app .page:not(.page-exiting)')
+        if (p && p.scrollTop <= 0) topIdle = true
+      }, 300)
+    }
+    const onWheel = (e) => {
+      if (s.refreshing) return
+      if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
+      const page = document.querySelector('#app .page:not(.page-exiting)')
+      if (!page) return
+      const atTop = page.scrollTop <= 0
+      if (!atTop) topIdle = false
+      const pulling = atTop && topIdle && e.deltaY < 0 && Math.abs(e.deltaY) >= Math.abs(e.deltaX)
+      if (!pulling) {
+        if (wheelDist > 0) { wheelDist = 0; setSpinner(0) }
+        scheduleIdle()
+        return
+      }
+      e.preventDefault()
+      wheelDist += (-e.deltaY) * 0.5
+      setSpinner(wheelDist)
+      clearTimeout(wheelTimer)
+      wheelTimer = setTimeout(() => {
+        if (wheelDist >= THRESHOLD) startRefresh()
+        else { wheelDist = 0; reset() }
+        topIdle = false   // require settling at the top again before the next pull
+        scheduleIdle()
+      }, 150)
+    }
+
+    app.addEventListener('touchstart', onStart, { passive: true })
+    app.addEventListener('touchmove', onMove, { passive: false })
+    app.addEventListener('touchend', onEnd)
+    app.addEventListener('touchcancel', onEnd)
+    app.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      app.removeEventListener('touchstart', onStart)
+      app.removeEventListener('touchmove', onMove)
+      app.removeEventListener('touchend', onEnd)
+      app.removeEventListener('touchcancel', onEnd)
+      app.removeEventListener('wheel', onWheel)
+      clearTimeout(wheelTimer)
+      clearTimeout(idleTimer)
+    }
+  }, [])
+
+  return spinnerRef
+}
+
 function AppInner() {
   const {
     categories, activeTodos, activeNotes,
     addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
     addProjectTodo, addProjectNote, addProjectLink,
-    setOpenDetail, setAutoEditNoteId,
+    setOpenDetail, setAutoEditNoteId, refresh,
   } = useAppContext()
+  const pullSpinnerRef = usePullToRefresh(refresh)
   const categoryIds = categories.map(c => c.id)
   const [activeTab, setActiveTab] = useState('star')
   const [toolbarType, setToolbarType] = useState('list')
@@ -786,6 +910,14 @@ function AppInner() {
           '--accent-base-rgb': activeAccent.baseRgb,
         }}
       >
+
+        {/* Pull-to-refresh spinner (driven by usePullToRefresh) */}
+        <div className="pull-spinner" ref={pullSpinnerRef}>
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="var(--accent-dark)" strokeOpacity="0.25" strokeWidth="2"/>
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="var(--accent-dark)" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </div>
 
         {/* Persistent date header — shown in the left sidebar on desktop only */}
         <div className="sidebar-date">

@@ -473,6 +473,20 @@ export function AppProvider({ children }) {
     db(supabase.from('notes').update({ project_id: toProj, sort_order: sortOrder }).eq('id', noteId))
   }, [])
 
+  const moveProjectLink = useCallback((fromCat, fromProj, toCat, toProj, linkId) => {
+    if (fromCat === toCat && fromProj === toProj) return
+    const link = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)?.links.find(l => l.id === linkId)
+    if (!link) return
+    const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.links.length || 0
+    setCategories(prev => prev.map(cat => {
+      let projects = cat.projects
+      if (cat.id === fromCat) projects = projects.map(p => p.id === fromProj ? { ...p, links: p.links.filter(l => l.id !== linkId) } : p)
+      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, links: [...p.links, link] } : p)
+      return projects === cat.projects ? cat : { ...cat, projects }
+    }))
+    db(supabase.from('links').update({ project_id: toProj, sort_order: sortOrder }).eq('id', linkId))
+  }, [])
+
   const toggleProjectTodoActivated = useCallback((categoryId, projectId, todoId) => {
     const cat = categoriesRef.current.find(c => c.id === categoryId)
     const proj = cat?.projects.find(p => p.id === projectId)
@@ -853,6 +867,7 @@ export function AppProvider({ children }) {
       setOpenDetail,
       autoEditNoteId,
       setAutoEditNoteId,
+      refresh: loadAll,
       addCategory,
       renameCategory,
       deleteCategory,
@@ -883,6 +898,7 @@ export function AppProvider({ children }) {
       reorderTodoLinks,
       moveProjectTodo,
       moveProjectNote,
+      moveProjectLink,
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
       archiveProjectNote,

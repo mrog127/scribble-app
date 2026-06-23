@@ -7,6 +7,8 @@ import { getCategoryAccent } from '../theme.js'
 import { ActivateSwipeButton, CalendarIcon, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
+import OutlinkButton from './OutlinkButton.jsx'
+import LinkDetailPage from './LinkDetailPage.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -986,7 +988,9 @@ function CollapsedNotesCard({ category }) {
 
 // ============ Links ============
 function CollapsedLinksCard({ category }) {
-  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, unarchiveProjectLink, reorderCategoryLinks } = useAppContext()
+  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, unarchiveProjectLink, reorderCategoryLinks, openDetail, setOpenDetail } = useAppContext()
+  const openLinkId = openDetail?.type === 'link' ? openDetail.id : null
+  const setOpenLinkId = (id) => setOpenDetail(id == null ? null : { type: 'link', id })
   const categoryRef = useRef(category)
   categoryRef.current = category
   const cardRef = useRef(null)
@@ -1099,8 +1103,8 @@ function CollapsedLinksCard({ category }) {
     }, 180)
   }, [category.id, deleteProjectLink])
 
-  const onLinkPointerDown = useCallback((e, url) => {
-    if (e.target.closest('.swipe-action-btn')) return
+  const onLinkPointerDown = useCallback((e, id) => {
+    if (e.target.closest('.swipe-action-btn') || e.target.closest('.link-outlink-btn')) return
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
     if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
@@ -1116,15 +1120,23 @@ function CollapsedLinksCard({ category }) {
     const onUp = (e2) => {
       const s = linkSwipeState.current
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8) openUrl(url)
+      if (!s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8) setOpenLinkId(id)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
-  }, [])
+  }, [setOpenLinkId])
 
   const { onPointerDown } = useSwipe()
+
+  let openLink = null, openLinkProj = null
+  if (openLinkId != null) {
+    for (const p of category.projects) {
+      const l = p.links.find(x => x.id === openLinkId)
+      if (l) { openLink = l; openLinkProj = p; break }
+    }
+  }
 
   return (
     <div className="card card-intro" ref={cardRef}>
@@ -1148,7 +1160,7 @@ function CollapsedLinksCard({ category }) {
         {sortedLinks.map((l, i) => (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row archivable" data-swipe-id={l.id} data-left-max="148">
+            <div className={`swipe-row archivable${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id} data-left-max="148">
               {!l.archived && (
                 <ActivateSwipeButton
                   item={l} type="link"
@@ -1172,7 +1184,7 @@ function CollapsedLinksCard({ category }) {
               <div className="swipe-content">
                 <div
                   className={`note-row link-row${l.archived ? ' archived' : ''}`}
-                  onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.url); onDragPointerDown(e, l.id) }}
+                  onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.id); onDragPointerDown(e, l.id) }}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -1190,12 +1202,23 @@ function CollapsedLinksCard({ category }) {
                   {(l.scheduledDate && !l.activated) && (
                     <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
                   )}
+                  <OutlinkButton onOpen={() => openUrl(l.url)} />
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {openLink && openLinkProj && createPortal(
+        <LinkDetailPage
+          link={openLink}
+          categoryId={category.id}
+          projectId={openLinkProj.id}
+          onClose={() => setOpenLinkId(null)}
+        />,
+        document.getElementById('app')
+      )}
 
       {calFor && (
         <CalendarPopup

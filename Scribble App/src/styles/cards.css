@@ -456,6 +456,67 @@
   animation-delay: -1.25s, -1.25s;
 }
 
+/* Outlink button at the right end of a link row (opens the URL) */
+.link-outlink-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-left: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (hover: hover) {
+  .link-outlink-btn:hover { background: rgba(0, 0, 0, 0.04); }
+}
+
+/* Floating link-preview card on the link detail page */
+.link-preview-card {
+  margin: 28px 0 0;
+  border: 1px solid #C2C1BF;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+  cursor: pointer;
+  background: hsl(from #F7F6F3 h s calc(l * 1.01));
+}
+.link-preview-image {
+  height: 192px;
+  background: var(--accent-light);
+  overflow: hidden;
+}
+.link-preview-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.link-preview-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.5; }
+.link-preview-divider { height: 1px; background: #DBDAD8; }
+.link-preview-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px;
+  background: hsl(from #F7F6F3 h s calc(l * 1.01));
+}
+.link-preview-title {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+.link-preview-url {
+  margin-top: 2px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .swipe-action-label { display: none; }
 
 .swipe-row.swiped-left .swipe-content { transform: translateX(-84px); pointer-events: none; }

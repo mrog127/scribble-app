@@ -634,7 +634,7 @@ html, body, #root {
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: var(--accent-base);
+  color: var(--accent-dark);
 }
 
 .toolbar-divider { width: 1px; height: 24px; background: #DBDAD8; flex-shrink: 0; }
@@ -766,12 +766,68 @@ html, body, #root {
   display: flex;
   flex-direction: column;
 }
+/* Category tab bar at the bottom of the Save to / Move to cards. Mirrors the
+   mobile footer text-tabs (no desktop vertical override). */
+.card-tabs {
+  flex-shrink: 0;
+  border-top: 1px solid #DBDAD8;
+  background: #F7F6F3;
+  padding: 6px 8px 8px;
+}
+.card-tabs-scroll {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 16px), transparent 100%);
+}
+.card-tabs-scroll::-webkit-scrollbar { display: none; }
+.card-tab {
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.card-tab.selected { color: var(--accent-dark); font-weight: 600; }
+.card-tab-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 38px;
+  background: rgba(var(--accent-base-rgb), 0.12);
+  border-radius: 4px;
+  pointer-events: none;
+  transition: left 100ms ease, width 100ms ease;
+  z-index: 0;
+}
+
 .save-to-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
   padding-bottom: 8px;
+}
+/* Top fade only once the list has scrolled behind the header */
+.save-to-scroll.scrolled {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 12px, black 100%);
   mask-image: linear-gradient(to bottom, transparent 0px, black 12px, black 100%);
 }
@@ -1251,13 +1307,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
 
   /* ---- "Save to..." picker opens below the textbox + send settings ----
-     Footer top 199 + input 48 + 12 add-row margin + 4 tab-area margin + 52 toolbar
-     = 315 (send-settings bottom); menu top = +8 = 323, bottom = 24 above window.
-     In link mode the textbox grows by 49px (second row), so the menu drops to 372. */
+     Sits just under the send-settings toolbar (16px less gap than before).
+     In link mode the textbox grows by 49px (second row), so the menu drops. */
   .save-to-panel.visible {
     position: fixed;
     left: 0;
-    top: 323px;
+    top: 307px;
     bottom: 24px;
     width: 340px;   /* same box as the footer; with 28px side padding the card
                        matches the textbox + send button (28 → 312) */
@@ -1267,7 +1322,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     transition: top 200ms ease;
   }
   /* Link mode adds a second input row — push the menu down so it stays below it */
-  #app:has(.add-link-url-wrap.open) .save-to-panel.visible { top: 372px; }
+  #app:has(.add-link-url-wrap.open) .save-to-panel.visible { top: 356px; }
   /* Keep the cards in place but dim them to 20% while the picker is open */
   .phone.save-panel-open .page {
     flex: 1;

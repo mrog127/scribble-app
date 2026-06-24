@@ -7,6 +7,8 @@ import AuthScreen from './components/AuthScreen.jsx'
 import MenuPage from './components/MenuPage.jsx'
 import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
+import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
+import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
@@ -153,6 +155,10 @@ function AppInner() {
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
+  const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
+  const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
+  const categoryDefaultRef = useRef(null)                    // scroll-based default project on a category page
+  const prevInputFocused = useRef(false)
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
 
   // Per-category expand/collapse state (persisted). Lifted here so the shared
@@ -174,8 +180,9 @@ function AppInner() {
   }, [])
 
   const activeCategoryCollapsed = categoryIds.includes(activeTab) && getCollapsed(activeTab)
-  // The footer shows its text box on the homescreen and on collapsed category pages.
-  const footerInputMode = activeTab === 'star' || activeCategoryCollapsed
+  // The footer text box is available on the homescreen and on every category page
+  // (items are always added from the footer); only the Menu page has none.
+  const footerInputMode = activeTab === 'star' || categoryIds.includes(activeTab)
 
   // Reset to star tab if active category tab is deleted
   useEffect(() => {
@@ -184,26 +191,88 @@ function AppInner() {
     }
   }, [categories]) // eslint-disable-line
 
-  // Auto-select an available project for the "Save to..." panel.
-  // On a collapsed category page the selection is constrained to that category.
-  useEffect(() => {
-    if (activeCategoryCollapsed) {
+  // Which project card is the scroll-based default on an expanded category page:
+  // the top card when scrolled to top, the bottom card when scrolled to bottom,
+  // otherwise the card most centered in the view. Read from the live DOM, so it
+  // must be called on focus, before the Save to panel collapses the page. Returns
+  // a project id (string) or null (e.g. a collapsed page has no project cards).
+  const measureCategoryDefault = (categoryId) => {
+    const page = document.getElementById(`page-${categoryId}`)
+    if (!page) return null
+    const cards = [...page.querySelectorAll('.project-card:not(.archived)')].filter(c => c.getAttribute('data-project-id'))
+    if (!cards.length) return null
+    const atTop = page.scrollTop <= 4
+    const atBottom = page.scrollTop + page.clientHeight >= page.scrollHeight - 4
+    let chosen
+    if (atTop) chosen = cards[0]
+    else if (atBottom) chosen = cards[cards.length - 1]
+    else {
+      const pr = page.getBoundingClientRect()
+      const center = pr.top + pr.height / 2
+      let best = cards[0], bestDist = Infinity
+      for (const c of cards) {
+        const r = c.getBoundingClientRect()
+        const d = Math.abs((r.top + r.height / 2) - center)
+        if (d < bestDist) { bestDist = d; best = c }
+      }
+      chosen = best
+    }
+    return chosen.getAttribute('data-project-id')
+  }
+
+  // The default destination for the "Save to..." card, by context:
+  //  - any category page → that category's tab; the project follows the scroll
+  //    position captured into categoryDefaultRef (collapsed pages fall back to the
+  //    top project, since they show no project cards)
+  //  - homescreen → the project last added to this session, else the first project
+  //    of the first tab. Archived projects are never offered.
+  const computeSaveDefault = useCallback(() => {
+    const firstActive = (cat) => cat?.projects.find(p => !p.archived) || null
+    if (categoryIds.includes(activeTab)) {
       const cat = categories.find(c => c.id === activeTab)
-      if (!cat || cat.projects.length === 0) return
-      const valid = saveToProject?.categoryId === activeTab && cat.projects.some(p => p.id === saveToProject.projectId)
-      if (!valid) setSaveToProject({ categoryId: cat.id, projectId: cat.projects[0].id })
-      return
+      const measured = categoryDefaultRef.current
+      let proj = null
+      if (measured && measured.categoryId === activeTab && measured.projectId != null) {
+        proj = cat?.projects.find(p => String(p.id) === String(measured.projectId) && !p.archived) || null
+      }
+      if (!proj) proj = firstActive(cat)
+      return { tab: activeTab, target: proj ? { categoryId: activeTab, projectId: proj.id } : null }
     }
-    // Validate current selection
-    if (saveToProject) {
-      const cat = categories.find(c => c.id === saveToProject.categoryId)
-      const proj = cat?.projects.find(p => p.id === saveToProject.projectId)
-      if (proj) return // still valid
+    const last = lastAddedRef.current
+    if (last) {
+      const cat = categories.find(c => c.id === last.categoryId)
+      const proj = cat?.projects.find(p => p.id === last.projectId && !p.archived)
+      if (proj) return { tab: last.categoryId, target: last }
     }
-    const firstCat = categories.find(c => c.projects.length > 0)
-    if (firstCat) setSaveToProject({ categoryId: firstCat.id, projectId: firstCat.projects[0].id })
-    else setSaveToProject(null)
-  }, [categories, activeTab, activeCategoryCollapsed]) // eslint-disable-line react-hooks/exhaustive-deps
+    const firstCat = categories.find(c => c.projects.some(p => !p.archived))
+    const firstProj = firstActive(firstCat)
+    return {
+      tab: firstCat?.id ?? categories[0]?.id ?? null,
+      target: firstCat && firstProj ? { categoryId: firstCat.id, projectId: firstProj.id } : null,
+    }
+  }, [categories, activeTab, categoryIds])
+
+  // Apply the default each time the Save to card opens (input focused).
+  useEffect(() => {
+    if (inputFocused && footerInputMode && !prevInputFocused.current) {
+      const { tab, target } = computeSaveDefault()
+      setSaveToTab(tab)
+      setSaveToProject(target)
+    }
+    prevInputFocused.current = inputFocused
+  }, [inputFocused, footerInputMode, computeSaveDefault])
+
+  // Keep the current selection valid as data changes (e.g. a project is deleted or
+  // archived); fall back to the default when it goes stale.
+  useEffect(() => {
+    const valid = saveToProject &&
+      categories.find(c => c.id === saveToProject.categoryId)?.projects.some(p => p.id === saveToProject.projectId && !p.archived)
+    if (!valid) {
+      const { tab, target } = computeSaveDefault()
+      setSaveToTab(tab)
+      setSaveToProject(target)
+    }
+  }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resize the phone to sit exactly above the keyboard on mobile.
   // vv.height = visible area above keyboard; vv.offsetTop = how far iOS scrolled
@@ -925,6 +994,7 @@ function AppInner() {
       if (!url) return
       if (footerInputMode && saveToProject) {
         addProjectLink(saveToProject.categoryId, saveToProject.projectId, inputValue.trim(), url, addAsActiveFlag)
+        lastAddedRef.current = { categoryId: saveToProject.categoryId, projectId: saveToProject.projectId }
       }
       setInputValue('')
       setLinkUrlValue('')
@@ -944,6 +1014,7 @@ function AppInner() {
     // Homescreen or collapsed category: route into the selected project
     if (footerInputMode && saveToProject) {
       const { categoryId, projectId } = saveToProject
+      lastAddedRef.current = { categoryId, projectId }
 
       if (addAsActiveFlag && (toolbarType === 'list' || toolbarType === 'note')) {
         // Capture input position BEFORE blur for the fly animation
@@ -1243,32 +1314,44 @@ function AppInner() {
                 <p className="save-to-title">Save to...</p>
                 <button className="save-to-cancel" onMouseDown={e => { e.preventDefault(); inputRef.current?.blur() }}>Cancel</button>
               </div>
-              <div className="save-to-scroll">
-                {(activeTab === 'star' ? categories : categories.filter(c => c.id === activeTab)).every(c => c.projects.length === 0) && (
-                  <p className="save-to-empty">No projects yet</p>
-                )}
-                {(activeTab === 'star' ? categories : categories.filter(c => c.id === activeTab)).filter(c => c.projects.length > 0).map(cat => {
-                  const catIdx = categories.findIndex(c2 => c2.id === cat.id)
-                  const accent = getCategoryAccent(catIdx)
-                  return (
-                  <div key={cat.id} style={{ '--cb-base': accent.base, '--cb-dark': accent.dark, '--cb-light': accent.light, '--cb-base-rgb': accent.baseRgb }}>
-                    <div className="save-to-category">{cat.name}</div>
-                    {cat.projects.map((proj, i) => (
-                      <div key={proj.id}>
-                        {i > 0 && <div className="save-to-divider"/>}
-                        <button
-                          className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
-                          onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: cat.id, projectId: proj.id }) }}
-                        >
-                          <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
-                          <span>{proj.name}</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  )
-                })}
+              <div
+                className="save-to-scroll"
+                onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollTop > 4)}
+                style={(() => {
+                  const idx = categories.findIndex(c => c.id === saveToTab)
+                  if (idx < 0) return undefined
+                  const a = getCategoryAccent(idx)
+                  return { '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb }
+                })()}
+              >
+                {(() => {
+                  const cat = categories.find(c => c.id === saveToTab)
+                  const projs = (cat?.projects || []).filter(p => !p.archived)
+                  if (projs.length === 0) return <p className="save-to-empty">No projects yet</p>
+                  return projs.map((proj, i) => (
+                    <div key={proj.id}>
+                      {i > 0 && <div className="save-to-divider"/>}
+                      <button
+                        className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
+                        onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: saveToTab, projectId: proj.id }) }}
+                      >
+                        <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
+                        <span>{proj.name}</span>
+                      </button>
+                    </div>
+                  ))
+                })()}
               </div>
+              <CardTabs
+                categories={categories}
+                selected={saveToTab}
+                onSelect={(catId) => {
+                  setSaveToTab(catId)
+                  const cat = categories.find(c => c.id === catId)
+                  const proj = cat?.projects.find(p => !p.archived)
+                  setSaveToProject(proj ? { categoryId: catId, projectId: proj.id } : null)
+                }}
+              />
             </div>
           </div>
         )}
@@ -1292,7 +1375,13 @@ function AppInner() {
                 placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : 'Scribble something down...'}
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
-                onFocus={() => setInputFocused(true)}
+                onFocus={() => {
+                  // Capture the scroll-based default project before the page collapses.
+                  categoryDefaultRef.current = categoryIds.includes(activeTab)
+                    ? { categoryId: activeTab, projectId: measureCategoryDefault(activeTab) }
+                    : null
+                  setInputFocused(true)
+                }}
                 onBlur={handleAddInputBlur}
                 onKeyDown={e => { if (toolbarType === 'link') { if (e.key === 'Enter') { e.preventDefault(); linkUrlRef.current?.focus() } } else handleKeyDown(e) }}
                 autoComplete="off"
@@ -1341,7 +1430,7 @@ function AppInner() {
                   className={`toolbar-source-btn${addAsActiveFlag ? '' : ' inactive'}`}
                   onMouseDown={e => { e.preventDefault(); setAddAsActiveFlag(v => !v) }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-dark)' : '#242424' }}>
+                  <svg width="16" height="16" viewBox="0 0 20 20" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-base)' : '#242424' }}>
                     <polyline points="3,6.8 10,2.6 17,6.8" vectorEffect="non-scaling-stroke"/>
                     <line x1="5" y1="7.6" x2="5" y2="14" vectorEffect="non-scaling-stroke"/>
                     <line x1="8.33" y1="7.6" x2="8.33" y2="14" vectorEffect="non-scaling-stroke"/>
@@ -1401,6 +1490,7 @@ function AppInner() {
         <div id="animation-portal"></div>
         <ArchiveAttachmentsModal />
         <DeleteConfirmModal />
+        <MoveAttachmentsModal />
       </div>
     </div>
   )

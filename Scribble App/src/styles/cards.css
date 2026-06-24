@@ -1459,7 +1459,9 @@
 .todo-composer .project-input-wrap { margin: 0; }
 
 /* ---- Project Card ---- */
-.project-card { padding-bottom: 0; }
+/* Same bottom padding as a content-type card (the in-card composer was removed;
+   set this back to 0 if SHOW_PROJECT_INPUT is re-enabled in ProjectCard.jsx). */
+.project-card { padding-bottom: 4px; }
 
 .project-header-actions {
   display: flex;

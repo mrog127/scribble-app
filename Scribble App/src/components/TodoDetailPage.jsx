@@ -435,6 +435,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     addTodoNote, addTodoLink,
     reorderTodoNotes, reorderTodoLinks,
     moveProjectTodo,
+    promptMoveAttachments,
     updateProjectNote,
     setAutoEditNoteId,
   } = useAppContext()
@@ -473,9 +474,19 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   }, [])
 
   const saveMove = useCallback((sel) => {
-    moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id)
     setMoveOpen(false)
-  }, [categoryId, projectId, todo.id, moveProjectTodo])
+    if (sel.categoryId === categoryId && sel.projectId === projectId) return
+    const noteCount = (todo.linkedNoteIds || []).length
+    const linkCount = (todo.linkedLinkIds || []).length
+    if (noteCount + linkCount > 0) {
+      const destName = categories.find(c => c.id === sel.categoryId)?.projects.find(p => p.id === sel.projectId)?.name || 'the new canvas'
+      promptMoveAttachments({ noteCount, linkCount, destName }, (moveAttach) => {
+        moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id, { moveAttachments: moveAttach })
+      })
+    } else {
+      moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id)
+    }
+  }, [categoryId, projectId, todo.id, todo.linkedNoteIds, todo.linkedLinkIds, categories, moveProjectTodo, promptMoveAttachments])
 
   // Press down: shrink (subtly) and hold while pressed, drop the shadow
   const completeDown = useCallback(() => {

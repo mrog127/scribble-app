@@ -490,6 +490,12 @@ function NoteRowContent({ note }) {
 }
 
 // ---- Main component ----
+// Project cards no longer have their own item composer — items are added from the
+// footer (or the desktop left-panel) text box instead. Flip this to true to bring
+// the in-card text box back (and set .project-card padding-bottom back to 0 in
+// cards.css to make room for it again).
+const SHOW_PROJECT_INPUT = false
+
 export default function ProjectCard({ categoryId, project }) {
   const [activeTab, setActiveTab] = useState('list')
   const [inputValue, setInputValue] = useState('')
@@ -1372,7 +1378,7 @@ export default function ProjectCard({ categoryId, project }) {
 
   return (
     <>
-      <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef}>
+      <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef} data-project-id={project.id}>
         {/* Header */}
         <div className="card-header">
           {renaming ? (
@@ -1713,8 +1719,10 @@ export default function ProjectCard({ categoryId, project }) {
           )}
         </div>
 
-        {/* Input — hidden on archived (read-only) canvases */}
-        {!archived && (
+        {/* Input — removed; items are added from the footer text box. Set
+            SHOW_PROJECT_INPUT (top of file) to true to restore. Hidden on
+            archived (read-only) canvases regardless. */}
+        {SHOW_PROJECT_INPUT && !archived && (
         <div className={`project-input-wrap${inputFocused ? ' focused' : ''}${linkMode ? ' link-mode' : ''}`} ref={inputWrapRef}>
           <div className="project-input-row">
             <input

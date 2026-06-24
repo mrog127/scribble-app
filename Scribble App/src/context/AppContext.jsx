@@ -445,18 +445,46 @@ export function AppProvider({ children }) {
   }, [user, updateProject])
 
   // ---- Move a todo / note to a different project ----
-  const moveProjectTodo = useCallback((fromCat, fromProj, toCat, toProj, todoId) => {
+  // Move a list item to another project. opts.moveAttachments: when true, the
+  // item's attached notes/links travel with it (keeping them attached); when
+  // false, the attachments stay in the original project and are detached from the
+  // moved item, so it doesn't reference items that aren't in its new project.
+  const moveProjectTodo = useCallback((fromCat, fromProj, toCat, toProj, todoId, opts = {}) => {
     if (fromCat === toCat && fromProj === toProj) return
-    const todo = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)?.todos.find(t => t.id === todoId)
+    const { moveAttachments = false } = opts
+    const src = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)
+    const todo = src?.todos.find(t => t.id === todoId)
     if (!todo) return
+    const noteIds = moveAttachments ? (todo.linkedNoteIds || []) : []
+    const linkIds = moveAttachments ? (todo.linkedLinkIds || []) : []
+    const movedNotes = noteIds.map(id => src.notes.find(n => String(n.id) === String(id))).filter(Boolean)
+    const movedLinks = linkIds.map(id => src.links.find(l => String(l.id) === String(id))).filter(Boolean)
+    const movedNoteIdSet = new Set(movedNotes.map(n => n.id))
+    const movedLinkIdSet = new Set(movedLinks.map(l => l.id))
+    const movedTodo = moveAttachments ? todo : { ...todo, linkedNoteIds: [], linkedLinkIds: [] }
     const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.todos.length || 0
     setCategories(prev => prev.map(cat => {
       let projects = cat.projects
-      if (cat.id === fromCat) projects = projects.map(p => p.id === fromProj ? { ...p, todos: p.todos.filter(t => t.id !== todoId) } : p)
-      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, todos: [...p.todos, todo] } : p)
+      if (cat.id === fromCat) projects = projects.map(p => p.id !== fromProj ? p : {
+        ...p,
+        todos: p.todos.filter(t => t.id !== todoId),
+        notes: movedNoteIdSet.size ? p.notes.filter(n => !movedNoteIdSet.has(n.id)) : p.notes,
+        links: movedLinkIdSet.size ? p.links.filter(l => !movedLinkIdSet.has(l.id)) : p.links,
+      })
+      if (cat.id === toCat) projects = projects.map(p => p.id !== toProj ? p : {
+        ...p,
+        todos: [...p.todos, movedTodo],
+        notes: movedNotes.length ? [...p.notes, ...movedNotes] : p.notes,
+        links: movedLinks.length ? [...p.links, ...movedLinks] : p.links,
+      })
       return projects === cat.projects ? cat : { ...cat, projects }
     }))
-    db(supabase.from('todos').update({ project_id: toProj, sort_order: sortOrder }).eq('id', todoId))
+    db(supabase.from('todos').update(moveAttachments
+      ? { project_id: toProj, sort_order: sortOrder }
+      : { project_id: toProj, sort_order: sortOrder, linked_note_ids: [], linked_link_ids: [] }
+    ).eq('id', todoId))
+    movedNotes.forEach(n => db(supabase.from('notes').update({ project_id: toProj }).eq('id', n.id)))
+    movedLinks.forEach(l => db(supabase.from('links').update({ project_id: toProj }).eq('id', l.id)))
   }, [])
 
   const moveProjectNote = useCallback((fromCat, fromProj, toCat, toProj, noteId) => {
@@ -587,6 +615,21 @@ export function AppProvider({ children }) {
     if (p && confirm && typeof p.onConfirm === 'function') {
       requestAnimationFrame(() => p.onConfirm())
     }
+  }, [])
+
+  // Modal prompt: when a list item with attachments moves to another project, ask
+  // whether the attachments should move along. The caller passes a resolver that
+  // receives true (move them) or false (leave them in the original project).
+  const [moveAttachPrompt, setMoveAttachPrompt] = useState(null)
+  const moveAttachPromptRef = useRef(null)
+  useEffect(() => { moveAttachPromptRef.current = moveAttachPrompt }, [moveAttachPrompt])
+  const promptMoveAttachments = useCallback((info, onResolve) => {
+    setMoveAttachPrompt({ ...info, onResolve })
+  }, [])
+  const resolveMoveAttachPrompt = useCallback((confirm) => {
+    const p = moveAttachPromptRef.current
+    setMoveAttachPrompt(null)
+    if (p && typeof p.onResolve === 'function') p.onResolve(confirm)
   }, [])
 
   const updateProjectLink = useCallback((categoryId, projectId, linkId, title, url) => {
@@ -930,6 +973,9 @@ export function AppProvider({ children }) {
       deletePrompt,
       promptDelete,
       resolveDeletePrompt,
+      moveAttachPrompt,
+      promptMoveAttachments,
+      resolveMoveAttachPrompt,
       toggleProjectLinkActivated,
       updateProjectLink,
       setProjectTodoScheduled,

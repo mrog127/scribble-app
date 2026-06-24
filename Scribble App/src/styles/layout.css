@@ -175,7 +175,10 @@ html, body, #root {
   transform: scale(0.9);
   transform-origin: left center;
   pointer-events: none;
+  transition: color 300ms ease;
 }
+/* Smoothly fade the paintbrush to its new colour when the dominant list changes */
+.active-date-decoration path { transition: fill 300ms ease; }
 
 .underline-img {
   display: block;

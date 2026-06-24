@@ -405,7 +405,7 @@ function distribute(category, newOrder, type, reorderFn) {
 
 // ============ Lists (todos) ============
 function CollapsedTodosCard({ category }) {
-  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderCategoryTodos, setProjectTodoScheduled, promptArchiveAttachments } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderCategoryTodos, setProjectTodoScheduled, promptArchiveAttachments, promptDelete } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const [calFor, setCalFor] = useState(null)
@@ -571,16 +571,18 @@ function CollapsedTodosCard({ category }) {
   }, [category.id, toggleProjectTodoActivated])
 
   const handleDelete = useCallback((id, projectId, row) => {
-    const wrapper = row?.parentElement
-    if (!wrapper) { deleteProjectTodo(category.id, projectId, id); return }
-    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
-      setTimeout(() => deleteProjectTodo(category.id, projectId, id), 250)
-    }, 180)
-  }, [category.id, deleteProjectTodo])
+    promptDelete(() => {
+      const wrapper = row?.parentElement
+      if (!wrapper) { deleteProjectTodo(category.id, projectId, id); return }
+      wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => deleteProjectTodo(category.id, projectId, id), 250)
+      }, 180)
+    })
+  }, [category.id, deleteProjectTodo, promptDelete])
 
   const onTodoTap = useCallback((e, id) => {
     if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return

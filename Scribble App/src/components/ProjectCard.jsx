@@ -1009,9 +1009,8 @@ export default function ProjectCard({ categoryId, project }) {
         else if (type === 'link') deleteProjectLink(categoryId, project.id, id)
       }
     }
-    // Notes and links confirm first; todos delete immediately.
-    if (type === 'note' || type === 'link') promptDelete(run)
-    else run()
+    // Confirm before deleting any list item (todo), note or link.
+    promptDelete(run)
   }, [categoryId, project.id, deleteProjectTodo, deleteProjectNote, deleteProjectLink, promptDelete])
 
   const handleActivate = useCallback((type, id, row) => {

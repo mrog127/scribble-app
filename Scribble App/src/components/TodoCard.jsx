@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
 import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
+import { useAppContext } from '../context/AppContext.jsx'
 
 function useSwipe(onDelete, onTagActive) {
   const swipeState = useRef({})
@@ -351,33 +352,36 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const containerRef = useRef(null)
+  const { promptDelete } = useAppContext()
   const handleDelete = useCallback((id) => {
-    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-    const wrapper = swipeRow?.parentElement
-    if (!wrapper) { onDelete(id); return }
-    // Flash red, then collapse
-    wrapper.animate(
-      [
-        { background: 'rgba(178,74,74,0)' },
-        { background: 'rgba(178,74,74,0.20)', offset: 0.4 },
-        { background: 'rgba(178,74,74,0)' },
-      ],
-      { duration: 280, fill: 'none' }
-    )
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'
-      wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => {
+    promptDelete(() => {
+      const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+      const wrapper = swipeRow?.parentElement
+      if (!wrapper) { onDelete(id); return }
+      // Flash red, then collapse
+      wrapper.animate(
+        [
+          { background: 'rgba(178,74,74,0)' },
+          { background: 'rgba(178,74,74,0.20)', offset: 0.4 },
+          { background: 'rgba(178,74,74,0)' },
+        ],
+        { duration: 280, fill: 'none' }
+      )
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'
+        wrapper.style.overflow = 'hidden'
         requestAnimationFrame(() => {
-          wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
-          wrapper.style.height = '0'
-          wrapper.style.opacity = '0'
+          requestAnimationFrame(() => {
+            wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
+            wrapper.style.height = '0'
+            wrapper.style.opacity = '0'
+          })
         })
-      })
-      setTimeout(() => onDelete(id), 250)
-    }, 180)
-  }, [onDelete])
+        setTimeout(() => onDelete(id), 250)
+      }, 180)
+    })
+  }, [onDelete, promptDelete])
   const { onPointerDown } = useSwipe(handleDelete, () => {})
   const checkTimers = useRef({})
   const checkPopping = useRef({})

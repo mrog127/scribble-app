@@ -300,7 +300,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
 // Activated todos — aggregated from all projects into one "Lists" card
 function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
-  const { reorderHomeTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail, promptArchiveAttachments } = useAppContext()
+  const { reorderHomeTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail, promptArchiveAttachments, promptDelete } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const [calFor, setCalFor] = useState(null)
@@ -335,17 +335,19 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
   const handleDelete = useCallback((id) => {
     const item = items.find(t => t.id === id)
     if (!item) return
-    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-    const wrapper = swipeRow?.parentElement
-    if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
-    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
-      setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
-    }, 180)
-  }, [onDelete, items])
+    promptDelete(() => {
+      const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+      const wrapper = swipeRow?.parentElement
+      if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
+      wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
+      }, 180)
+    })
+  }, [onDelete, items, promptDelete])
 
   const handleDeactivate = useCallback((id) => {
     const item = items.find(t => t.id === id)
@@ -1166,9 +1168,12 @@ export default function ActivePage({
     )
   ).sort(byHomeOrder)
 
-  // Decoration colour = base colour of the category contributing the most items to the Lists card
+  // Decoration colour = base colour of the category contributing the most
+  // unchecked items to the Lists card. Computed on every render, so it refreshes
+  // whenever the homepage reloads or an active item is checked off (a checked
+  // item drops out of the count and can hand dominance to another category).
   const listCatCounts = {}
-  ;[...allActivatedTodos, ...todos].forEach(t => {
+  ;[...allActivatedTodos.filter(t => !t.checked), ...todos].forEach(t => {
     if (t.categoryId) listCatCounts[t.categoryId] = (listCatCounts[t.categoryId] || 0) + 1
   })
   let domCatId = null, domCatMax = 0

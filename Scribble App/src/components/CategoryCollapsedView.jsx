@@ -741,7 +741,7 @@ function CollapsedTodosCard({ category }) {
 
 // ============ Notes ============
 function CollapsedNotesCard({ category }) {
-  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderCategoryNotes, setProjectNoteScheduled, archiveProjectNote, unarchiveProjectNote, openDetail, setOpenDetail } = useAppContext()
+  const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderCategoryNotes, setProjectNoteScheduled, archiveProjectNote, unarchiveProjectNote, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   // Open-note state is shared via AppContext so footer-added notes can auto-open here.
@@ -850,16 +850,18 @@ function CollapsedNotesCard({ category }) {
   }, [category.id, archiveProjectNote])
 
   const handleDelete = useCallback((id, projectId, row) => {
-    const wrapper = row?.parentElement
-    if (!wrapper) { deleteProjectNote(category.id, projectId, id); return }
-    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
-      setTimeout(() => deleteProjectNote(category.id, projectId, id), 250)
-    }, 180)
-  }, [category.id, deleteProjectNote])
+    promptDelete(() => {
+      const wrapper = row?.parentElement
+      if (!wrapper) { deleteProjectNote(category.id, projectId, id); return }
+      wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => deleteProjectNote(category.id, projectId, id), 250)
+      }, 180)
+    })
+  }, [category.id, deleteProjectNote, promptDelete])
 
   const noteTapState = useRef({})
   const onNoteTap = useCallback((e, id) => {
@@ -988,7 +990,7 @@ function CollapsedNotesCard({ category }) {
 
 // ============ Links ============
 function CollapsedLinksCard({ category }) {
-  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, unarchiveProjectLink, reorderCategoryLinks, openDetail, setOpenDetail } = useAppContext()
+  const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, unarchiveProjectLink, reorderCategoryLinks, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const openLinkId = openDetail?.type === 'link' ? openDetail.id : null
   const setOpenLinkId = (id) => setOpenDetail(id == null ? null : { type: 'link', id })
   const categoryRef = useRef(category)
@@ -1092,16 +1094,18 @@ function CollapsedLinksCard({ category }) {
   }, [category.id, archiveProjectLink])
 
   const handleDelete = useCallback((id, projectId, row) => {
-    const wrapper = row?.parentElement
-    if (!wrapper) { deleteProjectLink(category.id, projectId, id); return }
-    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
-      setTimeout(() => deleteProjectLink(category.id, projectId, id), 250)
-    }, 180)
-  }, [category.id, deleteProjectLink])
+    promptDelete(() => {
+      const wrapper = row?.parentElement
+      if (!wrapper) { deleteProjectLink(category.id, projectId, id); return }
+      wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => deleteProjectLink(category.id, projectId, id), 250)
+      }, 180)
+    })
+  }, [category.id, deleteProjectLink, promptDelete])
 
   const onLinkPointerDown = useCallback((e, id) => {
     if (e.target.closest('.swipe-action-btn') || e.target.closest('.link-outlink-btn')) return

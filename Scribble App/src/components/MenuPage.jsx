@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react
 import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
-import { getCategoryAccent } from '../theme.js'
+import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
 
 // Same FLIP drag-reorder animation as TodoCard/NoteCard, adapted for category rows.
 // Trigger: immediate pointerdown on the drag handle (no long-press needed).
@@ -225,7 +225,7 @@ function useCategoryDragReorder(containerRef, categories, onReorder) {
 }
 
 export default function MenuPage({ pageAnimClass = '', isExiting = false, onSelectTab }) {
-  const { categories, reorderCategories, renameCategory, deleteCategory, addCategory, toggleCategoryHomescreen } = useAppContext()
+  const { categories, reorderCategories, renameCategory, deleteCategory, addCategory, toggleCategoryHomescreen, promptDelete } = useAppContext()
   const { user, signOut } = useAuth()
 
   const containerRef = useRef(null)
@@ -286,7 +286,11 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
   }
 
   return (
-    <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-menu'}>
+    <div
+      className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`}
+      id={isExiting ? undefined : 'page-menu'}
+      style={{ '--accent-base': ACCENT_COLORS[0].base, '--accent-dark': ACCENT_COLORS[0].dark, '--accent-light': ACCENT_COLORS[0].light, '--accent-base-rgb': ACCENT_COLORS[0].baseRgb }}
+    >
       <div className="page-header">
         <p className="active-title">Menu</p>
       </div>
@@ -460,7 +464,21 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         Rename
                       </button>
                       <button
-                        onClick={() => { deleteCategory(cat.id); setOpenMenuId(null) }}
+                        onClick={() => {
+                          setOpenMenuId(null)
+                          promptDelete(() => {
+                            const row = document.querySelector(`#page-menu [data-cat-id="${cat.id}"]`)
+                            const wrapper = row?.parentElement
+                            if (!wrapper) { deleteCategory(cat.id); return }
+                            wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+                            setTimeout(() => {
+                              const height = wrapper.getBoundingClientRect().height
+                              wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+                              requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+                              setTimeout(() => deleteCategory(cat.id), 250)
+                            }, 180)
+                          })
+                        }}
                         style={{
                           display: 'block', width: '100%', padding: '12px 16px',
                           background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer',

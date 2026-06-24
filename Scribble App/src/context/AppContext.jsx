@@ -571,6 +571,24 @@ export function AppProvider({ children }) {
     setArchivePrompt(null)
   }, [archiveProjectNotes])
 
+  // Modal prompt: "Are you sure you want to delete?" for notes, links, project
+  // cards and categories. The caller passes a callback that does the actual
+  // (animated) delete; it runs only if the user confirms — after the modal has
+  // closed, so the page is back before the delete animation plays.
+  const [deletePrompt, setDeletePrompt] = useState(null)
+  const deletePromptRef = useRef(null)
+  useEffect(() => { deletePromptRef.current = deletePrompt }, [deletePrompt])
+  const promptDelete = useCallback((onConfirm) => {
+    setDeletePrompt({ onConfirm })
+  }, [])
+  const resolveDeletePrompt = useCallback((confirm) => {
+    const p = deletePromptRef.current
+    setDeletePrompt(null)
+    if (p && confirm && typeof p.onConfirm === 'function') {
+      requestAnimationFrame(() => p.onConfirm())
+    }
+  }, [])
+
   const updateProjectLink = useCallback((categoryId, projectId, linkId, title, url) => {
     const finalUrl = (url || '').trim()
     const finalTitle = (title && title.trim()) || finalUrl
@@ -909,6 +927,9 @@ export function AppProvider({ children }) {
       archivePrompt,
       promptArchiveAttachments,
       resolveArchivePrompt,
+      deletePrompt,
+      promptDelete,
+      resolveDeletePrompt,
       toggleProjectLinkActivated,
       updateProjectLink,
       setProjectTodoScheduled,

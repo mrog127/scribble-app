@@ -4,6 +4,7 @@ import ProjectCard from './ProjectCard.jsx'
 import CategoryCollapsedView from './CategoryCollapsedView.jsx'
 import { EyeIcon, EyeOffIcon, ArchiveMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
+import { getCategoryAccent } from '../theme.js'
 
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
 // outward to the corners (Collapsed → expand). The two glyphs crossfade.
@@ -406,6 +407,10 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   const menuRef = useRef(null)
 
   const category = categories.find(c => c.id === categoryId)
+  // This page's own accent — so the underline colour cross-dissolves with the
+  // header as pages fade in/out, instead of switching only at the global commit.
+  const catIdx = categories.findIndex(c => c.id === categoryId)
+  const pageAccent = catIdx >= 0 ? getCategoryAccent(catIdx) : null
 
   // Close the header menu on outside click
   useEffect(() => {
@@ -511,7 +516,12 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   const archivedCanvasCount = archivedProjects.length
 
   return (
-    <div className={`page active category-page${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : `page-${categoryId}`} onScroll={handleScroll}>
+    <div
+      className={`page active category-page${pageAnimClass ? ` ${pageAnimClass}` : ''}`}
+      id={isExiting ? undefined : `page-${categoryId}`}
+      onScroll={handleScroll}
+      style={pageAccent ? { '--accent-base': pageAccent.base, '--accent-dark': pageAccent.dark, '--accent-light': pageAccent.light, '--accent-base-rgb': pageAccent.baseRgb } : undefined}
+    >
       <div
         className="page-header"
         style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}
@@ -562,7 +572,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
             </div>
           </div>
         </div>
-        <UnderlineSvg className="underline-img" style={{ marginTop: '8px', marginBottom: '18px', color: 'var(--accent-base)' }} />
+        <UnderlineSvg className="underline-img" style={{ marginTop: '8px', marginBottom: '18px', color: pageAccent ? pageAccent.base : 'var(--accent-base)' }} />
       </div>
 
       <div className="cards-area" ref={cardsAreaRef}>

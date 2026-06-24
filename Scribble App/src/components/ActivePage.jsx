@@ -300,7 +300,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
 // Activated todos — aggregated from all projects into one "Lists" card
 function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
-  const { reorderHomeTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail } = useAppContext()
+  const { reorderHomeTodos, categories, setProjectTodoScheduled, openDetail, setOpenDetail, promptArchiveAttachments } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const [calFor, setCalFor] = useState(null)
@@ -458,8 +458,14 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     clearTimeout(checkTimers.current[id])
     const item = items.find(t => t.id === id)
     if (!item) return
+    const attachedNoteIds = item.linkedNoteIds || []
     const checkboxEl = e.currentTarget.querySelector('.checkbox')
-    if (!checkboxEl) { onToggle(item.categoryId, item.projectId, id); return }
+    if (!checkboxEl) {
+      const wasChecked = item.checked
+      onToggle(item.categoryId, item.projectId, id)
+      if (!wasChecked) promptArchiveAttachments(item.categoryId, item.projectId, attachedNoteIds)
+      return
+    }
     const isChecked = item.checked
     checkPopping.current[id] = true
     const popAnim = checkboxEl.animate(
@@ -478,6 +484,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
       setTimeout(() => {
         if (containerRef.current) toggleFlipRef.current = [...containerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
         onToggle(item.categoryId, item.projectId, id)
+        promptArchiveAttachments(item.categoryId, item.projectId, attachedNoteIds)
       }, 500)
     } else {
       if (containerRef.current) toggleFlipRef.current = [...containerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
@@ -637,7 +644,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
 
 // Activated notes — aggregated from all projects into one "Notes" card
 function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
-  const { reorderHomeNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail } = useAppContext()
+  const { reorderHomeNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {
     const item = items.find(t => t.id === id)
@@ -659,17 +666,19 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
   const handleDelete = useCallback((id) => {
     const item = items.find(n => n.id === id)
     if (!item) return
-    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-    const wrapper = swipeRow?.parentElement
-    if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
-    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
-      setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
-    }, 180)
-  }, [onDelete, items])
+    promptDelete(() => {
+      const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+      const wrapper = swipeRow?.parentElement
+      if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
+      wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
+      }, 180)
+    })
+  }, [onDelete, items, promptDelete])
 
   const handleDeactivate = useCallback((id) => {
     const item = items.find(n => n.id === id)
@@ -902,7 +911,7 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
 
 // Activated links — aggregated from all projects into one "Links" card
 function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
-  const { categories, setProjectLinkScheduled, reorderHomeLinks, openDetail, setOpenDetail } = useAppContext()
+  const { categories, setProjectLinkScheduled, reorderHomeLinks, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const categoriesRef = useRef(categories)
   categoriesRef.current = categories
   const openLinkId = openDetail?.type === 'link' ? openDetail.id : null
@@ -923,17 +932,19 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
   const handleDelete = useCallback((id) => {
     const item = items.find(l => l.id === id)
     if (!item) return
-    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-    const wrapper = swipeRow?.parentElement
-    if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
-    wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
-      setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
-    }, 180)
-  }, [onDelete, items])
+    promptDelete(() => {
+      const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+      const wrapper = swipeRow?.parentElement
+      if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
+      wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+        requestAnimationFrame(() => requestAnimationFrame(() => { wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'; wrapper.style.height = '0'; wrapper.style.opacity = '0' }))
+        setTimeout(() => onDelete(item.categoryId, item.projectId, id), 250)
+      }, 180)
+    })
+  }, [onDelete, items, promptDelete])
 
   const handleDeactivate = useCallback((id) => {
     const item = items.find(l => l.id === id)
@@ -1170,7 +1181,13 @@ export default function ActivePage({
   const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
 
   return (
-    <div className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={isExiting ? undefined : 'page-star'} ref={pageRef} onScroll={handleScroll}>
+    <div
+      className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`}
+      id={isExiting ? undefined : 'page-star'}
+      ref={pageRef}
+      onScroll={handleScroll}
+      style={{ '--accent-base': ACCENT_COLORS[0].base, '--accent-dark': ACCENT_COLORS[0].dark, '--accent-light': ACCENT_COLORS[0].light, '--accent-base-rgb': ACCENT_COLORS[0].baseRgb }}
+    >
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
         <p className="active-today-label">Today is</p>
         <p className="active-day-name">{dayName},</p>

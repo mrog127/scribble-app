@@ -80,6 +80,8 @@ html, body, #root {
   border-radius: 0;
   display: none;
   background: transparent;
+  /* Capture horizontal drags for tab-switching; vertical still scrolls natively */
+  touch-action: pan-y;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 48px, black 64px, black 100%);
   mask-image: linear-gradient(to bottom, transparent 0px, transparent 48px, black 64px, black 100%);
   scrollbar-width: none;
@@ -233,7 +235,7 @@ html, body, #root {
 }
 
 .cards-area {
-  padding: 0 12px 24px;
+  padding: 0 8px 24px;
   position: relative;
   z-index: 2;
 }
@@ -263,7 +265,7 @@ html, body, #root {
   background: #F7F6F3;
   border-top: 1px solid #C2C1BF;
   box-shadow: none;
-  padding: 10px 16px 28px;
+  padding: 10px 12px 28px;
   flex-shrink: 0;
   position: relative;
   z-index: 3;
@@ -278,6 +280,8 @@ html, body, #root {
   margin-bottom: 12px;
   position: relative;
   z-index: 2;
+  /* Let a horizontal drag on the text box switch tabs (vertical still scrolls) */
+  touch-action: pan-y;
 }
 
 .add-input {
@@ -959,6 +963,44 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 @keyframes cards-to-right {
   from { transform: translateX(0);    opacity: 1; }
   to   { transform: translateX(32px); opacity: 0; }
+}
+
+/* =============================================
+   Finger-tracked drag/swipe carousel
+   Both the current page (.tab-drag-from) and the page being dragged
+   toward (.tab-drag-to, an absolutely-overlaid .drag-incoming page) are
+   mounted at once. Their values are driven per-frame from JS via the
+   CSS custom properties below (set directly on each .page element, so
+   updates never trigger a React render):
+     --tab-x      horizontal offset of the content
+     --tab-op     content opacity (cross-fade)
+     --tab-hdr-op header opacity (fades in place; !important beats the
+                  React-inline opacity on the date/category headers)
+     --tab-trans  transition (none while tracking the finger; a timed
+                  ease for the release snap/commit)
+   The 16px gutter between the card columns is formed by the two pages'
+   8px .cards-area side padding (the page frames sit edge-to-edge).
+   ============================================= */
+.page.drag-incoming {
+  position: absolute;
+  inset: 0;
+  /* Below the footer (z-index 3) so the footer always stays on top during a swipe */
+  z-index: 2;
+  pointer-events: none;
+}
+
+.page.tab-drag-from > .page-header,
+.page.tab-drag-to > .page-header {
+  opacity: var(--tab-hdr-op, 1) !important;
+  transition: var(--tab-trans, none) !important;
+}
+
+.page.tab-drag-from > :not(.page-header),
+.page.tab-drag-to > :not(.page-header) {
+  transform: translateX(var(--tab-x, 0px));
+  opacity: var(--tab-op, 1);
+  transition: var(--tab-trans, none);
+  will-change: transform, opacity;
 }
 
 /* =============================================

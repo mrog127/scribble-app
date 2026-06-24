@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { ACCENT_COLORS, getCategoryAccent } from './theme.js'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
@@ -6,6 +6,7 @@ import TabBar from './components/TabBar.jsx'
 import AuthScreen from './components/AuthScreen.jsx'
 import MenuPage from './components/MenuPage.jsx'
 import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
+import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
@@ -261,6 +262,10 @@ function AppInner() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const transitionTimerRef = useRef(null)
 
+  // Finger-tracked drag/swipe carousel state
+  const [dragActive, setDragActive] = useState(false)       // current page wears .tab-drag-from
+  const [dragIncoming, setDragIncoming] = useState(null)    // { tab } mounted as the .drag-incoming overlay
+
   const handleTabChange = useCallback((newTab) => {
     if (newTab === activeTab) return
     setOpenDetail(null)   // close any open detail when navigating
@@ -286,58 +291,237 @@ function AppInner() {
   const activeTabRef = useRef(activeTab)
   const tabOrderRef = useRef(['star', ...categoryIds, 'menu'])
   const handleTabChangeRef = useRef(handleTabChange)
+  const dragRef = useRef(null)        // live gesture state (shared with the layout effect)
+  const dragFrameRef = useRef(null)   // applies a drag frame; set inside the gesture effect
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   useEffect(() => { tabOrderRef.current = ['star', ...categoryIds, 'menu'] }, [categoryIds])
   useEffect(() => { handleTabChangeRef.current = handleTabChange }, [handleTabChange])
 
-  // Swipe left/right on non-row areas to navigate tabs
+  // Drag/swipe between tabs — a finger-tracked carousel. The current page's
+  // content follows the finger and fades out while the adjacent page's content
+  // slides in and fades in (headers cross-fade in place). Release past half the
+  // screen width — or a fast flick — commits to the new page; otherwise it snaps
+  // back. Only the cards travel; per-frame updates are written as CSS custom
+  // properties straight onto the page elements (no React re-render per frame).
   useEffect(() => {
-    const phone = document.getElementById('app')
-    if (!phone) return
-    let startX = 0, startY = 0, tracking = false
+    if (typeof window !== 'undefined' && window.innerWidth >= 1000) return  // gesture is for the mobile layout
+    const app = document.getElementById('app')
+    if (!app) return
 
-    const onPointerDown = (e) => {
-      // Ignore swipes that start on a swipe row, input, or contenteditable
-      if (e.target.closest('.swipe-row')) return
-      if (e.target.closest('input, textarea, [contenteditable]')) return
-      // Ignore swipes inside a full-screen detail page (note or list item)
-      if (e.target.closest('.note-detail-page')) return
-      startX = e.clientX
-      startY = e.clientY
-      tracking = true
+    const ANIM_MS = 280
+    const GUTTER = 16    // constant gap between the two card columns, all through the drag
+    const EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
+    let animating = false   // snap/commit animation in flight
+
+    const fromPage = () => app.querySelector('.page.tab-drag-from') || app.querySelector('.page.active:not(.drag-incoming)')
+    const toPage = () => app.querySelector('.page.drag-incoming')
+
+    const setVars = (pg, v) => {
+      if (!pg) return
+      if (v.x !== undefined) pg.style.setProperty('--tab-x', `${v.x}px`)
+      if (v.op !== undefined) pg.style.setProperty('--tab-op', String(v.op))
+      if (v.hop !== undefined) pg.style.setProperty('--tab-hdr-op', String(v.hop))
+      if (v.trans !== undefined) pg.style.setProperty('--tab-trans', v.trans)
+    }
+    const clearFromVars = () => {
+      const fp = fromPage()
+      if (!fp) return
+      ;['--tab-x', '--tab-op', '--tab-hdr-op', '--tab-trans'].forEach(p => fp.style.removeProperty(p))
     }
 
-    const onPointerUp = (e) => {
-      if (!tracking) return
-      tracking = false
-      const dx = e.clientX - startX
-      const dy = e.clientY - startY
-      // Require 60px horizontal; only cancel if vertical clearly dominates
-      if (Math.abs(dx) < 60) return
-      if (Math.abs(dy) > Math.abs(dx) * 3) return
+    // One column step = the measured page width + the gutter. Measuring the actual
+    // page avoids window.innerWidth drift, and the explicit gutter keeps the columns
+    // exactly GUTTER apart for the whole drag (no overlap, no jitter).
+    const measureStep = (s) => {
+      const fp = fromPage()
+      const w = (fp && fp.getBoundingClientRect().width) || window.innerWidth
+      s.W = w
+      s.step = w + GUTTER
+    }
 
+    const frame = (s, dx) => {
+      if (!s || !s.engaged) return
+      if (s.edge) { setVars(fromPage(), { x: dx, op: 1, hop: 1 }); return }
+      const p = Math.min(1, Math.abs(dx) / s.W)
+      const base = s.dir === 'next' ? s.step : -s.step
+      setVars(fromPage(), { x: dx, op: 1 - p, hop: 1 - p })
+      setVars(toPage(), { x: dx + base, op: p, hop: p })
+    }
+    // Exposed so the layout effect can position the incoming page before it paints.
+    dragFrameRef.current = (dx) => frame(dragRef.current, dx)
+
+    const engage = (dx) => {
+      const s = dragRef.current
       const tabs = tabOrderRef.current
-      const currentIdx = tabs.indexOf(activeTabRef.current)
-      if (currentIdx === -1) return
-
-      if (dx < 0 && currentIdx < tabs.length - 1) {
-        handleTabChangeRef.current(tabs[currentIdx + 1])
-      } else if (dx > 0 && currentIdx > 0) {
-        handleTabChangeRef.current(tabs[currentIdx - 1])
+      const idx = tabs.indexOf(activeTabRef.current)
+      s.dir = dx < 0 ? 'next' : 'prev'
+      const toIdx = s.dir === 'next' ? idx + 1 : idx - 1
+      s.engaged = true
+      measureStep(s)
+      if (idx === -1 || toIdx < 0 || toIdx >= tabs.length) {
+        s.edge = true; s.toTab = null
+        setDragActive(true)
+      } else {
+        s.edge = false; s.toTab = tabs[toIdx]
+        setDragActive(true)
+        setDragIncoming({ tab: s.toTab })
       }
+      try { app.setPointerCapture(s.id) } catch { /* ignore */ }
     }
 
-    const onPointerCancel = () => { tracking = false }
+    const finalize = (commit) => {
+      const s = dragRef.current
+      if (!s) return
+      const willCommit = commit && !!s.toTab
+      const toTab = s.toTab, dir = s.dir, step = s.step
+      const trans = `transform ${ANIM_MS}ms ${EASE}, opacity ${ANIM_MS}ms ${EASE}`
+      animating = true
+      setVars(fromPage(), { trans })
+      setVars(toPage(), { trans })
+      if (willCommit) {
+        setVars(fromPage(), { x: dir === 'next' ? -step : step, op: 0, hop: 0 })
+        setVars(toPage(), { x: 0, op: 1, hop: 1 })
+      } else {
+        setVars(fromPage(), { x: 0, op: 1, hop: 1 })
+        setVars(toPage(), { x: dir === 'next' ? step : -step, op: 0, hop: 0 })
+      }
+      window.setTimeout(() => {
+        if (willCommit) {
+          // Old pages unmount (carrying their inline vars); the incoming page keeps
+          // its instance and simply becomes active — a seamless handoff.
+          setOpenDetail(null)
+          setHeaderOpacity(1)
+          setHeaderTranslate(0)
+          setActiveTab(toTab)
+        } else {
+          clearFromVars()   // overlay stays offscreen until it unmounts
+        }
+        setDragActive(false)
+        setDragIncoming(null)
+        animating = false
+      }, ANIM_MS + 20)
+      dragRef.current = null
+    }
 
-    phone.addEventListener('pointerdown', onPointerDown)
-    phone.addEventListener('pointerup', onPointerUp)
-    phone.addEventListener('pointercancel', onPointerCancel)
+    const onDown = (e) => {
+      if (animating || dragRef.current) return
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      const t = e.target
+      if (t.closest('.swipe-row')) return
+      if (t.closest('.note-detail-page')) return
+      // Allow drags that start anywhere on a page (incl. project-card text boxes)
+      // or on the footer's text-box row (the add-row), but not the tab bar.
+      if (!t.closest('.page') && !t.closest('.add-row')) return
+      dragRef.current = { startX: e.clientX, startY: e.clientY, id: e.pointerId, engaged: false, edge: false, dir: null, toTab: null, dx: 0, W: window.innerWidth, step: window.innerWidth + GUTTER, lastX: e.clientX, lastT: performance.now(), v: 0 }
+    }
+
+    const onMove = (e) => {
+      const s = dragRef.current
+      if (!s || e.pointerId !== s.id) return
+      const dx = e.clientX - s.startX
+      const dy = e.clientY - s.startY
+      if (!s.engaged) {
+        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { dragRef.current = null; return }  // vertical scroll wins
+        if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return
+        engage(dx)
+      }
+      const now = performance.now()
+      const dt = now - s.lastT
+      if (dt > 0) s.v = (e.clientX - s.lastX) / dt
+      s.lastX = e.clientX; s.lastT = now
+      let cdx = s.dir === 'next' ? Math.max(-s.step, Math.min(0, dx)) : Math.min(s.step, Math.max(0, dx))
+      if (s.edge) cdx = cdx / 3   // rubber-band when there's no neighbor
+      s.dx = cdx
+      frame(s, cdx)
+    }
+
+    const onUp = (e) => {
+      const s = dragRef.current
+      if (!s || (e.pointerId !== undefined && e.pointerId !== s.id)) return
+      if (!s.engaged) { dragRef.current = null; return }
+      if (s.edge) { finalize(false); return }
+      const passedHalf = Math.abs(s.dx) > s.W / 2
+      const flick = Math.abs(s.v) > 0.3 && Math.abs(s.dx) > 8 &&
+        ((s.dir === 'next' && s.v < 0) || (s.dir === 'prev' && s.v > 0))
+      finalize(passedHalf || flick)
+    }
+
+    const onCancel = (e) => {
+      const s = dragRef.current
+      if (!s || (e.pointerId !== undefined && e.pointerId !== s.id)) return
+      if (!s.engaged) { dragRef.current = null; return }
+      finalize(false)
+    }
+
+    // Two-finger trackpad swipe — same carousel, driven by horizontal wheel deltas.
+    // A trackpad gesture has no explicit end, so it commits/cancels on a short idle.
+    let wheelEndTimer = null
+    const wheelFinish = () => {
+      const s = dragRef.current
+      if (!s || !s.wheel) return
+      if (!s.engaged) { dragRef.current = null; return }
+      if (s.edge) { finalize(false); return }
+      const passedHalf = Math.abs(s.dx) > s.W / 2
+      const flick = Math.abs(s.v) > 0.3 && Math.abs(s.dx) > 8 &&
+        ((s.dir === 'next' && s.v < 0) || (s.dir === 'prev' && s.v > 0))
+      finalize(passedHalf || flick)
+    }
+    const onWheel = (e) => {
+      if (animating) return
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return   // vertical scroll — leave it
+      if (dragRef.current && !dragRef.current.wheel) return   // a finger drag owns the gesture
+      const t = e.target
+      if (t.closest('.swipe-row')) return                     // row swipe handler owns this
+      if (t.closest('.note-detail-page')) return
+      if (!t.closest('.page') && !t.closest('.add-row')) return
+      e.preventDefault()
+
+      let s = dragRef.current
+      if (!s) {
+        s = { wheel: true, engaged: false, edge: false, dir: null, toTab: null, acc: 0, dx: 0, W: window.innerWidth, step: window.innerWidth + GUTTER, v: 0, lastT: performance.now() }
+        dragRef.current = s
+      }
+      s.acc -= e.deltaX
+      const now = performance.now()
+      const dt = now - s.lastT
+      if (dt > 0) s.v = (-e.deltaX) / dt
+      s.lastT = now
+
+      if (!s.engaged) {
+        if (Math.abs(s.acc) < 8) { clearTimeout(wheelEndTimer); wheelEndTimer = setTimeout(wheelFinish, 140); return }
+        engage(s.acc)
+      }
+      let cdx = s.dir === 'next' ? Math.max(-s.step, Math.min(0, s.acc)) : Math.min(s.step, Math.max(0, s.acc))
+      if (s.edge) cdx = cdx / 3
+      s.dx = cdx
+      frame(s, cdx)
+      clearTimeout(wheelEndTimer)
+      wheelEndTimer = setTimeout(wheelFinish, 140)
+    }
+
+    app.addEventListener('pointerdown', onDown)
+    app.addEventListener('pointermove', onMove)
+    app.addEventListener('pointerup', onUp)
+    app.addEventListener('pointercancel', onCancel)
+    app.addEventListener('wheel', onWheel, { passive: false })
     return () => {
-      phone.removeEventListener('pointerdown', onPointerDown)
-      phone.removeEventListener('pointerup', onPointerUp)
-      phone.removeEventListener('pointercancel', onPointerCancel)
+      dragFrameRef.current = null
+      clearTimeout(wheelEndTimer)
+      app.removeEventListener('pointerdown', onDown)
+      app.removeEventListener('pointermove', onMove)
+      app.removeEventListener('pointerup', onUp)
+      app.removeEventListener('pointercancel', onCancel)
+      app.removeEventListener('wheel', onWheel)
     }
   }, []) // eslint-disable-line
+
+  // The incoming page mounts a frame or two after the drag engages. Position it
+  // (and re-assert the current frame) synchronously before paint, so it never
+  // flashes at translateX(0) over the current page mid-drag.
+  useLayoutEffect(() => {
+    const s = dragRef.current
+    if (dragIncoming && s && s.engaged && dragFrameRef.current) dragFrameRef.current(s.dx)
+  }, [dragIncoming])
 
   // Close swipe rows when clicking outside
   useEffect(() => {
@@ -898,6 +1082,74 @@ function AppInner() {
     [activeTab, categories, activeTodos, activeNotes, inputFocused, footerInputMode]
   )
 
+  // Render the page for a tab. `incoming` renders it as the absolutely-overlaid
+  // .drag-incoming page (and drops the duplicate id) during a drag.
+  // The key is the tab id regardless of role, so when a drag commits the incoming
+  // page keeps the SAME React instance as it becomes active — no remount, so its
+  // cards don't replay their intro animation and it never flashes back to the top.
+  const renderTabPage = (tabId, { incoming = false } = {}) => {
+    const dragClass = incoming
+      ? 'drag-incoming tab-drag-to'
+      : (dragActive ? 'tab-drag tab-drag-from' : '')
+    const animClass = !incoming && isTransitioning
+      ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}`
+      : ''
+    const pageAnimClass = [dragClass, animClass].filter(Boolean).join(' ')
+
+    if (tabId === 'star') {
+      return (
+        <ActivePage
+          key="star"
+          todos={activeTodos}
+          notes={activeNotes}
+          onToggleTodo={toggleTodo}
+          onDeleteTodo={deleteTodo}
+          onDeleteNote={deleteNote}
+          onUpdateNote={updateNote}
+          onReorderTodos={reorderTodos}
+          onReorderNotes={reorderNotes}
+          onScroll={handleScroll}
+          headerOpacity={headerOpacity}
+          headerTranslate={headerTranslate}
+          pageAnimClass={pageAnimClass}
+          isExiting={incoming}
+        />
+      )
+    }
+    if (categoryIds.includes(tabId)) {
+      return (
+        <CategoryPage
+          key={tabId}
+          categoryId={tabId}
+          collapsed={getCollapsed(tabId)}
+          onToggleCollapsed={() => toggleCollapsed(tabId)}
+          onScroll={handleScroll}
+          headerOpacity={headerOpacity}
+          headerTranslate={headerTranslate}
+          pageAnimClass={pageAnimClass}
+          isExiting={incoming}
+        />
+      )
+    }
+    if (tabId === 'menu') {
+      return (
+        <MenuPage
+          key="menu"
+          onSelectTab={handleTabChange}
+          pageAnimClass={pageAnimClass}
+          isExiting={incoming}
+        />
+      )
+    }
+    return (
+      <div key={tabId} className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`} id={incoming ? undefined : `page-${tabId}`}>
+        <div className="page-header">
+          <p className="active-title" style={{ textTransform: 'capitalize' }}>{tabId}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-wrap">
       <div
@@ -927,47 +1179,13 @@ function AppInner() {
           <p className="active-month-date">{monthDate}</p>
         </div>
 
-        {/* Entering pages — normal flex flow */}
-        {activeTab === 'star' && (
-          <ActivePage
-            todos={activeTodos}
-            notes={activeNotes}
-            onToggleTodo={toggleTodo}
-            onDeleteTodo={deleteTodo}
-            onDeleteNote={deleteNote}
-            onUpdateNote={updateNote}
-            onReorderTodos={reorderTodos}
-            onReorderNotes={reorderNotes}
-            onScroll={handleScroll}
-            headerOpacity={headerOpacity}
-            headerTranslate={headerTranslate}
-            pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
-          />
-        )}
-        {activeTab !== 'star' && activeTab !== 'menu' && categoryIds.includes(activeTab) && (
-          <CategoryPage
-            categoryId={activeTab}
-            collapsed={getCollapsed(activeTab)}
-            onToggleCollapsed={() => toggleCollapsed(activeTab)}
-            onScroll={handleScroll}
-            headerOpacity={headerOpacity}
-            headerTranslate={headerTranslate}
-            pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
-          />
-        )}
-        {activeTab === 'menu' && (
-          <MenuPage
-            onSelectTab={handleTabChange}
-            pageAnimClass={isTransitioning ? `page-entering page-enter-from-${transitionDir === 'left' ? 'right' : 'left'}` : ''}
-          />
-        )}
-        {activeTab !== 'star' && activeTab !== 'menu' && !categoryIds.includes(activeTab) && (
-          <div className="page active" id={`page-${activeTab}`}>
-            <div className="page-header">
-              <p className="active-title" style={{ textTransform: 'capitalize' }}>{activeTab}</p>
-            </div>
-          </div>
-        )}
+        {/* Current page (flex flow) + the incoming carousel column during a drag,
+            rendered as one keyed list so React matches pages by key: on commit the
+            incoming page keeps its instance as it becomes the active page. */}
+        {(dragIncoming
+          ? [{ tab: activeTab, incoming: false }, { tab: dragIncoming.tab, incoming: true }]
+          : [{ tab: activeTab, incoming: false }]
+        ).map(p => renderTabPage(p.tab, { incoming: p.incoming }))}
 
         {/* Exiting pages — absolutely overlaid, pointer-events:none, play exit animation */}
         {isTransitioning && exitingTab === 'star' && (
@@ -1182,6 +1400,7 @@ function AppInner() {
 
         <div id="animation-portal"></div>
         <ArchiveAttachmentsModal />
+        <DeleteConfirmModal />
       </div>
     </div>
   )

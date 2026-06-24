@@ -2,7 +2,7 @@
   background: hsl(from #F7F6F3 h s calc(l * 1.01));
   border: 1px solid #C2C1BF;
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   overflow: hidden;
   box-shadow: none;
   padding-bottom: 4px;
@@ -24,6 +24,13 @@
    (opacity driven by JS via --card-scroll-shadow, 0 → 0.04 over 56px) */
 .cards-area .card {
   box-shadow: 0 6px 24px rgba(0, 0, 0, var(--card-scroll-shadow, 0.04));
+}
+
+/* Mobile homescreen only: unscrolled cards get +4% drop-shadow opacity */
+@media (max-width: 480px) {
+  #page-star .cards-area .card {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, calc(var(--card-scroll-shadow, 0.04) + 0.04));
+  }
 }
 
 .card-header {
@@ -127,7 +134,7 @@
 .todo-row.checked .item-text,
 .todo-row.checked .source-label { opacity: 0.5; }
 
-.divider { height: 1px; background: #DBDAD8; margin: 0 20px; }
+.divider { height: 1px; background: #DBDAD8; margin: 0 20px 0 56px; }
 
 .checkbox-wrap {
   width: 20px;
@@ -214,10 +221,10 @@
     linear-gradient(#F7F6F3, #F7F6F3) padding-box,
     linear-gradient(var(--cb-stroke-angle),
       hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 1.53) / 0.6),
-      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 0.576) / 0.6)) border-box;
+      hsl(from var(--cb-dark, var(--accent-dark)) h s calc(l * 0.576 - 4) / 0.6)) border-box;
   box-shadow:
-    0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent),
-    inset 4px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96));
+    0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 24%, transparent),
+    inset 2px 6px 6px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96));
   animation: cb-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
   animation-delay: var(--cb-delay, 0s), var(--cb-delay, 0s);
   /* Orbit direction (clockwise/counterclockwise) is randomly assigned per checkbox
@@ -234,11 +241,11 @@
 }
 
 @keyframes cb-inner-orbit {
-  0%   { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  25%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 0px 8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  50%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset -4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  75%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 0px -8px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
-  100% { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 20%, transparent), inset 4px 0px 8px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  0%   { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 24%, transparent), inset 2px 0px 6px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  25%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 24%, transparent), inset 0px 6px 6px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  50%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 24%, transparent), inset -2px 0px 6px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  75%  { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 24%, transparent), inset 0px -6px 6px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
+  100% { box-shadow: 0 4px 4px color-mix(in srgb, hsl(from var(--cb-base, var(--accent-base)) h calc(s * 1.02) calc(l * 0.98)) 24%, transparent), inset 2px 0px 6px hsl(from var(--cb-light, var(--accent-light)) h calc(s * 1.08) calc(l * 0.96)); }
 }
 
 .checkbox.activated-checkbox.checked,
@@ -536,11 +543,14 @@
 .note-row.archived .note-text { text-decoration: line-through; }
 .note-row.archived .checkbox-wrap { opacity: 0.5; }
 
-/* Archived project card: 2% black overlay on the card's background fill, no shadow. */
+/* Archived project card: #F2F0EB fill, no shadow. Row labels read as the
+   secondary note-label gray. */
 .card.project-card.archived {
-  background-image: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02));
+  background: #F2F0EB;
   box-shadow: none;
 }
+.card.project-card.archived .item-text,
+.card.project-card.archived .note-text { color: #7A7A7A; }
 
 /* Archived canvas: dim the list-item checkbox (row) and the open page's
    mark-complete button to 60% opacity. */
@@ -636,6 +646,17 @@
   background: var(--accent-dark, #3F5999);
   color: #F7F6F3;
 }
+/* Destructive confirm: base red, trash icon 8px to the left of the label */
+.archive-modal-btn.danger {
+  border-color: transparent;
+  background: #B24A4A;
+  color: #F7F6F3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.archive-modal-btn.danger svg { flex-shrink: 0; }
 
 .swipe-content {
   position: relative;
@@ -772,7 +793,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(env(safe-area-inset-top) + 16px) 32px 0;
+  padding: calc(env(safe-area-inset-top) + 16px) 24px 0;
 }
 
 .note-scroll-title {
@@ -961,6 +982,12 @@
   box-shadow: none;
   display: flex;
   flex-direction: column;
+}
+
+/* Notes page footer: 12px ends (12 less than the shared 24px), notes only */
+.note-detail-page.has-footer .detail-footer {
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 /* Drop shadow only when the content above can actually scroll */
@@ -1820,6 +1847,11 @@
 
 .project-active-btn.on {
   color: var(--accent-base);
+}
+
+/* "Displayed" state: icon stroke stays base (via currentColor), label goes dark */
+.project-active-btn.on > span {
+  color: var(--accent-dark);
 }
 
 .project-type-btn {

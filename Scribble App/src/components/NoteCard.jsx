@@ -873,7 +873,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 export { NoteDetailPage }
 
 export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
-  const { openDetail, setOpenDetail } = useAppContext()
+  const { openDetail, setOpenDetail, promptDelete } = useAppContext()
   // Local active notes use their own type so their ids can't collide with project notes
   const openNoteId = openDetail?.type === 'local-note' ? openDetail.id : null
   const setOpenNoteId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'local-note' && prev.id === id) ? null : { type: 'local-note', id }))
@@ -913,31 +913,33 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   }, [openNoteId])
 
   const handleDelete = useCallback((id) => {
-    const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-    const wrapper = swipeRow?.parentElement
-    if (!wrapper) { onDelete(id); return }
-    wrapper.animate(
-      [
-        { background: 'rgba(178,74,74,0)' },
-        { background: 'rgba(178,74,74,0.20)', offset: 0.4 },
-        { background: 'rgba(178,74,74,0)' },
-      ],
-      { duration: 280, fill: 'none' }
-    )
-    setTimeout(() => {
-      const height = wrapper.getBoundingClientRect().height
-      wrapper.style.height = height + 'px'
-      wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => {
+    promptDelete(() => {
+      const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
+      const wrapper = swipeRow?.parentElement
+      if (!wrapper) { onDelete(id); return }
+      wrapper.animate(
+        [
+          { background: 'rgba(178,74,74,0)' },
+          { background: 'rgba(178,74,74,0.20)', offset: 0.4 },
+          { background: 'rgba(178,74,74,0)' },
+        ],
+        { duration: 280, fill: 'none' }
+      )
+      setTimeout(() => {
+        const height = wrapper.getBoundingClientRect().height
+        wrapper.style.height = height + 'px'
+        wrapper.style.overflow = 'hidden'
         requestAnimationFrame(() => {
-          wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
-          wrapper.style.height = '0'
-          wrapper.style.opacity = '0'
+          requestAnimationFrame(() => {
+            wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
+            wrapper.style.height = '0'
+            wrapper.style.opacity = '0'
+          })
         })
-      })
-      setTimeout(() => onDelete(id), 250)
-    }, 180)
-  }, [onDelete])
+        setTimeout(() => onDelete(id), 250)
+      }, 180)
+    })
+  }, [onDelete, promptDelete])
 
   useLayoutEffect(() => {
     const card = cardRef.current

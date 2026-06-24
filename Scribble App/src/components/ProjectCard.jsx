@@ -544,7 +544,7 @@ export default function ProjectCard({ categoryId, project }) {
     toggleProjectTodo, deleteProjectTodo, deleteProjectNote,
     deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated,
     toggleProjectLinkActivated, updateProjectLink,
-    archiveProjectNote, unarchiveProjectNote, promptArchiveAttachments,
+    archiveProjectNote, unarchiveProjectNote, promptArchiveAttachments, promptDelete,
     archiveProjectLink, unarchiveProjectLink,
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
@@ -594,8 +594,21 @@ export default function ProjectCard({ categoryId, project }) {
 
   const handleDeleteProject = useCallback(() => {
     setMenuOpen(false)
-    deleteProject(categoryId, project.id)
-  }, [categoryId, project.id, deleteProject])
+    promptDelete(() => {
+      const card = cardRef.current
+      if (!card) { deleteProject(categoryId, project.id); return }
+      const h = card.getBoundingClientRect().height
+      card.style.height = h + 'px'
+      card.style.overflow = 'hidden'
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        card.style.transition = 'height 220ms ease, opacity 180ms ease, margin 220ms ease'
+        card.style.height = '0'
+        card.style.opacity = '0'
+        card.style.marginBottom = '0'
+      }))
+      setTimeout(() => deleteProject(categoryId, project.id), 240)
+    })
+  }, [categoryId, project.id, deleteProject, promptDelete])
 
   // Archiving a canvas: collapse the card vertically + fade it out (like a row
   // disappearing) before flagging it archived and moving it out of the stack.
@@ -970,31 +983,36 @@ export default function ProjectCard({ categoryId, project }) {
 
   // ---- Handlers ----
   const handleDelete = useCallback((type, id, rowEl) => {
-    const wrapper = rowEl?.parentElement
-    if (wrapper) {
-      wrapper.animate(
-        [{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }],
-        { duration: 280, fill: 'none' }
-      )
-      setTimeout(() => {
-        const height = wrapper.getBoundingClientRect().height
-        wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
-          wrapper.style.height = '0'; wrapper.style.opacity = '0'
-        }))
+    const run = () => {
+      const wrapper = rowEl?.parentElement
+      if (wrapper) {
+        wrapper.animate(
+          [{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }],
+          { duration: 280, fill: 'none' }
+        )
         setTimeout(() => {
-          if (type === 'todo') deleteProjectTodo(categoryId, project.id, id)
-          else if (type === 'note') deleteProjectNote(categoryId, project.id, id)
-          else if (type === 'link') deleteProjectLink(categoryId, project.id, id)
-        }, 250)
-      }, 180)
-    } else {
-      if (type === 'todo') deleteProjectTodo(categoryId, project.id, id)
-      else if (type === 'note') deleteProjectNote(categoryId, project.id, id)
-      else if (type === 'link') deleteProjectLink(categoryId, project.id, id)
+          const height = wrapper.getBoundingClientRect().height
+          wrapper.style.height = height + 'px'; wrapper.style.overflow = 'hidden'
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            wrapper.style.transition = 'height 220ms ease, opacity 180ms ease'
+            wrapper.style.height = '0'; wrapper.style.opacity = '0'
+          }))
+          setTimeout(() => {
+            if (type === 'todo') deleteProjectTodo(categoryId, project.id, id)
+            else if (type === 'note') deleteProjectNote(categoryId, project.id, id)
+            else if (type === 'link') deleteProjectLink(categoryId, project.id, id)
+          }, 250)
+        }, 180)
+      } else {
+        if (type === 'todo') deleteProjectTodo(categoryId, project.id, id)
+        else if (type === 'note') deleteProjectNote(categoryId, project.id, id)
+        else if (type === 'link') deleteProjectLink(categoryId, project.id, id)
+      }
     }
-  }, [categoryId, project.id, deleteProjectTodo, deleteProjectNote, deleteProjectLink])
+    // Notes and links confirm first; todos delete immediately.
+    if (type === 'note' || type === 'link') promptDelete(run)
+    else run()
+  }, [categoryId, project.id, deleteProjectTodo, deleteProjectNote, deleteProjectLink, promptDelete])
 
   const handleActivate = useCallback((type, id, row) => {
     // Close swipe row immediately
@@ -1461,7 +1479,7 @@ export default function ProjectCard({ categoryId, project }) {
                     }}
                   >
                     <EditIcon/>
-                    Rename Project
+                    Rename Canvas
                   </button>
                 )}
                 {archived ? (
@@ -1478,7 +1496,7 @@ export default function ProjectCard({ categoryId, project }) {
                     onMouseDown={e => { e.preventDefault(); handleArchiveProject() }}
                   >
                     <ArchiveMenuIcon/>
-                    Archive Project
+                    Archive Canvas
                   </button>
                 )}
                 <button
@@ -1486,7 +1504,7 @@ export default function ProjectCard({ categoryId, project }) {
                   onMouseDown={e => { e.preventDefault(); handleDeleteProject() }}
                 >
                   <TrashMenuIcon/>
-                  Delete Project
+                  Delete Canvas
                 </button>
               </div>
           </div>

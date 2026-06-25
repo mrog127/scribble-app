@@ -1392,7 +1392,7 @@ export default function ProjectCard({ categoryId, project }) {
 
   return (
     <>
-      <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef} data-project-id={project.id}>
+      <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef}>
         {/* Header */}
         <div className="card-header">
           {renaming ? (
@@ -1469,8 +1469,8 @@ export default function ProjectCard({ categoryId, project }) {
               className="project-add-btn"
               onClick={() => requestCompose({ categoryId, projectId: project.id, type: displayType })}
             >
-              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                <path d="M13 6 L13 20 M6 13 L20 13" stroke="#242424" strokeWidth="1" strokeLinecap="round"/>
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M16 8 L16 24 M8 16 L24 16" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
               </svg>
             </button>
           )}

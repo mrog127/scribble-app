@@ -759,7 +759,7 @@ html, body, #root {
 .save-to-card {
   flex: 1;
   min-height: 0;
-  background: #F7F6F3;
+  background: #FAF9F7;   /* match the text box background */
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   box-shadow: none;
@@ -772,7 +772,7 @@ html, body, #root {
 .card-tabs {
   flex-shrink: 0;
   border-top: 1px solid #DBDAD8;
-  background: #F7F6F3;
+  background: #FAF9F7;   /* match the text box background */
   padding: 6px 8px 8px;
 }
 .card-tabs-scroll {
@@ -836,7 +836,7 @@ html, body, #root {
 .save-to-header {
   position: sticky;
   top: 0;
-  background: #F7F6F3;
+  background: #FAF9F7;   /* match the text box background */
   z-index: 1;
   display: flex;
   align-items: center;

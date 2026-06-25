@@ -1135,7 +1135,7 @@
   bottom: 48px;
   left: 24px;
   right: 24px;
-  background: #F7F6F3;
+  background: #FAF9F7;   /* match the text box background */
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.10);
@@ -1480,7 +1480,7 @@
 .project-header-actions {
   display: flex;
   align-items: center;
-  gap: 0;   /* plus button sits flush against the three-dot menu */
+  gap: 4px;   /* space between the plus button and the three-dot menu */
   flex-shrink: 0;
   margin-left: auto;   /* push the plus + three-dot menu to the right edge */
 }
@@ -1545,7 +1545,7 @@
 
 /* Project card header gets a touch more right padding past the three-dot menu.
    gap:0 so explicit margins control spacing (title → tabs = 16px, actions right). */
-.project-card .card-header { padding-right: 12px; padding-bottom: 6px; gap: 0; }
+.project-card .card-header { padding: 14px 12px 8px 18px; gap: 0; }
 /* Title sits at content width (shrinks with ellipsis) so the tabs follow it 20px
    to its right. The tight line-height keeps the title box shorter than the 32px
    tab buttons so the tab icons stay vertically centered. */

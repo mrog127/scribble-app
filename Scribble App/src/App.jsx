@@ -203,7 +203,9 @@ function AppInner() {
   const measureCategoryDefault = (categoryId) => {
     const page = document.getElementById(`page-${categoryId}`)
     if (!page) return null
-    const cards = [...page.querySelectorAll('.project-card:not(.archived)')].filter(c => c.getAttribute('data-project-id'))
+    // Non-archived project cards are wrapped in [data-project-id]; archived ones
+    // use [data-archived-id], so this is exactly the addable cards.
+    const cards = [...page.querySelectorAll('[data-project-id]')]
     if (!cards.length) return null
     const atTop = page.scrollTop <= 4
     const atBottom = page.scrollTop + page.clientHeight >= page.scrollHeight - 4

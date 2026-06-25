@@ -143,6 +143,7 @@ function AppInner() {
     addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
     addProjectTodo, addProjectNote, addProjectLink,
     setOpenDetail, setAutoEditNoteId, refresh,
+    registerComposeHandler,
   } = useAppContext()
   const pullSpinnerRef = usePullToRefresh(refresh)
   const categoryIds = categories.map(c => c.id)
@@ -158,6 +159,9 @@ function AppInner() {
   const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
   const categoryDefaultRef = useRef(null)                    // scroll-based default project on a category page
+  const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
+  const saveToScrollRef = useRef(null)                       // the Save to list scroller
+  const scrollSelPendingRef = useRef(false)                  // scroll the Save to list to the selected option on open
   const prevInputFocused = useRef(false)
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
 
@@ -252,15 +256,53 @@ function AppInner() {
     }
   }, [categories, activeTab, categoryIds])
 
-  // Apply the default each time the Save to card opens (input focused).
+  // Apply the default each time the Save to card opens (input focused). A pending
+  // compose request (from a project card's "Add" button) wins over the default.
   useEffect(() => {
     if (inputFocused && footerInputMode && !prevInputFocused.current) {
-      const { tab, target } = computeSaveDefault()
-      setSaveToTab(tab)
-      setSaveToProject(target)
+      if (pendingComposeRef.current) {
+        const { categoryId, projectId } = pendingComposeRef.current
+        pendingComposeRef.current = null
+        setSaveToTab(categoryId)
+        setSaveToProject({ categoryId, projectId })
+      } else {
+        const { tab, target } = computeSaveDefault()
+        setSaveToTab(tab)
+        setSaveToProject(target)
+      }
+      scrollSelPendingRef.current = true   // scroll the list to the selected canvas
     }
     prevInputFocused.current = inputFocused
   }, [inputFocused, footerInputMode, computeSaveDefault])
+
+  // Once the Save to list has rendered with its selection, scroll it so the
+  // selected canvas is centered in view (only when the panel just opened).
+  useEffect(() => {
+    if (!scrollSelPendingRef.current) return
+    if (!inputFocused || !footerInputMode) { scrollSelPendingRef.current = false; return }
+    scrollSelPendingRef.current = false
+    const raf = requestAnimationFrame(() => {
+      const scroller = saveToScrollRef.current
+      const sel = scroller?.querySelector('.save-to-option.selected')
+      if (!scroller || !sel) return
+      const sRect = scroller.getBoundingClientRect()
+      const eRect = sel.getBoundingClientRect()
+      scroller.scrollTop += (eRect.top - sRect.top) - (scroller.clientHeight - eRect.height) / 2
+      scroller.classList.toggle('scrolled', scroller.scrollTop > 4)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [saveToProject, saveToTab, inputFocused, footerInputMode])
+
+  // Register the compose handler so a project card's "Add ..." button can open
+  // the footer preset to that project + content type (focus synchronously).
+  useEffect(() => {
+    registerComposeHandler((target) => {
+      if (!target) return
+      pendingComposeRef.current = { categoryId: target.categoryId, projectId: target.projectId }
+      setToolbarType(target.type)
+      inputRef.current?.focus()
+    })
+  }, [registerComposeHandler])
 
   // Keep the current selection valid as data changes (e.g. a project is deleted or
   // archived); fall back to the default when it goes stale.
@@ -1316,6 +1358,7 @@ function AppInner() {
               </div>
               <div
                 className="save-to-scroll"
+                ref={saveToScrollRef}
                 onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollTop > 4)}
                 style={(() => {
                   const idx = categories.findIndex(c => c.id === saveToTab)

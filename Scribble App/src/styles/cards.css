@@ -118,9 +118,23 @@
   min-width: 0;
 }
 
+/* Renaming a canvas reuses the "name a new canvas" look: a blank header with the
+   title styled like a canvas header and a send / cancel (X) button — no text box. */
 .card-rename-wrap .project-input-wrap {
   margin: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
+.card-rename-wrap .project-input {
+  padding-left: 0;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #242424;
+}
+/* Hide the tabs + three-dot menu while renaming so the whole header is the title */
+.card-header:has(.card-rename-wrap) .project-header-actions { display: none; }
 
 .todo-row {
   display: flex;
@@ -1466,15 +1480,16 @@
 .project-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;   /* plus button sits flush against the three-dot menu */
   flex-shrink: 0;
+  margin-left: auto;   /* push the plus + three-dot menu to the right edge */
 }
 
 .project-tab-bar {
   position: relative;
   display: flex;
   align-items: center;
-  margin: 0;
+  margin: 0 0 0 20px;   /* 20px to the right of the canvas title */
   gap: 8px;
   flex-shrink: 0;
 }
@@ -1528,8 +1543,20 @@
   .project-tab-btn:hover:not(.selected)::before { background: rgba(0, 0, 0, 0.04); }
 }
 
-/* Project card header gets a touch more right padding past the three-dot menu */
-.project-card .card-header { padding-right: 12px; padding-bottom: 2px; }
+/* Project card header gets a touch more right padding past the three-dot menu.
+   gap:0 so explicit margins control spacing (title → tabs = 16px, actions right). */
+.project-card .card-header { padding-right: 12px; padding-bottom: 6px; gap: 0; }
+/* Title sits at content width (shrinks with ellipsis) so the tabs follow it 20px
+   to its right. The tight line-height keeps the title box shorter than the 32px
+   tab buttons so the tab icons stay vertically centered. */
+.project-card .card-header .card-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
 
 /* Three-dot menu trigger styled as a 32x32 button matching the tabs */
 .dots-menu-btn {
@@ -1591,6 +1618,25 @@
   color: #B5B4B2;
   padding: 16px 20px;
   text-align: center;
+}
+
+/* "Add ..." plus button in the project-card header, just left of the three-dot
+   menu. Opens the footer text box preset to this project + the shown type. */
+.project-add-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: 8px;   /* + the 8px header gap = 16px from the icon tabs */
+}
+@media (hover: hover) {
+  .project-add-btn:hover { background: rgba(0, 0, 0, 0.04); border-radius: 4px; }
 }
 
 .project-input-wrap {

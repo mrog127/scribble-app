@@ -309,9 +309,17 @@ export function AppProvider({ children }) {
     const todo = proj?.todos.find(t => t.id === todoId)
     if (!todo) return
     const newChecked = !todo.checked
-    updateProject(categoryId, projectId, proj => ({
-      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, checked: newChecked })
-    }))
+    // Reorder so a checked item lands at the top of the checked group and an
+    // unchecked item lands at the bottom of the unchecked group (mirrors
+    // toggleActiveTodo). The card displays filter by checked + stable activation
+    // grouping, so this carries through everywhere the todo is shown.
+    updateProject(categoryId, projectId, proj => {
+      const t = proj.todos.find(x => x.id === todoId)
+      if (!t) return proj
+      const toggled = { ...t, checked: newChecked }
+      const rest = proj.todos.filter(x => x.id !== todoId)
+      return { ...proj, todos: [...rest.filter(x => !x.checked), toggled, ...rest.filter(x => x.checked)] }
+    })
     db(supabase.from('todos').update({ checked: newChecked }).eq('id', todoId))
   }, [updateProject])
 
@@ -631,6 +639,13 @@ export function AppProvider({ children }) {
     setMoveAttachPrompt(null)
     if (p && typeof p.onResolve === 'function') p.onResolve(confirm)
   }, [])
+
+  // Footer compose request: a project card's "Add ..." button asks the footer to
+  // open, preset to that project + content type. App registers the handler so the
+  // focus happens synchronously inside the click (needed for the mobile keyboard).
+  const composeHandlerRef = useRef(null)
+  const registerComposeHandler = useCallback((fn) => { composeHandlerRef.current = fn }, [])
+  const requestCompose = useCallback((target) => { composeHandlerRef.current?.(target) }, [])
 
   const updateProjectLink = useCallback((categoryId, projectId, linkId, title, url) => {
     const finalUrl = (url || '').trim()
@@ -976,6 +991,8 @@ export function AppProvider({ children }) {
       moveAttachPrompt,
       promptMoveAttachments,
       resolveMoveAttachPrompt,
+      registerComposeHandler,
+      requestCompose,
       toggleProjectLinkActivated,
       updateProjectLink,
       setProjectTodoScheduled,

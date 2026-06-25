@@ -385,6 +385,14 @@ function SendIcon() {
   )
 }
 
+function CancelIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 // Inline editor shown in a link row after a long-press: stacked title + url with a send button.
 function LinkRowEditor({ link, onSave, onCancel }) {
   const [title, setTitle] = useState(link.title === link.url ? '' : (link.title || ''))
@@ -555,7 +563,7 @@ export default function ProjectCard({ categoryId, project }) {
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
     renameProject, archiveProject, unarchiveProject, deleteProject,
-    openDetail, setOpenDetail, setAutoEditNoteId,
+    openDetail, setOpenDetail, setAutoEditNoteId, requestCompose,
   } = useAppContext()
 
   // Archived canvases are read-only: tabs + opening pages work, but checkboxes,
@@ -620,6 +628,12 @@ export default function ProjectCard({ categoryId, project }) {
   // disappearing) before flagging it archived and moving it out of the stack.
   const handleArchiveProject = useCallback(() => {
     setMenuOpen(false)
+    // An archived canvas shows everything by default — reveal all completed items
+    // and all archived notes/links regardless of their prior visibility. Persisted,
+    // so a fresh mount in the archived section reads it; the user can re-hide after.
+    setHideCompleted(false); try { localStorage.setItem(`hc-project-${project.id}`, 'false') } catch {}
+    setShowArchived(true); try { localStorage.setItem(`arch-project-${project.id}`, 'true') } catch {}
+    setShowArchivedLinks(true); try { localStorage.setItem(`arch-link-project-${project.id}`, 'true') } catch {}
     const card = cardRef.current
     if (!card) { archiveProject(categoryId, project.id); return }
     const h = card.getBoundingClientRect().height
@@ -1383,7 +1397,7 @@ export default function ProjectCard({ categoryId, project }) {
         <div className="card-header">
           {renaming ? (
             <div className="card-rename-wrap">
-              <div className="project-input-wrap focused">
+              <div className="project-input-wrap">
                 <div className="project-input-row">
                   <input
                     ref={renameInputRef}
@@ -1396,47 +1410,69 @@ export default function ProjectCard({ categoryId, project }) {
                     }}
                     onBlur={() => setRenaming(false)}
                   />
-                  <button
-                    className="project-send-btn visible"
-                    onMouseDown={e => { e.preventDefault(); handleRenameSubmit() }}
-                  >
-                    <SendIcon/>
-                  </button>
+                  {renameValue.trim() ? (
+                    <button
+                      className="project-send-btn visible"
+                      onMouseDown={e => { e.preventDefault(); handleRenameSubmit() }}
+                    >
+                      <SendIcon/>
+                    </button>
+                  ) : (
+                    <button
+                      className="project-cancel-btn"
+                      onMouseDown={e => { e.preventDefault(); setRenaming(false) }}
+                    >
+                      <CancelIcon/>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ) : (
-            <span className={`card-title${archived ? ' archived-title' : ''}`}>{project.name}</span>
+            <>
+              <span className={`card-title${archived ? ' archived-title' : ''}`}>{project.name}</span>
+              {showTabs && (
+                <div className="project-tab-bar" ref={tabBarRef}>
+                  <div className="project-tab-indicator" ref={tabIndicatorRef}/>
+                  {typesWithItems.includes('list') && (
+                    <button
+                      className={`project-tab-btn${activeTab === 'list' ? ' selected' : ''}`}
+                      onMouseDown={e => { e.preventDefault(); switchTab('list') }}
+                    >
+                      <ListIcon size={20} color={activeTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
+                    </button>
+                  )}
+                  {typesWithItems.includes('note') && (
+                    <button
+                      className={`project-tab-btn${activeTab === 'note' ? ' selected' : ''}`}
+                      onMouseDown={e => { e.preventDefault(); switchTab('note') }}
+                    >
+                      <NoteIcon size={20} color={activeTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
+                    </button>
+                  )}
+                  {typesWithItems.includes('link') && (
+                    <button
+                      className={`project-tab-btn${activeTab === 'link' ? ' selected' : ''}`}
+                      onMouseDown={e => { e.preventDefault(); switchTab('link') }}
+                    >
+                      <LinkIcon size={20} color={activeTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
           <div className="project-header-actions">
-          {showTabs && (
-            <div className="project-tab-bar" ref={tabBarRef}>
-              <div className="project-tab-indicator" ref={tabIndicatorRef}/>
-              {typesWithItems.includes('list') && (
-                <button
-                  className={`project-tab-btn${activeTab === 'list' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); switchTab('list') }}
-                >
-                  <ListIcon size={20} color={activeTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
-                </button>
-              )}
-              {typesWithItems.includes('note') && (
-                <button
-                  className={`project-tab-btn${activeTab === 'note' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); switchTab('note') }}
-                >
-                  <NoteIcon size={20} color={activeTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
-                </button>
-              )}
-              {typesWithItems.includes('link') && (
-                <button
-                  className={`project-tab-btn${activeTab === 'link' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); switchTab('link') }}
-                >
-                  <LinkIcon size={20} color={activeTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
-                </button>
-              )}
-            </div>
+          {!archived && (
+            <button
+              type="button"
+              className="project-add-btn"
+              onClick={() => requestCompose({ categoryId, projectId: project.id, type: displayType })}
+            >
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <path d="M13 6 L13 20 M6 13 L20 13" stroke="#242424" strokeWidth="1" strokeLinecap="round"/>
+              </svg>
+            </button>
           )}
           <div className="dots-menu-wrap" ref={menuRef}>
             <div

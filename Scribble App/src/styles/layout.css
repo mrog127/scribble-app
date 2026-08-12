@@ -1497,7 +1497,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 @media (max-width: 999.98px) {
   .phone {
     --mbar-h: 48px;                                     /* bar height */
-    --mbar-bottom: calc(env(safe-area-inset-bottom) + 32px);  /* gap below the bar */
+    --mbar-bottom: calc(env(safe-area-inset-bottom) + 16px);  /* gap below the bar */
     --mbar-chrome: #F7F6F3;
     --mbar-stroke: #C2C1BF;
     --mbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

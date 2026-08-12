@@ -1790,9 +1790,11 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   .footer.keyboard-open .add-row { padding: 0; }
   .footer.search-open .add-row { padding: 0 8px; }   /* matches .save-to-panel's 8px */
-  /* The keyboard is always up in search mode, so the resting gap below the bar
-     doesn't apply — sit 16px above the keyboard instead. */
-  .footer.search-open { padding-bottom: 16px; }
+  /* With the keyboard up the resting gap doesn't apply — env(safe-area-inset-bottom)
+     still reports the home-indicator inset, which pushed the box well clear of the
+     keys. Sit a flat 16px above them in both focused states. */
+  .footer.search-open,
+  .footer.keyboard-open { padding-bottom: 16px; }
   .footer.keyboard-open .add-row .link-input-stack,
   .footer.keyboard-open .add-row .link-input-stack:focus-within {
     background: transparent;
@@ -2538,4 +2540,26 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 @media (max-width: 999.98px) {
   .page-header { padding-top: calc(env(safe-area-inset-top) + 24px); }
   .category-page .page-header { padding-top: calc(env(safe-area-inset-top) + 32px); }
+}
+
+/* Content that has started fading under the control bar shouldn't be tappable —
+   a mask only hides pixels, it doesn't stop pointer events. This strip covers
+   the fade region (from 16px above the bar down to the bottom) and swallows
+   taps. It sits above the page but below the footer (z-index 3), so the bar
+   itself, detail pages and sheets are unaffected. */
+@media (max-width: 999.98px) {
+  .phone::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--mbar-h) + var(--mbar-bottom) + 16px);
+    z-index: 2;
+    pointer-events: auto;
+    background: transparent;
+  }
+  /* No fade to guard while a panel is open or a page is being dragged away */
+  .phone.save-panel-open::after,
+  .phone.search-panel-open::after { display: none; }
 }

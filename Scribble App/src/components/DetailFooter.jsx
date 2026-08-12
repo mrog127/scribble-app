@@ -2,7 +2,7 @@
 // Left: the Active/Inactive toggle. Right: the project this item lives in.
 
 import { useState, useRef, useEffect } from 'react'
-import { CalendarIcon, formatSchedule, useActivatePress, isScheduleReached } from './ScheduleBits.jsx'
+import { CalendarIcon, formatSchedule, isScheduleReached } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 function FolderIcon({ active }) {
@@ -53,7 +53,6 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
   // Three-dot menu, in the slot the copy button used to occupy
   const [dotsOpen, setDotsOpen] = useState(false)
   const dotsRef = useRef(null)
-  const items = (menuItems || []).filter(Boolean)
 
   useEffect(() => {
     if (!dotsOpen) return
@@ -68,15 +67,22 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
   const active = activated || reached
   const scheduled = hasSchedule && !reached   // still upcoming → show the date
 
-  const press = useActivatePress({
-    onTap: () => { if (hasSchedule) onClearSchedule(); else onToggleActive() },
-    onLongPress: () => {
-      if (!canSchedule) return
-      const r = btnRef.current?.getBoundingClientRect()
-      setAnchorRect(r ? { top: r.top, left: r.left, bottom: r.bottom, right: r.right, width: r.width, height: r.height } : null)
-      setCalOpen(true)
-    },
-  })
+  const openCalendar = () => {
+    if (!canSchedule) return
+    // Anchor to the Display button, so the popup lands where it always has —
+    // the three-dot menu is only the new way in.
+    const r = btnRef.current?.getBoundingClientRect()
+    setAnchorRect(r ? { top: r.top, left: r.left, bottom: r.bottom, right: r.right, width: r.width, height: r.height } : null)
+    setCalOpen(true)
+  }
+
+  // Scheduling moved off a long-press on Display and into the three-dot menu.
+  const scheduleItem = canSchedule && {
+    label: hasSchedule ? 'Reschedule' : 'Schedule',
+    icon: <CalendarIcon size={18}/>,
+    onSelect: openCalendar,
+  }
+  const items = [scheduleItem, ...(menuItems || [])].filter(Boolean)
 
   return (
     <div className={`detail-footer${scrollable ? ' has-shadow' : ''}`}>
@@ -88,7 +94,10 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
           <button
             ref={btnRef}
             className={`project-active-btn${active ? ' on' : ''}${scheduled ? ' scheduled' : ''}${disabledActive ? ' disabled' : ''}`}
-            {...(disabledActive ? {} : press)}
+            onMouseDown={disabledActive ? undefined : (e) => {
+              e.preventDefault()
+              if (hasSchedule) onClearSchedule(); else onToggleActive()
+            }}
           >
             {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={active}/>}
             <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (active ? 'Displayed' : 'Display')}</span>

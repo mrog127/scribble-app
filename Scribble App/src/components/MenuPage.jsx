@@ -224,7 +224,7 @@ function useCategoryDragReorder(containerRef, categories, onReorder) {
   return { onDragPointerDown }
 }
 
-export default function MenuPage({ pageAnimClass = '', isExiting = false, onSelectTab }) {
+export default function MenuPage({ pageAnimClass = '', isExiting = false, onSelectTab, onClose }) {
   const { categories, reorderCategories, renameCategory, deleteCategory, addCategory, toggleCategoryHomescreen, promptDelete } = useAppContext()
   const { user, signOut } = useAuth()
 
@@ -292,7 +292,18 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
       style={{ '--accent-base': ACCENT_COLORS[0].base, '--accent-dark': ACCENT_COLORS[0].dark, '--accent-light': ACCENT_COLORS[0].light, '--accent-base-rgb': ACCENT_COLORS[0].baseRgb }}
     >
       <div className="page-header">
-        <p className="active-title">Menu</p>
+        <div className="settings-header-row">
+          <p className="active-title">Settings</p>
+          {/* Only present when Settings is shown as a sheet (mobile) */}
+          {onClose && (
+            <button className="settings-close-btn" aria-label="Close settings" onClick={onClose}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <line x1="4.5" y1="4.5" x2="15.5" y2="15.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                <line x1="15.5" y1="4.5" x2="4.5" y2="15.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ padding: '16px 12px', overflowY: 'auto' }}>

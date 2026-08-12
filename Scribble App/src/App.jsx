@@ -10,6 +10,31 @@ import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
+import { requestProjectFocus } from './searchFocus.js'
+
+// Wraps every case-insensitive occurrence of `q` in `text` so the matched span
+// can be tinted. Returns an array of strings and <mark> nodes.
+function highlightMatch(text, q, tint) {
+  const s = String(text || '')
+  const needle = (q || '').trim().toLowerCase()
+  if (!needle) return s
+  const hay = s.toLowerCase()
+  const out = []
+  let from = 0
+  let at = hay.indexOf(needle)
+  while (at !== -1) {
+    if (at > from) out.push(s.slice(from, at))
+    out.push(
+      <mark key={`${at}`} className="search-hit" style={{ background: tint }}>
+        {s.slice(at, at + needle.length)}
+      </mark>
+    )
+    from = at + needle.length
+    at = hay.indexOf(needle, from)
+  }
+  if (from < s.length) out.push(s.slice(from))
+  return out
+}
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
 import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
@@ -151,6 +176,66 @@ function AppInner() {
   const [toolbarType, setToolbarType] = useState('list')
   const [inputFocused, setInputFocused] = useState(false)
   const [toolbarFadedIn, setToolbarFadedIn] = useState(false)
+  // Mobile = below the 1000px desktop breakpoint. Drives the floating action bar.
+  const [isMobileView, setIsMobileView] = useState(
+    () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 1000px)').matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1000px)')
+    const onChange = () => setIsMobileView(!mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  // Search — the control bar's trailing circle expands the pill into a search field
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInputRef = useRef(null)
+
+  // Settings sheet — mobile only; desktop still reaches Settings via the nav tab
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsMounted, setSettingsMounted] = useState(false)
+  const [settingsIn, setSettingsIn] = useState(false)   // drives the .open class
+  useEffect(() => {
+    if (settingsOpen) {
+      // Mount offscreen first, then flip .open on a later frame — applying both in
+      // one commit gives the browser no start value to transition from.
+      setSettingsMounted(true)
+      let inner = 0
+      const outer = requestAnimationFrame(() => {
+        inner = requestAnimationFrame(() => setSettingsIn(true))
+      })
+      return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner) }
+    }
+    setSettingsIn(false)
+    // Keep it mounted through the slide-down so the exit animation can play
+    const t = setTimeout(() => setSettingsMounted(false), 350)
+    return () => clearTimeout(t)
+  }, [settingsOpen])
+
+  // Long-press page menu hanging off the gallery/easel circle
+  const [pageMenuOpen, setPageMenuOpen] = useState(false)
+  const pageMenuTimerRef = useRef(null)
+  const pageMenuFiredRef = useRef(false)
+  const pageMenuWrapRef = useRef(null)
+
+  const startPageMenuPress = useCallback(() => {
+    pageMenuFiredRef.current = false
+    clearTimeout(pageMenuTimerRef.current)
+    pageMenuTimerRef.current = setTimeout(() => {
+      pageMenuFiredRef.current = true
+      setPageMenuOpen(true)
+    }, 450)
+  }, [])
+
+  const cancelPageMenuPress = useCallback(() => {
+    clearTimeout(pageMenuTimerRef.current)
+  }, [])
+
+  useEffect(() => () => clearTimeout(pageMenuTimerRef.current), [])
+
+  // Dismissal is handled by the full-screen scrim rendered below, so a tap
+  // anywhere — including the other control-bar buttons — only closes the menu.
   const [inputValue, setInputValue] = useState('')
   const [linkUrlValue, setLinkUrlValue] = useState('')
   const [headerOpacity, setHeaderOpacity] = useState(1)
@@ -332,7 +417,9 @@ function AppInner() {
       phone.style.setProperty('--ivh', vv.height + 'px')
       phone.style.transform = vv.offsetTop > 0 ? `translateY(${vv.offsetTop}px)` : ''
     }
-    if (inputFocused) {
+    // Search raises the keyboard too, so it needs the same viewport tracking —
+    // otherwise .phone stays full height and the search bar sits under the keys.
+    if (inputFocused || searchOpen) {
       vv.addEventListener('resize', update)
       vv.addEventListener('scroll', update)
       update()
@@ -344,7 +431,7 @@ function AppInner() {
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
     }
-  }, [inputFocused])
+  }, [inputFocused, searchOpen])
 
   // Delay faded-in by one frame so CSS transition fires correctly
   useEffect(() => {
@@ -365,11 +452,25 @@ function AppInner() {
   const toolbarIndicatorRef = useRef(null)
   const indicatorMounted = useRef(false)
   const toolbarIndicatorMounted = useRef(false)
+
+  // The pill grows into the full box the moment it's focused, and that reflow can
+  // leave iOS with the keyboard up but no live caret. Re-assert focus once the new
+  // layout has settled so typing works without needing a second tap.
+  useEffect(() => {
+    if (!inputFocused || !isMobileView || toolbarType === 'link') return
+    const el = inputRef.current
+    if (!el) return
+    const raf = requestAnimationFrame(() => {
+      const ae = document.activeElement
+      if (ae !== el && ae !== linkUrlRef.current) el.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [inputFocused, isMobileView, toolbarType])
   const pendingAnimRef = useRef(null)
   const pendingProjectAnimRef = useRef(null)
 
   // Tab transition state
-  const TRANSITION_MS = 260
+  const TRANSITION_MS = 190
   const [exitingTab, setExitingTab] = useState(null)
   const [transitionDir, setTransitionDir] = useState(null) // 'left' | 'right'
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -400,6 +501,136 @@ function AppInner() {
     }, TRANSITION_MS)
   }, [activeTab, categoryIds]) // eslint-disable-line
 
+
+  // Results are split: things you can currently see first, then everything in a
+  // checked/archived state (including anything inside an archived canvas).
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return { visible: [], archived: [] }
+    const visible = []
+    const archived = []
+    categories.forEach((cat, catIdx) => {
+      (cat.projects || []).forEach(proj => {
+        const projArchived = !!proj.archived
+        const projGone = projArchived
+        const base = {
+          categoryId: cat.id,
+          projectId: proj.id,
+          projectName: proj.name,
+          categoryName: cat.name,
+          accentIdx: catIdx,
+        }
+        const push = (row, isArchived) => (isArchived ? archived : visible).push({ ...row, projArchived })
+        ;(proj.todos || []).forEach(t => {
+          const title = t.text || ''
+          if (title.toLowerCase().includes(q)) {
+            push({ ...base, key: `t-${proj.id}-${t.id}`, itemId: t.id, type: 'list', title, hidden: !!t.checked }, projGone || !!t.checked)
+          }
+        })
+        ;(proj.notes || []).forEach(n => {
+          const title = n.text || ''
+          if (title.toLowerCase().includes(q)) {
+            push({ ...base, key: `n-${proj.id}-${n.id}`, itemId: n.id, type: 'note', title, hidden: !!n.archived }, projGone || !!n.archived)
+          }
+        })
+        ;(proj.links || []).forEach(l => {
+          const title = l.title || l.url || ''
+          if (title.toLowerCase().includes(q) || (l.url || '').toLowerCase().includes(q)) {
+            push({ ...base, key: `l-${proj.id}-${l.id}`, itemId: l.id, type: 'link', title, hidden: !!l.archived }, projGone || !!l.archived)
+          }
+        })
+      })
+    })
+    return { visible: visible.slice(0, 100), archived: archived.slice(0, 100) }
+  }, [searchQuery, categories])
+
+  // Backstop: if the synchronous focus in the tap handler didn't take, grab it here.
+  useEffect(() => {
+    if (!searchOpen) return
+    const raf = requestAnimationFrame(() => {
+      if (document.activeElement !== searchInputRef.current) {
+        searchInputRef.current?.focus({ preventScroll: true })
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [searchOpen])
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false)
+    setSearchQuery('')
+    searchInputRef.current?.blur()
+  }, [])
+
+  const openSearchResult = useCallback((r) => {
+    // Everything the destination needs to make this item visible: the content tab,
+    // an expand if the canvas is collapsed, and whichever hide-toggle is hiding it.
+    const focusReq = {
+      projectId: r.projectId,
+      categoryId: r.categoryId,
+      type: r.type,
+      expand: true,
+      showCompleted: r.type === 'list' && (r.hidden || r.projArchived),
+      showArchivedNotes: r.type === 'note' && (r.hidden || r.projArchived),
+      showArchivedLinks: r.type === 'link' && (r.hidden || r.projArchived),
+      showArchivedCanvases: !!r.projArchived,
+    }
+    // Fires before navigating and again while hunting — a card that hasn't
+    // mounted yet can't hear the first one.
+    requestProjectFocus(focusReq)
+    closeSearch()
+    handleTabChange(r.categoryId)
+    // Wait for the destination canvas + its content tab to render, scroll the row
+    // itself into view, then flash it once the smooth scroll has actually settled.
+    let tries = 0
+    const hunt = setInterval(() => {
+      requestProjectFocus(focusReq)
+      const scope = document.querySelector(`[data-project-id="${r.projectId}"]`)
+        || document.querySelector(`[data-archived-id="${r.projectId}"]`)
+      const row = scope?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"]`)
+      if (!row) {
+        if (++tries > 40) clearInterval(hunt)
+        return
+      }
+      clearInterval(hunt)
+
+      const flash = () => {
+        row.classList.remove('search-flash')
+        void row.offsetWidth
+        row.classList.add('search-flash')
+        setTimeout(() => row.classList.remove('search-flash'), 1500)
+      }
+
+      // Revealing the item changes the card's height (expand animation, plus rows
+      // that were hidden), so one scroll pass lands against a moving layout.
+      // Scroll, let it settle, then correct and only then flash.
+      const settleAndScroll = () => {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const page = row.closest('.page')
+        let done = false
+        const finish = () => {
+          if (done) return
+          done = true
+          page?.removeEventListener('scrollend', finish)
+          // Second pass: if the expand shifted it out of view, nudge and flash after.
+          const rect = row.getBoundingClientRect()
+          const pr = page?.getBoundingClientRect()
+          const offscreen = pr && (rect.top < pr.top + 24 || rect.bottom > pr.bottom - 24)
+          if (offscreen) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            setTimeout(flash, 450)
+          } else {
+            flash()
+          }
+        }
+        page?.addEventListener('scrollend', finish, { once: true })
+        setTimeout(finish, 700)
+      }
+
+      // Give the reveal (expand + re-render) a beat before measuring anything.
+      setTimeout(settleAndScroll, 360)
+    }, 60)
+  }, [closeSearch, handleTabChange])
+
   // Refs for swipe-to-change-tab gesture (avoids re-registering listeners on every state change)
   const activeTabRef = useRef(activeTab)
   const tabOrderRef = useRef(['star', ...categoryIds, 'menu'])
@@ -407,7 +638,13 @@ function AppInner() {
   const dragRef = useRef(null)        // live gesture state (shared with the layout effect)
   const dragFrameRef = useRef(null)   // applies a drag frame; set inside the gesture effect
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
-  useEffect(() => { tabOrderRef.current = ['star', ...categoryIds, 'menu'] }, [categoryIds])
+  // Swipe carousel: Home → each project. On mobile the old Menu tab is gone —
+  // Settings is a sheet now — so swiping past the last project must not land on it.
+  useEffect(() => {
+    tabOrderRef.current = isMobileView
+      ? ['star', ...categoryIds]
+      : ['star', ...categoryIds, 'menu']
+  }, [categoryIds, isMobileView])
   useEffect(() => { handleTabChangeRef.current = handleTabChange }, [handleTabChange])
 
   // Drag/swipe between tabs — a finger-tracked carousel. The current page's
@@ -421,7 +658,7 @@ function AppInner() {
     const app = document.getElementById('app')
     if (!app) return
 
-    const ANIM_MS = 280
+    const ANIM_MS = 190
     const GUTTER = 16    // constant gap between the two card columns, all through the drag
     const EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
     let animating = false   // snap/commit animation in flight
@@ -548,8 +785,11 @@ function AppInner() {
       const dx = e.clientX - s.startX
       const dy = e.clientY - s.startY
       if (!s.engaged) {
-        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { dragRef.current = null; return }  // vertical scroll wins
-        if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return
+        // Hand off to vertical scrolling only when the gesture is clearly vertical:
+        // a long drop AND meaningfully steeper than it is wide.
+        if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.8) { dragRef.current = null; return }
+        // Engage on a short horizontal move; a diagonal still counts as a swipe.
+        if (Math.abs(dx) < 5 || Math.abs(dx) < Math.abs(dy) * 0.45) return
         engage(dx)
       }
       const now = performance.now()
@@ -567,8 +807,8 @@ function AppInner() {
       if (!s || (e.pointerId !== undefined && e.pointerId !== s.id)) return
       if (!s.engaged) { dragRef.current = null; return }
       if (s.edge) { finalize(false); return }
-      const passedHalf = Math.abs(s.dx) > s.W / 2
-      const flick = Math.abs(s.v) > 0.3 && Math.abs(s.dx) > 8 &&
+      const passedHalf = Math.abs(s.dx) > s.W * 0.2
+      const flick = Math.abs(s.v) > 0.12 && Math.abs(s.dx) > 6 &&
         ((s.dir === 'next' && s.v < 0) || (s.dir === 'prev' && s.v > 0))
       finalize(passedHalf || flick)
     }
@@ -588,8 +828,8 @@ function AppInner() {
       if (!s || !s.wheel) return
       if (!s.engaged) { dragRef.current = null; return }
       if (s.edge) { finalize(false); return }
-      const passedHalf = Math.abs(s.dx) > s.W / 2
-      const flick = Math.abs(s.v) > 0.3 && Math.abs(s.dx) > 8 &&
+      const passedHalf = Math.abs(s.dx) > s.W * 0.2
+      const flick = Math.abs(s.v) > 0.12 && Math.abs(s.dx) > 6 &&
         ((s.dir === 'next' && s.v < 0) || (s.dir === 'prev' && s.v > 0))
       finalize(passedHalf || flick)
     }
@@ -1171,6 +1411,7 @@ function AppInner() {
           headerTranslate={headerTranslate}
           pageAnimClass={pageAnimClass}
           isExiting={incoming}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       )
     }
@@ -1211,7 +1452,7 @@ function AppInner() {
   return (
     <div className="app-wrap">
       <div
-        className={`phone${inputFocused && footerInputMode ? ' save-panel-open' : ''}`}
+        className={`phone${inputFocused && footerInputMode ? ' save-panel-open' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}`}
         id="app"
         style={{
           '--accent-base': activeAccent.base,
@@ -1299,7 +1540,17 @@ function AppInner() {
             <div className="save-to-card">
               <div className="save-to-header">
                 <p className="save-to-title">Save to...</p>
-                <button className="save-to-cancel" onMouseDown={e => { e.preventDefault(); inputRef.current?.blur() }}>Cancel</button>
+                <button
+                  className="save-to-cancel"
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    // Cancel discards the draft — the bar returns to its resting state empty
+                    setInputValue('')
+                    setLinkUrlValue('')
+                    inputRef.current?.blur()
+                    linkUrlRef.current?.blur()
+                  }}
+                >Cancel</button>
               </div>
               <div
                 className="save-to-scroll"
@@ -1344,9 +1595,89 @@ function AppInner() {
           </div>
         )}
 
+        {/* Search results — same panel chrome as "Save to…" */}
+        {searchOpen && (
+          <div className="save-to-panel search-panel visible">
+            <div className="save-to-card">
+              <div className="save-to-header">
+                <p className="save-to-title">Search results</p>
+                <button
+                  className="save-to-cancel"
+                  onMouseDown={e => { e.preventDefault(); closeSearch() }}
+                >Done</button>
+              </div>
+              <div
+                className="save-to-scroll"
+                onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollTop > 4)}
+              >
+                {(() => {
+                  const renderRow = (r, showDivider) => (
+                    <div key={r.key}>
+                      {showDivider && <div className="save-to-divider"/>}
+                      <button
+                        className="search-result-row"
+                        onMouseDown={e => { e.preventDefault(); openSearchResult(r) }}
+                      >
+                        <span className="search-result-icon" style={{ color: getCategoryAccent(r.accentIdx).base }}>
+                          {r.type === 'list' && (
+                            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+                              <circle cx="5" cy="7" r="1.5" fill="currentColor"/>
+                              <line x1="9" y1="7" x2="19" y2="7" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                              <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+                              <line x1="9" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                              <circle cx="5" cy="17" r="1.5" fill="currentColor"/>
+                              <line x1="9" y1="17" x2="14" y2="17" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                            </svg>
+                          )}
+                          {r.type === 'note' && (
+                            <svg width="18" height="18" viewBox="0 0 20 22" fill="none">
+                              <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" fill="none"/>
+                              <path d="M12 3v5h5" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+                              <line x1="5" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                              <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                            </svg>
+                          )}
+                          {r.type === 'link' && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                              <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </span>
+                        <span className="search-result-text">
+                          <span className="search-result-title">
+                            {highlightMatch(r.title, searchQuery, `rgba(${getCategoryAccent(r.accentIdx).baseRgb}, 0.2)`)}
+                          </span>
+                          <span className="search-result-meta">{r.categoryName} · {r.projectName}</span>
+                        </span>
+                      </button>
+                    </div>
+                  )
+
+                  const { visible, archived } = searchResults
+                  if (visible.length === 0 && archived.length === 0) {
+                    return <p className="save-to-empty">{searchQuery.trim() ? 'No matches' : ''}</p>
+                  }
+                  return (
+                    <>
+                      {visible.map((r, i) => renderRow(r, i > 0))}
+                      {archived.length > 0 && (
+                        <div className="search-archived-group">
+                          <div className="search-archived-label">Archived</div>
+                          {archived.map((r, i) => renderRow(r, i > 0))}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div
-          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
+          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${searchOpen ? ' search-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
           style={{
             '--accent-base': footerAccent.base,
             '--accent-dark': footerAccent.dark,
@@ -1356,11 +1687,156 @@ function AppInner() {
         >
 
           <div className="add-row" ref={addRowRef}>
-            <div className="link-input-stack">
+            {/* Mobile floating action bar — leading circle (hidden on desktop).
+                Home page: gallery icon → jumps to the first project page.
+                Project page: easel icon → jumps back home.
+                Long-press opens the full page list. */}
+            {/* Swallows every tap while the page menu is open. Sits above the rest
+                of the control bar but below the menu itself, so the only live
+                targets are the menu's own rows. */}
+            {pageMenuOpen && (
+              <div
+                className="mbar-menu-scrim"
+                onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setPageMenuOpen(false) }}
+                onClick={e => { e.preventDefault(); e.stopPropagation() }}
+              />
+            )}
+
+            <div className="mbar-gallery-wrap" ref={pageMenuWrapRef}>
+              <button
+                className={`mbar-circle mbar-gallery${activeTab === 'star' ? ' on-gallery' : ''}`}
+                aria-label={activeTab === 'star' ? 'Projects' : 'Gallery'}
+                onMouseDown={e => e.preventDefault()}
+                onPointerDown={() => { if (!pageMenuOpen) startPageMenuPress() }}
+                onPointerUp={cancelPageMenuPress}
+                onPointerLeave={cancelPageMenuPress}
+                onPointerCancel={cancelPageMenuPress}
+                onContextMenu={e => e.preventDefault()}
+                onClick={() => {
+                  // The button sits above the scrim, so it has to dismiss too
+                  if (pageMenuOpen) { setPageMenuOpen(false); return }
+                  // A completed long-press already opened the menu — don't also navigate
+                  if (pageMenuFiredRef.current) { pageMenuFiredRef.current = false; return }
+                  if (activeTab === 'star') { if (categories[0]) handleTabChange(categories[0].id) }
+                  else handleTabChange('star')
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <polyline points="3,6.8 10,2.6 17,6.8" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+                  <line x1="5" y1="7.6" x2="5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="8.33" y1="7.6" x2="8.33" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="11.67" y1="7.6" x2="11.67" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="15" y1="7.6" x2="15" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="3.5" y1="14" x2="16.5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="3" y1="17" x2="17" y2="17" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                </svg>
+              </button>
+
+              {/* Long-press page list — Gallery on top, then every project page */}
+              <div className={`card-context-menu mbar-page-menu${pageMenuOpen ? ' open' : ''}`}>
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => { setPageMenuOpen(false); handleTabChange('star') }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <polyline points="3,6.8 10,2.6 17,6.8" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+                    <line x1="5" y1="7.6" x2="5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="8.33" y1="7.6" x2="8.33" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="11.67" y1="7.6" x2="11.67" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="15" y1="7.6" x2="15" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="3.5" y1="14" x2="16.5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="3" y1="17" x2="17" y2="17" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  </svg>
+                  <span className="mbar-page-menu-label">Gallery</span>
+                </button>
+                {categories.map((cat, idx) => {
+                  const acc = getCategoryAccent(idx)
+                  const gradId = `easel-canvas-${cat.id}`
+                  return (
+                    <button
+                      key={cat.id}
+                      className="card-context-item"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => { setPageMenuOpen(false); handleTabChange(cat.id) }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark }}>
+                        <defs>
+                          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={acc.base} />
+                            <stop offset="100%" stopColor={acc.light} />
+                          </linearGradient>
+                        </defs>
+                        <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                        <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                        <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                        <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                      </svg>
+                      <span className="mbar-page-menu-label">{cat.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Search field. Always mounted (parked offscreen when closed) so the
+                Search button can focus it synchronously inside the tap — iOS only
+                raises the keyboard for a focus() that happens in a user gesture. */}
+            <div className={`link-input-stack search-stack${searchOpen ? ' open' : ''}`}>
+                <span className="search-stack-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                    <circle cx="8.75" cy="8.75" r="5.25" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                    <line x1="12.6" y1="12.6" x2="16.75" y2="16.75" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  </svg>
+                </span>
+                <input
+                  ref={searchInputRef}
+                  className="add-input search-input"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') closeSearch() }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                  enterKeyHint="search"
+                />
+                <button
+                  className="search-close-btn"
+                  aria-label="Close search"
+                  onMouseDown={e => { e.preventDefault(); closeSearch() }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                    <line x1="5" y1="5" x2="15" y2="15" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    <line x1="15" y1="5" x2="5" y2="15" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  </svg>
+                </button>
+            </div>
+
+            <div
+              className="link-input-stack"
+              hidden={searchOpen}
+              onPointerDown={e => {
+                // A tap on the pill's chrome (not the field itself) should still
+                // put the caret in the field rather than land on a dead surface.
+                if (toolbarType === 'link') return
+                if (e.target === inputRef.current) return
+                if (e.target.closest('.send-btn')) return
+                e.preventDefault()
+                inputRef.current?.focus({ preventScroll: true })
+              }}
+            >
+              {/* Centred "+ Add an item" overlay for the mobile pill (hidden on desktop
+                  and while focused). Sits over the real input so the plus and the label
+                  centre together as one group. */}
+              <span className="mbar-placeholder" aria-hidden="true">
+                <span className="mbar-placeholder-label">+ Add item</span>
+              </span>
               <input
                 ref={inputRef}
                 className={`add-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}`}
-                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : 'Scribble something down...'}
+                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (isMobileView ? 'Add an item' : 'Scribble something down...')}
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onFocus={() => {
@@ -1408,6 +1884,23 @@ function AppInner() {
                 </svg>
               </button>
             </div>
+
+            {/* Mobile floating action bar — trailing Search circle (hidden on desktop) */}
+            <button
+              className="mbar-circle mbar-search"
+              aria-label="Search"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => {
+                // Focus first, still inside the gesture, then re-style into place
+                searchInputRef.current?.focus({ preventScroll: true })
+                setSearchOpen(true)
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <circle cx="8.75" cy="8.75" r="5.25" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                <line x1="12.6" y1="12.6" x2="16.75" y2="16.75" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </button>
           </div>
 
           <div className="tab-area">
@@ -1474,6 +1967,14 @@ function AppInner() {
 
 
         </div>
+
+        {/* Settings sheet — slides up over the homepage. Mobile only (CSS hides it
+            above 1000px, where Settings stays a normal nav tab). */}
+        {settingsMounted && (
+          <div className={`settings-sheet${settingsIn ? ' open' : ''}`}>
+            <MenuPage onSelectTab={handleTabChange} onClose={() => setSettingsOpen(false)} />
+          </div>
+        )}
 
         <div id="animation-portal"></div>
         <ArchiveAttachmentsModal />

@@ -10,6 +10,7 @@ import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './Row
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
+import { subscribeProjectFocus } from '../searchFocus.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -429,6 +430,30 @@ const SHOW_PROJECT_INPUT = false
 
 export default function ProjectCard({ categoryId, project }) {
   const [activeTab, setActiveTab] = useState('list')
+
+  // A search result can ask this canvas to open on a particular content type and,
+  // if the target item is currently hidden, to reveal it: expand the canvas and
+  // flip whichever visibility toggle is keeping it off screen.
+  useEffect(() => subscribeProjectFocus(req => {
+    if (!req || String(req.projectId) !== String(project.id)) return
+    if (req.type) setActiveTab(req.type)
+    if (req.expand) {
+      setCollapsed(false)
+      try { localStorage.setItem(`collapsed-project-${project.id}`, 'false') } catch {}
+    }
+    if (req.showCompleted) {
+      setHideCompleted(false)
+      try { localStorage.setItem(`hc-project-${project.id}`, 'false') } catch {}
+    }
+    if (req.showArchivedNotes) {
+      setShowArchived(true)
+      try { localStorage.setItem(`arch-project-${project.id}`, 'true') } catch {}
+    }
+    if (req.showArchivedLinks) {
+      setShowArchivedLinks(true)
+      try { localStorage.setItem(`arch-link-project-${project.id}`, 'true') } catch {}
+    }
+  }), [project.id])
   const [inputValue, setInputValue] = useState('')
   const [linkUrlValue, setLinkUrlValue] = useState('')
   const [inputFocused, setInputFocused] = useState(false)

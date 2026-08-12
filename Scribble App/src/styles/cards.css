@@ -1,7 +1,7 @@
 .card {
   background: hsl(from #F7F6F3 h s calc(l * 1.01));
   border: 1px solid #C2C1BF;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 8px;
   overflow: hidden;
   box-shadow: none;
@@ -28,7 +28,8 @@
 
 /* Mobile homescreen only: unscrolled cards get +4% drop-shadow opacity */
 @media (max-width: 480px) {
-  #page-star .cards-area .card {
+  #page-star .cards-area .card,
+  .home-page .cards-area .card {
     box-shadow: 0 6px 24px rgba(0, 0, 0, calc(var(--card-scroll-shadow, 0.04) + 0.04));
   }
 }
@@ -256,7 +257,7 @@
 .checkbox {
   width: 18px;
   height: 18px;
-  border-radius: 2px;
+  border-radius: 4px;
   border: 1px solid #B8B8B8;
   background: #FAF9F7;
   flex-shrink: 0;
@@ -1206,7 +1207,7 @@
   right: 24px;
   background: #FAF9F7;   /* match the text box background */
   border: 1px solid #C2C1BF;
-  border-radius: 8px;
+  border-radius: 16px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.10);
   overflow: hidden;
   display: flex;
@@ -1254,7 +1255,7 @@
   gap: 10px;
   width: 100%;
   height: 48px;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
@@ -1539,7 +1540,9 @@
 }
 
 .todo-composer { margin-top: 10px; }
-.todo-composer .project-input-wrap { margin: 0; }
+/* Add-note / add-link composers on a list-item page. Scoped to .todo-composer so
+   the same wrapper used in project cards and category pages keeps its 4px. */
+.todo-composer .project-input-wrap { margin: 0; border-radius: 8px; }
 
 /* ---- Project Card ---- */
 /* Same bottom padding as a content-type card (the in-card composer was removed;
@@ -1801,7 +1804,7 @@
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;

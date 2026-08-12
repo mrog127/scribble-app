@@ -975,6 +975,7 @@ export default function ActivePage({
   onReorderTodos, onReorderNotes,
   onScroll, headerOpacity, headerTranslate,
   pageAnimClass = '', isExiting = false,
+  onOpenSettings,
 }) {
   const pageRef = useRef(null)
   const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated } = useAppContext()
@@ -1040,7 +1041,7 @@ export default function ActivePage({
 
   return (
     <div
-      className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`}
+      className={`page home-page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`}
       id={isExiting ? undefined : 'page-star'}
       ref={pageRef}
       onScroll={handleScroll}
@@ -1048,6 +1049,17 @@ export default function ActivePage({
     >
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
         <p className="active-today-label">Today is</p>
+        {/* Settings gear — right edge, vertically centred on the "Today is" line.
+            Mobile only; desktop reaches Settings from the sidebar nav. */}
+        <button className="home-settings-btn" aria-label="Settings" onClick={onOpenSettings}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3.2" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <path
+              d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008.6 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"
+              stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+        </button>
         <p className="active-day-name">{dayName},</p>
         <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
         <p className="active-month-date">{monthDate}</p>

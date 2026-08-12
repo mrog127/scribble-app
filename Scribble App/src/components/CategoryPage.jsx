@@ -5,6 +5,7 @@ import CategoryCollapsedView from './CategoryCollapsedView.jsx'
 import { EyeIcon, EyeOffIcon, ArchiveMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent } from '../theme.js'
+import { subscribeProjectFocus } from '../searchFocus.js'
 
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
 // outward to the corners (Collapsed → expand). The two glyphs crossfade.
@@ -419,6 +420,14 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
+
+  // A search result inside an archived canvas needs that section revealed first.
+  useEffect(() => subscribeProjectFocus(req => {
+    if (!req || !req.showArchivedCanvases) return
+    if (String(req.categoryId) !== String(categoryId)) return
+    setShowArchivedCanvases(true)
+    try { localStorage.setItem(`arch-canvases-${categoryId}`, 'true') } catch {}
+  }), [categoryId])
 
   const handleToggleShowArchivedCanvases = useCallback(() => {
     setShowArchivedCanvases(v => {

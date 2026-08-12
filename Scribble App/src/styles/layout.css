@@ -108,7 +108,10 @@ html, body, #root {
 .category-page .page-header:has(.card-context-menu.open) { z-index: 40; }
 
 /* Homepage header (mobile only — hidden on desktop): extra space above/below */
-#page-star > .page-header { padding: 48px 16px 8px; }
+/* Keyed off the class too: the id is absent while the page is mid-transition,
+   which made the header snap between paddings on arrival. */
+#page-star > .page-header,
+.home-page > .page-header { padding: 48px 16px 8px; }
 
 .active-title {
   font-family: 'Merriweather', Georgia, serif;
@@ -324,7 +327,7 @@ html, body, #root {
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -392,6 +395,9 @@ html, body, #root {
 .add-link-url-wrap.open { max-height: 41px; }
 
 .add-input-divider { height: 1px; background: #DBDAD8; flex-shrink: 0; }
+
+/* Mobile floating action bar pieces — off by default, enabled below 1000px */
+.mbar-circle, .mbar-placeholder { display: none; }
 
 /* Tab bar */
 .tab-bar {
@@ -761,7 +767,7 @@ html, body, #root {
   min-height: 0;
   background: #FAF9F7;   /* match the text box background */
   border: 1px solid #C2C1BF;
-  border-radius: 8px;
+  border-radius: 16px;
   box-shadow: none;
   overflow: hidden;
   display: flex;
@@ -1152,7 +1158,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   /* The date lives in the sidebar, so hide the Active page's own date header.
      Category / menu page headers stay in flow, above the cards. */
-  #page-star > .page-header { display: none; }
+  #page-star > .page-header,
+  .home-page > .page-header { display: none; }
   .page-header { padding: 28px 48px 6px 28px; }
   /* Category header: the title's baseline aligns with the sidebar day-name
      ("Thursday,") baseline, and the gap to the first card is exactly 24px. */
@@ -1473,4 +1480,669 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .home-indicator {
     display: none;
   }
+}
+
+/* ============================================================
+   MOBILE FLOATING ACTION BAR
+
+   Mobile only (< 1000px). Deliberately the LAST block in this
+   file: the `max-width: 480px` block above resets `.page`'s mask
+   and `.footer`'s padding, so anything declared earlier loses.
+
+   Resting:  [ 48px Gallery ]  [ "+ Add an item" pill ]  [ 48px ••• ]
+             80px side padding, floating over the page.
+   Focused:  one 96px box, 16px side padding, 4px radius, split by
+             a light divider — toolbar on top, text field below.
+   ============================================================ */
+@media (max-width: 999.98px) {
+  .phone {
+    --mbar-h: 48px;                                     /* bar height */
+    --mbar-bottom: calc(env(safe-area-inset-bottom) + 32px);  /* gap below the bar */
+    --mbar-chrome: #F7F6F3;
+    --mbar-stroke: #C2C1BF;
+    --mbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --mbar-side: 56px;                                  /* bar inset from each edge */
+  }
+
+  /* --- Footer becomes transparent overlay chrome --- */
+  .footer,
+  .footer.keyboard-open,
+  .footer.search-open {
+    background: transparent;
+    border-top: none;
+    box-shadow: none;
+    padding: 0 0 var(--mbar-bottom);
+    display: flex;
+    flex-direction: column;   /* text box on top, toolbar beneath it */
+    pointer-events: none;
+    overflow: visible;
+  }
+  .footer.has-scroll { box-shadow: none; }
+
+  /* --- Page runs to the phone bottom, behind the bar, and fades into it.
+         Fade starts 8px above the bar's top edge, hits 0 at its midline. --- */
+  .page {
+    margin-bottom: calc(-1 * (var(--mbar-h) + var(--mbar-bottom)));
+    /* Bottom fade only — no top fade (the pre-existing 480px block used to
+       cancel the base mask outright, so the top edge must stay opaque). */
+    -webkit-mask-image: linear-gradient(to bottom,
+      black 0px,
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 16px),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 8px));
+    mask-image: linear-gradient(to bottom,
+      black 0px,
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 16px),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 8px));
+  }
+  .phone.save-panel-open .page { margin-bottom: 0; }
+
+  /* Let content scroll clear of the bar: at the end of the scroll the last item
+     sits 24px above the bar's top edge. */
+  .cards-area {
+    padding-bottom: calc(var(--mbar-h) + var(--mbar-bottom) + 24px);
+  }
+
+  /* Pages that leave the flex flow during a swipe/tab change are `inset: 0`, so
+     they already span the full phone. The negative margin would stretch them
+     80px past the bottom and push the fade below the bar — content would flash
+     at full opacity behind it mid-transition. */
+  .page.page-exiting,
+  .page.drag-incoming { margin-bottom: 0; }
+
+  /* --- The bar row ---
+     The earlier <1000px block gives .add-row / .tab-area `margin: auto` for the
+     800px centring cap. On a flex item that kills cross-axis stretch, so the
+     toolbar shrank to fit its content while the input row filled. Force both
+     rows to the same full width so the focused state reads as one box. */
+  .footer .add-row,
+  .footer .tab-area {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+  }
+
+  .footer .add-row {
+    padding: 0 var(--mbar-side);
+    margin-bottom: 0;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+    transition: padding 200ms ease;
+  }
+  /* The Menu page hid this row; on mobile the bar is always present */
+  .footer.category-mode .add-row {
+    max-height: 200px;
+    opacity: 1;
+    overflow: visible;
+    margin-bottom: 0;
+  }
+
+  /* --- Shared chrome --- */
+  .mbar-circle,
+  .footer .add-row .link-input-stack {
+    background: var(--mbar-chrome);
+    border: 1px solid var(--mbar-stroke);
+    box-shadow: var(--mbar-shadow);
+    pointer-events: auto;
+  }
+
+  /* Anchor for the long-press page menu */
+  .mbar-gallery-wrap {
+    position: relative;
+    flex: 0 0 auto;
+    pointer-events: auto;
+    transition: flex-basis 200ms ease, width 200ms ease, margin 200ms ease;
+  }
+
+  .mbar-circle {
+    display: flex;
+    -webkit-touch-callout: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--mbar-h);
+    height: var(--mbar-h);
+    flex: 0 0 var(--mbar-h);
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: opacity 150ms ease, flex-basis 200ms ease,
+                width 200ms ease, margin 200ms ease;
+  }
+  .mbar-circle svg { flex-shrink: 0; }
+
+  /* --- Resting pill --- */
+  .footer .add-row .link-input-stack {
+    height: var(--mbar-h);
+    border-radius: calc(var(--mbar-h) / 2);
+    flex-direction: row;
+    align-items: center;
+    overflow: visible;
+    position: relative;
+    transition: border-radius 200ms ease, height 200ms ease;
+  }
+  .footer .add-row .link-input-stack:focus-within { box-shadow: var(--mbar-shadow); }
+
+  .footer .add-row .link-input-stack > .add-input {
+    height: var(--mbar-h);
+    flex: 1 1 auto;
+    padding: 0 16px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  /* The centred overlay stands in for the placeholder while resting */
+  .footer:not(.keyboard-open) .add-row .add-input::placeholder { opacity: 0; }
+
+  .mbar-placeholder {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 120ms ease;
+  }
+  /* Matches the old "Scribble something down..." placeholder styling */
+  .mbar-placeholder-label {
+    font-family: 'Open Sans', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: #B5B4B2;
+  }
+  .footer.keyboard-open .mbar-placeholder { opacity: 0; }
+
+  .send-btn { top: 8px; right: 8px; height: 32px; width: 32px; }
+
+  /* --- Toolbar row: hidden while resting, top half of the box when focused --- */
+  .footer .tab-area {
+    height: 0;
+    padding: 0;
+    overflow: hidden;   /* keeps the toolbar clipped away while resting */
+    pointer-events: none;
+    transition: height 150ms ease;
+  }
+  .footer .input-toolbar {
+    position: static;
+    height: var(--mbar-h);
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0 8px;
+    pointer-events: auto;
+    transform: translateY(8px);
+  }
+  .footer .input-toolbar.faded-in { transform: translateY(0); }
+  .footer.category-mode .input-toolbar { display: none !important; }
+
+  /* --- Focused ---
+     The circles fold away and the FOOTER ITSELF becomes the box: one stroke,
+     one shadow, one 16px radius wrapping both rows. The children go
+     transparent and borderless so there's no seam or doubled stroke; only
+     the divider between the two rows remains. Side margin matches the
+     Save-to panel's 8px padding so the two line up. */
+  .footer.keyboard-open {
+    margin: 0 8px var(--mbar-bottom);
+    padding: 0;
+    background: var(--mbar-chrome);
+    border: 1px solid var(--mbar-stroke);
+    border-radius: 16px;
+    box-shadow: var(--mbar-shadow);
+    overflow: hidden;
+    pointer-events: auto;
+  }
+
+  .footer.keyboard-open .mbar-circle,
+  .footer.keyboard-open .mbar-gallery-wrap,
+  .footer.search-open .mbar-circle,
+  .footer.search-open .mbar-gallery-wrap {
+    opacity: 0;
+    flex-basis: 0;
+    width: 0;
+    margin: 0 -4px;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .footer.keyboard-open .tab-area {
+    height: var(--mbar-h);
+    border-top: 1px solid #DBDAD8;   /* the single divider through the middle */
+  }
+
+  .footer.keyboard-open .add-row { padding: 0; }
+  .footer.search-open .add-row { padding: 0 8px; }   /* matches .save-to-panel's 8px */
+  .footer.keyboard-open .add-row .link-input-stack,
+  .footer.keyboard-open .add-row .link-input-stack:focus-within {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* The old tab bar is replaced entirely on mobile */
+  .footer .tab-bar { display: none; }
+}
+
+/* Long-press page menu on the mobile gallery/easel circle.
+   Reuses .card-context-menu chrome but opens upward off the bar, and is
+   capped so its top never comes closer than 24px to the screen edge. */
+@media (max-width: 999.98px) {
+  /* Doubled-up class: cards.css imports after this file, so .card-context-menu's
+     downward `top` would otherwise win on equal specificity. */
+  .card-context-menu.mbar-page-menu {
+    border-radius: 16px;
+    top: auto;
+    bottom: calc(100% + 8px);   /* 8px above the control bar */
+    left: 0;
+    right: auto;
+    transform: translateY(8px);
+    /* Span the full control bar: viewport minus the bar's inset on both sides.
+       The menu is anchored to the leading circle, which sits on that inset. */
+    width: calc(100vw - 2 * var(--mbar-side));
+    min-width: 0;
+    max-height: calc(
+      var(--ivh, 100dvh)
+      - var(--mbar-h) - var(--mbar-bottom)   /* the bar itself */
+      - 8px                                  /* gap above the bar */
+      - 24px                                 /* required top inset */
+    );
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  /* Gallery row stays black; project rows take their category's base accent
+     (set inline). Both sit at medium weight. */
+  .card-context-menu.mbar-page-menu .card-context-item {
+    font-weight: 500;
+    padding-right: 16px;   /* base rule reserves 40px for a trailing glyph */
+  }
+
+  /* Long page names truncate rather than running to the menu edge. The label
+     needs its own box — text-overflow doesn't apply to a bare text node in a
+     flex container. */
+  .mbar-page-menu-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .card-context-menu.mbar-page-menu::-webkit-scrollbar { display: none; }
+  .card-context-menu.mbar-page-menu.open { transform: translateY(0); }
+
+  /* Dim the page behind the open menu (matches the save-to panel treatment) */
+  .phone.page-menu-open .page { opacity: 0.2; }
+
+  /* Tap-swallowing scrim. Lives inside .add-row so it shares a stacking context
+     with the menu's wrapper — scrim below (5), wrapper above (6), and the pill
+     and ••• circle at auto, i.e. beneath the scrim. */
+  .mbar-menu-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    background: transparent;
+    pointer-events: auto;
+  }
+  .phone.page-menu-open .mbar-gallery-wrap { z-index: 6; }
+}
+
+/* =============================================
+   Settings sheet (mobile) + Home settings gear
+   Settings is the page formerly titled "Menu". On mobile it presents as a
+   sheet sliding up over the homepage; on desktop it stays a nav tab, so the
+   sheet is suppressed above the breakpoint.
+   ============================================= */
+.settings-sheet { display: none; }
+
+.home-settings-btn {
+  display: none;
+  position: absolute;
+  right: 16px;
+  top: 44px;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Flex row rather than absolute offsets — the header's padding-top varies by
+   breakpoint (the <=480px block swaps in a safe-area calc), so any hardcoded
+   `top` drifts away from the title. */
+.settings-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.settings-header-row .active-title { margin-bottom: 0; }
+
+.settings-close-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+@media (max-width: 999.98px) {
+  .home-settings-btn { display: flex; }
+
+  .settings-sheet {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 40;   /* over the page + footer bar, under detail pages */
+    background: linear-gradient(160deg,
+      hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%,
+      hsl(from #F2F0EB h calc(s * 1.62) l));
+    transform: translateY(100%);
+    transition: transform 350ms ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .settings-sheet.open { transform: translateY(0); }
+
+  /* The page inside the sheet fills it and scrolls on its own — it must not
+     inherit the homepage's bottom fade or negative margin. */
+  .settings-sheet .page {
+    margin-bottom: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* =============================================
+   Search (mobile control bar)
+   The trailing circle opens a search field in the pill; results appear in a
+   panel above it that reuses the "Save to…" card chrome.
+   ============================================= */
+@media (max-width: 999.98px) {
+  /* Parked when closed: still in the DOM and focusable (so a synchronous focus()
+     inside the tap raises the iOS keyboard), but takes no space and can't be hit.
+     display:none would make it unfocusable, which is the whole problem. */
+  .footer .add-row .search-stack {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+  .footer .add-row .search-stack.open {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    height: var(--mbar-h);
+    flex: 1 1 auto;
+    opacity: 1;
+    pointer-events: auto;
+    overflow: visible;
+    background: var(--mbar-chrome);
+    border: 1px solid var(--mbar-stroke);
+    box-shadow: var(--mbar-shadow);
+  }
+
+  .search-stack-icon {
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+
+  .footer .add-row .search-stack > .search-input {
+    padding-left: 6px;   /* matches the add pill's icon → text gap */
+  }
+}
+
+/* Result rows — icon on the left, title over its category · canvas */
+.search-result-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'Open Sans', system-ui, sans-serif;
+}
+.search-result-row:active { background: rgba(0, 0, 0, 0.04); }
+@media (hover: hover) {
+  .search-result-row:hover { background: rgba(0, 0, 0, 0.02); }
+}
+
+.search-result-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.search-result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.search-result-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #242424;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-meta {
+  font-size: 13px;
+  font-weight: 400;
+  color: #8A8987;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Search: panel sizing, hidden add pill, landed-row flash --- */
+
+/* The add pill's own `display: flex` beats the [hidden] attribute's UA rule. */
+.link-input-stack[hidden] { display: none !important; }
+
+/* The results panel fills the space above the bar, same as "Save to…" — the
+   page-collapse comes from the shared .save-panel-open class on .phone. */
+
+/* Brief highlight on the row a search result landed on */
+@keyframes search-flash {
+  0%   { background: transparent; }
+  25%  { background: rgba(var(--accent-base-rgb), 0.2); }
+  70%  { background: rgba(var(--accent-base-rgb), 0.2); }
+  100% { background: transparent; }
+}
+.swipe-row.search-flash { animation: search-flash 1300ms ease; }
+
+/* Matched substring inside a search result title */
+.search-hit {
+  background: transparent;   /* real tint set inline, per category accent */
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Checked / archived results sit on the same light gray used for row hovers */
+.search-archived-group {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Divider label between live results and checked/archived ones */
+.search-archived-label {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8A8987;
+  padding: 14px 16px 6px;
+  border-top: 1px solid #DBDAD8;
+  margin-top: 6px;
+}
+
+/* Archived-section titles read like a checked-off / archived item:
+   #595959 at 50% opacity with a strikethrough (matches .card-title.archived-title). */
+.search-archived-group .search-result-title {
+  color: #595959;
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* Gallery circle: orbiting inner glow while you're on the gallery page.
+   Same idea as .checkbox.activated-checkbox — the offsets ride registered
+   custom properties so box-shadow itself stays un-animated and the separately
+   animated colour updates every frame. Offsets scaled up for the 48px circle.
+   Each full revolution is one colour, stepping R-O-Y-G-B-P-Pink and looping. */
+@keyframes mbar-glow-orbit {
+  0%   { --glow-x: 6px;  --glow-y: 0px; }
+  25%  { --glow-x: 0px;  --glow-y: 8px; }
+  50%  { --glow-x: -6px; --glow-y: 0px; }
+  75%  { --glow-x: 0px;  --glow-y: -8px; }
+  100% { --glow-x: 6px;  --glow-y: 0px; }
+}
+
+@media (max-width: 999.98px) {
+  /* The glow and the colour ring live on pseudo-elements that run continuously
+     and only fade their opacity. Toggling the animations themselves would snap
+     the box-shadow/border back the instant you left the gallery page, because a
+     running animation overrides any transition on the same property. */
+  .mbar-circle.mbar-gallery { position: relative; }
+
+  /* Inner glow */
+  .mbar-circle.mbar-gallery::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: inset var(--glow-x) var(--glow-y) 14px var(--glow);
+    opacity: 0;
+    transition: opacity 450ms ease;
+    pointer-events: none;
+    animation: mbar-glow-orbit 2.5s linear infinite,
+               gallery-rainbow 17.5s linear infinite;
+  }
+
+  /* Colour ring, painted over the button's own gray stroke so the gray reads
+     through wherever the gradient is faint. Ring shape via the standard
+     mask-exclude trick — a 1px padding box punched out of the middle. */
+  .mbar-circle.mbar-gallery::after {
+    content: '';
+    position: absolute;
+    /* An absolutely positioned pseudo is laid out against the PADDING box, so
+       inset:0 lands just inside the button's 1px border. -1px pushes the ring
+       out to sit directly on top of the gray stroke. */
+    inset: -1px;
+    border-radius: 50%;
+    padding: 1px;
+    background: linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--glow-base) h s calc(l * 1.53) / 0.6),
+      hsl(from var(--glow-base) h s calc(l * 0.576 - 4) / 0.6));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 450ms ease;
+    pointer-events: none;
+    animation: cb-stroke-orbit 2.5s linear infinite,
+               gallery-rainbow 17.5s linear infinite;
+  }
+
+  .mbar-circle.mbar-gallery.on-gallery::before,
+  .mbar-circle.mbar-gallery.on-gallery::after { opacity: 1; }
+
+  /* Keep the icon above both layers */
+  .mbar-circle.mbar-gallery svg { position: relative; z-index: 1; }
+}
+
+/* Close X inside the open search bar — same effect as the panel's Done button */
+@media (max-width: 999.98px) {
+  .search-close-btn {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .search-close-btn:active { background: rgba(0, 0, 0, 0.06); }
+  /* Hidden along with the rest of the field while search is parked */
+  .footer .add-row .search-stack:not(.open) .search-close-btn { display: none; }
+}
+
+/* Cards mount with a 200ms opacity + translateY intro. During a page swipe the
+   incoming column mounts under your finger, so that intro plays as you drag and
+   the cards appear to settle downward. Pages that are mid-transition show their
+   cards already settled — the .visible class lands on the next frame anyway, so
+   nothing snaps when these classes come off at commit. */
+.page.drag-incoming .card-intro,
+.page.page-entering .card-intro,
+.page.page-exiting .card-intro,
+.page.tab-drag-to .card-intro,
+.page.tab-drag-from .card-intro {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+/* Freeze card internals while a page is mid-swipe.
+   Several things inside a card animate their height on mount or on first paint
+   (.hide-completed-btn, .project-input-bottom, the items-area height effect,
+   the card intro). With the incoming column mounting under your finger those
+   all play during the drag, so the cards appear to grow downward as you move.
+   Scoped to .card and its descendants so the page/header/cards-area transition
+   animations themselves are untouched. */
+.page.drag-incoming .card,
+.page.drag-incoming .card *,
+.page.tab-drag-to .card,
+.page.tab-drag-to .card *,
+.page.tab-drag-from .card,
+.page.tab-drag-from .card *,
+.page.page-entering .card,
+.page.page-entering .card *,
+.page.page-exiting .card,
+.page.page-exiting .card * {
+  transition: none !important;
+  animation: none !important;
 }

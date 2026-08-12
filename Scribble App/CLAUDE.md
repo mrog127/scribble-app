@@ -45,7 +45,7 @@ Code/
 - **Blue accent:** `#6993FE` — **Dark blue:** `#3F5999`
 - **Display font:** Baskerville Bold/SemiBold — page title 32px, card titles 24px
 - **Body font:** Open Sans SemiBold 600 — items 16px, labels 14px
-- **Cards:** 8pt corner radius, drop shadow Y=4 blur=20 black 10% opacity, background `#F7F6F3`, border `#C2C1BF`
+- **Cards:** 12pt corner radius, drop shadow Y=4 blur=20 black 10% opacity, background `#F7F6F3`, border `#C2C1BF`
 - **Dividers:** 1px `#DBDAD8`, inset 16px
 - **Header:** sticky, cards scroll beneath
 - **Underline.svg:** blue squiggly (`#6993FE`), sits 8pt below the "Active" page title

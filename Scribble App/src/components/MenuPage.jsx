@@ -313,7 +313,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
           style={{
             background: '#F7F6F3',
             border: '1px solid #C2C1BF',
-            borderRadius: 8,
+            borderRadius: 16,
             boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
           }}
         >

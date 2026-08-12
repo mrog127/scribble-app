@@ -46,7 +46,7 @@ html, body, #root {
   -webkit-user-select: none;
   width: 100%;
   height: 100vh;
-  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
+  background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08) / 0.5), 10%, hsl(from #F2F0EB h calc(s * 1.62) l / 0.5));
   border-radius: 0;
   overflow: hidden;
   display: flex;
@@ -513,15 +513,15 @@ html, body, #root {
   align-items: center;
 }
 
-.text-tab.selected { background: transparent; color: var(--accent-dark); font-weight: 600; }
+.text-tab.selected { background: transparent; color: var(--accent-dark); }
 
 .tab-indicator {
   position: absolute;
   top: 1px;
   height: 38px;
   box-sizing: border-box;
-  background: rgba(var(--accent-base-rgb), 0.12);
-  border-radius: 4px;
+  background: rgba(var(--accent-base-rgb), 0.10);
+  border-radius: 999px;
   pointer-events: none;
   transition: left 100ms ease, width 100ms ease;
   z-index: 0;
@@ -554,9 +554,32 @@ html, body, #root {
 
 .tab-bar.star-active .tab-indicator {
   background: #FAF9F7;
+  /* Gray stroke underneath; the colour ring below is painted over it */
   border: 1px solid #C2C1BF;
-  box-shadow: 0 1px 16px color-mix(in srgb, var(--glow-base) 16%, transparent);
-  animation: gallery-rainbow 37.31s linear infinite;
+  /* Same orbiting inner glow as the mobile gallery button */
+  box-shadow: inset var(--glow-x) var(--glow-y) 14px var(--glow);
+  animation: mbar-glow-orbit 2.5s linear infinite,
+             gallery-rainbow 17.5s linear infinite;
+}
+
+/* Rotating colour stroke, matching .mbar-gallery.on-gallery::after. Ring shape
+   via mask-exclude; inset -1px so it lands on the border, not inside it. */
+.tab-bar.star-active .tab-indicator::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(var(--cb-stroke-angle),
+    hsl(from var(--glow-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--glow-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: cb-stroke-orbit 2.5s linear infinite,
+             gallery-rainbow 17.5s linear infinite;
 }
 
 /* Orbit drives the inner-shadow offset through custom properties, leaving
@@ -1228,26 +1251,28 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    /* Gallery stays put; only .tabs-scroll below it scrolls. The indicator is a
+       child here, so leaving this un-scrolled keeps its offsets valid. */
+    overflow: visible;
     position: relative;
     margin-top: 24px;
     margin-bottom: 24px;
     gap: 4px;
-    scrollbar-width: none;
   }
-  .tab-scroll::-webkit-scrollbar { display: none; }
   /* 12px fade only on an edge that has content beyond it (set by JS on scroll) */
-  .tab-scroll.fade-top {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 100%);
+  /* Project tabs fade out over the 16px directly below the Gallery row as they
+     scroll under it. No scroll, no fade. */
+  .tabs-scroll.fade-top {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 100%);
   }
-  .tab-scroll.fade-bottom {
-    -webkit-mask-image: linear-gradient(to top, transparent 0, #000 12px, #000 100%);
-    mask-image: linear-gradient(to top, transparent 0, #000 12px, #000 100%);
+  .tabs-scroll.fade-bottom {
+    -webkit-mask-image: linear-gradient(to top, transparent 0, #000 16px, #000 100%);
+    mask-image: linear-gradient(to top, transparent 0, #000 16px, #000 100%);
   }
-  .tab-scroll.fade-top.fade-bottom {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  .tabs-scroll.fade-top.fade-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
   }
   .tab-home { margin-top: auto; }   /* bottom-anchor the stack */
 
@@ -1260,7 +1285,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     gap: 14px;
     padding: 0 14px;
     border: 1px solid transparent;   /* reserve space so selection adds no shift */
-    border-radius: 8px;
+    border-radius: 999px;
     box-sizing: border-box;
     font-size: 15px;
   }
@@ -1274,29 +1299,79 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     color: #333333;
   }
   .tab-home::after  { content: 'Gallery'; }
-  .tab-pages::after { content: 'Pages'; }
+  .tab-pages::after { content: 'Settings'; }
 
   /* Home label: match category-tab weight, sit 8px from the star, and cycle
      through the star's dark colours (same rate/colours) when selected. */
   .tab-bar .tab-home { gap: 6px; }
+  /* Settings row matches Gallery's icon size and gap, so its label lands at the
+     same 38px as the Gallery and project labels. */
+  .tab-bar .tab-pages { gap: 6px; }
+  .tab-bar .tab-pages svg { width: 18px; height: 18px; }
+  /* Label styled like a project tab (Merriweather 500) rather than the heavier
+     icon-tab default. */
+  .tab-bar .tab-pages::after { font-weight: 500; }
+  /* Project tabs keep their labels at the Gallery label's x (14px row padding +
+     the 18px icon + its 6px gap) whether or not the easel is showing — the icon
+     is absolutely positioned in that reserved space, so nothing shifts as you
+     switch pages. */
+  .tabs-scroll .text-tab { padding-left: 38px; padding-right: 16px; position: relative; }
+  /* Titles truncate 16px from the selection box's right edge, selected or not */
+  .tabs-scroll .text-tab .tab-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+  }
+  .tabs-scroll .text-tab .tab-easel {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 140ms ease;
+    pointer-events: none;
+  }
+  /* Wait for the selection box to finish sliding (120-170ms) before revealing
+     the easel; on deselect the base rule fades it straight out. */
+  .tabs-scroll .text-tab.selected .tab-easel {
+    opacity: 1;
+    transition: opacity 140ms ease 180ms;
+  }
   .tab-bar .tab-home svg,
   .tab-bar .tab-home.selected svg { width: 18px; height: 18px; }
   .tab-bar .tab-home::after { font-weight: 500; color: #242424; }
-  .tab-bar.star-active .tab-home.selected::after {
-    font-weight: 600;   /* match a selected category tab label */
-  }
 
-  /* Categories stack at natural height within the scroll container */
+
+  /* Categories scroll beneath the pinned Gallery row */
   .tabs-scroll {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;   /* positioning context for the sliding indicator */
     flex-direction: column;
     align-items: stretch;
-    overflow: visible;
+    overflow-y: auto;
+    scrollbar-width: none;
     -webkit-mask-image: none;
     mask-image: none;
     margin-left: 0;
     padding: 0;
     gap: 4px;
+  }
+  .tabs-scroll::-webkit-scrollbar { display: none; }
+  /* Gallery no longer bottom-anchors the stack — it sits above the scroller */
+  .tab-home { margin-top: 0; flex: 0 0 auto; }
+
+  /* Settings selected. The sliding indicator lives inside .tab-scroll and the
+     Settings row is a sibling outside it, so the indicator can't travel there —
+     it was being positioned past the scroller's edge and clipped. Give the row
+     its own highlight and park the indicator. */
+  .tab-bar.menu-active .tab-indicator { opacity: 0; }
+  .tab-bar.menu-active .icon-tab.tab-pages.selected {
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
   }
 
   /* Selected colour comes from base rules; the sliding box is the indicator */
@@ -1305,7 +1380,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .tab-bar .icon-tab:hover:not(.selected),
   .tabs-scroll .text-tab:hover:not(.selected) {
     background: rgba(0, 0, 0, 0.02);
-    border-radius: 4px;
+    border-radius: 999px;
   }
 
   /* Focused-input toolbar sits at the top of the nav area, not stretched */
@@ -1320,7 +1395,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .save-to-panel.visible {
     position: fixed;
     left: 0;
-    top: 307px;
+    top: 311px;
     bottom: 24px;
     width: 340px;   /* same box as the footer; with 28px side padding the card
                        matches the textbox + send button (28 → 312) */
@@ -1330,7 +1405,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     transition: top 200ms ease;
   }
   /* Link mode adds a second input row — push the menu down so it stays below it */
-  #app:has(.add-link-url-wrap.open) .save-to-panel.visible { top: 356px; }
+  #app:has(.add-link-url-wrap.open) .save-to-panel.visible { top: 360px; }
   /* Keep the cards in place but dim them to 20% while the picker is open */
   .phone.save-panel-open .page {
     flex: 1;
@@ -1420,7 +1495,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      with the detail page's background so it reads as extending to the window edge. */
   .app-wrap {
     position: relative;
-    background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
+    background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08) / 0.5), 10%, hsl(from #F2F0EB h calc(s * 1.62) l / 0.5));
   }
   .app-wrap:has(.note-detail-page.open)::after {
     content: '';
@@ -1498,7 +1573,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .phone {
     --mbar-h: 48px;                                     /* bar height */
     --mbar-bottom: calc(env(safe-area-inset-bottom) + 16px);  /* gap below the bar */
-    --mbar-chrome: #F7F6F3;
+    --mbar-chrome: hsl(from #F7F6F3 h s calc(l * 1.01));   /* matches .card */
     --mbar-stroke: #C2C1BF;
     --mbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     --mbar-side: 56px;                                  /* bar inset from each edge */
@@ -1715,6 +1790,9 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   .footer.keyboard-open .add-row { padding: 0; }
   .footer.search-open .add-row { padding: 0 8px; }   /* matches .save-to-panel's 8px */
+  /* The keyboard is always up in search mode, so the resting gap below the bar
+     doesn't apply — sit 16px above the keyboard instead. */
+  .footer.search-open { padding-bottom: 16px; }
   .footer.keyboard-open .add-row .link-input-stack,
   .footer.keyboard-open .add-row .link-input-stack:focus-within {
     background: transparent;
@@ -1853,8 +1931,9 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     inset: 0;
     z-index: 40;   /* over the page + footer bar, under detail pages */
     background: linear-gradient(160deg,
-      hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%,
-      hsl(from #F2F0EB h calc(s * 1.62) l));
+      hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08) / 0.5), 10%,
+      hsl(from #F2F0EB h calc(s * 1.62) l / 0.5));
+    background-color: #FFFFFF;
     transform: translateY(100%);
     transition: transform 350ms ease;
     display: flex;
@@ -1904,7 +1983,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     opacity: 1;
     pointer-events: auto;
     overflow: visible;
-    background: var(--mbar-chrome);
+    background: #FAF9F7;   /* the text-box fill used by .add-input / save-to / move-to */
     border: 1px solid var(--mbar-stroke);
     box-shadow: var(--mbar-shadow);
   }
@@ -1912,7 +1991,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .search-stack-icon {
     display: flex;
     align-items: center;
-    padding-left: 12px;
+    padding-left: 14px;
     flex: 0 0 auto;
     pointer-events: none;
   }
@@ -1974,8 +2053,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
 /* --- Search: panel sizing, hidden add pill, landed-row flash --- */
 
-/* The add pill's own `display: flex` beats the [hidden] attribute's UA rule. */
-.link-input-stack[hidden] { display: none !important; }
+/* Mobile: search replaces the add pill outright. (Desktop fades it instead —
+   see the desktop block.) A plain [hidden] wouldn't work here: the element's own
+   `display: flex` beats the UA rule. */
+@media (max-width: 999.98px) {
+  .link-input-stack.add-hidden { display: none !important; }
+}
 
 /* The results panel fills the space above the bar, same as "Save to…" — the
    page-collapse comes from the shared .save-panel-open class on .phone. */
@@ -2145,4 +2228,314 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 .page.page-exiting .card * {
   transition: none !important;
   animation: none !important;
+}
+
+/* =============================================================
+   DESKTOP (>=1000px): mobile-style add pill + search
+   The sidebar keeps its layout; the add textbox is restyled as the
+   mobile pill and gains a search circle beside it. Search expands to
+   the full column width and drops the results panel into the same
+   fixed box the "Save to…" picker uses.
+   ============================================================= */
+@media (min-width: 1000px) {
+  .phone {
+    --mbar-h: 44px;   /* matches .text-tab / .icon-tab height in the nav */
+    --mbar-chrome: hsl(from #F7F6F3 h s calc(l * 1.01));   /* matches .card */
+    --mbar-stroke: #C2C1BF;
+    --mbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Pill + search circle share one row, spanning exactly the same box as the
+     tab selection indicator below (both sit inside the footer's 28px padding). */
+  .footer .add-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  /* Hover tint: the same 2% black an unchecked checkbox gets, as an overlay so
+     it doesn't disturb the pill's own background. */
+  .footer .add-row .mbar-search,
+  .footer .add-row .link-input-stack { position: relative; }
+
+  @media (hover: hover) {
+    .footer .add-row .mbar-search::after,
+    .footer .add-row .link-input-stack:not(.search-stack)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: rgba(0, 0, 0, 0.02);
+      opacity: 0;
+      transition: opacity 120ms ease;
+      pointer-events: none;
+    }
+    .footer .add-row .mbar-search:hover::after,
+    .footer .add-row .link-input-stack:not(.search-stack):hover::after { opacity: 1; }
+    /* An active text box shouldn't read as hoverable */
+    .footer.keyboard-open .add-row .link-input-stack:hover::after { opacity: 0; }
+  }
+
+  /* The gallery circle and its long-press menu are mobile-only */
+  .footer .add-row .mbar-gallery-wrap { display: none; }
+
+  /* ---- Add pill ---- */
+  .footer .add-row .link-input-stack {
+    flex: 1 1 auto;
+    min-width: 0;
+    position: relative;
+    height: var(--mbar-h);
+    flex-direction: row;
+    align-items: center;
+    border-radius: calc(var(--mbar-h) / 2);
+    background: var(--mbar-chrome);
+    border: 1px solid var(--mbar-stroke);
+    box-shadow: var(--mbar-shadow);
+    overflow: visible;
+  }
+  .footer .add-row .link-input-stack > .add-input {
+    height: var(--mbar-h);
+    flex: 1 1 auto;
+    padding: 0 16px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  /* The centred overlay stands in for the placeholder while resting */
+  .footer:not(.keyboard-open) .add-row .add-input::placeholder { opacity: 0; }
+
+  .mbar-placeholder {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: flex-start;   /* left-justified on desktop */
+    padding-left: 16px;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 120ms ease;
+  }
+  .mbar-placeholder-label {
+    font-family: 'Open Sans', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: #B5B4B2;
+  }
+  .footer.keyboard-open .mbar-placeholder { opacity: 0; }
+
+  .send-btn { top: 6px; right: 16px; height: 32px; width: 32px; }
+
+  /* ---- Search circle ---- */
+  .footer .add-row .mbar-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 var(--mbar-h);
+    width: var(--mbar-h);
+    height: var(--mbar-h);
+    padding: 0;
+    border-radius: 50%;
+    background: var(--mbar-chrome);
+    border: 1px solid var(--mbar-stroke);
+    box-shadow: var(--mbar-shadow);
+    cursor: pointer;
+    transition: opacity 160ms ease 130ms, margin 220ms ease;
+  }
+  /* Only one of the two can be active. Focusing Add item collapses the circle so
+     the pill grows into the full column; opening search replaces it outright. */
+  /* Add item focused: the circle fades and slides out of the row (keeping its
+     own dimensions) so the pill grows into the full column. */
+  .footer.keyboard-open .add-row .mbar-search {
+    opacity: 0;
+    margin-right: calc(-1 * (var(--mbar-h) + 8px));
+    pointer-events: none;
+    transition: opacity 140ms ease, margin 220ms ease;
+  }
+  /* Search opened: the overlay sits exactly on top of the circle, so the circle
+     only needs to cross-fade — moving it would break the morph. */
+  .footer.search-open .add-row .mbar-search {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease;
+  }
+
+  /* ---- Search field ----
+     An absolute overlay rather than a flex child, so opening it never resizes
+     the add pill. Closed, it sits exactly on top of the search circle at the
+     same size and radius; opening widens it leftward to the full column, which
+     reads as the circle morphing into the bar. Staying in the DOM (not
+     display:none) keeps the synchronous focus() in the tap handler working. */
+  .footer .add-row { position: relative; }
+
+  .footer .add-row .search-stack {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    width: var(--mbar-h);
+    height: var(--mbar-h);
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    /* Half the height in px, not 50%: a percentage radius tracks both axes, so
+       animating it against a changing width pinches the ends into an ellipse.
+       At 44px wide this is already a perfect circle, and it stays a clean pill
+       all the way out — so the radius never needs to animate at all. */
+    border-radius: calc(var(--mbar-h) / 2);
+    background: #FAF9F7;
+    border: 1px solid var(--mbar-stroke);
+    box-shadow: var(--mbar-shadow);
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+    /* Closing: shrink first, fade only over the tail so it visibly collapses
+       back into the circle. (A transition is read off the state being moved TO,
+       so the delay belongs on the closed rule.) */
+    transition: width 260ms ease, opacity 140ms ease 130ms;
+  }
+  .footer .add-row .search-stack.open {
+    width: 100%;
+    opacity: 1;
+    pointer-events: auto;
+    /* Opening: fade in straight away, then widen */
+    transition: width 260ms ease, opacity 140ms ease;
+  }
+
+  /* Add pill slides left and fades as the search bar grows into its space.
+     Scoped off .search-stack — an unscoped `transition: opacity` here lands after
+     the search-stack rule at equal specificity and wipes out its width /
+     border-radius transition, which makes the morph snap instead of animate. */
+  .footer .add-row .link-input-stack:not(.search-stack) {
+    transition: opacity 180ms ease, transform 260ms ease;
+  }
+  .footer .add-row .link-input-stack.add-hidden {
+    opacity: 0;
+    transform: translateX(-40px);
+    pointer-events: none;
+  }
+  .search-stack-icon {
+    display: flex;
+    align-items: center;
+    padding-left: 14px;
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+  .footer .add-row .search-stack > .search-input { padding-left: 6px; }
+  .search-close-btn {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .footer .add-row .search-stack:not(.open) .search-close-btn { display: none; }
+
+  /* Desktop gallery selection box: same orbit, but the glow crawls across the
+     top and bottom and zips past the left and right. Eight 45-degree arcs,
+     weighted 1 (horizontal) : 6 (vertical) — 4x1 + 4x6 = 28 shares, so a
+     horizontal arc is 100/28 = 3.571%. Duration scales 2.5s -> 8.75s so those
+     horizontal arcs still take the 312.5ms they took before. */
+  @keyframes gallery-orbit-slow-vert {
+    0%      { --glow-x: 6px;     --glow-y: 0px; }
+    3.571%  { --glow-x: 4.24px;  --glow-y: 5.66px; }
+    25%     { --glow-x: 0px;     --glow-y: 8px; }
+    46.43%  { --glow-x: -4.24px; --glow-y: 5.66px; }
+    50%     { --glow-x: -6px;    --glow-y: 0px; }
+    53.57%  { --glow-x: -4.24px; --glow-y: -5.66px; }
+    75%     { --glow-x: 0px;     --glow-y: -8px; }
+    96.43%  { --glow-x: 4.24px;  --glow-y: -5.66px; }
+    100%    { --glow-x: 6px;     --glow-y: 0px; }
+  }
+  /* Stroke sweep on the identical schedule so it keeps tracking the glow */
+  @keyframes gallery-stroke-slow-vert {
+    0%      { --cb-stroke-angle: 270deg; }
+    3.571%  { --cb-stroke-angle: 315deg; }
+    25%     { --cb-stroke-angle: 360deg; }
+    46.43%  { --cb-stroke-angle: 405deg; }
+    50%     { --cb-stroke-angle: 450deg; }
+    53.57%  { --cb-stroke-angle: 495deg; }
+    75%     { --cb-stroke-angle: 540deg; }
+    96.43%  { --cb-stroke-angle: 585deg; }
+    100%    { --cb-stroke-angle: 630deg; }
+  }
+  /* Icon takes the same colour the selection stroke is currently showing. Each
+     stroke element runs gallery-rainbow itself (--glow-base doesn't inherit),
+     which keeps it in phase with the ring since they all start together.
+     Full opacity, one flat colour across the whole glyph. */
+  .tab-bar.star-active .tab-home.selected svg .museum {
+    /* Same derivation as the ring's dark stop, at full opacity */
+    stroke: hsl(from var(--glow-base) h s calc(l * 0.576 - 4));
+    opacity: 1;
+    animation: gallery-rainbow 17.5s linear infinite;
+  }
+
+  /* The sliding indicator now lives inside .tabs-scroll, so it can only reach the
+     project tabs. Gallery paints its own selection box (::before, because
+     ::after already carries the row's label). */
+  .tab-bar.star-active .tab-indicator { opacity: 0; }
+
+  .tab-bar.star-active .tab-home.selected {
+    background: #FAF9F7;
+    /* Gray stroke sits under the rotating colour ring, so the stroke stays
+       continuous where the gradient is faint. */
+    border: 1px solid rgba(194, 193, 191, 0.6);
+    border-radius: 999px;
+    /* --glow-base still needs animating for the ring, which reads it */
+    animation: gallery-rainbow 17.5s linear infinite;
+  }
+
+  /* Rotating colour stroke. Ring shape via mask-exclude; inset -1px so it lands
+     on the border box rather than inside it. */
+  .tab-bar.star-active .tab-home.selected::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--glow-base) h s calc(l * 1.53) / 0.6),
+      hsl(from var(--glow-base) h s calc(l * 0.576 - 4) / 0.6));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0.6;
+    pointer-events: none;
+    animation: gallery-stroke-slow-vert 8.75s linear infinite,
+               gallery-rainbow 17.5s linear infinite;
+  }
+  /* Keep the icon and label above the inner glow */
+  .tab-bar.star-active .tab-home.selected svg,
+  .tab-bar.star-active .tab-home.selected::after { position: relative; z-index: 1; }
+
+  /* ---- Results panel ----
+     Pinned top and bottom, so it is always at that max height rather than sized
+     to its contents. Sits 8px under the search box: sidebar top (199) + the
+     bar (44) + 8. */
+  .search-panel.visible { top: 251px; }
+  .search-panel .save-to-card { flex: 1; }
+}
+
+/* Header spacing across the whole mobile range, not just <=480px.
+   The safe-area paddings lived only in the 480px block, so a narrow desktop
+   window (480-999px) fell back to the base 123/131px and showed a big gap
+   above the title. */
+@media (max-width: 999.98px) {
+  .page-header { padding-top: calc(env(safe-area-inset-top) + 24px); }
+  .category-page .page-header { padding-top: calc(env(safe-area-inset-top) + 32px); }
 }

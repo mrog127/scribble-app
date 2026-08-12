@@ -451,6 +451,7 @@ function AppInner() {
   const indicatorRef = useRef(null)
   const toolbarIndicatorRef = useRef(null)
   const indicatorMounted = useRef(false)
+  const prevIndicatorTab = useRef(activeTab)
   const toolbarIndicatorMounted = useRef(false)
 
   // The pill grows into the full box the moment it's focused, and that reflow can
@@ -561,6 +562,20 @@ function AppInner() {
     searchInputRef.current?.blur()
   }, [])
 
+  // Desktop: clicking anywhere outside the search field or its results dismisses
+  // search. (Mobile keeps its own affordances — the panel covers the screen and
+  // the bar has a close X.)
+  useEffect(() => {
+    if (!searchOpen) return
+    if (!window.matchMedia('(min-width: 1000px)').matches) return
+    const onDown = (e) => {
+      if (e.target.closest('.search-stack') || e.target.closest('.search-panel')) return
+      closeSearch()
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [searchOpen, closeSearch])
+
   const openSearchResult = useCallback((r) => {
     // Everything the destination needs to make this item visible: the content tab,
     // an expand if the canvas is collapsed, and whichever hide-toggle is hiding it.
@@ -654,7 +669,9 @@ function AppInner() {
   // back. Only the cards travel; per-frame updates are written as CSS custom
   // properties straight onto the page elements (no React re-render per frame).
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1000) return  // gesture is for the mobile layout
+    // Desktop keeps the trackpad (wheel) path but not the pointer-drag path —
+    // dragging with a mouse shouldn't switch tabs. The pointer handlers bail on
+    // width themselves, so the listeners can stay attached across a resize.
     const app = document.getElementById('app')
     if (!app) return
 
@@ -754,6 +771,7 @@ function AppInner() {
     }
 
     const onDown = (e) => {
+      if (window.innerWidth >= 1000) return   // pointer-drag switching is mobile-only
       // A gesture may start while the previous tab animation is still settling —
       // onMove holds it un-engaged until that lands, so consecutive swipes don't
       // have to wait out the full transition.
@@ -835,10 +853,14 @@ function AppInner() {
     }
     const onWheel = (e) => {
       if (animating) return
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return   // vertical scroll — leave it
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) * 0.8) return   // clearly vertical — leave it to scrolling
       if (dragRef.current && !dragRef.current.wheel) return   // a finger drag owns the gesture
       const t = e.target
-      if (t.closest('.swipe-row')) return                     // row swipe handler owns this
+      // Every card row is wrapped in a .swipe-row, so this guard rejected a
+      // trackpad swipe anywhere over the content column. It exists because the
+      // touch row-swipe owns horizontal drags — but nothing in the cards listens
+      // to wheel, so it only needs to apply below the desktop breakpoint.
+      if (!window.matchMedia('(min-width: 1000px)').matches && t.closest('.swipe-row')) return
       if (t.closest('.note-detail-page')) return
       if (!t.closest('.page') && !t.closest('.add-row')) return
       e.preventDefault()
@@ -904,7 +926,10 @@ function AppInner() {
       const bR = bar.getBoundingClientRect()
       const tR = selected.getBoundingClientRect()
       const vertical = window.matchMedia('(min-width: 1000px)').matches
-      const scroller = bar.querySelector('.tab-scroll')
+      const scroller = bar.querySelector('.tabs-scroll')
+      // Settings sits outside the scroller and paints its own highlight; moving
+      // the indicator down to it stretched the scroll area and jumped the list.
+      if (vertical && scroller && !scroller.contains(selected)) return
       const place = () => {
         if (vertical && scroller) {
           // Desktop: vertical stack — the selector box slides top-to-bottom, full
@@ -921,8 +946,12 @@ function AppInner() {
           indicator.style.height = ''
         }
       }
-      if (!indicatorMounted.current) {
-        // Snap on first render, then enable animation
+      // Gallery and Settings live outside the scroller and paint their own boxes,
+      // so the indicator has nothing to travel from/to across that boundary —
+      // sliding there just looks like it flies in from nowhere. Snap instead;
+      // project-to-project moves keep the slide.
+      const cameFromOwnBox = prevIndicatorTab.current === 'star' || prevIndicatorTab.current === 'menu'
+      if (!indicatorMounted.current || (vertical && cameFromOwnBox)) {
         indicator.style.transition = 'none'
         place()
         requestAnimationFrame(() => { indicator.style.transition = ''; indicatorMounted.current = true })
@@ -943,6 +972,8 @@ function AppInner() {
       }
     }
     requestAnimationFrame(updateIndicator)
+    prevIndicatorTab.current = activeTab
+
     // Re-snap on resize (crossing the desktop breakpoint flips the slide axis)
     const onResize = () => { indicatorMounted.current = false; requestAnimationFrame(updateIndicator) }
     window.addEventListener('resize', onResize)
@@ -951,7 +982,8 @@ function AppInner() {
 
   // Desktop nav edges: fade an edge only when there's content beyond it
   useEffect(() => {
-    const scroller = document.querySelector('.tab-scroll')
+    // Desktop scroller is .tabs-scroll (Gallery sits pinned above it)
+    const scroller = document.querySelector('.tabs-scroll') || document.querySelector('.tab-scroll')
     if (!scroller) return
     const update = () => {
       const overflow = scroller.scrollHeight - scroller.clientHeight > 1
@@ -1009,6 +1041,9 @@ function AppInner() {
     const indicator = document.getElementById('tabIndicator')
     if (!selected || !indicator) return
     requestAnimationFrame(() => {
+      // Desktop: the indicator sits inside .tabs-scroll and scrolls with it
+      // natively, so nothing to do here.
+      if (window.matchMedia('(min-width: 1000px)').matches) return
       const bar = document.querySelector('.tab-bar')
       if (!bar) return
       const bR = bar.getBoundingClientRect()
@@ -1784,7 +1819,7 @@ function AppInner() {
                 raises the keyboard for a focus() that happens in a user gesture. */}
             <div className={`link-input-stack search-stack${searchOpen ? ' open' : ''}`}>
                 <span className="search-stack-icon" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                     <circle cx="8.75" cy="8.75" r="5.25" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                     <line x1="12.6" y1="12.6" x2="16.75" y2="16.75" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                   </svg>
@@ -1807,7 +1842,7 @@ function AppInner() {
                   aria-label="Close search"
                   onMouseDown={e => { e.preventDefault(); closeSearch() }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                     <line x1="5" y1="5" x2="15" y2="15" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                     <line x1="15" y1="5" x2="5" y2="15" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                   </svg>
@@ -1815,8 +1850,7 @@ function AppInner() {
             </div>
 
             <div
-              className="link-input-stack"
-              hidden={searchOpen}
+              className={`link-input-stack${searchOpen ? ' add-hidden' : ''}`}
               onPointerDown={e => {
                 // A tap on the pill's chrome (not the field itself) should still
                 // put the caret in the field rather than land on a dead surface.

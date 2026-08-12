@@ -920,6 +920,20 @@ export default function ProjectCard({ categoryId, project }) {
     return () => el.removeEventListener('transitionend', done)
   }, [collapsed])
 
+  // Revealing or re-hiding completed / archived items changes how tall the body
+  // should be, but nothing recomputes it — the collapse and tab-switch effects
+  // both write an inline height on .project-items and only clear it on their own
+  // transitionend. If one of those is still set, the body stays at the old size
+  // and the newly shown rows get clipped. Drop the inline sizing and let it lay
+  // out naturally whenever visibility changes.
+  useLayoutEffect(() => {
+    const el = itemsRef.current
+    if (!el || collapsedRef.current) return
+    el.style.height = ''
+    el.style.overflow = ''
+    itemsHeightRef.current = el.scrollHeight
+  }, [hideCompleted, showArchived, showArchivedLinks])
+
   const applyCollapsed = useCallback((next) => {
     setCollapsed(next)
     try { localStorage.setItem(`collapsed-project-${project.id}`, next ? 'true' : 'false') } catch {}
@@ -1687,6 +1701,7 @@ export default function ProjectCard({ categoryId, project }) {
               className="project-reveal-link"
               onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted() }}
             >
+              <span className="project-reveal-icon" aria-hidden="true"><EyeIcon/></span>
               Show {checkedCount} Completed
             </button>
           )}
@@ -1745,6 +1760,7 @@ export default function ProjectCard({ categoryId, project }) {
               className="project-reveal-link"
               onMouseDown={e => { e.preventDefault(); handleToggleShowArchived() }}
             >
+              <span className="project-reveal-icon" aria-hidden="true"><EyeIcon/></span>
               Show {archivedNoteCount} Archived
             </button>
           )}
@@ -1796,6 +1812,7 @@ export default function ProjectCard({ categoryId, project }) {
               className="project-reveal-link"
               onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedLinks() }}
             >
+              <span className="project-reveal-icon" aria-hidden="true"><EyeIcon/></span>
               Show {archivedLinkCount} Archived
             </button>
           )}

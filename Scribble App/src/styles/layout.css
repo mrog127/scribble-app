@@ -1761,7 +1761,10 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      the divider between the two rows remains. Side margin matches the
      Save-to panel's 8px padding so the two line up. */
   .footer.keyboard-open {
-    margin: 0 8px var(--mbar-bottom);
+    /* Flat 16px, not --mbar-bottom: that carries env(safe-area-inset-bottom),
+       which iOS still reports as the home-indicator inset while the keyboard is
+       up — leaving a ~50px gap above the keys. */
+    margin: 0 8px 16px;
     padding: 0;
     background: var(--mbar-chrome);
     border: 1px solid var(--mbar-stroke);
@@ -1790,11 +1793,10 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   .footer.keyboard-open .add-row { padding: 0; }
   .footer.search-open .add-row { padding: 0 8px; }   /* matches .save-to-panel's 8px */
-  /* With the keyboard up the resting gap doesn't apply — env(safe-area-inset-bottom)
-     still reports the home-indicator inset, which pushed the box well clear of the
-     keys. Sit a flat 16px above them in both focused states. */
-  .footer.search-open,
-  .footer.keyboard-open { padding-bottom: 16px; }
+  /* Search has no box of its own, so its gap to the keyboard is padding.
+     (The add-item box uses margin-bottom instead — padding here would add space
+     INSIDE the box, under the Displayed row.) */
+  .footer.search-open { padding-bottom: 16px; }
   .footer.keyboard-open .add-row .link-input-stack,
   .footer.keyboard-open .add-row .link-input-stack:focus-within {
     background: transparent;

@@ -4,8 +4,9 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, ActivateSwipeButton, closeSwipeRow, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
-import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon } from './MenuIcons.jsx'
+import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
+import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon } from './MenuIcons.jsx'
+import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
@@ -41,94 +42,6 @@ function displayUrl(url) {
 
 
 // ---- Swipe hook ----
-function useSwipe() {
-  const swipeState = useRef({})
-
-  const onPointerDown = useCallback((e, id) => {
-    if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
-    const row = e.currentTarget.closest('.swipe-row')
-    if (!row) return
-    const wasLeft = row.classList.contains('swiped-left')
-    const wasRight = row.classList.contains('swiped-right')
-    // Rows with a two-button left tray (e.g. archivable notes: [Archive][Delete])
-    // declare a wider left-swipe travel via data-left-max. Right swipe stays 84.
-    const leftMax = parseInt(row.dataset.leftMax, 10) || 84
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null, leftMax }
-
-    const onMove = (e2) => {
-      const s = swipeState.current
-      if (!s.row) return
-      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir) {
-        if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
-        else return
-      }
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) return
-      const base = s.wasLeft ? -s.leftMax : s.wasRight ? 84 : 0
-      const proposed = base + dx
-      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
-      let newX = Math.max(-s.leftMax, Math.min(84, proposed))
-      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
-      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
-      content.style.transition = 'none'
-      content.style.transform = `translateX(${newX}px)`
-    }
-
-    const onUp = (e2) => {
-      const s = swipeState.current
-      if (!s.row) { cleanup(); return }
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) { cleanup(); return }
-      content.style.transition = ''
-      const isTap = Math.abs(dx) < 8 && Math.abs(dy) < 8
-      if (isTap && (s.wasLeft || s.wasRight)) {
-        s.row.classList.remove('swiped-left', 'swiped-right')
-        content.style.transform = ''
-        cleanup()
-        return
-      }
-      const base = s.wasLeft ? -s.leftMax : s.wasRight ? 84 : 0
-      const rawTotal = base + dx
-      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
-      if (s.lockSign === 1) total = Math.max(0, total)
-      if (s.lockSign === -1) total = Math.min(0, total)
-      if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
-      else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
-      else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
-      cleanup()
-    }
-
-    const handleCancel = () => {
-      const s2 = swipeState.current
-      if (s2.row) {
-        const c2 = s2.row.querySelector('.swipe-content')
-        if (c2) {
-          c2.style.transition = ''
-          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
-          const cx = m ? parseFloat(m[1]) : 0
-          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
-          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
-          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
-          c2.style.transform = ''
-        }
-      }
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', handleCancel)
-    }
-    const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); document.removeEventListener('pointercancel', handleCancel) }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-    document.addEventListener('pointercancel', handleCancel)
-  }, [])
-
-  return { onPointerDown }
-}
-
 // ---- Drag reorder hook ----
 function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
   const dragRef = useRef(null)
@@ -526,6 +439,11 @@ export default function ProjectCard({ categoryId, project }) {
   const [showArchivedLinks, setShowArchivedLinks] = useState(() => {
     try { return localStorage.getItem(`arch-link-project-${project.id}`) === 'true' } catch { return false }
   })
+  // Tapping the card header collapses the card to just its header (and expands
+  // it again). Persisted per canvas.
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(`collapsed-project-${project.id}`) === 'true' } catch { return false }
+  })
 
   const cardRef = useRef(null)
   const inputWrapRef = useRef(null)
@@ -544,6 +462,10 @@ export default function ProjectCard({ categoryId, project }) {
   const tabIndicatorRef = useRef(null)
   const itemsRef = useRef(null)
   const itemsHeightRef = useRef(null)
+  const collapsedRef = useRef(collapsed)
+  collapsedRef.current = collapsed
+  const collapseMountedRef = useRef(false)
+  const defaultTabRef = useRef(false)
   const tabMountedRef = useRef(false)
   const typeBarRef = useRef(null)
   const typeIndicatorRef = useRef(null)
@@ -648,7 +570,7 @@ export default function ProjectCard({ categoryId, project }) {
     setTimeout(() => archiveProject(categoryId, project.id), 240)
   }, [categoryId, project.id, archiveProject])
 
-  const { onPointerDown } = useSwipe()
+  const rowMenu = useRowMenu()
 
   // ---- Sorted todos: activated first, then unchecked, then checked ----
   // Order: active → scheduled → rest, with checked todos last
@@ -855,8 +777,30 @@ export default function ProjectCard({ categoryId, project }) {
     (t === 'note' && project.notes.length > 0) ||
     (t === 'link' && project.links.length > 0)
   )
-  const showTabs = typesWithItems.length > 1
-  const displayType = showTabs ? activeTab : (typesWithItems[0] || 'list')
+  // Tabs normally appear only when there's more than one content type — but a
+  // collapsed single-type canvas shows its one icon so you can still tell what
+  // it holds.
+  const showTabs = typesWithItems.length > 1 || (collapsed && typesWithItems.length === 1)
+  const displayType = typesWithItems.length > 1 ? activeTab : (typesWithItems[0] || 'list')
+  // Nothing reads as selected while the canvas is collapsed.
+  const selectedTab = collapsed ? null : displayType
+
+  // How many items a tab would actually render right now, honouring the
+  // hide-completed / show-archived toggles.
+  const visibleCount = (t) => {
+    if (t === 'list') return hideCompleted ? project.todos.filter(x => !x.checked).length : project.todos.length
+    if (t === 'note') return showArchived ? project.notes.length : project.notes.filter(n => !n.archived).length
+    return showArchivedLinks ? project.links.length : project.links.filter(l => !l.archived).length
+  }
+
+  // ---- Default tab: first type with visible items, else the first type ----
+  // Runs once, on the first render where the project actually has content
+  // (data loads async, so the very first render can be empty).
+  useLayoutEffect(() => {
+    if (defaultTabRef.current || typesWithItems.length === 0) return
+    defaultTabRef.current = true
+    setActiveTab(typesWithItems.find(t => visibleCount(t) > 0) || typesWithItems[0])
+  })
 
   // ---- Slide the tab selector box to the active tab ----
   useLayoutEffect(() => {
@@ -868,11 +812,12 @@ export default function ProjectCard({ categoryId, project }) {
     if (!tabMountedRef.current) ind.style.transition = 'none'
     ind.style.opacity = '1'
     ind.style.left = sel.offsetLeft + 'px'
+    ind.style.width = sel.offsetWidth + 'px'
     if (!tabMountedRef.current) {
       // enable transition after the initial position is set
       requestAnimationFrame(() => { ind.style.transition = ''; tabMountedRef.current = true })
     }
-  }, [activeTab, showTabs, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedTab, showTabs, collapsed, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Slide the composer type-selector box to the active add-type ----
   useLayoutEffect(() => {
@@ -893,6 +838,7 @@ export default function ProjectCard({ categoryId, project }) {
   useLayoutEffect(() => {
     const el = itemsRef.current
     if (!el) return
+    if (collapsedRef.current) { itemsHeightRef.current = el.scrollHeight; return }
     const newH = el.scrollHeight
     const prevH = itemsHeightRef.current
     itemsHeightRef.current = newH
@@ -912,12 +858,58 @@ export default function ProjectCard({ categoryId, project }) {
     el.addEventListener('transitionend', done)
   }, [displayType])
 
+  // ---- Collapse / expand the card body when the header is tapped ----
+  useLayoutEffect(() => {
+    const el = itemsRef.current
+    if (!el) return
+    // First run: apply the persisted collapsed state with no animation.
+    if (!collapseMountedRef.current) {
+      collapseMountedRef.current = true
+      if (collapsed) { el.style.height = '0px'; el.style.overflow = 'hidden' }
+      return
+    }
+    const full = el.scrollHeight
+    el.style.overflow = 'hidden'
+    el.style.height = (collapsed ? full : 0) + 'px'
+    el.offsetHeight // force reflow
+    el.style.transition = 'height 250ms ease'
+    el.style.height = (collapsed ? 0 : full) + 'px'
+    const done = (e) => {
+      if (e && e.propertyName !== 'height') return
+      el.style.transition = ''
+      if (!collapsed) { el.style.height = ''; el.style.overflow = '' }
+      itemsHeightRef.current = el.scrollHeight
+      el.removeEventListener('transitionend', done)
+    }
+    el.addEventListener('transitionend', done)
+    return () => el.removeEventListener('transitionend', done)
+  }, [collapsed])
+
+  const applyCollapsed = useCallback((next) => {
+    setCollapsed(next)
+    try { localStorage.setItem(`collapsed-project-${project.id}`, next ? 'true' : 'false') } catch {}
+  }, [project.id])
+
+  // Tap anywhere on the header that isn't an interactive control to toggle.
+  const handleHeaderClick = useCallback((e) => {
+    if (renaming) return
+    if (e.target.closest('button, input, .dots-menu-wrap, .project-tab-bar, .card-context-menu')) return
+    applyCollapsed(!collapsedRef.current)
+  }, [renaming, applyCollapsed])
+
   // Capture the current items height before switching tabs so the height
   // animation starts from the right place (even if content changed in between).
   const switchTab = useCallback((type) => {
-    if (itemsRef.current) itemsHeightRef.current = itemsRef.current.scrollHeight
+    if (collapsedRef.current) {
+      // Tapping a tab on a collapsed canvas expands it onto that tab. Null the
+      // cached height so the tab-switch animation defers to the expand one.
+      itemsHeightRef.current = null
+      applyCollapsed(false)
+    } else if (itemsRef.current) {
+      itemsHeightRef.current = itemsRef.current.scrollHeight
+    }
     setActiveTab(type)
-  }, [])
+  }, [applyCollapsed])
 
   // ---- Card intro animation ----
   useEffect(() => {
@@ -929,7 +921,7 @@ export default function ProjectCard({ categoryId, project }) {
   // ---- Auto-correct activeTab if its type is empty ----
   useEffect(() => {
     if (typesWithItems.length > 0 && !typesWithItems.includes(activeTab)) {
-      setActiveTab(typesWithItems[0])
+      setActiveTab(typesWithItems.find(t => visibleCount(t) > 0) || typesWithItems[0])
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typesWithItems.join(',')])
@@ -1215,6 +1207,46 @@ export default function ProjectCard({ categoryId, project }) {
     setCalendarFor({ type, id: item.id, current: item.scheduledDate || null, anchorRect })
   }, [])
 
+  // ---- Long-press row menu ----
+  // Returns a builder the menu hook calls with the row element once the press
+  // completes, so the existing row-anchored animations still work.
+  const buildRowItems = useCallback((type, item) => (row) => {
+    const noun = type === 'todo' ? 'Item' : type === 'note' ? 'Note' : 'Link'
+    if (archived) {
+      return [{ label: `Delete ${noun}`, icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(type, item.id, row) }]
+    }
+    return [
+      {
+        label: item.activated ? 'Remove from Gallery' : 'Display in Gallery',
+        icon: <GalleryMenuIcon/>,
+        onSelect: () => handleActivate(type, item.id, row),
+      },
+      {
+        label: item.scheduledDate ? 'Clear Schedule' : 'Schedule',
+        icon: <CalendarMenuIcon/>,
+        onSelect: () => item.scheduledDate
+          ? handleScheduleClear(type, item.id, row)
+          : handleScheduleOpen(type, item, row),
+      },
+      type === 'note' && {
+        label: item.archived ? 'Unarchive Note' : 'Archive Note',
+        icon: item.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>,
+        onSelect: () => item.archived ? handleRetrieve(item.id, row) : handleArchive(item.id, row),
+      },
+      type === 'link' && {
+        label: item.archived ? 'Unarchive Link' : 'Archive Link',
+        icon: item.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>,
+        onSelect: () => item.archived ? handleRetrieveLink(item.id, row) : handleArchiveLink(item.id, row),
+      },
+      {
+        label: `Delete ${noun}`,
+        icon: <TrashMenuIcon/>,
+        danger: true,
+        onSelect: () => handleDelete(type, item.id, row),
+      },
+    ]
+  }, [archived, handleActivate, handleScheduleClear, handleScheduleOpen, handleRetrieve, handleArchive, handleRetrieveLink, handleArchiveLink, handleDelete])
+
   const handleCalendarSelect = useCallback((dateStr) => {
     setCalendarFor(prev => {
       if (!prev) return null
@@ -1243,19 +1275,18 @@ export default function ProjectCard({ categoryId, project }) {
     const row = e.currentTarget.closest('.swipe-row')
     if (!row) return
     if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) return
-    const s = { startX: e.clientX, startY: e.clientY, dir: null, longFired: false }
-    const longTimer = archived ? null : setTimeout(() => { s.longFired = true; setEditingLinkId(link.id) }, 1000)
+    // NOTE: long-press used to open the inline link editor; that gesture now
+    // belongs to the row action menu.
+    const s = { startX: e.clientX, startY: e.clientY, dir: null }
     const onMove = (e2) => {
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
       if (!s.dir && (Math.abs(dx) > 10 || Math.abs(dy) > 8)) {
         s.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : 'scroll'
-        clearTimeout(longTimer)
       }
     }
     const onUp = (e2) => {
-      clearTimeout(longTimer)
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir && !s.longFired && Math.abs(dx) < 8 && Math.abs(dy) < 8) setOpenLinkId(link.id)
+      if (!s.dir && !isRowMenuOpen() && Math.abs(dx) < 8 && Math.abs(dy) < 8) setOpenLinkId(link.id)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
@@ -1290,7 +1321,7 @@ export default function ProjectCard({ categoryId, project }) {
     const onUp = (e2) => {
       const s = noteSwipeState.current
       const dx = e2.clientX - s.startX
-      if (!s.dir && Math.abs(dx) < 8) setOpenNoteId(id)
+      if (!s.dir && Math.abs(dx) < 8 && !isRowMenuOpen()) setOpenNoteId(id)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
@@ -1310,7 +1341,7 @@ export default function ProjectCard({ categoryId, project }) {
       if (Math.abs(e2.clientX - s.startX) > 8 || Math.abs(e2.clientY - s.startY) > 8) s.moved = true
     }
     const onUp = () => {
-      if (!todoTapState.current.moved) setOpenTodoId(id)
+      if (!todoTapState.current.moved && !isRowMenuOpen()) setOpenTodoId(id)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
@@ -1392,9 +1423,12 @@ export default function ProjectCard({ categoryId, project }) {
 
   return (
     <>
+      {/* NOTE: don't add render-dependent classes to this element — the intro
+          animation adds `visible` imperatively, and React rewrites className
+          (wiping it) whenever the string changes. Put toggles on the header. */}
       <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef}>
         {/* Header */}
-        <div className="card-header">
+        <div className={`card-header${collapsed ? ' collapsed' : ''}`} onClick={handleHeaderClick}>
           {renaming ? (
             <div className="card-rename-wrap">
               <div className="project-input-wrap">
@@ -1436,26 +1470,29 @@ export default function ProjectCard({ categoryId, project }) {
                   <div className="project-tab-indicator" ref={tabIndicatorRef}/>
                   {typesWithItems.includes('list') && (
                     <button
-                      className={`project-tab-btn${activeTab === 'list' ? ' selected' : ''}`}
+                      className={`project-tab-btn${selectedTab === 'list' ? ' selected' : ''}`}
                       onMouseDown={e => { e.preventDefault(); switchTab('list') }}
                     >
-                      <ListIcon size={20} color={activeTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
+                      <ListIcon size={20} color={selectedTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
+                      <span className="project-tab-count">{visibleCount('list')}</span>
                     </button>
                   )}
                   {typesWithItems.includes('note') && (
                     <button
-                      className={`project-tab-btn${activeTab === 'note' ? ' selected' : ''}`}
+                      className={`project-tab-btn${selectedTab === 'note' ? ' selected' : ''}`}
                       onMouseDown={e => { e.preventDefault(); switchTab('note') }}
                     >
-                      <NoteIcon size={20} color={activeTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
+                      <NoteIcon size={20} color={selectedTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
+                      <span className="project-tab-count">{visibleCount('note')}</span>
                     </button>
                   )}
                   {typesWithItems.includes('link') && (
                     <button
-                      className={`project-tab-btn${activeTab === 'link' ? ' selected' : ''}`}
+                      className={`project-tab-btn${selectedTab === 'link' ? ' selected' : ''}`}
                       onMouseDown={e => { e.preventDefault(); switchTab('link') }}
                     >
-                      <LinkIcon size={20} color={activeTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
+                      <LinkIcon size={20} color={selectedTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
+                      <span className="project-tab-count">{visibleCount('link')}</span>
                     </button>
                   )}
                 </div>
@@ -1562,20 +1599,12 @@ export default function ProjectCard({ categoryId, project }) {
                 <div key={t.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className={`swipe-row${t.id === openTodoId ? ' row-open' : ''}`} data-swipe-id={t.id}>
-                    {!archived && (
-                      <ActivateSwipeButton item={t} type="todo" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
-                    )}
-                    <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('todo', t.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <div className="swipe-active-inner">
-                        <TrashIcon/>
-                        <span className="swipe-action-label delete">Delete</span>
-                      </div>
-                    </button>
                     <div className="swipe-content">
                       <div
                         className={`todo-row${t.checked ? ' checked' : ''}`}
                         data-id={t.id}
-                        onPointerDown={e => { onPointerDown(e, t.id); onTodoTap(e, t.id); if (!archived) onTodoDrag(e, t.id) }}
+                        onPointerDown={e => { rowMenu.press(e, buildRowItems('todo', t)); onTodoTap(e, t.id); if (!archived) onTodoDrag(e, t.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems('todo', t))}
                       >
                         <div
                           className="checkbox-wrap"
@@ -1601,7 +1630,7 @@ export default function ProjectCard({ categoryId, project }) {
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                         </div>
                         {(t.scheduledDate && !t.activated) ? (
-                          <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                          <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span><CalendarIcon size={20}/></span>
                         ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                           <span className="todo-attach-indicator">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1617,42 +1646,29 @@ export default function ProjectCard({ categoryId, project }) {
             </div>
           )}
 
+          {/* Nothing visible but there are completed items — offer to reveal them */}
+          {displayType === 'list' && hideCompleted && uncheckedCount === 0 && checkedCount > 0 && (
+            <button
+              className="project-reveal-link"
+              onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted() }}
+            >
+              Show {checkedCount} Completed
+            </button>
+          )}
+
           {/* ---- Notes ---- */}
           {displayType === 'note' && (
             <div ref={noteContainerRef}>
               {sortedNotes.map((n, i) => (
                 <div key={n.id}>
                   {i > 0 && <div className="divider"/>}
-                  <div className={`swipe-row${archived ? '' : ' archivable'}${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id} data-left-max={archived ? undefined : '148'}>
-                    {!n.archived && !archived && (
-                      <ActivateSwipeButton item={n} type="note" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
-                    )}
-                    {!archived && (n.archived ? (
-                      <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleRetrieve(n.id, e.currentTarget.closest('.swipe-row')) }}>
-                        <div className="swipe-active-inner">
-                          <RetrieveIcon/>
-                          <span className="swipe-action-label">Retrieve</span>
-                        </div>
-                      </button>
-                    ) : (
-                      <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(n.id, e.currentTarget.closest('.swipe-row')) }}>
-                        <div className="swipe-active-inner">
-                          <ArchiveIcon/>
-                          <span className="swipe-action-label">Archive</span>
-                        </div>
-                      </button>
-                    ))}
-                    <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('note', n.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <div className="swipe-active-inner">
-                        <TrashIcon/>
-                        <span className="swipe-action-label delete">Delete</span>
-                      </div>
-                    </button>
+                  <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id}>
                     <div className="swipe-content">
                       <div
                         className={`note-row${n.archived ? ' archived' : ''}`}
                         data-note-id={n.id}
-                        onPointerDown={e => { onPointerDown(e, n.id); onNotePointerDown(e, n.id); if (!archived) onNoteDrag(e, n.id) }}
+                        onPointerDown={e => { rowMenu.press(e, buildRowItems('note', n)); onNotePointerDown(e, n.id); if (!archived) onNoteDrag(e, n.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems('note', n))}
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                           <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
@@ -1679,7 +1695,7 @@ export default function ProjectCard({ categoryId, project }) {
                           <NoteRowContent note={n} />
                         </div>
                         {(n.scheduledDate && !n.activated) && (
-                          <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                          <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(n.scheduledDate)}</span><CalendarIcon size={20}/></span>
                         )}
                       </div>
                     </div>
@@ -1689,37 +1705,22 @@ export default function ProjectCard({ categoryId, project }) {
             </div>
           )}
 
+          {displayType === 'note' && !showArchived && activeNotesList.length === 0 && archivedNoteCount > 0 && (
+            <button
+              className="project-reveal-link"
+              onMouseDown={e => { e.preventDefault(); handleToggleShowArchived() }}
+            >
+              Show {archivedNoteCount} Archived
+            </button>
+          )}
+
           {/* ---- Links ---- */}
           {displayType === 'link' && (
             <div ref={linkContainerRef}>
               {sortedLinks.map((l, i) => (
                 <div key={l.id}>
                   {i > 0 && <div className="divider"/>}
-                  <div className={`swipe-row${archived ? '' : ' archivable'}${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id} data-left-max={archived ? undefined : '148'}>
-                    {!l.archived && !archived && (
-                      <ActivateSwipeButton item={l} type="link" onActivateTap={handleActivate} onScheduleClear={handleScheduleClear} onScheduleOpen={handleScheduleOpen} />
-                    )}
-                    {!archived && (l.archived ? (
-                      <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleRetrieveLink(l.id, e.currentTarget.closest('.swipe-row')) }}>
-                        <div className="swipe-active-inner">
-                          <RetrieveIcon/>
-                          <span className="swipe-action-label">Retrieve</span>
-                        </div>
-                      </button>
-                    ) : (
-                      <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchiveLink(l.id, e.currentTarget.closest('.swipe-row')) }}>
-                        <div className="swipe-active-inner">
-                          <ArchiveIcon/>
-                          <span className="swipe-action-label">Archive</span>
-                        </div>
-                      </button>
-                    ))}
-                    <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete('link', l.id, e.currentTarget.closest('.swipe-row')) }}>
-                      <div className="swipe-active-inner">
-                        <TrashIcon/>
-                        <span className="swipe-action-label delete">Delete</span>
-                      </div>
-                    </button>
+                  <div className={`swipe-row${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id}>
                     <div className="swipe-content">
                       {editingLinkId === l.id ? (
                         <LinkRowEditor
@@ -1730,7 +1731,8 @@ export default function ProjectCard({ categoryId, project }) {
                       ) : (
                       <div
                         className={`note-row link-row${l.archived ? ' archived' : ''}`}
-                        onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l); if (!archived) onLinkDrag(e, l.id) }}
+                        onPointerDown={e => { rowMenu.press(e, buildRowItems('link', l)); onLinkPointerDown(e, l); if (!archived) onLinkDrag(e, l.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems('link', l))}
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                           <LinkRowIcon activated={l.activated}/>
@@ -1742,7 +1744,7 @@ export default function ProjectCard({ categoryId, project }) {
                           </div>
                         </div>
                         {(l.scheduledDate && !l.activated) && (
-                          <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                          <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(l.scheduledDate)}</span><CalendarIcon size={20}/></span>
                         )}
                         <OutlinkButton onOpen={() => openUrl(l.url)} />
                       </div>
@@ -1752,6 +1754,15 @@ export default function ProjectCard({ categoryId, project }) {
                 </div>
               ))}
             </div>
+          )}
+
+          {displayType === 'link' && !showArchivedLinks && activeLinksList.length === 0 && archivedLinkCount > 0 && (
+            <button
+              className="project-reveal-link"
+              onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedLinks() }}
+            >
+              Show {archivedLinkCount} Archived
+            </button>
           )}
         </div>
 
@@ -1882,6 +1893,8 @@ export default function ProjectCard({ categoryId, project }) {
           onClose={() => setCalendarFor(null)}
         />
       )}
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
     </>
   )
 }

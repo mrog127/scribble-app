@@ -1342,6 +1342,19 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     max-width: none;   /* let the cards fill their half of the split */
   }
 
+  /* With no detail panel open, the Schedule popup would otherwise span the whole
+     window. Confine it to the canvas cards' column so it matches their width.
+     Constants mirror the cards column above: sidebar 340px + .cards-area's 28px
+     left / 48px right padding, capped at its 880px max-width. */
+  .phone:not(:has(.note-detail-page.open)) .cal-overlay {
+    left: 368px;
+    right: auto;
+    width: min(804px, calc(100% - 416px));
+  }
+  .phone:not(:has(.note-detail-page.open)) .cal-card {
+    width: 100%;
+  }
+
   /* "Move to" / "Schedule" popups open over the right panel only */
   .phone:has(.note-detail-page.open) .move-to-overlay,
   .phone:has(.note-detail-page.open) .cal-overlay {
@@ -1392,10 +1405,16 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .phone {
     max-width: 1300px;
     transform: translateX(0);
+    /* Gradient moves up to .app-wrap so it spans the whole window rather than
+       stopping at the 1300px content cap. */
+    background: transparent;
   }
   /* When a detail page is open, fill the right margin (outside the centred app)
      with the detail page's background so it reads as extending to the window edge. */
-  .app-wrap { position: relative; }
+  .app-wrap {
+    position: relative;
+    background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08)), 10%, hsl(from #F2F0EB h calc(s * 1.62) l));
+  }
   .app-wrap:has(.note-detail-page.open)::after {
     content: '';
     position: absolute;

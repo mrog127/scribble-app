@@ -1,11 +1,11 @@
 # Scribble — Project Spec for Claude
 
 ## What this is
-A mobile To Do List app called Scribble. Built in Vite + React, deployed via GitHub → Netlify.
+A mobile To Do List app called Scribble. Built in Vite + React, deployed via GitHub → Vercel.
 
-**Local project folder:** `~/NewDocuments/Personal/Projects/Scribble/Code`  
-**Dev command:** `npm run dev`  
-**Deploy:** `git add . && git commit -m "description" && git push` → Netlify auto-deploys
+**Local project folder:** `~/Documents/Personal/Projects/Scribble/Code/Scribble App`  
+**Dev command:** `cd ~/Documents/Personal/Projects/Scribble/Code/"Scribble App" && npm run dev`  
+**Deploy:** `git add . && git commit -m "description" && git push` → Vercel auto-deploys
 
 ---
 

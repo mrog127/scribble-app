@@ -8,6 +8,7 @@ import LinkDetailPage from './LinkDetailPage.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
+import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useScrollable } from '../useScrollable.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -438,6 +439,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     promptMoveAttachments,
     updateProjectNote,
     setAutoEditNoteId,
+    promptDelete,
+    deleteProjectTodo,
   } = useAppContext()
 
   const projectName = useMemo(
@@ -785,6 +788,15 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   // Footer drop shadow only when the content can scroll
   const contentScrollable = useScrollable(scrollRef, [todo, attachedNotes.length, attachedLinks.length])
 
+  const footerMenuItems = [
+    {
+      label: 'Delete Item',
+      icon: <TrashMenuIcon/>,
+      danger: true,
+      onSelect: () => promptDelete(() => { deleteProjectTodo(categoryId, projectId, todo.id); onClose() }),
+    },
+  ]
+
   return (
     <div
       ref={pageRef}
@@ -932,6 +944,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
       )}
 
       <DetailFooter
+        menuItems={footerMenuItems}
         activated={!!todo.activated}
         scheduledDate={todo.scheduledDate}
         onToggleActive={() => toggleProjectTodoActivated(categoryId, projectId, todo.id)}

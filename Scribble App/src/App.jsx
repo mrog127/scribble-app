@@ -520,7 +520,8 @@ function AppInner() {
       if (animating || dragRef.current) return
       if (e.pointerType === 'mouse' && e.button !== 0) return
       const t = e.target
-      if (t.closest('.swipe-row')) return
+      // Rows used to own the horizontal gesture (swipe-to-reveal), so they were
+      // excluded here. That's gone — a horizontal drag on a row now switches tabs.
       if (t.closest('.note-detail-page')) return
       // Allow drags that start anywhere on a page (incl. project-card text boxes)
       // or on the footer's text-box row (the add-row), but not the tab bar.
@@ -636,79 +637,8 @@ function AppInner() {
     if (dragIncoming && s && s.engaged && dragFrameRef.current) dragFrameRef.current(s.dx)
   }, [dragIncoming])
 
-  // Close swipe rows when clicking outside
-  useEffect(() => {
-    const handler = (e) => {
-      if (!e.target.closest('.swipe-action-btn')) {
-        document.querySelectorAll('.swipe-row.swiped-left, .swipe-row.swiped-right').forEach(r => {
-          r.classList.remove('swiped-left', 'swiped-right')
-          const content = r.querySelector('.swipe-content')
-          if (content) { content.style.transition = ''; content.style.transform = '' }
-        })
-      }
-    }
-    document.addEventListener('pointerdown', handler, true)
-    return () => document.removeEventListener('pointerdown', handler, true)
-  }, [])
-
-  // Two-finger (trackpad) horizontal swipe over a row reveals the Active/Delete
-  // buttons, mirroring the one-finger pointer swipe. Trackpad swipes arrive as
-  // horizontal wheel events, so accumulate deltaX and snap when the gesture ends.
-  useEffect(() => {
-    const app = document.getElementById('app')
-    if (!app) return
-    let active = null
-    let endTimer = null
-
-    const closeRow = (r) => {
-      r.classList.remove('swiped-left', 'swiped-right')
-      const c = r.querySelector('.swipe-content')
-      if (c) { c.style.transition = ''; c.style.transform = '' }
-    }
-
-    const finish = () => {
-      if (!active) return
-      const { row, content, offset } = active
-      active = null
-      content.style.transition = ''
-      if (offset < -36 || offset > 36) {
-        document.querySelectorAll('.swipe-row.swiped-left, .swipe-row.swiped-right').forEach(r => { if (r !== row) closeRow(r) })
-        row.classList.add(offset < 0 ? 'swiped-left' : 'swiped-right')
-        row.classList.remove(offset < 0 ? 'swiped-right' : 'swiped-left')
-      } else {
-        row.classList.remove('swiped-left', 'swiped-right')
-      }
-      content.style.transform = ''
-    }
-
-    const onWheel = (e) => {
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return  // vertical scroll — ignore
-      const row = e.target.closest('.swipe-row')
-      if (!row) return
-      const content = row.querySelector('.swipe-content')
-      if (!content) return
-      e.preventDefault()
-      if (active && active.row !== row) finish()
-      if (!active) {
-        const base = row.classList.contains('swiped-left') ? -84 : row.classList.contains('swiped-right') ? 84 : 0
-        active = { row, content, offset: base }
-        content.style.transition = 'none'
-      }
-      active.offset = Math.max(-84, Math.min(84, active.offset - e.deltaX))
-      content.style.transform = `translateX(${active.offset}px)`
-      // Reveal the button live (its opacity is tied to the swiped class) so it
-      // appears as you cross the threshold instead of waiting for the gesture —
-      // and trackpad momentum — to fully settle.
-      if (active.offset < -36) { row.classList.add('swiped-left'); row.classList.remove('swiped-right') }
-      else if (active.offset > 36) { row.classList.add('swiped-right'); row.classList.remove('swiped-left') }
-      else { row.classList.remove('swiped-left', 'swiped-right') }
-      clearTimeout(endTimer)
-      endTimer = setTimeout(finish, 120)
-    }
-
-    app.addEventListener('wheel', onWheel, { passive: false })
-    return () => { app.removeEventListener('wheel', onWheel); clearTimeout(endTimer) }
-  }, [])
+  // Row swipe gestures (pointer drag + trackpad two-finger) were removed in
+  // favour of the long-press row action menu — see RowMenu.jsx.
 
   // Update tab indicator position
   useEffect(() => {

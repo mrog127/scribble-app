@@ -1,104 +1,7 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
-import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, TrashMenuIcon } from './MenuIcons.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
-
-function useSwipe(onDelete, onTagActive) {
-  const swipeState = useRef({})
-
-  const onPointerDown = useCallback((e, id) => {
-    if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
-    const row = e.currentTarget.closest('.swipe-row')
-    if (!row) return
-    const wasLeft = row.classList.contains('swiped-left')
-    const wasRight = row.classList.contains('swiped-right')
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null }
-
-    const onMove = (e2) => {
-      const s = swipeState.current
-      if (!s.row) return
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      if (!s.dir) {
-        if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
-        else return
-      }
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) return
-      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
-      const proposed = base + dx
-      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
-      let newX = Math.max(-84, Math.min(84, proposed))
-      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
-      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
-      content.style.transition = 'none'
-      content.style.transform = `translateX(${newX}px)`
-    }
-
-    const onUp = (e2) => {
-      const s = swipeState.current
-      if (!s.row) { cleanup(); return }
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) { cleanup(); return }
-      content.style.transition = ''
-      const isTap = Math.abs(dx) < 8 && Math.abs(dy) < 8
-      if (isTap && (s.wasLeft || s.wasRight)) {
-        s.row.classList.remove('swiped-left', 'swiped-right')
-        content.style.transform = ''
-        cleanup()
-        return
-      }
-      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
-      const rawTotal = base + dx
-      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
-      if (s.lockSign === 1) total = Math.max(0, total)
-      if (s.lockSign === -1) total = Math.min(0, total)
-      if (total < -36) {
-        s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right')
-        content.style.transform = ''
-      } else if (total > 36) {
-        s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left')
-        content.style.transform = ''
-      } else {
-        s.row.classList.remove('swiped-left', 'swiped-right')
-        content.style.transform = ''
-      }
-      cleanup()
-    }
-
-    const handleCancel = () => {
-      const s2 = swipeState.current
-      if (s2.row) {
-        const c2 = s2.row.querySelector('.swipe-content')
-        if (c2) {
-          c2.style.transition = ''
-          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
-          const cx = m ? parseFloat(m[1]) : 0
-          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
-          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
-          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
-          c2.style.transform = ''
-        }
-      }
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', handleCancel)
-    }
-    const cleanup = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', handleCancel)
-    }
-
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-    document.addEventListener('pointercancel', handleCancel)
-  }, [])
-
-  return { onPointerDown }
-}
+import { useRowMenu, RowActionMenu } from './RowMenu.jsx'
 
 function useDragReorder(containerRef, items, onReorder) {
   const dragRef = useRef(null)
@@ -382,7 +285,10 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       }, 180)
     })
   }, [onDelete, promptDelete])
-  const { onPointerDown } = useSwipe(handleDelete, () => {})
+  const rowMenu = useRowMenu()
+  const buildRowItems = useCallback((t) => () => ([
+    { label: 'Delete Item', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(t.id) },
+  ]), [handleDelete])
   const checkTimers = useRef({})
   const checkPopping = useRef({})
   const cardRef = useRef(null)
@@ -615,23 +521,12 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row" data-swipe-id={t.id} data-swipe-type="todo">
-              <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
-                <div className="swipe-active-inner">
-                  <ActiveTagIcon/>
-                  <span className="swipe-action-label">Displayed</span>
-                </div>
-              </button>
-              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id) }}>
-                <div className="swipe-active-inner">
-                  <TrashIcon/>
-                  <span className="swipe-action-label">Delete</span>
-                </div>
-              </button>
               <div className="swipe-content">
                 <div
                   className={`todo-row${t.checked ? ' checked' : ''}`}
                   data-id={t.id}
-                  onPointerDown={e => { onPointerDown(e, t.id); onDragPointerDown(e, t.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(t)); onDragPointerDown(e, t.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems(t))}
                 >
                   <div
                     className="checkbox-wrap"
@@ -663,6 +558,8 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
           </div>
         ))}
       </div>
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
     </div>
   )
 }

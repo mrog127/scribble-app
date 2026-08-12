@@ -1,7 +1,7 @@
 // Floating footer for the list-item and (non-edit) note detail pages.
 // Left: the Active/Inactive toggle. Right: the project this item lives in.
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { CalendarIcon, formatSchedule, useActivatePress, isScheduleReached } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
@@ -46,10 +46,21 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false, menuItems }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
+  // Three-dot menu, in the slot the copy button used to occupy
+  const [dotsOpen, setDotsOpen] = useState(false)
+  const dotsRef = useRef(null)
+  const items = (menuItems || []).filter(Boolean)
+
+  useEffect(() => {
+    if (!dotsOpen) return
+    const handler = (e) => { if (dotsRef.current && !dotsRef.current.contains(e.target)) setDotsOpen(false) }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [dotsOpen])
   const canSchedule = typeof onSchedule === 'function'
   const hasSchedule = canSchedule && !!scheduledDate && !activated
   // Once the scheduled day arrives, the item reads as plain "active".
@@ -93,7 +104,31 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
             <span className="detail-footer-project">{projectName}</span>
           </button>
         </div>
-        {typeof onCopy === 'function' && (
+        {items.length > 0 ? (
+          <>
+            <div className="detail-footer-divider"/>
+            <div className="dots-menu-wrap detail-footer-dots" ref={dotsRef}>
+              <div
+                className="dots-menu dots-menu-btn"
+                onMouseDown={e => { e.preventDefault(); setDotsOpen(v => !v) }}
+              >
+                <span/><span/><span/>
+              </div>
+              <div className={`card-context-menu detail-footer-menu${dotsOpen ? ' open' : ''}`}>
+                {items.map((item, i) => (
+                  <button
+                    key={i}
+                    className={`card-context-item${item.danger ? ' danger' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); setDotsOpen(false); item.onSelect() }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : typeof onCopy === 'function' && (
           <>
             <div className="detail-footer-divider"/>
             <button

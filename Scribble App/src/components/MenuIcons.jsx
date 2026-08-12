@@ -40,6 +40,28 @@ export function EditIcon() {
   )
 }
 
+// Two stacked sheets — "Copy"
+export function CopyMenuIcon() {
+  return (
+    <svg {...base}>
+      <rect x="9" y="9" width="11" height="11" rx="2" {...stroke}/>
+      <path d="M5 15V5a2 2 0 012-2h8" {...stroke}/>
+    </svg>
+  )
+}
+
+// Calendar — "Schedule". Matches the other menu icons' 16x16 / non-scaling
+// 1pt stroke so it reads the same weight and colour.
+export function CalendarMenuIcon() {
+  return (
+    <svg {...base}>
+      <rect x="3.5" y="5" width="17" height="15" rx="2" {...stroke}/>
+      <path d="M3.5 9.5h17" {...stroke}/>
+      <path d="M8 3.5v3M16 3.5v3" {...stroke}/>
+    </svg>
+  )
+}
+
 // Archive box — "Archive"
 export function ArchiveMenuIcon() {
   return (

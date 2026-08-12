@@ -112,6 +112,59 @@
 
 .card-context-item:active { background: rgba(0,0,0,0.04); }
 
+/* ---- Long-press row action menu ---- */
+
+/* The pressed row floats above everything until the menu is dismissed */
+.swipe-row.row-lifted {
+  position: relative;
+  z-index: 120;
+  background: #F7F6F3;
+  border: 1px solid #C2C1BF;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* Cards clip their contents — let a lifted row's shadow escape */
+.card:has(.swipe-row.row-lifted) { overflow: visible; }
+.cards-area .card:has(.swipe-row.row-lifted) { position: relative; z-index: 40; }
+
+/* Portalled into #app, so it's positioned from JS rather than off a parent.
+   `top` transitions so it can ride along with the scroll-into-view nudge. */
+.row-action-menu {
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: 121;
+  transition: opacity 160ms ease, transform 160ms ease, top 300ms ease;
+}
+
+/* Cursor-anchored (right-click) menus settle their position in one measured
+   step — animating `top` would make the flip visibly slide. */
+.row-action-menu.cursor-anchored {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+/* Right-click menu: the row holds its hover highlight instead of floating */
+.swipe-row.row-context-held .swipe-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.row-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 119;
+  background: transparent;
+}
+
 /* Inline rename */
 .card-rename-wrap {
   flex: 1;
@@ -1050,6 +1103,22 @@
   background: #DBDAD8;
 }
 
+/* Three-dot menu in the detail footer, occupying the copy button's old slot.
+   The footer sits at the bottom of the screen, so the menu opens upward. */
+.detail-footer-dots {
+  align-self: center;
+  margin: 0 18px 0 12px;
+  flex-shrink: 0;
+}
+
+.detail-footer-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+  right: 0;
+  transform: translateY(8px);
+}
+.detail-footer-menu.open { transform: translateY(0); }
+
 .detail-footer-copy-btn {
   position: relative;
   display: flex;
@@ -1506,21 +1575,25 @@
   z-index: 0;
   opacity: 0;
   pointer-events: none;
-  transition: left 170ms ease;
+  transition: left 170ms ease, width 170ms ease;
 }
 
+/* Tabs size to their content (icon + visible-item count), so the sliding
+   indicator's width is set from JS to match the selected button. */
 .project-tab-btn {
   position: relative;
   z-index: 1;
-  width: 32px;
+  width: auto;
+  min-width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 0 6px;
   flex-shrink: 0;
 }
 
@@ -1529,15 +1602,26 @@
 .project-tab-btn::before {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 32px;
-  height: 32px;
+  inset: 0;
+  transform: none;
   border-radius: 4px;
   background: transparent;
   z-index: 0;
 }
+
+/* Count matches a row item's primary label */
+.project-tab-count {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  color: #242424;
+  opacity: 0.75;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.project-tab-btn.selected .project-tab-count { color: var(--accent-dark); }
 
 @media (hover: hover) {
   .project-tab-btn:hover:not(.selected)::before { background: rgba(0, 0, 0, 0.04); }
@@ -1609,6 +1693,36 @@
 
 .project-items {
   min-height: 0;
+}
+
+/* Tapping the canvas card header collapses the card to just the header */
+.project-card > .card-header {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: padding-bottom 250ms ease;
+}
+.project-card > .card-header.collapsed { padding-bottom: 12px; }
+
+/* "Show N Completed / Archived" reveal link — shown when a content tab has no
+   visible items but does have hidden (checked / archived) ones. Occupies the
+   same height as a row and aligns left with the canvas title (18px). */
+.project-reveal-link {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 18px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--accent-dark);
 }
 
 .project-empty {
@@ -1963,6 +2077,17 @@
   margin-left: 8px;
   display: flex;
   align-items: center;
+  color: #7A7A7A;
+}
+
+/* Scheduled day, 8px to the left of the calendar icon and the same gray */
+.row-schedule-date {
+  margin-right: 6px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
   color: #7A7A7A;
 }
 

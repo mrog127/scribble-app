@@ -6,6 +6,8 @@ import { getCategoryAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
 import { useScrollable } from '../useScrollable.js'
 import MoveToCard from './MoveToCard.jsx'
+import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
+import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -204,7 +206,8 @@ function StarIcon() {
 function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
-  const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId } = useAppContext()
+  const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId,
+    promptDelete, deleteProjectNote, archiveProjectNote, unarchiveProjectNote } = useAppContext()
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
   const noteAccent = useMemo(() => {
@@ -779,6 +782,26 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // Footer drop shadow only when the note content can scroll
   const contentScrollable = useScrollable(editorRef, [editing, isOpen, note])
 
+  const footerMenuItems = [
+    { label: 'Copy Note', icon: <CopyMenuIcon/>, onSelect: handleCopy },
+    categoryId != null && projectId != null && {
+      label: note.archived ? 'Unarchive Note' : 'Archive Note',
+      icon: note.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>,
+      onSelect: () => {
+        note.archived
+          ? unarchiveProjectNote(categoryId, projectId, note.id)
+          : archiveProjectNote(categoryId, projectId, note.id)
+        onClose()
+      },
+    },
+    categoryId != null && projectId != null && {
+      label: 'Delete Note',
+      icon: <TrashMenuIcon/>,
+      danger: true,
+      onSelect: () => promptDelete(() => { deleteProjectNote(categoryId, projectId, note.id); onClose() }),
+    },
+  ]
+
   return (
     <div
       ref={pageRef}
@@ -852,6 +875,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
       {hasFooter && !editing && (
         <DetailFooter
+          menuItems={footerMenuItems}
           activated={!!activated}
           scheduledDate={note.scheduledDate}
           onToggleActive={onToggleActive}
@@ -877,9 +901,9 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   // Local active notes use their own type so their ids can't collide with project notes
   const openNoteId = openDetail?.type === 'local-note' ? openDetail.id : null
   const setOpenNoteId = (id) => setOpenDetail(id == null ? null : (prev => (prev?.type === 'local-note' && prev.id === id) ? null : { type: 'local-note', id }))
-  const swipeState = useRef({})
   const cardRef = useRef(null)
   const containerRef = useRef(null)
+  const rowMenu = useRowMenu()
   const { onDragPointerDown } = useDragReorder(containerRef, notes, onReorder)
 
   // Three-dot header menu (mirrors the Lists card / project cards).
@@ -951,94 +975,29 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
 
   const openNote = notes.find(n => n.id === openNoteId)
 
-  const onPointerDown = (e, id) => {
-    if (e.target.closest('.swipe-action-btn')) return
-    const row = e.currentTarget  // handler is on .swipe-row, so this IS the row
+  const buildRowItems = (n) => () => ([
+    { label: 'Delete Note', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(n.id) },
+  ])
 
-    // If a button is exposed, close and swallow — note must not open
-    if (row.classList.contains('swiped-left') || row.classList.contains('swiped-right')) {
-      row.classList.remove('swiped-left', 'swiped-right')
-      const content = row.querySelector('.swipe-content')
-      if (content) content.style.transform = ''
-      return
-    }
-
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft: false, wasRight: false, lockSign: null }
-
+  // Tap (no drag, no long-press menu) opens the note editor
+  const onRowTap = (e, id) => {
+    const startX = e.clientX, startY = e.clientY
+    let moved = false
     const onMove = (e2) => {
-      const s = swipeState.current
-      if (!s.row) return
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      if (!s.dir) {
-        if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
-        else return
-      }
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) return
-      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
-      const proposed = base + dx
-      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
-      let newX = Math.max(-84, Math.min(84, proposed))
-      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
-      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
-      content.style.transition = 'none'
-      content.style.transform = `translateX(${newX}px)`
+      if (Math.abs(e2.clientX - startX) > 8 || Math.abs(e2.clientY - startY) > 8) moved = true
     }
-
-    const onUp = (e2) => {
-      const s = swipeState.current
-      if (!s.row) { cleanup(); return }
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) { cleanup(); return }
-      content.style.transition = ''
-      const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
-      if (isTap) {
-        setOpenNoteId(id)
-        cleanup()
-        return
-      }
-      const base = s.wasLeft ? -84 : s.wasRight ? 84 : 0
-      const rawTotal = base + dx
-      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
-      if (s.lockSign === 1) total = Math.max(0, total)
-      if (s.lockSign === -1) total = Math.min(0, total)
-      if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
-      else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
-      else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
+    const onUp = () => {
+      if (!moved && !isRowMenuOpen()) setOpenNoteId(id)
       cleanup()
-    }
-
-    const handleCancel = () => {
-      const s2 = swipeState.current
-      if (s2.row && s2.dir) {
-        const c2 = s2.row.querySelector('.swipe-content')
-        if (c2) {
-          c2.style.transition = ''
-          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
-          const cx = m ? parseFloat(m[1]) : 0
-          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
-          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
-          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
-          c2.style.transform = ''
-        }
-      }
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', handleCancel)
     }
     const cleanup = () => {
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', handleCancel)
+      document.removeEventListener('pointercancel', cleanup)
     }
-
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
-    document.addEventListener('pointercancel', handleCancel)
+    document.addEventListener('pointercancel', cleanup)
   }
 
   return (
@@ -1073,32 +1032,8 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
           {notes.map((n, i) => (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
-              <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id} data-swipe-type="note" onPointerDown={e => { onPointerDown(e, n.id); onDragPointerDown(e, n.id) }}>
-                <button className="swipe-action-btn active-tag" onMouseDown={e => e.preventDefault()}>
-                  <div className="swipe-active-inner">
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3,6.8 10,2.6 17,6.8" vectorEffect="non-scaling-stroke"/>
-                      <line x1="5" y1="7.6" x2="5" y2="14" vectorEffect="non-scaling-stroke"/>
-                      <line x1="8.33" y1="7.6" x2="8.33" y2="14" vectorEffect="non-scaling-stroke"/>
-                      <line x1="11.67" y1="7.6" x2="11.67" y2="14" vectorEffect="non-scaling-stroke"/>
-                      <line x1="15" y1="7.6" x2="15" y2="14" vectorEffect="non-scaling-stroke"/>
-                      <line x1="3.5" y1="14" x2="16.5" y2="14" vectorEffect="non-scaling-stroke"/>
-                      <line x1="3" y1="17" x2="17" y2="17" vectorEffect="non-scaling-stroke"/>
-                    </svg>
-                    <span className="swipe-action-label">Displayed</span>
-                  </div>
-                </button>
-                <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id) }}>
-                  <div className="swipe-active-inner">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <span className="swipe-action-label">Delete</span>
-                  </div>
-                </button>
+              <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id} data-swipe-type="note" onPointerDown={e => { rowMenu.press(e, buildRowItems(n)); onRowTap(e, n.id); onDragPointerDown(e, n.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems(n))}>
                 <div className="swipe-content">
                   <div className="note-row" data-note-id={n.id}>
                     <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
@@ -1132,6 +1067,8 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
         />,
         document.getElementById('app')
       )}
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
     </>
   )
 }

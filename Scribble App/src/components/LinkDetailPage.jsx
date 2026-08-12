@@ -3,6 +3,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
+import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 
 export function openUrl(url) {
@@ -42,7 +43,8 @@ function LinkPageIcon() {
 }
 
 export default function LinkDetailPage({ link, categoryId, projectId, onClose }) {
-  const { categories, updateProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, moveProjectLink } = useAppContext()
+  const { categories, updateProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, moveProjectLink,
+    promptDelete, deleteProjectLink, archiveProjectLink, unarchiveProjectLink } = useAppContext()
   const [isOpen, setIsOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -124,6 +126,26 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
 
   const previewSrc = `https://image.thum.io/get/width/800/${fullUrl(link.url)}`
 
+  const footerMenuItems = [
+    { label: 'Copy Link', icon: <CopyMenuIcon/>, onSelect: handleCopy },
+    {
+      label: link.archived ? 'Unarchive Link' : 'Archive Link',
+      icon: link.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>,
+      onSelect: () => {
+        link.archived
+          ? unarchiveProjectLink(categoryId, projectId, link.id)
+          : archiveProjectLink(categoryId, projectId, link.id)
+        onClose()
+      },
+    },
+    {
+      label: 'Delete Link',
+      icon: <TrashMenuIcon/>,
+      danger: true,
+      onSelect: () => promptDelete(() => { deleteProjectLink(categoryId, projectId, link.id); onClose() }),
+    },
+  ]
+
   return (
     <div
       ref={pageRef}
@@ -185,6 +207,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
       )}
 
       <DetailFooter
+        menuItems={footerMenuItems}
         activated={!!link.activated}
         scheduledDate={link.scheduledDate}
         onToggleActive={() => toggleProjectLinkActivated(categoryId, projectId, link.id)}

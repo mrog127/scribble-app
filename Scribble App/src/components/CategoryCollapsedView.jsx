@@ -4,9 +4,10 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { ActivateSwipeButton, CalendarIcon, toAnchorRect, groupByActivation } from './ScheduleBits.jsx'
+import { CalendarIcon, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
-import { EyeIcon, EyeOffIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon } from './MenuIcons.jsx'
+import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 
@@ -132,97 +133,6 @@ function NoteRowContent({ note }) {
 }
 
 // ---- Swipe hook (directional, ProjectCard-style) ----
-function useSwipe() {
-  const swipeState = useRef({})
-  const onPointerDown = useCallback((e, id) => {
-    if (e.target.closest('.swipe-action-btn') || e.target.closest('.checkbox-wrap')) return
-    const row = e.currentTarget.closest('.swipe-row')
-    if (!row) return
-    const wasLeft = row.classList.contains('swiped-left')
-    const wasRight = row.classList.contains('swiped-right')
-    const leftMax = parseInt(row.dataset.leftMax, 10) || 84
-    swipeState.current = { id, startX: e.clientX, startY: e.clientY, row, dir: null, wasLeft, wasRight, lockSign: null, leftMax }
-
-    const onMove = (e2) => {
-      const s = swipeState.current
-      if (!s.row) return
-      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir) {
-        if (Math.abs(dy) > 8) { cleanup(); return }
-        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
-        else return
-      }
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) return
-      const base = s.wasLeft ? -s.leftMax : s.wasRight ? 84 : 0
-      const proposed = base + dx
-      if (s.lockSign === null && Math.abs(proposed) > 2) s.lockSign = proposed > 0 ? 1 : -1
-      let newX = Math.max(-s.leftMax, Math.min(84, proposed))
-      if (s.lockSign === 1 || s.wasRight) newX = Math.max(0, newX)
-      if (s.lockSign === -1 || s.wasLeft) newX = Math.min(0, newX)
-      content.style.transition = 'none'
-      content.style.transform = `translateX(${newX}px)`
-    }
-
-    const onUp = (e2) => {
-      const s = swipeState.current
-      if (!s.row) { cleanup(); return }
-      const dx = e2.clientX - s.startX
-      const dy = e2.clientY - s.startY
-      const content = s.row.querySelector('.swipe-content')
-      if (!content) { cleanup(); return }
-      content.style.transition = ''
-      const isTap = Math.abs(dx) < 8 && Math.abs(dy) < 8
-      if (isTap && (s.wasLeft || s.wasRight)) {
-        s.row.classList.remove('swiped-left', 'swiped-right')
-        content.style.transform = ''
-        cleanup()
-        return
-      }
-      const base = s.wasLeft ? -s.leftMax : s.wasRight ? 84 : 0
-      const rawTotal = base + dx
-      let total = s.wasRight ? Math.max(0, rawTotal) : s.wasLeft ? Math.min(0, rawTotal) : rawTotal
-      if (s.lockSign === 1) total = Math.max(0, total)
-      if (s.lockSign === -1) total = Math.min(0, total)
-      if (total < -36) { s.row.classList.add('swiped-left'); s.row.classList.remove('swiped-right'); content.style.transform = '' }
-      else if (total > 36) { s.row.classList.add('swiped-right'); s.row.classList.remove('swiped-left'); content.style.transform = '' }
-      else { s.row.classList.remove('swiped-left', 'swiped-right'); content.style.transform = '' }
-      cleanup()
-    }
-
-    const handleCancel = () => {
-      const s2 = swipeState.current
-      if (s2.row) {
-        const c2 = s2.row.querySelector('.swipe-content')
-        if (c2) {
-          c2.style.transition = ''
-          const m = c2.style.transform.match(/translateX\((-?[\d.]+)px\)/)
-          const cx = m ? parseFloat(m[1]) : 0
-          if (cx < -36) { s2.row.classList.add('swiped-left'); s2.row.classList.remove('swiped-right') }
-          else if (cx > 36) { s2.row.classList.add('swiped-right'); s2.row.classList.remove('swiped-left') }
-          else { s2.row.classList.remove('swiped-left', 'swiped-right') }
-          c2.style.transform = ''
-        }
-      }
-      cleanup()
-    }
-    const cleanup = () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', handleCancel)
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-    document.addEventListener('pointercancel', handleCancel)
-  }, [])
-  return { onPointerDown }
-}
-
-// ---- Drag reorder hook (group-aware) ----
-// groupKeysProp: optional array aligned to `items`. Items sharing a contiguous key
-// form an independent reorderable group; an item whose key is null/undefined is
-// locked (not draggable). Dragging is confined within the dragged item's group, so
-// e.g. active items only reorder among active, inactive among inactive.
 function useDragReorder(containerRef, items, onReorder, groupKeysProp) {
   const dragRef = useRef(null)
   const flipRef = useRef(null)
@@ -445,7 +355,14 @@ function CollapsedTodosCard({ category }) {
   const hasChecked = allTodos.some(t => t.checked)
   const checkedCount = allTodos.filter(t => t.checked).length
 
-  const { onPointerDown } = useSwipe()
+  const rowMenu = useRowMenu()
+  function buildRowItems(t) {
+    return (row) => ([
+      { label: t.activated ? 'Remove from Gallery' : 'Display in Gallery', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(t.id, t.projectId, row) },
+      { label: t.scheduledDate ? 'Clear Schedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => t.scheduledDate ? clearSchedule(t.id, t.projectId, row) : openSchedule(t, row) },
+      { label: 'Delete Item', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(t.id, t.projectId, row) },
+    ])
+  }
 
   const handleReorder = useCallback((newOrder) => {
     reorderCategoryTodos(category.id, newOrder)
@@ -594,7 +511,7 @@ function CollapsedTodosCard({ category }) {
       const s = todoTapState.current
       if (Math.abs(e2.clientX - s.startX) > 8 || Math.abs(e2.clientY - s.startY) > 8) s.moved = true
     }
-    const onUp = () => { if (!todoTapState.current.moved) setOpenTodoId(id); cleanup() }
+    const onUp = () => { if (!todoTapState.current.moved && !isRowMenuOpen()) setOpenTodoId(id); cleanup() }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
@@ -661,20 +578,12 @@ function CollapsedTodosCard({ category }) {
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
             <div className="swipe-row" data-swipe-id={t.id}>
-              <ActivateSwipeButton
-                item={t} type="todo"
-                onActivateTap={(_, id, row) => handleActivate(id, t.projectId, row)}
-                onScheduleClear={(_, id, row) => clearSchedule(id, t.projectId, row)}
-                onScheduleOpen={(_, item, el) => openSchedule(item, el)}
-              />
-              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(t.id, t.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><TrashIcon/></div>
-              </button>
               <div className="swipe-content">
                 <div
                   className={`todo-row${t.checked ? ' checked' : ''}`}
                   data-id={t.id}
-                  onPointerDown={e => { onPointerDown(e, t.id); onTodoTap(e, t.id); onDragPointerDown(e, t.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(t)); onTodoTap(e, t.id); onDragPointerDown(e, t.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems(t))}
                 >
                   <div
                     className="checkbox-wrap"
@@ -701,7 +610,7 @@ function CollapsedTodosCard({ category }) {
                     </div>
                   </div>
                   {(t.scheduledDate && !t.activated) ? (
-                    <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span><CalendarIcon size={20}/></span>
                   ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -727,6 +636,8 @@ function CollapsedTodosCard({ category }) {
         />,
         document.getElementById('app')
       )}
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
 
       {calFor && (
         <CalendarPopup
@@ -778,7 +689,15 @@ function CollapsedNotesCard({ category }) {
   const archivedNoteCount = archivedNotes.length
   const sortedNotes = showArchived ? [...allNotes, ...archivedNotes] : allNotes
 
-  const { onPointerDown } = useSwipe()
+  const rowMenu = useRowMenu()
+  function buildRowItems(n) {
+    return (row) => ([
+      { label: n.activated ? 'Remove from Gallery' : 'Display in Gallery', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(n.id, n.projectId, row) },
+      { label: n.scheduledDate ? 'Clear Schedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => n.scheduledDate ? clearSchedule(n.id, n.projectId, row) : openSchedule(n, row) },
+      { label: n.archived ? 'Unarchive Note' : 'Archive Note', icon: n.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>, onSelect: () => n.archived ? handleRetrieve(n.id, n.projectId, row) : handleArchive(n.id, n.projectId, row) },
+      { label: 'Delete Note', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(n.id, n.projectId, row) },
+    ])
+  }
 
   const handleReorder = useCallback((newOrder) => {
     reorderCategoryNotes(category.id, newOrder)
@@ -876,7 +795,7 @@ function CollapsedNotesCard({ category }) {
       const s = noteTapState.current
       if (Math.abs(e2.clientX - s.startX) > 8 || Math.abs(e2.clientY - s.startY) > 8) s.moved = true
     }
-    const onUp = () => { if (!noteTapState.current.moved) setOpenNoteId(id); cleanup() }
+    const onUp = () => { if (!noteTapState.current.moved && !isRowMenuOpen()) setOpenNoteId(id); cleanup() }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
@@ -912,32 +831,13 @@ function CollapsedNotesCard({ category }) {
         {sortedNotes.map((n, i) => (
           <div key={n.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row archivable" data-swipe-id={n.id} data-left-max="148">
-              {!n.archived && (
-                <ActivateSwipeButton
-                  item={n} type="note"
-                  onActivateTap={(_, id, row) => handleActivate(id, n.projectId, row)}
-                  onScheduleClear={(_, id, row) => clearSchedule(id, n.projectId, row)}
-                  onScheduleOpen={(_, item, el) => openSchedule(item, el)}
-                />
-              )}
-              {n.archived ? (
-                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleRetrieve(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                  <div className="swipe-active-inner"><RetrieveIcon/></div>
-                </button>
-              ) : (
-                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                  <div className="swipe-active-inner"><ArchiveIcon/></div>
-                </button>
-              )}
-              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(n.id, n.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><TrashIcon/></div>
-              </button>
+            <div className="swipe-row" data-swipe-id={n.id}>
               <div className="swipe-content">
                 <div
                   className={`note-row${n.archived ? ' archived' : ''}`}
                   data-note-id={n.id}
-                  onPointerDown={e => { onPointerDown(e, n.id); onNoteTap(e, n.id); onDragPointerDown(e, n.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(n)); onNoteTap(e, n.id); onDragPointerDown(e, n.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems(n))}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                     <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
@@ -954,7 +854,7 @@ function CollapsedNotesCard({ category }) {
                     </div>
                   </div>
                   {(n.scheduledDate && !n.activated) && (
-                    <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(n.scheduledDate)}</span><CalendarIcon size={20}/></span>
                   )}
                 </div>
               </div>
@@ -976,6 +876,8 @@ function CollapsedNotesCard({ category }) {
         />,
         document.getElementById('app')
       )}
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
 
       {calFor && (
         <CalendarPopup
@@ -1126,7 +1028,7 @@ function CollapsedLinksCard({ category }) {
     const onUp = (e2) => {
       const s = linkSwipeState.current
       const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8) setOpenLinkId(id)
+      if (!s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8 && !isRowMenuOpen()) setOpenLinkId(id)
       cleanup()
     }
     const cleanup = () => { document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp) }
@@ -1134,7 +1036,15 @@ function CollapsedLinksCard({ category }) {
     document.addEventListener('pointerup', onUp)
   }, [setOpenLinkId])
 
-  const { onPointerDown } = useSwipe()
+  const rowMenu = useRowMenu()
+  function buildRowItems(l) {
+    return (row) => ([
+      { label: l.activated ? 'Remove from Gallery' : 'Display in Gallery', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(l.id, l.projectId, row) },
+      { label: l.scheduledDate ? 'Clear Schedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => l.scheduledDate ? clearSchedule(l.id, l.projectId, row) : openSchedule(l, row) },
+      { label: l.archived ? 'Unarchive Link' : 'Archive Link', icon: l.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>, onSelect: () => l.archived ? handleRetrieve(l.id, l.projectId, row) : handleArchive(l.id, l.projectId, row) },
+      { label: 'Delete Link', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(l.id, l.projectId, row) },
+    ])
+  }
 
   let openLink = null, openLinkProj = null
   if (openLinkId != null) {
@@ -1166,31 +1076,12 @@ function CollapsedLinksCard({ category }) {
         {sortedLinks.map((l, i) => (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
-            <div className={`swipe-row archivable${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id} data-left-max="148">
-              {!l.archived && (
-                <ActivateSwipeButton
-                  item={l} type="link"
-                  onActivateTap={(_, id, row) => handleActivate(id, l.projectId, row)}
-                  onScheduleClear={(_, id, row) => clearSchedule(id, l.projectId, row)}
-                  onScheduleOpen={(_, item, el) => openSchedule(item, el)}
-                />
-              )}
-              {l.archived ? (
-                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleRetrieve(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                  <div className="swipe-active-inner"><RetrieveIcon/></div>
-                </button>
-              ) : (
-                <button className="swipe-action-btn archive" onMouseDown={e => { e.preventDefault(); handleArchive(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                  <div className="swipe-active-inner"><ArchiveIcon/></div>
-                </button>
-              )}
-              <button className="swipe-action-btn delete" onMouseDown={e => { e.preventDefault(); handleDelete(l.id, l.projectId, e.currentTarget.closest('.swipe-row')) }}>
-                <div className="swipe-active-inner"><TrashIcon/></div>
-              </button>
+            <div className={`swipe-row archivable${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id}>
               <div className="swipe-content">
                 <div
                   className={`note-row link-row${l.archived ? ' archived' : ''}`}
-                  onPointerDown={e => { onPointerDown(e, l.id); onLinkPointerDown(e, l.id); onDragPointerDown(e, l.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(l)); onLinkPointerDown(e, l.id); onDragPointerDown(e, l.id) }}
+                        onContextMenu={e => rowMenu.context(e, buildRowItems(l))}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -1206,7 +1097,7 @@ function CollapsedLinksCard({ category }) {
                     </div>
                   </div>
                   {(l.scheduledDate && !l.activated) && (
-                    <span className="row-schedule-indicator"><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(l.scheduledDate)}</span><CalendarIcon size={20}/></span>
                   )}
                   <OutlinkButton onOpen={() => openUrl(l.url)} />
                 </div>
@@ -1225,6 +1116,8 @@ function CollapsedLinksCard({ category }) {
         />,
         document.getElementById('app')
       )}
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
 
       {calFor && (
         <CalendarPopup

@@ -17,6 +17,19 @@ export function formatSchedule(str, long = false) {
     : { month: 'short', day: 'numeric' })
 }
 
+// Compact label for a row's schedule indicator: the abbreviated weekday if the
+// date falls inside the next week ("Mon"), otherwise month + day ("Aug 12").
+export function formatScheduleShort(str) {
+  const date = parseLocalDate(str)
+  if (!date) return ''
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const days = Math.round((date - today) / 86400000)
+  return date.toLocaleDateString(undefined, days >= 0 && days < 7
+    ? { weekday: 'short' }
+    : { month: 'short', day: 'numeric' })
+}
+
 // True once a scheduled item's day has arrived (scheduled date is today or earlier).
 export function isScheduleReached(str) {
   const date = parseLocalDate(str)

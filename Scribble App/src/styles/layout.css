@@ -1572,7 +1572,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 @media (max-width: 999.98px) {
   .phone {
     --mbar-h: 48px;                                     /* bar height */
-    --mbar-bottom: calc(env(safe-area-inset-bottom) + 16px);  /* gap below the bar */
+    --mbar-bottom: calc(env(safe-area-inset-bottom) + 12px);  /* gap below the bar */
     --mbar-chrome: hsl(from #F7F6F3 h s calc(l * 1.01));   /* matches .card */
     --mbar-stroke: #C2C1BF;
     --mbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -1701,14 +1701,30 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   .footer .add-row .link-input-stack > .add-input {
     height: var(--mbar-h);
-    flex: 1 1 auto;
-    padding: 0 16px;
+    flex: 1 1 0%;
+    width: auto;      /* beats the inherited width:100% basis */
+    min-width: 0;
+    /* Right padding clears the send button (right:8 + 32 wide) plus a 12px gap,
+       so the text scrolls only once it reaches 12px left of the button. */
+    padding: 0 52px 0 16px;
     background: transparent;
     border: none;
     box-shadow: none;
   }
   /* The centred overlay stands in for the placeholder while resting */
   .footer:not(.keyboard-open) .add-row .add-input::placeholder { opacity: 0; }
+
+  /* The link-mode URL row is a flex sibling of the input. It was laid out for
+     the original column stack; in the pill's row direction it sits BESIDE the
+     input and steals width, so the text scrolled long before reaching the send
+     button. Collapse it to zero width unless link mode is actually open. */
+  .footer .add-row .link-input-stack > .add-link-url-wrap { display: none; }
+  .footer .add-row .link-input-stack > .add-link-url-wrap.open {
+    display: block;
+    flex: 1 1 auto;
+    width: auto;
+  }
+
 
   .mbar-placeholder {
     display: flex;
@@ -2306,14 +2322,29 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
   .footer .add-row .link-input-stack > .add-input {
     height: var(--mbar-h);
-    flex: 1 1 auto;
-    padding: 0 16px;
+    flex: 1 1 0%;
+    width: auto;
+    min-width: 0;
+    /* send button is right:16 + 32 wide, plus the same 12px gap */
+    padding: 0 60px 0 16px;
     background: transparent;
     border: none;
     box-shadow: none;
   }
   /* The centred overlay stands in for the placeholder while resting */
   .footer:not(.keyboard-open) .add-row .add-input::placeholder { opacity: 0; }
+
+  /* The link-mode URL row is a flex sibling of the input. It was laid out for
+     the original column stack; in the pill's row direction it sits BESIDE the
+     input and steals width, so the text scrolled long before reaching the send
+     button. Collapse it to zero width unless link mode is actually open. */
+  .footer .add-row .link-input-stack > .add-link-url-wrap { display: none; }
+  .footer .add-row .link-input-stack > .add-link-url-wrap.open {
+    display: block;
+    flex: 1 1 auto;
+    width: auto;
+  }
+
 
   .mbar-placeholder {
     display: flex;
@@ -2564,4 +2595,13 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* No fade to guard while a panel is open or a page is being dragged away */
   .phone.save-panel-open::after,
   .phone.search-panel-open::after { display: none; }
+}
+
+/* Add item opens on release, not on press. preventDefault on pointerdown /
+   mousedown didn't reliably stop the browser focusing the field, so while the
+   bar is closed the input simply doesn't receive pointer events — the press
+   lands on the pill, and its pointerup handler focuses the field. Once open,
+   pointer events return so the caret can be positioned normally. */
+.footer:not(.keyboard-open) .add-row .link-input-stack > .add-input {
+  pointer-events: none;
 }

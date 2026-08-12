@@ -447,6 +447,7 @@ function AppInner() {
   const inputRef = useRef(null)
   const linkUrlRef = useRef(null)
   const addRowRef = useRef(null)
+  const addTapRef = useRef(null)   // press origin, so a swipe doesn't open the field
   const tabBarRef = useRef(null)
   const indicatorRef = useRef(null)
   const toolbarIndicatorRef = useRef(null)
@@ -1852,14 +1853,25 @@ function AppInner() {
             <div
               className={`link-input-stack${searchOpen ? ' add-hidden' : ''}`}
               onPointerDown={e => {
-                // A tap on the pill's chrome (not the field itself) should still
-                // put the caret in the field rather than land on a dead surface.
+                // Open on release, not on press. The field itself is
+                // pointer-events:none while closed (see CSS), so a press can't
+                // focus it — we just record the origin so a drag (tab swipe)
+                // doesn't count as a tap.
                 if (toolbarType === 'link') return
-                if (e.target === inputRef.current) return
                 if (e.target.closest('.send-btn')) return
-                e.preventDefault()
+                addTapRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId }
+              }}
+              onPointerUp={e => {
+                if (toolbarType === 'link') return
+                if (e.target.closest('.send-btn')) return
+                const t = addTapRef.current
+                addTapRef.current = null
+                if (!t || t.id !== e.pointerId) return
+                // Moved too far — that was a swipe, not a tap
+                if (Math.abs(e.clientX - t.x) > 10 || Math.abs(e.clientY - t.y) > 10) return
                 inputRef.current?.focus({ preventScroll: true })
               }}
+              onPointerCancel={() => { addTapRef.current = null }}
             >
               {/* Centred "+ Add an item" overlay for the mobile pill (hidden on desktop
                   and while focused). Sits over the real input so the plus and the label

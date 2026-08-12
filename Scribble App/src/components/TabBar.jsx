@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { useAppContext } from '../context/AppContext.jsx'
 import { ACCENT_COLORS, getCategoryAccent } from '../theme.js'
 
-export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScroll }) {
+export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScroll, pulse = '', pulseVars }) {
   const { categories } = useAppContext()
   const tabsScrollRef = useRef(null)
 
@@ -11,14 +11,18 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
       {/* Home + categories live in one scrollable, bottom-anchored container */}
       <div className="tab-scroll">
         <button
-          className={`icon-tab tab-home${activeTab === 'star' ? ' selected' : ''}`}
-          style={{ '--tab-light': ACCENT_COLORS[0].light }}
+          className={`icon-tab tab-home${activeTab === 'star' ? ' selected' : ''}${pulse ? ` pulse-active pulse-${pulse}` : ''}`}
+          style={{ '--tab-light': ACCENT_COLORS[0].light, ...(pulseVars || {}) }}
           onClick={() => {
             // Always send the category list back to the top, whatever was selected
             tabsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
             onSelectTab('star')
           }}
         >
+          {/* Own layer for the orbiting inner glow: the button element itself is
+              already driving the pulse sequence animation, and `animation` is a
+              single property. */}
+          <span className="tab-glow" aria-hidden="true" />
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <polyline className="museum" points="3,6.8 10,2.6 17,6.8" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
             <line className="museum" x1="5" y1="7.6" x2="5" y2="14" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
@@ -31,10 +35,25 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
         </button>
 
         <div className="tabs-scroll" onScroll={onTabsScroll} ref={tabsScrollRef}>
-          <div className="tab-indicator" id="tabIndicator"></div>
+          {/* One easel, carried by the sliding indicator so it travels with the
+              box instead of cross-fading per tab. Colours come from the page
+              accent vars, so they change exactly when the box does. */}
+          <div className="tab-indicator" id="tabIndicator">
+            <svg className="tab-indicator-easel" width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <defs>
+                <linearGradient id="tab-indicator-easel-grad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-base)" />
+                  <stop offset="100%" stopColor="var(--accent-light)" />
+                </linearGradient>
+              </defs>
+              <rect x="3.5" y="2.5" width="13" height="9.5" fill="url(#tab-indicator-easel-grad)" fillOpacity="0.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+              <line x1="10" y1="12" x2="10" y2="17.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+              <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+              <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+            </svg>
+          </div>
           {categories.map((cat, idx) => {
             const acc = getCategoryAccent(idx)
-            const gradId = `tab-easel-${cat.id}`
             return (
               <button
                 key={cat.id}
@@ -42,19 +61,6 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
                 style={{ '--tab-light': acc.light }}
                 onClick={() => onSelectTab(cat.id)}
               >
-                {/* Absolutely positioned so showing it never shifts the label */}
-                <svg className="tab-easel" width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark }}>
-                  <defs>
-                    <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor={acc.base} />
-                      <stop offset="100%" stopColor={acc.light} />
-                    </linearGradient>
-                  </defs>
-                  <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                  <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                </svg>
                 <span className="tab-label">{cat.name}</span>
               </button>
             )

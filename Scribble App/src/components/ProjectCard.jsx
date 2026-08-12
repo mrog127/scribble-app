@@ -11,6 +11,7 @@ import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 import { subscribeProjectFocus } from '../searchFocus.js'
+import { subscribeOrderHold } from '../galleryPulse.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -610,6 +611,63 @@ export default function ProjectCard({ categoryId, project }) {
   // ---- Sorted todos: activated first, then unchecked, then checked ----
   // Order: active → scheduled → rest, with checked todos last
   const uncheckedOrdered = groupByActivation(project.todos.filter(t => !t.checked))
+  // While the activation sequence plays, keep rendering the order that was on
+  // screen when it started. The data has already committed; this only defers the
+  // visual re-sort so the row slides to its new slot once the animations end.
+  const [orderHeld, setOrderHeld] = useState(false)
+  const heldOrderRef = useRef(null)
+  const liveOrderRef = useRef({ todos: [], notes: [], links: [] })
+  const releaseFlipRef = useRef(null)
+  useEffect(() => subscribeOrderHold(held => {
+    if (held) { heldOrderRef.current = liveOrderRef.current; setOrderHeld(true) }
+    else {
+      // Snapshot where every row sits right now, before React reorders them, so
+      // the release can be animated rather than snapping into place.
+      const scope = cardRef.current
+      releaseFlipRef.current = scope
+        ? [...scope.querySelectorAll('.swipe-row[data-swipe-id]')].map(el => ({
+            el: el.parentElement || el, top: el.getBoundingClientRect().top,
+          }))
+        : null
+      heldOrderRef.current = null
+      setOrderHeld(false)
+    }
+  }), [])
+
+  // FLIP the rows from their held positions to their new ones
+  useLayoutEffect(() => {
+    const snap = releaseFlipRef.current
+    if (!snap) return
+    releaseFlipRef.current = null
+    const frames = snap
+      .map(({ el, top }) => ({ el, dy: top - el.getBoundingClientRect().top }))
+      .filter(f => Math.abs(f.dy) > 1)
+    if (!frames.length) return
+    frames.forEach(({ el, dy }) => {
+      el.style.transition = 'none'
+      el.style.transform = `translateY(${dy}px)`
+    })
+    document.body.offsetHeight   // force reflow
+    requestAnimationFrame(() => {
+      frames.forEach(({ el }) => {
+        el.style.transition = 'transform 300ms cubic-bezier(0.4,0,0.2,1)'
+        el.style.transform = ''
+      })
+      setTimeout(() => frames.forEach(({ el }) => { el.style.transition = '' }), 320)
+    })
+  }, [orderHeld])
+
+  // Re-apply a captured order to a freshly sorted list; anything new goes last.
+  const applyHeld = (list, ids) => {
+    if (!ids || !ids.length) return list
+    const pos = new Map(ids.map((id, i) => [String(id), i]))
+    return [...list].sort((a, b) => {
+      const ai = pos.has(String(a.id)) ? pos.get(String(a.id)) : Number.MAX_SAFE_INTEGER
+      const bi = pos.has(String(b.id)) ? pos.get(String(b.id)) : Number.MAX_SAFE_INTEGER
+      return ai - bi
+    })
+  }
+
   const sortedTodos = hideCompleted
     ? uncheckedOrdered
     : [...uncheckedOrdered, ...project.todos.filter(t => t.checked)]
@@ -623,6 +681,16 @@ export default function ProjectCard({ categoryId, project }) {
   const archivedLinksList = project.links.filter(l => l.archived)
   const archivedLinkCount = archivedLinksList.length
   const sortedLinks = showArchivedLinks ? [...activeLinksList, ...archivedLinksList] : activeLinksList
+
+  // Snapshot the live order every render so it can be frozen on demand
+  liveOrderRef.current = {
+    todos: sortedTodos.map(t => t.id),
+    notes: sortedNotes.map(n => n.id),
+    links: sortedLinks.map(l => l.id),
+  }
+  const displayTodos = orderHeld ? applyHeld(sortedTodos, heldOrderRef.current?.todos) : sortedTodos
+  const displayNotes = orderHeld ? applyHeld(sortedNotes, heldOrderRef.current?.notes) : sortedNotes
+  const displayLinks = orderHeld ? applyHeld(sortedLinks, heldOrderRef.current?.links) : sortedLinks
   const uncheckedCount = project.todos.filter(t => !t.checked).length
   const hasChecked = project.todos.some(t => t.checked)
   const checkedCount = project.todos.filter(t => t.checked).length
@@ -1266,7 +1334,7 @@ export default function ProjectCard({ categoryId, project }) {
     }
     return [
       {
-        label: item.activated ? 'Remove from Gallery' : 'Display in Gallery',
+        label: item.activated ? 'Stop displaying' : 'Display',
         icon: <GalleryMenuIcon/>,
         onSelect: () => handleActivate(type, item.id, row),
       },
@@ -1644,7 +1712,7 @@ export default function ProjectCard({ categoryId, project }) {
           {/* ---- List (todos) ---- */}
           {displayType === 'list' && (
             <div ref={todoContainerRef}>
-              {sortedTodos.map((t, i) => (
+              {displayTodos.map((t, i) => (
                 <div key={t.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className={`swipe-row${t.id === openTodoId ? ' row-open' : ''}`} data-swipe-id={t.id}>
@@ -1709,7 +1777,7 @@ export default function ProjectCard({ categoryId, project }) {
           {/* ---- Notes ---- */}
           {displayType === 'note' && (
             <div ref={noteContainerRef}>
-              {sortedNotes.map((n, i) => (
+              {displayNotes.map((n, i) => (
                 <div key={n.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id}>
@@ -1768,7 +1836,7 @@ export default function ProjectCard({ categoryId, project }) {
           {/* ---- Links ---- */}
           {displayType === 'link' && (
             <div ref={linkContainerRef}>
-              {sortedLinks.map((l, i) => (
+              {displayLinks.map((l, i) => (
                 <div key={l.id}>
                   {i > 0 && <div className="divider"/>}
                   <div className={`swipe-row${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id}>

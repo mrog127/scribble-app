@@ -368,7 +368,7 @@ function CollapsedTodosCard({ category }) {
   const rowMenu = useRowMenu()
   function buildRowItems(t) {
     return (row) => ([
-      { label: t.activated ? 'Remove from Gallery' : 'Display in Gallery', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(t.id, t.projectId, row) },
+      { label: t.activated ? 'Stop displaying' : 'Display', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(t.id, t.projectId, row) },
       { label: t.scheduledDate ? 'Clear Schedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => t.scheduledDate ? clearSchedule(t.id, t.projectId, row) : openSchedule(t, row) },
       { label: 'Delete Item', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(t.id, t.projectId, row) },
     ])
@@ -702,7 +702,7 @@ function CollapsedNotesCard({ category }) {
   const rowMenu = useRowMenu()
   function buildRowItems(n) {
     return (row) => ([
-      { label: n.activated ? 'Remove from Gallery' : 'Display in Gallery', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(n.id, n.projectId, row) },
+      { label: n.activated ? 'Stop displaying' : 'Display', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(n.id, n.projectId, row) },
       { label: n.scheduledDate ? 'Clear Schedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => n.scheduledDate ? clearSchedule(n.id, n.projectId, row) : openSchedule(n, row) },
       { label: n.archived ? 'Unarchive Note' : 'Archive Note', icon: n.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>, onSelect: () => n.archived ? handleRetrieve(n.id, n.projectId, row) : handleArchive(n.id, n.projectId, row) },
       { label: 'Delete Note', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(n.id, n.projectId, row) },
@@ -1049,7 +1049,7 @@ function CollapsedLinksCard({ category }) {
   const rowMenu = useRowMenu()
   function buildRowItems(l) {
     return (row) => ([
-      { label: l.activated ? 'Remove from Gallery' : 'Display in Gallery', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(l.id, l.projectId, row) },
+      { label: l.activated ? 'Stop displaying' : 'Display', icon: <GalleryMenuIcon/>, onSelect: () => handleActivate(l.id, l.projectId, row) },
       { label: l.scheduledDate ? 'Clear Schedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => l.scheduledDate ? clearSchedule(l.id, l.projectId, row) : openSchedule(l, row) },
       { label: l.archived ? 'Unarchive Link' : 'Archive Link', icon: l.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>, onSelect: () => l.archived ? handleRetrieve(l.id, l.projectId, row) : handleArchive(l.id, l.projectId, row) },
       { label: 'Delete Link', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(l.id, l.projectId, row) },

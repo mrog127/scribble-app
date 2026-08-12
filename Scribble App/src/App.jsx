@@ -11,6 +11,7 @@ import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { requestProjectFocus } from './searchFocus.js'
+import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
 
 // Wraps every case-insensitive occurrence of `q` in `text` so the matched span
 // can be tinted. Returns an array of strings and <mark> nodes.
@@ -212,6 +213,104 @@ function AppInner() {
     const t = setTimeout(() => setSettingsMounted(false), 350)
     return () => clearTimeout(t)
   }, [settingsOpen])
+
+  // Activation celebration on the gallery control: two orbit rotations (833ms
+  // each), then a short flash, then back to no animation at all.
+  const [galleryPulse, setGalleryPulse] = useState('')      // '' | 'spin' | 'flash'
+  const [pulseAccent, setPulseAccent] = useState(null)
+  const pulseTimers = useRef([])
+  const categoriesForPulse = useRef(categories)
+  categoriesForPulse.current = categories
+  // A copy of the activated row flies to the gallery control, morphing into its
+  // shape while its contents fade. The original stays put (the card also freezes
+  // its order), so the list is undisturbed for the whole sequence.
+  const FLOAT_MS = 500
+  const flyRowToGallery = useCallback((itemId) => {
+    const app = document.getElementById('app')
+    const portal = document.getElementById('animation-portal-under')
+    const row = document.querySelector(`.swipe-row[data-swipe-id="${itemId}"]`)
+    // Both controls exist at every width — the inactive one is just display:none,
+    // and would hand back a zero rect. Take the first that's actually laid out.
+    const target = ['.mbar-gallery', '.tab-home']
+      .map(sel => document.querySelector(sel))
+      .find(el => el && el.offsetParent !== null && el.getBoundingClientRect().width > 0)
+    if (!app || !portal || !row || !target) return false
+
+    const appR = app.getBoundingClientRect()
+    const from = row.getBoundingClientRect()
+    const to = target.getBoundingClientRect()
+    const targetRadius = getComputedStyle(target).borderRadius
+
+    const clone = document.createElement('div')
+    clone.style.cssText = [
+      'position:absolute',
+      `left:${from.left - appR.left}px`,
+      `top:${from.top - appR.top}px`,
+      `width:${from.width}px`,
+      `height:${from.height}px`,
+      'overflow:hidden',
+      'pointer-events:none',
+      'background:#F7F6F3',
+      'border:1px solid #C2C1BF',
+      'border-radius:8px',
+      'box-sizing:border-box',
+      'opacity:1',
+      `transition:left ${FLOAT_MS}ms ease, top ${FLOAT_MS}ms ease, width ${FLOAT_MS}ms ease, height ${FLOAT_MS}ms ease, border-radius ${FLOAT_MS}ms ease, opacity ${FLOAT_MS}ms ease`,
+    ].join(';')
+
+    const inner = row.cloneNode(true)
+    inner.style.transition = `opacity ${Math.round(FLOAT_MS * 0.7)}ms ease`
+    inner.style.opacity = '1'
+    clone.appendChild(inner)
+    portal.appendChild(clone)
+
+    requestAnimationFrame(() => {
+      clone.style.left = `${to.left - appR.left}px`
+      clone.style.top = `${to.top - appR.top}px`
+      clone.style.width = `${to.width}px`
+      clone.style.height = `${to.height}px`
+      clone.style.borderRadius = targetRadius
+      clone.style.opacity = '0.5'   // arrives at 50%
+      inner.style.opacity = '0'
+    })
+    setTimeout(() => clone.remove(), FLOAT_MS + 60)
+    return true
+  }, [])
+
+  useEffect(() => subscribeGalleryPulse((categoryId, itemId) => {
+    const idx = categoriesForPulse.current.findIndex(c => c.id === categoryId)
+    pulseTimers.current.forEach(clearTimeout)
+    pulseTimers.current = []
+    setPulseAccent(idx >= 0 ? getCategoryAccent(idx) : null)
+
+    // Cards hold their current order until the whole sequence finishes, so the
+    // row only slides to its new slot at the very end.
+    setOrderHold(true)
+    const flew = flyRowToGallery(itemId)
+    const startAt = flew ? FLOAT_MS : 0
+
+    // 'float' runs during the fly-over so the desktop selector box can fade in
+    // with it; then one rotation (555ms) + a quarter-rotation fade (139ms), a
+    // beat at rest, and the 500ms-in / 500ms-out flash.
+    setGalleryPulse('float')
+    pulseTimers.current.push(setTimeout(() => setGalleryPulse('spin'), startAt))
+    pulseTimers.current.push(setTimeout(() => {
+      setGalleryPulse('flash')
+      setOrderHold(false)      // list re-sorts as the flash begins
+    }, startAt + 794))
+    pulseTimers.current.push(setTimeout(() => {
+      setGalleryPulse('')
+      setPulseAccent(null)
+    }, startAt + 1804))
+  }), [flyRowToGallery])
+  useEffect(() => () => pulseTimers.current.forEach(clearTimeout), [])
+
+  const pulseVars = pulseAccent ? {
+    '--pulse-base': pulseAccent.base,
+    '--pulse-light': pulseAccent.light,
+    '--pulse-dark': pulseAccent.dark,
+    '--pulse-base-rgb': pulseAccent.baseRgb,
+  } : undefined
 
   // Long-press page menu hanging off the gallery/easel circle
   const [pageMenuOpen, setPageMenuOpen] = useState(false)
@@ -523,6 +622,10 @@ function AppInner() {
           accentIdx: catIdx,
         }
         const push = (row, isArchived) => (isArchived ? archived : visible).push({ ...row, projArchived })
+        // The canvas itself
+        if ((proj.name || '').toLowerCase().includes(q)) {
+          push({ ...base, key: `c-${proj.id}`, itemId: proj.id, type: 'canvas', title: proj.name || '', hidden: projGone }, projGone)
+        }
         ;(proj.todos || []).forEach(t => {
           const title = t.text || ''
           if (title.toLowerCase().includes(q)) {
@@ -580,10 +683,12 @@ function AppInner() {
   const openSearchResult = useCallback((r) => {
     // Everything the destination needs to make this item visible: the content tab,
     // an expand if the canvas is collapsed, and whichever hide-toggle is hiding it.
+    const isCanvas = r.type === 'canvas'
     const focusReq = {
       projectId: r.projectId,
       categoryId: r.categoryId,
-      type: r.type,
+      // A canvas result shouldn't force a particular content tab
+      type: isCanvas ? null : r.type,
       expand: true,
       showCompleted: r.type === 'list' && (r.hidden || r.projArchived),
       showArchivedNotes: r.type === 'note' && (r.hidden || r.projArchived),
@@ -602,7 +707,10 @@ function AppInner() {
       requestProjectFocus(focusReq)
       const scope = document.querySelector(`[data-project-id="${r.projectId}"]`)
         || document.querySelector(`[data-archived-id="${r.projectId}"]`)
-      const row = scope?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"]`)
+      // Canvas results flash the whole card; item results flash their row.
+      const row = isCanvas
+        ? scope?.querySelector('.card')
+        : scope?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"]`)
       if (!row) {
         if (++tries > 40) clearInterval(hunt)
         return
@@ -1673,7 +1781,15 @@ function AppInner() {
                               <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
                             </svg>
                           )}
-                          {r.type === 'link' && (
+                          {r.type === 'canvas' && (
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                            <rect x="3.5" y="2.5" width="13" height="9.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15"/>
+                            <line x1="10" y1="12" x2="10" y2="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
+                            <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
+                            <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
+                          </svg>
+                        )}
+                        {r.type === 'link' && (
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                               <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                               <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1684,7 +1800,9 @@ function AppInner() {
                           <span className="search-result-title">
                             {highlightMatch(r.title, searchQuery, `rgba(${getCategoryAccent(r.accentIdx).baseRgb}, 0.2)`)}
                           </span>
-                          <span className="search-result-meta">{r.categoryName} · {r.projectName}</span>
+                          <span className="search-result-meta">
+                            {r.type === 'canvas' ? r.categoryName : `${r.categoryName} · ${r.projectName}`}
+                          </span>
                         </span>
                       </button>
                     </div>
@@ -1740,7 +1858,8 @@ function AppInner() {
 
             <div className="mbar-gallery-wrap" ref={pageMenuWrapRef}>
               <button
-                className={`mbar-circle mbar-gallery${activeTab === 'star' ? ' on-gallery' : ''}`}
+                className={`mbar-circle mbar-gallery${activeTab === 'star' ? ' on-gallery' : ''}${galleryPulse ? ` pulse-active pulse-${galleryPulse}` : ''}`}
+                style={pulseVars}
                 aria-label={activeTab === 'star' ? 'Projects' : 'Gallery'}
                 onMouseDown={e => e.preventDefault()}
                 onPointerDown={() => { if (!pageMenuOpen) startPageMenuPress() }}
@@ -1751,21 +1870,33 @@ function AppInner() {
                 onClick={() => {
                   // The button sits above the scrim, so it has to dismiss too
                   if (pageMenuOpen) { setPageMenuOpen(false); return }
-                  // A completed long-press already opened the menu — don't also navigate
+                  // A completed long-press already opened the menu — don't also act
                   if (pageMenuFiredRef.current) { pageMenuFiredRef.current = false; return }
-                  if (activeTab === 'star') { if (categories[0]) handleTabChange(categories[0].id) }
+                  // On the gallery page a tap opens the project list; on a project
+                  // page it returns to the gallery (long-press opens the list).
+                  if (activeTab === 'star') setPageMenuOpen(true)
                   else handleTabChange('star')
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                  <polyline points="3,6.8 10,2.6 17,6.8" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-                  <line x1="5" y1="7.6" x2="5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="8.33" y1="7.6" x2="8.33" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="11.67" y1="7.6" x2="11.67" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="15" y1="7.6" x2="15" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="3.5" y1="14" x2="16.5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  <line x1="3" y1="17" x2="17" y2="17" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                </svg>
+                {activeTab === 'star' ? (
+                  /* On the gallery page: easel, in black */
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <rect x="3.5" y="2.5" width="13" height="9.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                    <line x1="10" y1="12" x2="10" y2="17.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <polyline points="3,6.8 10,2.6 17,6.8" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+                    <line x1="5" y1="7.6" x2="5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="8.33" y1="7.6" x2="8.33" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="11.67" y1="7.6" x2="11.67" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="15" y1="7.6" x2="15" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="3.5" y1="14" x2="16.5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="3" y1="17" x2="17" y2="17" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  </svg>
+                )}
               </button>
 
               {/* Long-press page list — Gallery on top, then every project page */}
@@ -2008,7 +2139,7 @@ function AppInner() {
               </div>
             </div>
 
-            <TabBar activeTab={activeTab} onSelectTab={handleTabChange} inputFocused={inputFocused} onTabsScroll={handleTabsScroll} />
+            <TabBar activeTab={activeTab} onSelectTab={handleTabChange} inputFocused={inputFocused} onTabsScroll={handleTabsScroll} pulse={galleryPulse} pulseVars={pulseVars} />
           </div>
 
 
@@ -2022,6 +2153,8 @@ function AppInner() {
           </div>
         )}
 
+        {/* Below the control (z-index 2): the activated row flies under it */}
+        <div id="animation-portal-under"></div>
         <div id="animation-portal"></div>
         <ArchiveAttachmentsModal />
         <DeleteConfirmModal />

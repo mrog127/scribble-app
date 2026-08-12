@@ -1316,6 +1316,14 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      is absolutely positioned in that reserved space, so nothing shifts as you
      switch pages. */
   .tabs-scroll .text-tab { padding-left: 38px; padding-right: 16px; position: relative; }
+  /* The easel rides the indicator; its x matches the labels' 14px icon slot */
+  .tab-indicator-easel {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(calc(-50% + 1px));   /* 1pt lower than dead centre */
+    pointer-events: none;
+  }
   /* Titles truncate 16px from the selection box's right edge, selected or not */
   .tabs-scroll .text-tab .tab-label {
     flex: 1 1 auto;
@@ -1325,21 +1333,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     white-space: nowrap;
     text-align: left;
   }
-  .tabs-scroll .text-tab .tab-easel {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0;
-    transition: opacity 140ms ease;
-    pointer-events: none;
-  }
-  /* Wait for the selection box to finish sliding (120-170ms) before revealing
-     the easel; on deselect the base rule fades it straight out. */
-  .tabs-scroll .text-tab.selected .tab-easel {
-    opacity: 1;
-    transition: opacity 140ms ease 180ms;
-  }
+
   .tab-bar .tab-home svg,
   .tab-bar .tab-home.selected svg { width: 18px; height: 18px; }
   .tab-bar .tab-home::after { font-weight: 500; color: #242424; }
@@ -1602,12 +1596,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
        cancel the base mask outright, so the top edge must stay opaque). */
     -webkit-mask-image: linear-gradient(to bottom,
       black 0px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 16px),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 8px));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
     mask-image: linear-gradient(to bottom,
       black 0px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 16px),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 8px));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
   }
   .phone.save-panel-open .page { margin-bottom: 0; }
 
@@ -2090,7 +2084,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   70%  { background: rgba(var(--accent-base-rgb), 0.2); }
   100% { background: transparent; }
 }
-.swipe-row.search-flash { animation: search-flash 1300ms ease; }
+.swipe-row.search-flash,
+.card.search-flash { animation: search-flash 1300ms ease; }
 
 /* Matched substring inside a search result title */
 .search-hit {
@@ -2144,9 +2139,14 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      and only fade their opacity. Toggling the animations themselves would snap
      the box-shadow/border back the instant you left the gallery page, because a
      running animation overrides any transition on the same property. */
-  .mbar-circle.mbar-gallery { position: relative; }
+  .mbar-circle.mbar-gallery {
+    position: relative;
+    --pulse-rest-bg: var(--mbar-chrome);
+    --pulse-rest-shadow: var(--mbar-shadow);
+    --pulse-rest-border: var(--mbar-stroke);
+  }
 
-  /* Inner glow */
+  /* Inner glow — idle by default, only runs during an activation pulse */
   .mbar-circle.mbar-gallery::before {
     content: '';
     position: absolute;
@@ -2156,8 +2156,13 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     opacity: 0;
     transition: opacity 450ms ease;
     pointer-events: none;
-    animation: mbar-glow-orbit 2.5s linear infinite,
-               gallery-rainbow 17.5s linear infinite;
+  }
+  .mbar-circle.mbar-gallery.pulse-spin::before {
+    opacity: 1;
+    /* Fixed to the activated item's accent — no rainbow cycling */
+    box-shadow: inset var(--glow-x) var(--glow-y) 14px var(--pulse-light, #E4EEF4);
+    animation: mbar-glow-orbit 555ms linear infinite,
+               gallery-pulse-fade 694ms linear forwards;
   }
 
   /* Colour ring, painted over the button's own gray stroke so the gray reads
@@ -2171,7 +2176,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
        out to sit directly on top of the gray stroke. */
     inset: -1px;
     border-radius: 50%;
-    padding: 1px;
+    padding: 1.5px;
     background: linear-gradient(var(--cb-stroke-angle),
       hsl(from var(--glow-base) h s calc(l * 1.53) / 0.6),
       hsl(from var(--glow-base) h s calc(l * 0.576 - 4) / 0.6));
@@ -2182,12 +2187,15 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     opacity: 0;
     transition: opacity 450ms ease;
     pointer-events: none;
-    animation: cb-stroke-orbit 2.5s linear infinite,
-               gallery-rainbow 17.5s linear infinite;
   }
-
-  .mbar-circle.mbar-gallery.on-gallery::before,
-  .mbar-circle.mbar-gallery.on-gallery::after { opacity: 1; }
+  .mbar-circle.mbar-gallery.pulse-spin::after {
+    opacity: 1;
+    background: linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--pulse-base, #78A4C2) h s calc(l * 1.53) / 0.6),
+      hsl(from var(--pulse-base, #78A4C2) h s calc(l * 0.576 - 4) / 0.6));
+    animation: cb-stroke-orbit 555ms linear infinite,
+               gallery-pulse-fade 694ms linear forwards;
+  }
 
   /* Keep the icon above both layers */
   .mbar-circle.mbar-gallery svg { position: relative; z-index: 1; }
@@ -2513,10 +2521,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      which keeps it in phase with the ring since they all start together.
      Full opacity, one flat colour across the whole glyph. */
   .tab-bar.star-active .tab-home.selected svg .museum {
-    /* Same derivation as the ring's dark stop, at full opacity */
-    stroke: hsl(from var(--glow-base) h s calc(l * 0.576 - 4));
+    stroke: #242424;
     opacity: 1;
-    animation: gallery-rainbow 17.5s linear infinite;
   }
 
   /* The sliding indicator now lives inside .tabs-scroll, so it can only reach the
@@ -2526,22 +2532,19 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   .tab-bar.star-active .tab-home.selected {
     background: #FAF9F7;
-    /* Gray stroke sits under the rotating colour ring, so the stroke stays
-       continuous where the gradient is faint. */
     border: 1px solid rgba(194, 193, 191, 0.6);
     border-radius: 999px;
-    /* --glow-base still needs animating for the ring, which reads it */
-    animation: gallery-rainbow 17.5s linear infinite;
   }
+  /* Colours only cycle while an activation pulse is running */
 
   /* Rotating colour stroke. Ring shape via mask-exclude; inset -1px so it lands
      on the border box rather than inside it. */
-  .tab-bar.star-active .tab-home.selected::before {
+  .tab-bar .tab-home::before {
     content: '';
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    padding: 1px;
+    padding: 1.5px;
     background: linear-gradient(var(--cb-stroke-angle),
       hsl(from var(--glow-base) h s calc(l * 1.53) / 0.6),
       hsl(from var(--glow-base) h s calc(l * 0.576 - 4) / 0.6));
@@ -2549,10 +2552,43 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
-    opacity: 0.6;
+    opacity: 0;
     pointer-events: none;
-    animation: gallery-stroke-slow-vert 8.75s linear infinite,
-               gallery-rainbow 17.5s linear infinite;
+    transition: opacity 300ms ease;
+  }
+  .tab-bar .tab-home.pulse-spin::before {
+    opacity: 0.6;
+    /* cb-stroke-orbit sweeps at a constant rate, so every edge moves at the
+       same speed (the slow-vertical variant is no longer used here). */
+    background: linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--pulse-base, #78A4C2) h s calc(l * 1.53) / 0.6),
+      hsl(from var(--pulse-base, #78A4C2) h s calc(l * 0.576 - 4) / 0.6));
+    animation: cb-stroke-orbit 555ms linear infinite,
+               gallery-pulse-fade 694ms linear forwards;
+  }
+  .tab-bar .tab-home {
+    --pulse-rest-bg: transparent;
+    --pulse-rest-shadow: none;
+    --pulse-rest-border: transparent;
+    /* The selected look, faded in over the first ~400ms of the sequence */
+    --pulse-mid-bg: #FAF9F7;
+    --pulse-mid-border: rgba(194, 193, 191, 0.6);
+  }
+  /* Orbiting inner glow, on its own layer because the button element is already
+     running the pulse sequence animation. Matches the mobile button. */
+  .tab-bar .tab-home .tab-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 0;
+  }
+  .tab-bar .tab-home.pulse-spin .tab-glow {
+    opacity: 1;
+    box-shadow: inset var(--glow-x) var(--glow-y) 14px var(--pulse-light, #E4EEF4);
+    animation: mbar-glow-orbit 555ms linear infinite,
+               gallery-pulse-fade 694ms linear forwards;
   }
   /* Keep the icon and label above the inner glow */
   .tab-bar.star-active .tab-home.selected svg,
@@ -2587,7 +2623,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(var(--mbar-h) + var(--mbar-bottom) + 16px);
+    height: calc(var(--mbar-h) + var(--mbar-bottom) + 8px);
     z-index: 2;
     pointer-events: auto;
     background: transparent;
@@ -2604,4 +2640,90 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
    pointer events return so the caret can be positioned normally. */
 .footer:not(.keyboard-open) .add-row .link-input-stack > .add-input {
   pointer-events: none;
+}
+
+
+/* Ring holds for one full rotation (555ms = 80% of 694ms) then fades out over
+   the following quarter-rotation, so the flash starts on a clean button. */
+@keyframes gallery-pulse-fade {
+  0%, 80% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+/* ---- Activation flash (mobile button + desktop tab) ----
+   Fires after the two orbit rotations: the surface flashes 20% of the item's
+   light accent, the shadow 8% of its base, and the icon/label the base colour.
+   --pulse-* are set inline from the activated item's category accent. */
+/* 250ms in, 250ms out. Ends and starts on the control's real resting values
+   (--pulse-rest-bg / --pulse-rest-shadow, set per breakpoint) so it returns to
+   default rather than to transparent. */
+/* One pass over the whole sequence, float included (500 + 1804 = 2304ms):
+     0     -> 17.4%  surface fades up to --pulse-mid-bg over ~400ms (on desktop
+                     that's the selected white, i.e. the selector box)
+     17.4% -> 45.8%  the row finishes flying; glow and dark outline fade in
+     45.8% -> 77.9%  they hold; the flash rises to its peak at 77.9%
+     77.9% -> 100%   flash, glow and outline fade out together                 */
+@keyframes gallery-pulse-surface {
+  0%        { background: var(--pulse-rest-bg, transparent);
+              box-shadow: var(--pulse-rest-shadow, none); }
+  17.4%     { background: var(--pulse-mid-bg, var(--pulse-rest-bg, transparent));
+              box-shadow: var(--pulse-rest-shadow, none); }
+  45.8%     { background: var(--pulse-mid-bg, var(--pulse-rest-bg, transparent));
+              box-shadow: inset 0 0 14px var(--pulse-light, #E4EEF4),
+                          var(--pulse-rest-shadow, 0 0 0 transparent); }
+  56.2%     { background: var(--pulse-mid-bg, var(--pulse-rest-bg, transparent));
+              box-shadow: inset 0 0 14px var(--pulse-light, #E4EEF4),
+                          var(--pulse-rest-shadow, 0 0 0 transparent); }
+  77.9%     { background: var(--pulse-light, #E4EEF4);
+              box-shadow: inset 0 0 14px var(--pulse-light, #E4EEF4),
+                          0 4px 24px rgba(var(--pulse-base-rgb, 120,164,194), 0.60); }
+  100%      { background: var(--pulse-rest-bg, transparent);
+              box-shadow: var(--pulse-rest-shadow, none); }
+}
+
+/* 1.5pt dark outline fades in with the rotation and leaves with the flash */
+@keyframes gallery-pulse-border {
+  0%             { border-color: var(--pulse-rest-border, transparent); border-width: 1px; }
+  /* Selector box fully in by ~400ms, stroke included */
+  17.4%, 21.7%   { border-color: var(--pulse-mid-border, var(--pulse-rest-border, transparent));
+                   border-width: 1px; }
+  45.8%, 77.9%   { border-color: var(--pulse-dark, #43535E); border-width: 1.5px; }
+  100%           { border-color: var(--pulse-rest-border, transparent); border-width: 1px; }
+}
+@keyframes gallery-flash-ink {
+  0%   { stroke: #242424; stroke-width: 1; }
+  50%  { stroke: var(--pulse-dark, #43535E); stroke-width: 1.5; }
+  100% { stroke: #242424; stroke-width: 1; }
+}
+
+@keyframes gallery-flash-label {
+  0%   { color: #333333; }
+  50%  { color: var(--pulse-dark, #43535E); }
+  100% { color: #333333; }
+}
+
+.mbar-circle.mbar-gallery.pulse-active,
+.tab-bar .tab-home.pulse-active {
+  animation: gallery-pulse-surface 2304ms ease,
+             gallery-pulse-border 2304ms ease;
+}
+.mbar-circle.mbar-gallery.pulse-flash svg line,
+.mbar-circle.mbar-gallery.pulse-flash svg polyline,
+.mbar-circle.mbar-gallery.pulse-flash svg rect,
+.tab-bar .tab-home.pulse-flash svg .museum {
+  animation: gallery-flash-ink 1000ms ease;
+}
+/* Desktop label lives in ::after */
+.tab-bar .tab-home.pulse-flash::after {
+  animation: gallery-flash-label 1000ms ease;
+}
+
+/* Fly-over layer for the activation float. Sits above the page but below the
+   control it flies to (mobile footer z-index 3, desktop sidebar 40), so the row
+   passes underneath the button/tab rather than over it. */
+#animation-portal-under {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
 }

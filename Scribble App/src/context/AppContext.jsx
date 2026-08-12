@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from './AuthContext'
+import { fireGalleryPulse } from '../galleryPulse.js'
 
 export const AppContext = createContext(null)
 
@@ -529,6 +530,7 @@ export function AppProvider({ children }) {
     const todo = proj?.todos.find(t => t.id === todoId)
     if (!todo) return
     const newActivated = !todo.activated
+    if (newActivated) fireGalleryPulse(categoryId, todoId)
     updateProject(categoryId, projectId, proj => ({
       ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, activated: newActivated })
     }))
@@ -541,6 +543,7 @@ export function AppProvider({ children }) {
     const note = proj?.notes.find(n => n.id === noteId)
     if (!note) return
     const newActivated = !note.activated
+    if (newActivated) fireGalleryPulse(categoryId, noteId)
     updateProject(categoryId, projectId, proj => ({
       ...proj, notes: proj.notes.map(n => n.id !== noteId ? n : { ...n, activated: newActivated })
     }))
@@ -662,6 +665,7 @@ export function AppProvider({ children }) {
     const link = proj?.links.find(l => l.id === linkId)
     if (!link) return
     const newActivated = !link.activated
+    if (newActivated) fireGalleryPulse(categoryId, linkId)
     updateProject(categoryId, projectId, proj => ({
       ...proj, links: proj.links.map(l => l.id !== linkId ? l : { ...l, activated: newActivated })
     }))

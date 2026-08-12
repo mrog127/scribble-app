@@ -1901,22 +1901,6 @@ function AppInner() {
 
               {/* Long-press page list — Gallery on top, then every project page */}
               <div className={`card-context-menu mbar-page-menu${pageMenuOpen ? ' open' : ''}`}>
-                <button
-                  className="card-context-item"
-                  onMouseDown={e => e.preventDefault()}
-                  onClick={() => { setPageMenuOpen(false); handleTabChange('star') }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                    <polyline points="3,6.8 10,2.6 17,6.8" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-                    <line x1="5" y1="7.6" x2="5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="8.33" y1="7.6" x2="8.33" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="11.67" y1="7.6" x2="11.67" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="15" y1="7.6" x2="15" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="3.5" y1="14" x2="16.5" y2="14" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="3" y1="17" x2="17" y2="17" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                  </svg>
-                  <span className="mbar-page-menu-label">Gallery</span>
-                </button>
                 {categories.map((cat, idx) => {
                   const acc = getCategoryAccent(idx)
                   const gradId = `easel-canvas-${cat.id}`

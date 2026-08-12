@@ -517,7 +517,10 @@ function AppInner() {
     }
 
     const onDown = (e) => {
-      if (animating || dragRef.current) return
+      // A gesture may start while the previous tab animation is still settling —
+      // onMove holds it un-engaged until that lands, so consecutive swipes don't
+      // have to wait out the full transition.
+      if (dragRef.current) return
       if (e.pointerType === 'mouse' && e.button !== 0) return
       const t = e.target
       // Rows used to own the horizontal gesture (swipe-to-reveal), so they were
@@ -532,6 +535,16 @@ function AppInner() {
     const onMove = (e) => {
       const s = dragRef.current
       if (!s || e.pointerId !== s.id) return
+      // Previous commit still animating: keep the gesture alive but re-baseline to
+      // the finger's current position, so it engages from here the moment the
+      // animation lands instead of jumping by however far you've already moved.
+      if (!s.engaged && animating) {
+        s.startX = e.clientX
+        s.startY = e.clientY
+        s.lastX = e.clientX
+        s.lastT = performance.now()
+        return
+      }
       const dx = e.clientX - s.startX
       const dy = e.clientY - s.startY
       if (!s.engaged) {

@@ -70,6 +70,16 @@ function useDragReorder(containerRef, items, onReorder) {
 
       const cloneInner = dragged.el.cloneNode(true)
       cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
+      // The clone lives in #animation-portal, outside the card, so card-scoped
+      // rules (`.project-card .todo-row { min-height, align-items }` and friends)
+      // stop reaching it — the row would render short and top-aligned. Wrap it in
+      // a bare element carrying the source card's classes to restore that scope,
+      // with the card's own box styling neutralised.
+      const srcCard = dragged.el.closest('.card')
+      const scope = document.createElement('div')
+      if (srcCard) scope.className = srcCard.className
+      scope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;overflow:visible;opacity:1;transform:none;'
+      scope.appendChild(cloneInner)
       const clone = document.createElement('div')
       clone.style.cssText = [
         'position:absolute',
@@ -85,7 +95,7 @@ function useDragReorder(containerRef, items, onReorder) {
         'overflow:hidden',
         'z-index:999',
       ].join(';')
-      clone.appendChild(cloneInner)
+      clone.appendChild(scope)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
       // Boundary positions for clamping clone movement (app-relative)

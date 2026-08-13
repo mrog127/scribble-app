@@ -8,6 +8,7 @@ import LinkDetailPage from './LinkDetailPage.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
+import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useScrollable } from '../useScrollable.js'
 
@@ -142,6 +143,9 @@ function NoteComposer({ onAdd }) {
     if (!text) return
     onAdd(text, active)
     setValue('')
+    // The new note opens into edit mode ~650ms later, on a timer — hold the
+    // keyboard so focus can transfer to the editor when it does.
+    keepKeyboardAlive()
     inputRef.current?.blur()
   }
 

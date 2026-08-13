@@ -225,7 +225,12 @@ function useCategoryDragReorder(containerRef, categories, onReorder) {
 }
 
 export default function MenuPage({ pageAnimClass = '', isExiting = false, onSelectTab, onClose }) {
-  const { categories, reorderCategories, renameCategory, deleteCategory, addCategory, toggleCategoryHomescreen, promptDelete } = useAppContext()
+  const {
+    categories, archivedCategories, archiveCategory, unarchiveCategory,
+    reorderCategories, renameCategory, deleteCategory, addCategory,
+    toggleCategoryHomescreen, promptDelete,
+  } = useAppContext()
+  const [showArchivedCats, setShowArchivedCats] = useState(true)
   const { user, signOut } = useAuth()
 
   const containerRef = useRef(null)
@@ -475,6 +480,18 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         Rename
                       </button>
                       <button
+                        onClick={() => { setOpenMenuId(null); archiveCategory(cat.id) }}
+                        style={{
+                          display: 'block', width: '100%', padding: '12px 16px',
+                          background: 'none', border: 'none', borderBottom: '1px solid #DBDAD8',
+                          textAlign: 'left', cursor: 'pointer',
+                          fontFamily: "'Open Sans', sans-serif",
+                          fontSize: 16, fontWeight: 400, color: '#242424',
+                        }}
+                      >
+                        Archive
+                      </button>
+                      <button
                         onClick={() => {
                           setOpenMenuId(null)
                           promptDelete(() => {
@@ -506,6 +523,83 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
             </div>
           ))}
           </div>
+
+          {/* ---- Archived easels ---- */}
+          {archivedCategories.length > 0 && (
+            <div className="settings-archived-group">
+              <div className="settings-archived-head">
+                <span className="settings-archived-label">Archived</span>
+                <button
+                  className="settings-archived-toggle"
+                  onClick={() => setShowArchivedCats(v => !v)}
+                >
+                  {showArchivedCats ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {showArchivedCats && archivedCategories.map((cat, i) => (
+                <div key={cat.id}>
+                  {i > 0 && <div style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />}
+                  <div className="settings-archived-row">
+                    <span className="settings-archived-name">{cat.name}</span>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <button
+                        className="cat-menu-btn"
+                        onClick={() => setOpenMenuId(openMenuId === `arch-${cat.id}` ? null : `arch-${cat.id}`)}
+                        /* Same box as the active rows' menu so the dots line up */
+                        style={{
+                          width: 44, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                          <circle cx="9" cy="4" r="1.5" fill="#242424"/>
+                          <circle cx="9" cy="9" r="1.5" fill="#242424"/>
+                          <circle cx="9" cy="14" r="1.5" fill="#242424"/>
+                        </svg>
+                      </button>
+                      {openMenuId === `arch-${cat.id}` && (
+                        <div
+                          className="cat-menu-dropdown"
+                          style={{
+                            position: 'absolute', right: 8, top: '100%', zIndex: 200,
+                            background: '#F7F6F3', border: '1px solid #C2C1BF', borderRadius: 8,
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)', minWidth: 140, overflow: 'hidden',
+                          }}
+                        >
+                          <button
+                            onClick={() => { setOpenMenuId(null); unarchiveCategory(cat.id) }}
+                            style={{
+                              display: 'block', width: '100%', padding: '12px 16px',
+                              background: 'none', border: 'none', borderBottom: '1px solid #DBDAD8',
+                              textAlign: 'left', cursor: 'pointer',
+                              fontFamily: "'Open Sans', sans-serif",
+                              fontSize: 16, fontWeight: 400, color: '#242424',
+                            }}
+                          >
+                            Unarchive
+                          </button>
+                          <button
+                            onClick={() => {
+                              setOpenMenuId(null)
+                              promptDelete(() => deleteCategory(cat.id))
+                            }}
+                            style={{
+                              display: 'block', width: '100%', padding: '12px 16px',
+                              background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer',
+                              fontFamily: "'Open Sans', sans-serif",
+                              fontSize: 16, fontWeight: 400, color: '#B24A4A',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Add category inline input row */}
           {isAdding && (

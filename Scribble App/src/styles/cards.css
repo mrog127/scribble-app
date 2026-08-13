@@ -2289,3 +2289,83 @@
 /* Header reuses .save-to-header / .save-to-title / .save-to-cancel from layout.css */
 .cal-card .save-to-header { padding: 14px 16px 8px; }
 
+
+/* ---- Link page: inline title / URL editor ---- */
+.link-preview-body { flex-direction: row; align-items: center; gap: 8px; }
+.link-preview-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.link-edit-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.link-edit-btn:active { background: rgba(0, 0, 0, 0.04); }
+
+.link-edit { background: hsl(from #F7F6F3 h s calc(l * 1.01)); }
+.link-edit-row { display: flex; align-items: center; padding: 0 8px 0 16px; }
+.link-edit-divider { height: 1px; background: #DBDAD8; margin-left: 16px; }
+
+.link-edit-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+.link-edit-input.link-edit-url { font-size: 14px; color: #7A7A7A; }
+.link-edit-input::placeholder { color: #B5B4B2; }
+
+.link-edit-clear {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.link-edit-clear:active { background: rgba(0, 0, 0, 0.04); }
+
+/* Same treatment as every other send button: gradient stroke orbiting in the
+   accent's dark tone, accent-tinted glow, 6px radius. Checkmark instead of an
+   arrow since this commits an edit rather than adding something. */
+.link-edit-send {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--accent-dark) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--accent-dark) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
+    inset 6px 14px 12px var(--accent-light);
+  animation: mc-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
+}
+.link-edit-send svg { flex-shrink: 0; }

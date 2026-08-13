@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
+import { flushSync } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import ProjectCard from './ProjectCard.jsx'
 import CategoryCollapsedView from './CategoryCollapsedView.jsx'
@@ -488,7 +489,9 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
     if (!creating) return
     const card = creationCardRef.current
     if (card) requestAnimationFrame(() => card.classList.add('visible'))
-    const t = setTimeout(() => inputRef.current?.focus(), 80)
+    const t = setTimeout(() => {
+      if (document.activeElement !== inputRef.current) inputRef.current?.focus()
+    }, 80)
     return () => clearTimeout(t)
   }, [creating])
 
@@ -548,7 +551,11 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               className="category-header-btn"
               onMouseDown={e => {
                 e.preventDefault()
-                setCreating(true); setTitle('')
+                // flushSync commits the state (and mounts the input) before this
+                // handler returns, so focus() still counts as part of the tap —
+                // iOS only raises the keyboard for a focus inside a gesture.
+                flushSync(() => { setCreating(true); setTitle('') })
+                inputRef.current?.focus()
               }}
             >
               <AddIcon/>

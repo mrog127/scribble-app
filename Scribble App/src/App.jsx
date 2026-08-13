@@ -12,6 +12,7 @@ import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { requestProjectFocus } from './searchFocus.js'
 import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
+import { registerKeyboardKeeper, keepKeyboardAlive } from './keyboardKeeper.js'
 
 // Wraps every case-insensitive occurrence of `q` in `text` so the matched span
 // can be tinted. Returns an array of strings and <mark> nodes.
@@ -1423,6 +1424,9 @@ function AppInner() {
       }
 
       setInputValue('')
+      // A note opens into edit mode later, on a timer — keep the keyboard up so
+      // focus can transfer to the editor when it does.
+      if (toolbarType === 'note') keepKeyboardAlive()
       inputRef.current?.blur()
       return
     }
@@ -1452,6 +1456,7 @@ function AppInner() {
       if (animRect && appRect) pendingAnimRef.current = { id: newId, type: 'note', text, inputRect: animRect, appRect }
       openNoteSoon('local-note', holder)
     }
+    if (toolbarType === 'note') keepKeyboardAlive()
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
@@ -1810,7 +1815,7 @@ function AppInner() {
 
                   const { visible, archived } = searchResults
                   if (visible.length === 0 && archived.length === 0) {
-                    return <p className="save-to-empty">{searchQuery.trim() ? 'No matches' : ''}</p>
+                    return <p className="save-to-empty search-empty">{searchQuery.trim() ? 'No matches' : ''}</p>
                   }
                   return (
                     <>
@@ -2136,6 +2141,16 @@ function AppInner() {
             <MenuPage onSelectTab={handleTabChange} onClose={() => setSettingsOpen(false)} />
           </div>
         )}
+
+        {/* Parked, focusable input that holds the keyboard open while a new
+            note's editor is still opening. Never receives typed input. */}
+        <input
+          className="kb-keeper"
+          ref={registerKeyboardKeeper}
+          tabIndex={-1}
+          aria-hidden="true"
+          readOnly
+        />
 
         {/* Below the control (z-index 2): the activated row flies under it */}
         <div id="animation-portal-under"></div>

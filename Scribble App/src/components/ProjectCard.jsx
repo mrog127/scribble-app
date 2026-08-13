@@ -11,6 +11,7 @@ import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 import MoveToCard from './MoveToCard.jsx'
+import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { subscribeOrderHold } from '../galleryPulse.js'
 
@@ -298,6 +299,16 @@ function RetrieveIcon() {
       <path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
       <path d="M12 18v-6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
       <path d="M9.5 14.5L12 12l2.5 2.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+// Rename commits an edit rather than adding something, so it gets a check.
+// (SendIcon's arrow stays on the composer's add button.)
+function CheckIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+      <path d="M4 10.5 L8.5 15 L16 5.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -799,6 +810,14 @@ export default function ProjectCard({ categoryId, project }) {
   }, [archived, categoryId, project.id, project.todos, toggleProjectTodo, promptArchiveAttachments])
 
   // ---- Hide/Show Completed ----
+  // Menu items close the dropdown on mousedown, which removes the button before
+  // the click lands — the browser then retargets that click to the header, whose
+  // handler toggles collapse. Flag it to skip the next one.
+  const closeCardMenu = useCallback(() => {
+    suppressHeaderToggleRef.current = true
+    setMenuOpen(false)
+  }, [])
+
   const handleToggleHideCompleted = useCallback(() => {
     if (!hideCompleted) {
       const container = todoContainerRef.current
@@ -1510,6 +1529,7 @@ export default function ProjectCard({ categoryId, project }) {
       holder.id = addProjectNote(categoryId, project.id, text, addAsActive, addScheduledDate, (realId) => { holder.id = realId })
       setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenDetail({ type: 'note', id: holder.id }) } }, 650)
     }
+    if (addType === 'note') keepKeyboardAlive()
     setInputValue('')
     setAddScheduledDate(null)
     inputRef.current?.blur()
@@ -1615,7 +1635,7 @@ export default function ProjectCard({ categoryId, project }) {
                       className="project-send-btn visible"
                       onMouseDown={e => { e.preventDefault(); handleRenameSubmit() }}
                     >
-                      <SendIcon/>
+                      <CheckIcon/>
                     </button>
                   ) : (
                     <button
@@ -1688,7 +1708,7 @@ export default function ProjectCard({ categoryId, project }) {
                 {displayType === 'list' && hasChecked && (
                   <button
                     className="card-context-item"
-                    onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); setMenuOpen(false) }}
+                    onMouseDown={e => { e.preventDefault(); handleToggleHideCompleted(); closeCardMenu() }}
                   >
                     {hideCompleted ? <EyeIcon/> : <EyeOffIcon/>}
                     {hideCompleted ? `Show ${checkedCount} Completed` : 'Hide Completed'}
@@ -1697,7 +1717,7 @@ export default function ProjectCard({ categoryId, project }) {
                 {displayType === 'note' && archivedNoteCount > 0 && (
                   <button
                     className="card-context-item"
-                    onMouseDown={e => { e.preventDefault(); handleToggleShowArchived(); setMenuOpen(false) }}
+                    onMouseDown={e => { e.preventDefault(); handleToggleShowArchived(); closeCardMenu() }}
                   >
                     {showArchived ? <EyeOffIcon/> : <EyeIcon/>}
                     {showArchived ? 'Hide Archived' : `Show ${archivedNoteCount} Archived`}
@@ -1706,7 +1726,7 @@ export default function ProjectCard({ categoryId, project }) {
                 {displayType === 'link' && archivedLinkCount > 0 && (
                   <button
                     className="card-context-item"
-                    onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedLinks(); setMenuOpen(false) }}
+                    onMouseDown={e => { e.preventDefault(); handleToggleShowArchivedLinks(); closeCardMenu() }}
                   >
                     {showArchivedLinks ? <EyeOffIcon/> : <EyeIcon/>}
                     {showArchivedLinks ? 'Hide Archived' : `Show ${archivedLinkCount} Archived`}
@@ -1717,7 +1737,7 @@ export default function ProjectCard({ categoryId, project }) {
                     className="card-context-item"
                     onMouseDown={e => {
                       e.preventDefault()
-                      setMenuOpen(false)
+                      closeCardMenu()
                       setRenameValue(project.name)
                       setRenaming(true)
                     }}
@@ -1729,7 +1749,7 @@ export default function ProjectCard({ categoryId, project }) {
                 {!archived && (
                   <button
                     className="card-context-item"
-                    onMouseDown={e => { e.preventDefault(); setMenuOpen(false); setMoveCanvasOpen(true) }}
+                    onMouseDown={e => { e.preventDefault(); closeCardMenu(); setMoveCanvasOpen(true) }}
                   >
                     <FolderMenuIcon/>
                     Move Canvas
@@ -1738,7 +1758,7 @@ export default function ProjectCard({ categoryId, project }) {
                 {archived ? (
                   <button
                     className="card-context-item"
-                    onMouseDown={e => { e.preventDefault(); setMenuOpen(false); unarchiveProject(categoryId, project.id) }}
+                    onMouseDown={e => { e.preventDefault(); closeCardMenu(); unarchiveProject(categoryId, project.id) }}
                   >
                     <RetrieveMenuIcon/>
                     Unarchive Canvas
@@ -1750,6 +1770,22 @@ export default function ProjectCard({ categoryId, project }) {
                   >
                     <ArchiveMenuIcon/>
                     Archive Canvas
+                  </button>
+                )}
+                {displayType === 'list' && hasChecked && (
+                  <button
+                    className="card-context-item danger"
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      closeCardMenu()
+                      promptDelete(
+                        () => project.todos.filter(t => t.checked).forEach(t => deleteProjectTodo(categoryId, project.id, t.id)),
+                        { title: 'Are you sure you want to clear completed items?', confirmLabel: 'Clear' },
+                      )
+                    }}
+                  >
+                    <TrashMenuIcon/>
+                    Clear Completed
                   </button>
                 )}
                 <button

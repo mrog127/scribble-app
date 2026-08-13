@@ -2727,3 +2727,82 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   pointer-events: none;
   z-index: 2;
 }
+
+/* Parked keyboard-keeper input — focusable but invisible and out of the way.
+   display:none would make it unfocusable, which defeats the purpose. */
+.kb-keeper {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---- Archived easels section in the Settings Tabs card ----
+   Same treatment as the archived group in search results: light gray ground,
+   small uppercase label, with a Show/Hide control on the same line. */
+.settings-archived-group {
+  background: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid #DBDAD8;
+  margin-top: 6px;
+}
+
+.settings-archived-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 6px;
+}
+
+.settings-archived-label {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8A8987;
+}
+
+.settings-archived-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-dark);
+}
+
+.settings-archived-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding-left: 16px;
+  /* No right padding — the 44px menu button provides the inset, matching the
+     active rows above so both columns of dots share an x. */
+  padding-right: 0;
+}
+
+.settings-archived-name {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #595959;
+  opacity: 0.7;
+}
+
+/* "No matches" reads as a row sub-label (matches .source-label-text) */
+.save-to-empty.search-empty {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+  padding: 14px 16px;
+}

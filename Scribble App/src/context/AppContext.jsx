@@ -81,6 +81,7 @@ export function AppProvider({ children }) {
       id: cat.id,
       name: cat.name,
       sendToHomescreen: cat.send_to_homescreen !== false,
+      archived: cat.archived === true,
       projects: (projs || [])
         .filter(p => p.category_id === cat.id)
         .map(proj => ({
@@ -617,8 +618,10 @@ export function AppProvider({ children }) {
   const [deletePrompt, setDeletePrompt] = useState(null)
   const deletePromptRef = useRef(null)
   useEffect(() => { deletePromptRef.current = deletePrompt }, [deletePrompt])
-  const promptDelete = useCallback((onConfirm) => {
-    setDeletePrompt({ onConfirm })
+  // opts: { title, confirmLabel } — lets callers reuse the modal for other
+  // destructive actions (e.g. clearing completed items).
+  const promptDelete = useCallback((onConfirm, opts = {}) => {
+    setDeletePrompt({ onConfirm, ...opts })
   }, [])
   const resolveDeletePrompt = useCallback((confirm) => {
     const p = deletePromptRef.current
@@ -876,6 +879,17 @@ export function AppProvider({ children }) {
     await supabase.from('categories').delete().eq('id', id)
   }, [])
 
+  // Archiving an easel hides it everywhere except the Settings Tabs card.
+  const archiveCategory = useCallback((id) => {
+    setCategories(prev => prev.map(c => c.id !== id ? c : { ...c, archived: true }))
+    db(supabase.from('categories').update({ archived: true }).eq('id', id))
+  }, [])
+
+  const unarchiveCategory = useCallback((id) => {
+    setCategories(prev => prev.map(c => c.id !== id ? c : { ...c, archived: false }))
+    db(supabase.from('categories').update({ archived: false }).eq('id', id))
+  }, [])
+
   const reorderCategories = useCallback((newOrder) => {
     setCategories(newOrder)
     Promise.all(newOrder.map((cat, i) => supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)))
@@ -956,7 +970,12 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      categories,
+      // Active only — archived easels are hidden from every list in the app.
+      categories: categories.filter(c => !c.archived),
+      allCategories: categories,
+      archivedCategories: categories.filter(c => c.archived),
+      archiveCategory,
+      unarchiveCategory,
       activeTodos,
       activeNotes,
       loading,

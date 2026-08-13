@@ -43,6 +43,10 @@ function LinkPageIcon() {
 }
 
 export default function LinkDetailPage({ link, categoryId, projectId, onClose }) {
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editUrl, setEditUrl] = useState('')
+  const editUrlRef = useRef(null)
   const { categories, updateProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, moveProjectLink,
     promptDelete, deleteProjectLink, archiveProjectLink, unarchiveProjectLink } = useAppContext()
   const [isOpen, setIsOpen] = useState(false)
@@ -188,10 +192,80 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
               )}
           </div>
           <div className="link-preview-divider"/>
-          <div className="link-preview-body">
-            <span className="link-preview-title">{link.title || hostOf(link.url)}</span>
-            <span className="link-preview-url">{displayUrl(link.url)}</span>
-          </div>
+          {editOpen ? (
+            // Stop the card's openUrl click while editing
+            <div className="link-edit" onClick={e => e.stopPropagation()}>
+              <div className="link-edit-row">
+                <input
+                  className="link-edit-input"
+                  placeholder="Title"
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); editUrlRef.current?.focus() } }}
+                  autoFocus
+                />
+                <button
+                  className="link-edit-send"
+                  aria-label="Save link"
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    updateProjectLink(categoryId, projectId, link.id, editTitle.trim(), editUrl.trim())
+                    setEditOpen(false)
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10.5 L8.5 15 L16 5.5" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div className="link-edit-divider"/>
+              <div className="link-edit-row">
+                <input
+                  ref={editUrlRef}
+                  className="link-edit-input link-edit-url"
+                  placeholder="Add link"
+                  value={editUrl}
+                  onChange={e => setEditUrl(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                  inputMode="url"
+                />
+                <button
+                  className="link-edit-clear"
+                  aria-label="Clear link"
+                  onMouseDown={e => { e.preventDefault(); setEditUrl(''); editUrlRef.current?.focus() }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <line x1="5" y1="5" x2="15" y2="15" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="15" y1="5" x2="5" y2="15" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="link-preview-body">
+              <div className="link-preview-text">
+                <span className="link-preview-title">{link.title || hostOf(link.url)}</span>
+                <span className="link-preview-url">{displayUrl(link.url)}</span>
+              </div>
+              <button
+                className="link-edit-btn"
+                aria-label="Edit link"
+                onClick={e => {
+                  e.stopPropagation()
+                  setEditTitle(link.title || '')
+                  setEditUrl(link.url || '')
+                  setEditOpen(true)
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 20h4l10-10a2.83 2.83 0 10-4-4L4 16v4z" stroke="#959493" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

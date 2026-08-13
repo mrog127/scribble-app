@@ -33,12 +33,12 @@ export default function DeleteConfirmModal() {
   return createPortal(
     <div className={`archive-modal-backdrop${visible ? ' visible' : ''}`} onPointerDown={() => resolveDeletePrompt(false)}>
       <div className="archive-modal" onPointerDown={e => e.stopPropagation()}>
-        <p className="archive-modal-title">Are you sure you want to delete?</p>
+        <p className="archive-modal-title">{deletePrompt.title || 'Are you sure you want to delete?'}</p>
         <p className="archive-modal-body">This action cannot be undone.</p>
         <div className="archive-modal-actions">
           <button className="archive-modal-btn" onPointerDown={e => { e.preventDefault(); resolveDeletePrompt(false) }}>Cancel</button>
           <button className="archive-modal-btn danger" onPointerDown={e => { e.preventDefault(); resolveDeletePrompt(true) }}>
-            <TrashIcon/>Delete
+            <TrashIcon/>{deletePrompt.confirmLabel || 'Delete'}
           </button>
         </div>
       </div>

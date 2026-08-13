@@ -1566,9 +1566,29 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin: 0 0 0 20px;   /* 20px to the right of the canvas title */
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* Expanded: the tabs drop to their own row under the title, left-aligned with
+   it. The header wraps, so the title and the plus/menu keep the first line. */
+.project-card .card-header {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.project-card .card-header .card-title { flex: 1 1 auto; }
+.project-card .card-header .project-tab-bar {
+  order: 3;
+  flex-basis: 100%;
+  margin: 10px 0 0 0;   /* space below the title row; starts at the title's x */
+}
+
+/* Collapsed: no plus or menu; the tabs take that spot at the right end. */
+.project-card > .card-header.collapsed .project-header-actions { display: none; }
+.project-card > .card-header.collapsed .project-tab-bar {
+  order: 2;
+  flex-basis: auto;
+  margin: 0 0 0 auto;
 }
 
 /* Single sliding selector box that animates between the icon tabs */

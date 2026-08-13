@@ -5,11 +5,12 @@ import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
-import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
+import MoveToCard from './MoveToCard.jsx'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { subscribeOrderHold } from '../galleryPulse.js'
 
@@ -498,6 +499,7 @@ export default function ProjectCard({ categoryId, project }) {
   const tabIndicatorRef = useRef(null)
   const itemsRef = useRef(null)
   const itemsHeightRef = useRef(null)
+  const suppressHeaderToggleRef = useRef(false)
   const collapsedRef = useRef(collapsed)
   collapsedRef.current = collapsed
   const collapseMountedRef = useRef(false)
@@ -506,6 +508,8 @@ export default function ProjectCard({ categoryId, project }) {
   const typeBarRef = useRef(null)
   const typeIndicatorRef = useRef(null)
   const typeMountedRef = useRef(false)
+  const [moveItem, setMoveItem] = useState(null)   // { type, id } — row being moved
+  const [moveCanvasOpen, setMoveCanvasOpen] = useState(false)
   const showingRef = useRef(false)
   const checkTimers = useRef({})
   const checkPopping = useRef({})
@@ -520,7 +524,8 @@ export default function ProjectCard({ categoryId, project }) {
     archiveProjectLink, unarchiveProjectLink,
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
-    renameProject, archiveProject, unarchiveProject, deleteProject,
+    renameProject, archiveProject, unarchiveProject, deleteProject, moveProject,
+    moveProjectTodo, moveProjectNote, moveProjectLink,
     openDetail, setOpenDetail, setAutoEditNoteId, requestCompose,
   } = useAppContext()
 
@@ -1010,6 +1015,8 @@ export default function ProjectCard({ categoryId, project }) {
   // Tap anywhere on the header that isn't an interactive control to toggle.
   const handleHeaderClick = useCallback((e) => {
     if (renaming) return
+    // A tab tap already expanded the card — don't let its click toggle it back.
+    if (suppressHeaderToggleRef.current) { suppressHeaderToggleRef.current = false; return }
     if (e.target.closest('button, input, .dots-menu-wrap, .project-tab-bar, .card-context-menu')) return
     applyCollapsed(!collapsedRef.current)
   }, [renaming, applyCollapsed])
@@ -1017,15 +1024,20 @@ export default function ProjectCard({ categoryId, project }) {
   // Capture the current items height before switching tabs so the height
   // animation starts from the right place (even if content changed in between).
   const switchTab = useCallback((type) => {
+    // Set the tab first so the card expands straight onto it.
+    setActiveTab(type)
     if (collapsedRef.current) {
       // Tapping a tab on a collapsed canvas expands it onto that tab. Null the
       // cached height so the tab-switch animation defers to the expand one.
       itemsHeightRef.current = null
+      // Don't touch collapsedRef here — the header's toggle reads it, and
+      // flipping it early made that toggle re-collapse the card straight away.
+      // Instead, tell the header to skip the click this tap produces.
+      suppressHeaderToggleRef.current = true
       applyCollapsed(false)
     } else if (itemsRef.current) {
       itemsHeightRef.current = itemsRef.current.scrollHeight
     }
-    setActiveTab(type)
   }, [applyCollapsed])
 
   // ---- Card intro animation ----
@@ -1345,6 +1357,11 @@ export default function ProjectCard({ categoryId, project }) {
           ? handleScheduleClear(type, item.id, row)
           : handleScheduleOpen(type, item, row),
       },
+      {
+        label: `Move ${type === 'todo' ? 'list item' : type}`,
+        icon: <FolderMenuIcon/>,
+        onSelect: () => { closeSwipeRow(row); setMoveItem({ type, id: item.id }) },
+      },
       type === 'note' && {
         label: item.archived ? 'Unarchive Note' : 'Archive Note',
         icon: item.archived ? <RetrieveMenuIcon/> : <ArchiveMenuIcon/>,
@@ -1543,6 +1560,38 @@ export default function ProjectCard({ categoryId, project }) {
       {/* NOTE: don't add render-dependent classes to this element — the intro
           animation adds `visible` imperatively, and React rewrites className
           (wiping it) whenever the string changes. Put toggles on the header. */}
+      {moveItem && (
+        <MoveToCard
+          categories={categories}
+          currentCategoryId={categoryId}
+          currentProjectId={project.id}
+          onCancel={() => setMoveItem(null)}
+          onSave={(sel) => {
+            const { type, id } = moveItem
+            setMoveItem(null)
+            if (sel.projectId === project.id) return
+            if (type === 'todo') moveProjectTodo(categoryId, project.id, sel.categoryId, sel.projectId, id)
+            else if (type === 'note') moveProjectNote(categoryId, project.id, sel.categoryId, sel.projectId, id)
+            else moveProjectLink(categoryId, project.id, sel.categoryId, sel.projectId, id)
+          }}
+        />
+      )}
+
+      {moveCanvasOpen && (
+        <MoveToCard
+          mode="pages"
+          title="Move to..."
+          categories={categories}
+          currentCategoryId={categoryId}
+          currentProjectId={project.id}
+          onCancel={() => setMoveCanvasOpen(false)}
+          onSave={(sel) => {
+            setMoveCanvasOpen(false)
+            moveProject(categoryId, project.id, sel.categoryId)
+          }}
+        />
+      )}
+
       <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef}>
         {/* Header */}
         <div className={`card-header${collapsed ? ' collapsed' : ''}`} onClick={handleHeaderClick}>
@@ -1588,7 +1637,7 @@ export default function ProjectCard({ categoryId, project }) {
                   {typesWithItems.includes('list') && (
                     <button
                       className={`project-tab-btn${selectedTab === 'list' ? ' selected' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); switchTab('list') }}
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('list') }}
                     >
                       <ListIcon size={20} color={selectedTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
                       <span className="project-tab-count">{visibleCount('list')}</span>
@@ -1597,7 +1646,7 @@ export default function ProjectCard({ categoryId, project }) {
                   {typesWithItems.includes('note') && (
                     <button
                       className={`project-tab-btn${selectedTab === 'note' ? ' selected' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); switchTab('note') }}
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('note') }}
                     >
                       <NoteIcon size={20} color={selectedTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
                       <span className="project-tab-count">{visibleCount('note')}</span>
@@ -1606,7 +1655,7 @@ export default function ProjectCard({ categoryId, project }) {
                   {typesWithItems.includes('link') && (
                     <button
                       className={`project-tab-btn${selectedTab === 'link' ? ' selected' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); switchTab('link') }}
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('link') }}
                     >
                       <LinkIcon size={20} color={selectedTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
                       <span className="project-tab-count">{visibleCount('link')}</span>
@@ -1675,6 +1724,15 @@ export default function ProjectCard({ categoryId, project }) {
                   >
                     <EditIcon/>
                     Rename Canvas
+                  </button>
+                )}
+                {!archived && (
+                  <button
+                    className="card-context-item"
+                    onMouseDown={e => { e.preventDefault(); setMenuOpen(false); setMoveCanvasOpen(true) }}
+                  >
+                    <FolderMenuIcon/>
+                    Move Canvas
                   </button>
                 )}
                 {archived ? (

@@ -6,10 +6,13 @@ import CardTabs from './CardTabs.jsx'
 // "Move to..." card — pick a destination project. Nothing applies until Save.
 // Opens centered over a dim scrim. Reuses the .save-to-* styles. Defaults to the
 // tab and project the item is currently in.
-export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave }) {
+// mode 'projects' (default) picks a destination canvas; mode 'pages' picks a
+// destination category page — used when moving a canvas itself.
+export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave, mode = 'projects', title = 'Move to...' }) {
+  const pagesMode = mode === 'pages'
   const [sel, setSel] = useState({ categoryId: currentCategoryId, projectId: currentProjectId })
   const [tab, setTab] = useState(currentCategoryId)
-  const changed = sel.projectId !== currentProjectId
+  const changed = pagesMode ? sel.categoryId !== currentCategoryId : sel.projectId !== currentProjectId
   const selCatIdx = categories.findIndex(c => c.id === sel.categoryId)
   const selAccent = selCatIdx !== -1 ? getCategoryAccent(selCatIdx) : null
   const tabCatIdx = categories.findIndex(c => c.id === tab)
@@ -52,7 +55,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
       style={selAccent ? { '--accent-dark': selAccent.dark } : undefined}
     >
       <div className="save-to-header">
-        <p className="save-to-title">Move to...</p>
+        <p className="save-to-title">{title}</p>
         <button
           className="save-to-cancel"
           onMouseDown={e => { e.preventDefault(); changed ? finish(() => onSave(sel)) : finish(onCancel) }}
@@ -66,7 +69,27 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
         onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollTop > 4)}
         style={tabAccent ? { '--cb-base': tabAccent.base, '--cb-dark': tabAccent.dark, '--cb-light': tabAccent.light, '--cb-base-rgb': tabAccent.baseRgb } : undefined}
       >
-        {tabProjects.length === 0 ? (
+        {pagesMode ? (
+          categories.map((cat, i) => {
+            const acc = getCategoryAccent(i)
+            const on = sel.categoryId === cat.id
+            return (
+              <div key={cat.id}>
+                {i > 0 && <div className="save-to-divider"/>}
+                <button
+                  className={`save-to-option${on ? ' selected' : ''}`}
+                  /* Each row carries its own accent so the selected highlight
+                     matches that page, rather than one colour for the list. */
+                  style={{ '--cb-base': acc.base, '--cb-dark': acc.dark, '--cb-light': acc.light, '--cb-base-rgb': acc.baseRgb }}
+                  onMouseDown={e => { e.preventDefault(); setSel({ categoryId: cat.id, projectId: currentProjectId }) }}
+                >
+                  <div className={`save-to-radio${on ? ' filled' : ''}`}/>
+                  <span>{cat.name}</span>
+                </button>
+              </div>
+            )
+          })
+        ) : tabProjects.length === 0 ? (
           <p className="save-to-empty">No projects yet</p>
         ) : tabProjects.map((proj, i) => (
           <div key={proj.id}>
@@ -81,7 +104,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
           </div>
         ))}
       </div>
-      <CardTabs categories={categories} selected={tab} onSelect={setTab} />
+      {!pagesMode && <CardTabs categories={categories} selected={tab} onSelect={setTab} />}
     </div>
     </div>,
     document.getElementById('app')

@@ -893,6 +893,23 @@ export function AppProvider({ children }) {
     db(supabase.from('projects').update({ name: newName }).eq('id', projectId))
   }, [])
 
+  // Move a canvas to another category page. Mirrors renameProject: local state
+  // first, then persist the new category_id (and a sort_order at the end of the
+  // destination list).
+  const moveProject = useCallback((fromCategoryId, projectId, toCategoryId) => {
+    if (fromCategoryId === toCategoryId) return
+    const from = categoriesRef.current.find(c => c.id === fromCategoryId)
+    const proj = from?.projects.find(p => p.id === projectId)
+    if (!proj) return
+    const sortOrder = categoriesRef.current.find(c => c.id === toCategoryId)?.projects.length || 0
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === fromCategoryId) return { ...cat, projects: cat.projects.filter(p => p.id !== projectId) }
+      if (cat.id === toCategoryId) return { ...cat, projects: [...cat.projects, proj] }
+      return cat
+    }))
+    db(supabase.from('projects').update({ category_id: toCategoryId, sort_order: sortOrder }).eq('id', projectId))
+  }, [])
+
   // Archive a project (canvas): flag it archived and move it to the bottom of the
   // category's project array so it sits beneath the active stack. Read-only is
   // handled in the UI; its items are also hidden from the homescreen/collapsed cards.
@@ -976,6 +993,7 @@ export function AppProvider({ children }) {
       addTodoLink,
       reorderTodoNotes,
       reorderTodoLinks,
+      moveProject,
       moveProjectTodo,
       moveProjectNote,
       moveProjectLink,

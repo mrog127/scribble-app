@@ -193,7 +193,8 @@ html, body, #root {
 
 .category-header-row {
   display: flex;
-  align-items: center;
+  /* Top-aligned so a wrapped title doesn't drag the buttons down with it */
+  align-items: flex-start;
   justify-content: space-between;
 }
 
@@ -202,6 +203,8 @@ html, body, #root {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  /* Centre the 36px buttons on the title's first 30.8px line box */
+  margin-top: -3px;
 }
 
 .category-header-btn {

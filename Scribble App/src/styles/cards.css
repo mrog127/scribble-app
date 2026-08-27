@@ -1383,6 +1383,11 @@
   max-height: 360px;
   opacity: 1;
   pointer-events: auto;
+  /* The panel caps at 360px, so a longer list has to scroll inside it.
+     (overflow stays hidden while closed so the collapse animation clips.) */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .todo-attach-item {
@@ -2369,3 +2374,14 @@
   animation: mc-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 .link-edit-send svg { flex-shrink: 0; }
+
+/* Attachment count, matching the scheduled-date chip beside the calendar icon */
+.row-attach-count {
+  margin-right: 6px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  color: #7A7A7A;
+}

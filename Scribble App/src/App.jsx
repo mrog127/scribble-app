@@ -340,6 +340,74 @@ function AppInner() {
   const [linkUrlValue, setLinkUrlValue] = useState('')
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
+  // ---- "cc" canvas picker ----
+  // Typing `cc` as the very first two characters of the add field, then any
+  // non-space character, turns the field into a canvas search: the `cc` drops
+  // away, what follows becomes a highlighted token, and the Save-to list shows
+  // matching canvases from every page. Space commits the highlighted one.
+  const [ccActive, setCcActive] = useState(false)
+  const [ccPick, setCcPick] = useState(null)   // { categoryId, projectId } | null
+
+  const ccMatches = useMemo(() => {
+    if (!ccActive) return []
+    const q = inputValue.trim().toLowerCase()
+    const out = []
+    categories.forEach((cat, catIdx) => {
+      (cat.projects || []).forEach(proj => {
+        if (proj.archived) return
+        if (!q || (proj.name || '').toLowerCase().includes(q)) {
+          out.push({ categoryId: cat.id, projectId: proj.id, name: proj.name, categoryName: cat.name, accentIdx: catIdx })
+        }
+      })
+    })
+    return out
+  }, [ccActive, inputValue, categories])
+
+  // Highlighted canvas: whatever the user tapped, else the first match
+  const ccSelected = useMemo(() => {
+    if (!ccActive) return null
+    if (ccPick) {
+      const hit = ccMatches.find(m => m.projectId === ccPick.projectId)
+      if (hit) return hit
+    }
+    return ccMatches[0] || null
+  }, [ccActive, ccPick, ccMatches])
+
+  const ccAccent = ccSelected ? getCategoryAccent(ccSelected.accentIdx) : null
+  const ccSelectedRef = useRef(null)
+  ccSelectedRef.current = ccSelected
+
+  // Commit the highlighted canvas: it becomes the Save-to destination, the panel
+  // returns to its normal state showing that canvas's page, and the field clears.
+  const ccCommit = useCallback((pick) => {
+    if (pick) {
+      setSaveToTab(pick.categoryId)
+      setSaveToProject({ categoryId: pick.categoryId, projectId: pick.projectId })
+    }
+    setCcActive(false)
+    setCcPick(null)
+    setInputValue('')
+  }, [])
+
+  // Runs on every keystroke in the add field.
+  const handleAddInputChange = useCallback((raw) => {
+    if (ccActive) {
+      // Space commits; anything else refines the search.
+      if (/\s/.test(raw)) { ccCommit(ccSelectedRef.current); return }
+      if (raw === '') { setCcActive(false); setCcPick(null) }
+      setInputValue(raw)
+      return
+    }
+    // Only the very start of an empty field can open the picker.
+    if (/^cc\S/i.test(raw)) {
+      setCcActive(true)
+      setCcPick(null)
+      setInputValue(raw.slice(2))   // the "cc" itself drops away
+      return
+    }
+    setInputValue(raw)
+  }, [ccActive, ccCommit])
+
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
   const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
@@ -1696,6 +1764,8 @@ function AppInner() {
                     // Cancel discards the draft — the bar returns to its resting state empty
                     setInputValue('')
                     setLinkUrlValue('')
+                    setCcActive(false)
+                    setCcPick(null)
                     inputRef.current?.blur()
                     linkUrlRef.current?.blur()
                   }}
@@ -1712,7 +1782,30 @@ function AppInner() {
                   return { '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb }
                 })()}
               >
-                {(() => {
+                {ccActive ? (
+                  ccMatches.length === 0 ? (
+                    <p className="save-to-empty search-empty">No canvases</p>
+                  ) : ccMatches.map((m, i) => {
+                    const acc = getCategoryAccent(m.accentIdx)
+                    const on = ccSelected?.projectId === m.projectId
+                    return (
+                      <div key={`${m.categoryId}-${m.projectId}`}>
+                        {i > 0 && <div className="save-to-divider"/>}
+                        <button
+                          className={`save-to-option${on ? ' selected' : ''}`}
+                          style={{ '--cb-base': acc.base, '--cb-dark': acc.dark, '--cb-light': acc.light, '--cb-base-rgb': acc.baseRgb }}
+                          onMouseDown={e => { e.preventDefault(); setCcPick({ categoryId: m.categoryId, projectId: m.projectId }) }}
+                        >
+                          <div className={`save-to-radio${on ? ' filled' : ''}`}/>
+                          <span className="cc-option-text">
+                            <span className="cc-option-name">{m.name}</span>
+                            <span className="cc-option-page">{m.categoryName}</span>
+                          </span>
+                        </button>
+                      </div>
+                    )
+                  })
+                ) : (() => {
                   const cat = categories.find(c => c.id === saveToTab)
                   const projs = (cat?.projects || []).filter(p => !p.archived)
                   if (projs.length === 0) return <p className="save-to-empty">No projects yet</p>
@@ -1730,7 +1823,7 @@ function AppInner() {
                   ))
                 })()}
               </div>
-              <CardTabs
+              {!ccActive && <CardTabs
                 categories={categories}
                 selected={saveToTab}
                 onSelect={(catId) => {
@@ -1739,7 +1832,7 @@ function AppInner() {
                   const proj = cat?.projects.find(p => !p.archived)
                   setSaveToProject(proj ? { categoryId: catId, projectId: proj.id } : null)
                 }}
-              />
+              />}
             </div>
           </div>
         )}
@@ -1873,10 +1966,13 @@ function AppInner() {
                 onPointerCancel={cancelPageMenuPress}
                 onContextMenu={e => e.preventDefault()}
                 onClick={() => {
-                  // The button sits above the scrim, so it has to dismiss too
-                  if (pageMenuOpen) { setPageMenuOpen(false); return }
-                  // A completed long-press already opened the menu — don't also act
+                  // A completed long-press already opened the menu — swallow the
+                  // click it produces on release. This has to come before the
+                  // dismiss branch below, or releasing the press closes the menu
+                  // the press just opened.
                   if (pageMenuFiredRef.current) { pageMenuFiredRef.current = false; return }
+                  // The button sits above the scrim, so a later tap dismisses too
+                  if (pageMenuOpen) { setPageMenuOpen(false); return }
                   // On the gallery page a tap opens the project list; on a project
                   // page it returns to the gallery (long-press opens the list).
                   if (activeTab === 'star') setPageMenuOpen(true)
@@ -1996,15 +2092,28 @@ function AppInner() {
               {/* Centred "+ Add an item" overlay for the mobile pill (hidden on desktop
                   and while focused). Sits over the real input so the plus and the label
                   centre together as one group. */}
+              {ccActive && ccAccent && (
+                /* An input can only fill its whole box, so the highlight lives
+                   on this mirror of the text; the real input is transparent. */
+                <span className="cc-overlay" aria-hidden="true">
+                  <span
+                    className="cc-overlay-text"
+                    style={{ background: `rgba(${ccAccent.baseRgb}, 0.2)`, color: ccAccent.base }}
+                  >{inputValue}</span>
+                </span>
+              )}
               <span className="mbar-placeholder" aria-hidden="true">
                 <span className="mbar-placeholder-label">+ Add item</span>
               </span>
               <input
                 ref={inputRef}
-                className={`add-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}`}
+                className={`add-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}${ccActive ? ' cc-token' : ''}`}
+                style={ccActive && ccAccent
+                  ? { color: 'transparent', caretColor: ccAccent.dark }
+                  : undefined}
                 placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (isMobileView ? 'Add an item' : 'Scribble something down...')}
                 value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
+                onChange={e => handleAddInputChange(e.target.value)}
                 onFocus={() => {
                   // Capture the scroll-based default project before the page collapses.
                   categoryDefaultRef.current = categoryIds.includes(activeTab)

@@ -857,7 +857,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                   <button
                     key={n.id}
                     className="todo-attach-item"
-                    onMouseDown={e => { e.preventDefault(); attachNoteToTodo(categoryId, projectId, todo.id, n.id); setNoteAttachOpen(false) }}
+                    onMouseDown={e => { e.preventDefault(); attachNoteToTodo(categoryId, projectId, todo.id, n.id) }}
                   >
                     <span className="note-text">{n.text}</span>
                     {preview && <span className="note-preview-text">{preview}</span>}
@@ -908,7 +908,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   key={l.id}
                   className="todo-attach-item"
-                  onMouseDown={e => { e.preventDefault(); attachLinkToTodo(categoryId, projectId, todo.id, l.id); setLinkAttachOpen(false) }}
+                  onMouseDown={e => { e.preventDefault(); attachLinkToTodo(categoryId, projectId, todo.id, l.id) }}
                 >
                   <span className="note-text">{l.title}</span>
                   <span className="note-preview-text">{displayUrl(l.url)}</span>

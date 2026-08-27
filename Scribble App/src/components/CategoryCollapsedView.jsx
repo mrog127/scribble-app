@@ -623,6 +623,9 @@ function CollapsedTodosCard({ category }) {
                     <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span><CalendarIcon size={20}/></span>
                   ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
+                      {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 1 && (
+                        <span className="row-attach-count">{(t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)}</span>
+                      )}
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M21 11.5l-8.6 8.6a5 5 0 01-7.07-7.07l8.6-8.6a3.33 3.33 0 014.71 4.71l-8.6 8.6a1.67 1.67 0 01-2.36-2.36l7.9-7.9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>

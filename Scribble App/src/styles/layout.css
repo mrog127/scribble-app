@@ -1716,11 +1716,25 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      input and steals width, so the text scrolled long before reaching the send
      button. Collapse it to zero width unless link mode is actually open. */
   .footer .add-row .link-input-stack > .add-link-url-wrap { display: none; }
-  .footer .add-row .link-input-stack > .add-link-url-wrap.open {
-    display: block;
-    flex: 1 1 auto;
-    width: auto;
+  .footer .add-row .link-input-stack > .add-link-url-wrap.open { display: block; }
+
+  /* Link mode: the URL row belongs UNDER the title, but the pill lays its
+     children out in a row — switch back to a column while it's open. */
+  .footer .add-row .link-input-stack:has(> .add-link-url-wrap.open) {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    border-radius: 12px;
   }
+  .footer .add-row .link-input-stack:has(> .add-link-url-wrap.open) > .add-input {
+    width: 100%;
+    flex: 0 0 var(--mbar-h);
+  }
+  .footer .add-row .link-input-stack > .add-link-url-wrap.open {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
 
 
   .mbar-placeholder {
@@ -2350,11 +2364,25 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      input and steals width, so the text scrolled long before reaching the send
      button. Collapse it to zero width unless link mode is actually open. */
   .footer .add-row .link-input-stack > .add-link-url-wrap { display: none; }
-  .footer .add-row .link-input-stack > .add-link-url-wrap.open {
-    display: block;
-    flex: 1 1 auto;
-    width: auto;
+  .footer .add-row .link-input-stack > .add-link-url-wrap.open { display: block; }
+
+  /* Link mode: the URL row belongs UNDER the title, but the pill lays its
+     children out in a row — switch back to a column while it's open. */
+  .footer .add-row .link-input-stack:has(> .add-link-url-wrap.open) {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    border-radius: 12px;
   }
+  .footer .add-row .link-input-stack:has(> .add-link-url-wrap.open) > .add-input {
+    width: 100%;
+    flex: 0 0 var(--mbar-h);
+  }
+  .footer .add-row .link-input-stack > .add-link-url-wrap.open {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
 
 
   .mbar-placeholder {
@@ -2808,4 +2836,69 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   font-weight: 500;
   color: #7A7A7A;
   padding: 14px 16px;
+}
+
+/* Divider between the link title and URL rows starts where their text does
+   (the inputs carry 16px of left padding), rather than at the pill's edge. */
+.footer .add-row .link-input-stack .add-input-divider {
+  margin-left: 16px;
+}
+
+/* The URL input sits inside .add-link-url-wrap, so the pill's
+   `.link-input-stack > .add-input` rule (direct child) never reaches it and it
+   fell back to the base 12px left padding. Match the title row's 16px. */
+.footer .add-row .link-input-stack .link-url-input {
+  padding-left: 16px;
+}
+
+/* "cc" canvas picker: the query reads as a highlighted token in the field, and
+   each result names the page it belongs to. */
+/* Reads like a text selection, matching .search-hit in the results list.
+   The highlight can't go on the input (that would fill the whole field), so it
+   sits on .cc-overlay-text — a mirror of the value drawn in the same place. */
+.add-input.cc-token { background: transparent; }
+
+.cc-overlay {
+  position: absolute;
+  left: 16px;          /* matches the input's own left padding */
+  right: 16px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+.cc-overlay-text {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: 2px;
+  padding: 6px 5px;   /* generous box around the query text */
+  white-space: pre;
+}
+
+/* Canvas name over its easel, spaced like a note row's label and sub-label */
+.cc-option-text { display: flex; flex-direction: column; min-width: 0; }
+.cc-option-name {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cc-option-page {
+  margin-top: 2px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

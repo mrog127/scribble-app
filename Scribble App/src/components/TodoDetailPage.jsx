@@ -9,6 +9,7 @@ import OutlinkButton from './OutlinkButton.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
+import { pasteInto } from '../clipboard.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useScrollable } from '../useScrollable.js'
 
@@ -243,6 +244,13 @@ function LinkComposer({ onAdd }) {
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
           tabIndex={focused ? 0 : -1}
         />
+        {!url && (
+          <button
+            className="paste-btn"
+            tabIndex={focused ? 0 : -1}
+            onMouseDown={e => { e.preventDefault(); pasteInto(setUrl, urlRef) }}
+          >Paste</button>
+        )}
       </div>
       <div className="project-input-bottom">
         <div className="project-input-divider"/>

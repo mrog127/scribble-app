@@ -5,7 +5,7 @@ import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
-import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
@@ -30,6 +30,14 @@ function openUrl(url) {
 }
 
 // Strip the scheme for a cleaner one-line preview
+// Bare hostname, used when a link has no title of its own.
+function hostOf(url) {
+  try {
+    const u = /^https?:\/\//i.test(url) ? url : `https://${url}`
+    return new URL(u).hostname.replace(/^www\./, '')
+  } catch { return url }
+}
+
 function displayUrl(url) {
   if (!url) return ''
   const t = url.trim()
@@ -47,6 +55,116 @@ function displayUrl(url) {
 
 // ---- Swipe hook ----
 // ---- Drag reorder hook ----
+// Drag-to-reorder for the links grid. The list version picks an insert point
+// from clientY alone, which is meaningless across two columns — this one takes
+// the cell whose centre is nearest the pointer instead. Long-press to lift.
+function useGridDragReorder(containerRef, items, onReorder) {
+  const dragRef = useRef(null)
+  const flipRef = useRef(null)
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+
+  // Animate cells from their pre-reorder positions to their new ones
+  useLayoutEffect(() => {
+    const flip = flipRef.current
+    if (!flip) return
+    flipRef.current = null
+    flip.forEach(({ el }) => { el.style.transition = 'none'; el.style.transform = '' })
+    document.body.offsetHeight
+    const frames = flip
+      .map(({ el, rect }) => {
+        const now = el.getBoundingClientRect()
+        return { el, dx: rect.left - now.left, dy: rect.top - now.top }
+      })
+      .filter(f => Math.abs(f.dx) > 1 || Math.abs(f.dy) > 1)
+    if (!frames.length) return
+    frames.forEach(({ el, dx, dy }) => {
+      el.style.transition = 'none'
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+    })
+    document.body.offsetHeight
+    requestAnimationFrame(() => {
+      frames.forEach(({ el }) => {
+        el.style.transition = 'transform 220ms ease'
+        el.style.transform = ''
+      })
+      setTimeout(() => frames.forEach(({ el }) => { el.style.transition = '' }), 230)
+    })
+  }, [items])
+
+  const onDragPointerDown = useCallback((e, id) => {
+    if (e.target.closest('button, input, .card-context-menu')) return
+    const startX = e.clientX, startY = e.clientY
+    let started = false
+    let timer = null
+    const preventScroll = (ev) => { if (started) ev.preventDefault() }
+
+    const begin = () => {
+      const container = containerRef.current
+      if (!container) return false
+      const cells = [...container.querySelectorAll('.link-grid-cell')]
+      const idx = cells.findIndex(c => c.dataset.swipeId === String(id))
+      if (idx < 0) return false
+      const el = cells[idx]
+      const rect = el.getBoundingClientRect()
+      el.style.opacity = '0.35'
+      el.style.transition = 'opacity 120ms ease'
+      dragRef.current = { cells, idx, currentIdx: idx, el, rect }
+      return true
+    }
+
+    timer = setTimeout(() => { timer = null; started = begin() }, 250)
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+
+    const onMove = (ev) => {
+      if (timer && (Math.abs(ev.clientX - startX) > 8 || Math.abs(ev.clientY - startY) > 8)) {
+        clearTimeout(timer); timer = null
+        document.removeEventListener('touchmove', preventScroll)
+      }
+      if (!started) return
+      ev.preventDefault()
+      const st = dragRef.current
+      if (!st) return
+      // Nearest cell centre wins — works in both axes
+      let best = st.currentIdx, bestD = Infinity
+      st.cells.forEach((c, i) => {
+        const r = c.getBoundingClientRect()
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2
+        const d = (ev.clientX - cx) ** 2 + (ev.clientY - cy) ** 2
+        if (d < bestD) { bestD = d; best = i }
+      })
+      st.currentIdx = best
+    }
+
+    const finish = (commit) => {
+      clearTimeout(timer); timer = null
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
+      const st = dragRef.current
+      dragRef.current = null
+      if (!st) return
+      st.el.style.opacity = ''
+      st.el.style.transition = ''
+      if (!commit || st.currentIdx === st.idx) return
+      flipRef.current = st.cells.map(c => ({ el: c, rect: c.getBoundingClientRect() }))
+      const next = [...itemsRef.current]
+      const [moved] = next.splice(st.idx, 1)
+      next.splice(st.currentIdx, 0, moved)
+      onReorder(next)
+    }
+    const onUp = () => finish(true)
+    const onCancel = () => finish(false)
+
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
+  }, [containerRef, onReorder])
+
+  return { onDragPointerDown }
+}
+
 function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
   const dragRef = useRef(null)
   const flipRef = useRef(null)
@@ -440,6 +558,59 @@ function NoteRowContent({ note }) {
 // the in-card text box back (and set .project-card padding-bottom back to 0 in
 // cards.css to make room for it again).
 const SHOW_PROJECT_INPUT = false
+
+// One tile in the links grid. Styled like the preview card on a link page:
+// the site's own og:image up top, title and host beneath.
+function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, onContextMenu, onOpenPage }) {
+  const { ensureLinkImage } = useAppContext()
+  const [failed, setFailed] = useState(false)
+
+  // Resolve the image once, the first time this card is shown.
+  useEffect(() => { ensureLinkImage(categoryId, projectId, link) }, [link.id, link.imageFetchedAt]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const showImg = !!link.imageUrl && !failed
+  return (
+    <div
+      className={`link-tile${link.archived ? ' archived' : ''}`}
+      onPointerDown={onPointerDown}
+      onContextMenu={onContextMenu}
+    >
+      {/* Image opens the site; the label block opens the link's own page. */}
+      <div className="link-tile-image" onClick={() => openUrl(link.url)}>
+        {showImg ? (
+          <img src={link.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
+        ) : (
+          <div className="link-tile-fallback">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="var(--accent-dark)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="var(--accent-dark)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        )}
+        {/* Hover affordance: dims the image and names the action */}
+        <div className="link-tile-image-hover" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M14 5h5v5" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+            <path d="M19 5l-8 8" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+            <path d="M18 14.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.5" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+          </svg>
+        </div>
+      </div>
+      <div className="link-tile-divider"/>
+      <div className="link-tile-body" onClick={onOpenPage}>
+        <div className="link-tile-text">
+          <span className="link-tile-title">{link.title || hostOf(link.url)}</span>
+          <span className="link-tile-url">{displayUrl(link.url)}</span>
+        </div>
+        <span className="link-tile-edit" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 20h4l10-10a2.83 2.83 0 10-4-4L4 16v4z" stroke="#959493" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export default function ProjectCard({ categoryId, project }) {
   const [activeTab, setActiveTab] = useState('list')
@@ -852,7 +1023,7 @@ export default function ProjectCard({ categoryId, project }) {
   // ---- Drag reorder ----
   const { onDragPointerDown: onTodoDrag } = useDragReorder(todoContainerRef, sortedTodos, handleTodoReorder, uncheckedCount)
   const { onDragPointerDown: onNoteDrag } = useDragReorder(noteContainerRef, sortedNotes, handleNoteReorder, showArchived ? activeNotesList.length : undefined)
-  const { onDragPointerDown: onLinkDrag } = useDragReorder(linkContainerRef, sortedLinks, handleLinkReorder, showArchivedLinks ? activeLinksList.length : undefined)
+  const { onDragPointerDown: onLinkDrag } = useGridDragReorder(linkContainerRef, sortedLinks, handleLinkReorder)
 
   // ---- FLIP animation when checkbox re-sorts the list ----
   useLayoutEffect(() => {
@@ -918,6 +1089,15 @@ export default function ProjectCard({ categoryId, project }) {
     if (t === 'list') return hideCompleted ? project.todos.filter(x => !x.checked).length : project.todos.length
     if (t === 'note') return showArchived ? project.notes.length : project.notes.filter(n => !n.archived).length
     return showArchivedLinks ? project.links.length : project.links.filter(l => !l.archived).length
+  }
+
+  // What the tab badges show: only outstanding items. Completed and archived
+  // items are excluded even while their "show" toggle is on, so revealing them
+  // doesn't make the canvas look like it grew work.
+  const tabCount = (t) => {
+    if (t === 'list') return project.todos.filter(x => !x.checked).length
+    if (t === 'note') return project.notes.filter(n => !n.archived).length
+    return project.links.filter(l => !l.archived).length
   }
 
   // ---- Default tab: first type with visible items, else the first type ----
@@ -1369,6 +1549,14 @@ export default function ProjectCard({ categoryId, project }) {
         icon: <GalleryMenuIcon/>,
         onSelect: () => handleActivate(type, item.id, row),
       },
+      ...(type === 'link' ? [{
+        label: 'Copy link',
+        icon: <CopyMenuIcon/>,
+        onSelect: () => {
+          closeSwipeRow(row)
+          navigator.clipboard?.writeText(item.url || '').catch(() => {})
+        },
+      }] : []),
       {
         label: item.scheduledDate ? 'Clear Schedule' : 'Schedule',
         icon: <CalendarMenuIcon/>,
@@ -1660,7 +1848,7 @@ export default function ProjectCard({ categoryId, project }) {
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('list') }}
                     >
                       <ListIcon size={20} color={selectedTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
-                      <span className="project-tab-count">{visibleCount('list')}</span>
+                      {tabCount('list') > 0 && <span className="project-tab-count">{tabCount('list')}</span>}
                     </button>
                   )}
                   {typesWithItems.includes('note') && (
@@ -1669,7 +1857,7 @@ export default function ProjectCard({ categoryId, project }) {
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('note') }}
                     >
                       <NoteIcon size={20} color={selectedTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
-                      <span className="project-tab-count">{visibleCount('note')}</span>
+                      {tabCount('note') > 0 && <span className="project-tab-count">{tabCount('note')}</span>}
                     </button>
                   )}
                   {typesWithItems.includes('link') && (
@@ -1678,7 +1866,7 @@ export default function ProjectCard({ categoryId, project }) {
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('link') }}
                     >
                       <LinkIcon size={20} color={selectedTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
-                      <span className="project-tab-count">{visibleCount('link')}</span>
+                      {tabCount('link') > 0 && <span className="project-tab-count">{tabCount('link')}</span>}
                     </button>
                   )}
                 </div>
@@ -1930,43 +2118,31 @@ export default function ProjectCard({ categoryId, project }) {
             </button>
           )}
 
-          {/* ---- Links ---- */}
+          {/* ---- Links: 2-column grid of preview cards ---- */}
           {displayType === 'link' && (
-            <div ref={linkContainerRef}>
-              {displayLinks.map((l, i) => (
-                <div key={l.id}>
-                  {i > 0 && <div className="divider"/>}
-                  <div className={`swipe-row${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id}>
-                    <div className="swipe-content">
-                      {editingLinkId === l.id ? (
-                        <LinkRowEditor
-                          link={l}
-                          onSave={(t, u) => saveLinkEdit(l.id, t, u)}
-                          onCancel={() => setEditingLinkId(null)}
-                        />
-                      ) : (
-                      <div
-                        className={`note-row link-row${l.archived ? ' archived' : ''}`}
-                        onPointerDown={e => { rowMenu.press(e, buildRowItems('link', l)); onLinkPointerDown(e, l); if (!archived) onLinkDrag(e, l.id) }}
-                        onContextMenu={e => rowMenu.context(e, buildRowItems('link', l))}
-                      >
-                        <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
-                          <LinkRowIcon activated={l.activated}/>
-                        </div>
-                        <div className="item-content">
-                          <div className="link-row-text">
-                            <span className="note-text">{l.title}</span>
-                            <span className="note-preview-text">{displayUrl(l.url)}</span>
-                          </div>
-                        </div>
-                        {(l.scheduledDate && !l.activated) && (
-                          <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(l.scheduledDate)}</span><CalendarIcon size={20}/></span>
-                        )}
-                        <OutlinkButton onOpen={() => openUrl(l.url)} />
-                      </div>
-                      )}
-                    </div>
-                  </div>
+            <div className="link-grid" ref={linkContainerRef}>
+              {displayLinks.map(l => (
+                <div key={l.id} className="link-grid-cell" data-swipe-id={l.id}>
+                  {editingLinkId === l.id ? (
+                    <LinkRowEditor
+                      link={l}
+                      onSave={(t, u) => saveLinkEdit(l.id, t, u)}
+                      onCancel={() => setEditingLinkId(null)}
+                    />
+                  ) : (
+                    <LinkGridCard
+                      link={l}
+                      categoryId={categoryId}
+                      projectId={project.id}
+                      archived={archived}
+                      onOpenPage={() => setOpenLinkId(l.id)}
+                      onPointerDown={e => {
+                        rowMenu.press(e, buildRowItems('link', l))
+                        if (!archived) onLinkDrag(e, l.id)
+                      }}
+                      onContextMenu={e => rowMenu.context(e, buildRowItems('link', l))}
+                    />
+                  )}
                 </div>
               ))}
             </div>

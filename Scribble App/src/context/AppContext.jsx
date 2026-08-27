@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase, functionsUrl, functionsKey } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
 
@@ -97,7 +97,8 @@ export function AppProvider({ children }) {
             id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, catSortOrder: n.cat_sort_order ?? null, editorHTML: n.editor_html, archived: n.archived === true
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
-            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true
+            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true,
+            imageUrl: l.image_url ?? null, imageFetchedAt: l.image_fetched_at ?? null, siteName: l.site_name ?? null
           })),
         }))
     }))
@@ -890,6 +891,48 @@ export function AppProvider({ children }) {
     db(supabase.from('categories').update({ archived: false }).eq('id', id))
   }, [])
 
+  // Resolve a link's own preview image (og:image) via the edge function, once.
+  // image_fetched_at is stamped either way so pages without one aren't retried
+  // on every load.
+  const linkImageInFlight = useRef(new Set())
+  const ensureLinkImage = useCallback(async (categoryId, projectId, link) => {
+    if (!link || link.imageFetchedAt || linkImageInFlight.current.has(link.id)) return
+    linkImageInFlight.current.add(link.id)
+    let image = null
+    let siteName = null
+    let answered = false          // did the function actually respond?
+    try {
+      const res = await fetch(
+        `${functionsUrl}/link-preview?url=${encodeURIComponent(link.url)}`,
+        { headers: { apikey: functionsKey } },
+      )
+      if (res.ok) {
+        const data = await res.json()
+        answered = true
+        if (data && typeof data.image === 'string') image = data.image
+        if (data && typeof data.siteName === 'string') siteName = data.siteName
+      } else {
+        console.warn('[link-preview] HTTP', res.status)
+      }
+    } catch (err) {
+      console.warn('[link-preview] request failed', err)
+    }
+
+    // Only mark it checked when we got a real answer. Stamping on failure would
+    // permanently write off links looked at before the function was deployed.
+    if (!answered) {
+      linkImageInFlight.current.delete(link.id)
+      return
+    }
+
+    const stamp = new Date().toISOString()
+    updateProject(categoryId, projectId, proj => ({
+      ...proj,
+      links: proj.links.map(l => l.id !== link.id ? l : { ...l, imageUrl: image, siteName, imageFetchedAt: stamp }),
+    }))
+    db(supabase.from('links').update({ image_url: image, site_name: siteName, image_fetched_at: stamp }).eq('id', link.id))
+  }, [])
+
   const reorderCategories = useCallback((newOrder) => {
     setCategories(newOrder)
     Promise.all(newOrder.map((cat, i) => supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)))
@@ -1012,6 +1055,7 @@ export function AppProvider({ children }) {
       addTodoLink,
       reorderTodoNotes,
       reorderTodoLinks,
+      ensureLinkImage,
       moveProject,
       moveProjectTodo,
       moveProjectNote,

@@ -22,6 +22,18 @@ function displayUrl(url) {
   if (!url) return ''
   return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '')
 }
+// Fallback when a site publishes no og:site_name: the bare domain, capitalised
+// and without the TLD ("buckmason.com" -> "Buckmason"). Splitting that into
+// "Buck Mason" isn't derivable — only og:site_name knows the real name.
+function siteLabel(url) {
+  try {
+    const u = /^https?:\/\//i.test(url) ? url : `https://${url}`
+    const host = new URL(u).hostname.replace(/^www\./, '')
+    const name = host.split('.')[0]
+    return name.charAt(0).toUpperCase() + name.slice(1)
+  } catch { return url }
+}
+
 function hostOf(url) {
   try {
     const u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url) ? url : 'https://' + url)
@@ -47,7 +59,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   const [editTitle, setEditTitle] = useState('')
   const [editUrl, setEditUrl] = useState('')
   const editUrlRef = useRef(null)
-  const { categories, updateProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, moveProjectLink,
+  const { categories, updateProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, moveProjectLink, ensureLinkImage,
     promptDelete, deleteProjectLink, archiveProjectLink, unarchiveProjectLink } = useAppContext()
   const [isOpen, setIsOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -128,7 +140,13 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
     navigator.clipboard?.writeText(link.url || '').then(flash).catch(() => {})
   }, [link.url])
 
-  const previewSrc = `https://image.thum.io/get/width/800/${fullUrl(link.url)}`
+  // Same source as the grid tiles: the site's own og:image, resolved once and
+  // cached on the row (no third-party screenshot service).
+  const previewSrc = link.imageUrl || null
+
+  // Resolve it here too, in case the page is opened before the grid rendered
+  // this link (e.g. straight from search).
+  useEffect(() => { ensureLinkImage(categoryId, projectId, link) }, [link.id, link.imageFetchedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const footerMenuItems = [
     { label: 'Copy Link', icon: <CopyMenuIcon/>, onSelect: handleCopy },
@@ -162,7 +180,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
         <button className="note-detail-done" onMouseDown={handleTopButton}>{editingTitle ? 'Save' : 'Done'}</button>
       </div>
 
-      <div className="todo-detail-scroll" ref={scrollRef}>
+      <div className="todo-detail-scroll link-detail-scroll" ref={scrollRef}>
         <div
           ref={titleRef}
           className="todo-detail-title"
@@ -180,7 +198,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
 
         <div className="link-preview-card" onClick={() => openUrl(link.url)}>
           <div className="link-preview-image">
-            {!imgFailed
+            {previewSrc && !imgFailed
               ? <img src={previewSrc} alt="" loading="lazy" onError={() => setImgFailed(true)} />
               : (
                 <div className="link-preview-fallback">
@@ -195,30 +213,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
           {editOpen ? (
             // Stop the card's openUrl click while editing
             <div className="link-edit" onClick={e => e.stopPropagation()}>
-              <div className="link-edit-row">
-                <input
-                  className="link-edit-input"
-                  placeholder="Title"
-                  value={editTitle}
-                  onChange={e => setEditTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); editUrlRef.current?.focus() } }}
-                  autoFocus
-                />
-                <button
-                  className="link-edit-send"
-                  aria-label="Save link"
-                  onMouseDown={e => {
-                    e.preventDefault()
-                    updateProjectLink(categoryId, projectId, link.id, editTitle.trim(), editUrl.trim())
-                    setEditOpen(false)
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M4 10.5 L8.5 15 L16 5.5" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
-              <div className="link-edit-divider"/>
+              {/* Title is edited from the page header, so this is URL only */}
               <div className="link-edit-row">
                 <input
                   ref={editUrlRef}
@@ -226,6 +221,14 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
                   placeholder="Add link"
                   value={editUrl}
                   onChange={e => setEditUrl(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      updateProjectLink(categoryId, projectId, link.id, link.title || '', editUrl.trim())
+                      setEditOpen(false)
+                    }
+                  }}
+                  autoFocus
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="none"
@@ -237,9 +240,21 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
                   aria-label="Clear link"
                   onMouseDown={e => { e.preventDefault(); setEditUrl(''); editUrlRef.current?.focus() }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                    <line x1="5" y1="5" x2="15" y2="15" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
-                    <line x1="15" y1="5" x2="5" y2="15" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                <button
+                  className="link-edit-send"
+                  aria-label="Save link"
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    updateProjectLink(categoryId, projectId, link.id, link.title || '', editUrl.trim())
+                    setEditOpen(false)
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10.5 L8.5 15 L16 5.5" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
               </div>
@@ -247,7 +262,8 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
           ) : (
             <div className="link-preview-body">
               <div className="link-preview-text">
-                <span className="link-preview-title">{link.title || hostOf(link.url)}</span>
+                {/* The site's own name (og:site_name), not the user's link title */}
+                <span className="link-preview-title">{link.siteName || siteLabel(link.url)}</span>
                 <span className="link-preview-url">{displayUrl(link.url)}</span>
               </div>
               <button

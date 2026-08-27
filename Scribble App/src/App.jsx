@@ -13,6 +13,7 @@ import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { requestProjectFocus } from './searchFocus.js'
 import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
 import { registerKeyboardKeeper, keepKeyboardAlive } from './keyboardKeeper.js'
+import { pasteInto } from './clipboard.js'
 
 // Wraps every case-insensitive occurrence of `q` in `text` so the matched span
 // can be tinted. Returns an array of strings and <mark> nodes.
@@ -847,9 +848,8 @@ function AppInner() {
   // back. Only the cards travel; per-frame updates are written as CSS custom
   // properties straight onto the page elements (no React re-render per frame).
   useEffect(() => {
-    // Desktop keeps the trackpad (wheel) path but not the pointer-drag path —
-    // dragging with a mouse shouldn't switch tabs. The pointer handlers bail on
-    // width themselves, so the listeners can stay attached across a resize.
+    // Mobile only, both paths. The handlers bail on width themselves rather than
+    // the effect skipping setup, so the listeners survive a resize.
     const app = document.getElementById('app')
     if (!app) return
 
@@ -1030,15 +1030,16 @@ function AppInner() {
       finalize(passedHalf || flick)
     }
     const onWheel = (e) => {
+      // Mobile-only gesture. Desktop has the sidebar for switching pages, and a
+      // trackpad's horizontal deltas fire during ordinary scrolling. Checked per
+      // event rather than at setup so a window resize takes effect immediately.
+      if (window.matchMedia('(min-width: 1000px)').matches) return
       if (animating) return
       if (Math.abs(e.deltaX) < Math.abs(e.deltaY) * 0.8) return   // clearly vertical — leave it to scrolling
       if (dragRef.current && !dragRef.current.wheel) return   // a finger drag owns the gesture
       const t = e.target
-      // Every card row is wrapped in a .swipe-row, so this guard rejected a
-      // trackpad swipe anywhere over the content column. It exists because the
-      // touch row-swipe owns horizontal drags — but nothing in the cards listens
-      // to wheel, so it only needs to apply below the desktop breakpoint.
-      if (!window.matchMedia('(min-width: 1000px)').matches && t.closest('.swipe-row')) return
+      // The touch row-swipe owns horizontal drags over a card row
+      if (t.closest('.swipe-row')) return
       if (t.closest('.note-detail-page')) return
       if (!t.closest('.page') && !t.closest('.add-row')) return
       e.preventDefault()
@@ -2148,6 +2149,16 @@ function AppInner() {
                   inputMode="url"
                   tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
                 />
+                {!linkUrlValue && (
+                  <button
+                    className="paste-btn"
+                    tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      pasteInto(setLinkUrlValue, linkUrlRef)
+                    }}
+                  >Paste</button>
+                )}
               </div>
               <button
                 className={`send-btn${inputFocused || inputValue.trim() || (toolbarType === 'link' && linkUrlValue.trim()) ? ' visible' : ''}`}

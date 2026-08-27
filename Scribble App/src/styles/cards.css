@@ -563,7 +563,7 @@
   background: hsl(from #F7F6F3 h s calc(l * 1.01));
 }
 .link-preview-image {
-  height: 192px;
+  height: 384px;
   background: var(--accent-light);
   overflow: hidden;
 }
@@ -2331,20 +2331,25 @@
   font-weight: 500;
   color: #1a1a1a;
 }
-.link-edit-input.link-edit-url { font-size: 14px; color: #7A7A7A; }
+/* URL reads as a primary label in both states, matching .link-preview-title */
+.link-edit-input.link-edit-url { font-size: 16px; font-weight: 500; color: #1a1a1a; }
+
 .link-edit-input::placeholder { color: #B5B4B2; }
 
+/* Boxed X, same as the cancel button on an empty canvas-title field */
 .link-edit-clear {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
+  margin-right: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  background: none;
-  border: none;
-  border-radius: 6px;
+  background: #FFFFFF;
+  border: 1px solid #C2C1BF;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   cursor: pointer;
 }
 .link-edit-clear:active { background: rgba(0, 0, 0, 0.04); }
@@ -2384,4 +2389,213 @@
   line-height: 1;
   white-space: nowrap;
   color: #7A7A7A;
+}
+
+/* ---- Links tab: 2-column grid of preview tiles ---- */
+.link-grid {
+  display: grid;
+  /* Tiles cap at 200px wide, so a wider card just fits more columns. Columns
+     are added as soon as two fit; each still stretches to fill leftover space
+     via the 1fr, and a narrow card collapses to one full-width column. */
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  gap: 10px;
+  padding: 4px 16px 12px;
+}
+.link-tile { max-width: 200px; }
+
+.link-tile {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #C2C1BF;
+  border-radius: 8px;
+  background: hsl(from #F7F6F3 h s calc(l * 1.01));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+  cursor: pointer;
+  /* Long-press opens the row menu; suppress the iOS text/callout selection */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.link-tile.archived { opacity: 0.5; }
+
+.link-tile-image {
+  /* 50% taller than the previous 16/10 (i.e. 16/15) */
+  aspect-ratio: 16 / 15;
+  background: #EBE8E1;
+  overflow: hidden;
+}
+.link-tile-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.link-tile-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 120ms ease;
+}
+
+.link-tile-divider { height: 1px; background: #DBDAD8; }
+
+.link-tile-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px 10px;
+  min-width: 0;
+}
+/* Note-row styling, but at the sub-label size so it fits a narrow tile */
+.link-tile-title {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Same as .note-preview-text */
+.link-tile-url {
+  margin-top: 2px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Each half of a tile is its own target: image → the site, labels → the page */
+.link-tile-image, .link-tile-body { cursor: pointer; }
+
+/* ---- Link tile hover states (desktop only) ----
+   Each half advertises its own destination: the image dims and shows an
+   outbound arrow, the label block greys and shows the pencil. */
+.link-tile-image { position: relative; }
+.link-tile-image-hover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.link-tile-body { flex-direction: row; align-items: center; gap: 8px; }
+.link-tile-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.link-tile-edit {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  /* On a placeholder tile the two icons would stack, so the chain link steps
+     aside and the outbound arrow takes its place. */
+  .link-tile-image:hover .link-tile-fallback { opacity: 0; }
+
+  .link-tile-image:hover .link-tile-image-hover { opacity: 1; }
+  .link-tile-body:hover { background: rgba(0, 0, 0, 0.04); }
+  .link-tile-body:hover .link-tile-edit { opacity: 1; }
+}
+
+/* Touch: nothing to hover, so both affordances are simply always on. The label
+   block skips the grey wash — that only ever read as a hover cue. */
+@media (hover: none) {
+  .link-tile-edit { opacity: 1; }
+  .link-tile-image-hover { opacity: 1; }
+  .link-tile-fallback { opacity: 0; }
+}
+
+/* ---- Link detail page: card fills the page ----
+   The card runs from where it already starts down to 32px above the footer,
+   with the image absorbing the slack. The scroll area becomes a flex column so
+   the card can claim the leftover height; everything else stays natural size. */
+.link-detail-scroll {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 32px;
+}
+.link-detail-scroll > .todo-detail-title,
+.link-detail-scroll > .todo-detail-underline { flex: 0 0 auto; }
+
+.link-detail-scroll .link-preview-card {
+  flex: 1 1 auto;
+  min-height: 240px;      /* short viewports scroll rather than crush the image */
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+.link-detail-scroll .link-preview-image {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+.link-detail-scroll .link-preview-divider,
+.link-detail-scroll .link-preview-body,
+.link-detail-scroll .link-edit { flex: 0 0 auto; }
+
+/* Both states of the card foot are the same height (8px padding + 44px of
+   text), so opening the editor doesn't resize the card — the URL just
+   vertically centres in the space the two labels occupied. */
+.link-preview-url { line-height: 1.4; }
+.link-preview-body,
+.link-edit-row { min-height: 60px; box-sizing: border-box; }
+
+/* ---- "Paste" button on an empty Add-link field ----
+   Styled like the Done/Save button on a detail page: text only, accent-dark,
+   same hover pill on desktop. It's absolutely placed rather than added to the
+   row's flow so the existing expand/collapse animation is untouched, and it
+   only renders while the field is empty, so it never covers a value. */
+.add-link-url-wrap,
+.project-link-url-row { position: relative; }
+
+.paste-btn {
+  position: absolute;
+  right: 16px;
+  top: 1px;              /* clear the divider above the input */
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  isolation: isolate;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-dark);
+}
+
+/* Touch only. On desktop, reading the clipboard trips the browser's own paste
+   permission bubble, which defeats the point of a one-tap button — and Cmd+V
+   in the field is already right there. */
+@media (hover: hover) and (pointer: fine) {
+  .paste-btn { display: none; }
+}
+
+/* Icon only — the 32px hit area stays, the chrome around it goes */
+.link-edit-clear {
+  margin-left: 4px;
+  margin-right: 10px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 6px;
 }

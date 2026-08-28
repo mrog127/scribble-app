@@ -9,6 +9,7 @@ import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
+import { openInCanvas } from '../searchFocus.js'
 import homepageDecoration from '../assets/Homepage decoration.png'
 import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
 import { useActivatePress, toAnchorRect, CalendarIcon } from './ScheduleBits.jsx'
@@ -550,7 +551,14 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                   <div className="item-content">
                     <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                     <div className="source-label">
-                      <span className="source-label-text">{t.projectName}</span>
+                      <span
+                        className="source-label-text canvas-link"
+                        onPointerDown={e => { e.stopPropagation() }}
+                        onClick={e => {
+                          e.stopPropagation()
+                          openInCanvas({ type: 'list', itemId: t.id, projectId: t.projectId, categoryId: t.categoryId })
+                        }}
+                      >{t.projectName}</span>
                     </div>
                   </div>
                   {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
@@ -758,7 +766,14 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
                     <div className="item-content">
                       <span className="note-text">{n.text}</span>
                       <div className="source-label">
-                        <span className="source-label-text">{n.projectName}</span>
+                        <span
+                        className="source-label-text canvas-link"
+                        onPointerDown={e => { e.stopPropagation() }}
+                        onClick={e => {
+                          e.stopPropagation()
+                          openInCanvas({ type: 'note', itemId: n.id, projectId: n.projectId, categoryId: n.categoryId })
+                        }}
+                      >{n.projectName}</span>
                       </div>
                     </div>
                   </div>
@@ -935,7 +950,14 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
                   <div className="item-content">
                     <span className="note-text">{l.title}</span>
                     <div className="source-label">
-                      <span className="source-label-text">{l.projectName}</span>
+                      <span
+                        className="source-label-text canvas-link"
+                        onPointerDown={e => { e.stopPropagation() }}
+                        onClick={e => {
+                          e.stopPropagation()
+                          openInCanvas({ type: 'link', itemId: l.id, projectId: l.projectId, categoryId: l.categoryId })
+                        }}
+                      >{l.projectName}</span>
                     </div>
                   </div>
                   <OutlinkButton onOpen={() => openUrl(l.url)} />

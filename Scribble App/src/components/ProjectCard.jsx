@@ -1894,7 +1894,7 @@ export default function ProjectCard({ categoryId, project }) {
                   <div className="project-tab-indicator" ref={tabIndicatorRef}/>
                   {typesWithItems.includes('list') && (
                     <button
-                      className={`project-tab-btn${selectedTab === 'list' ? ' selected' : ''}`}
+                      className={`project-tab-btn${selectedTab === 'list' ? ' selected' : ''}${tabCount('list') === 0 ? ' all-hidden' : ''}`}
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('list') }}
                     >
                       <ListIcon size={20} color={selectedTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
@@ -1903,7 +1903,7 @@ export default function ProjectCard({ categoryId, project }) {
                   )}
                   {typesWithItems.includes('note') && (
                     <button
-                      className={`project-tab-btn${selectedTab === 'note' ? ' selected' : ''}`}
+                      className={`project-tab-btn${selectedTab === 'note' ? ' selected' : ''}${tabCount('note') === 0 ? ' all-hidden' : ''}`}
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('note') }}
                     >
                       <NoteIcon size={20} color={selectedTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
@@ -1912,7 +1912,7 @@ export default function ProjectCard({ categoryId, project }) {
                   )}
                   {typesWithItems.includes('link') && (
                     <button
-                      className={`project-tab-btn${selectedTab === 'link' ? ' selected' : ''}`}
+                      className={`project-tab-btn${selectedTab === 'link' ? ' selected' : ''}${tabCount('link') === 0 ? ' all-hidden' : ''}`}
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('link') }}
                     >
                       <LinkIcon size={20} color={selectedTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>

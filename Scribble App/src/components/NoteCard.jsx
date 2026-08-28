@@ -551,6 +551,117 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     })
   }, [editing, enterEdit, detectCursorStyle, archived])
 
+  /* ---- Swipe a bullet sideways to indent it (3 levels) ----
+     Works with a finger drag on touch and a two-finger horizontal trackpad
+     swipe. Right indents, left outdents. */
+  const shiftBullet = useCallback((para, dir) => {
+    const content = contentRef.current
+    if (!content) return
+    const levelOf = (el) => Number((el.className.match(/indent-(\d)/) || [])[1] || 0)
+    const setLevel = (el, lvl) => {
+      el.classList.remove('indent-1', 'indent-2', 'indent-3')
+      if (lvl) el.classList.add('indent-' + lvl)
+    }
+
+    const paras = [...content.querySelectorAll('.note-para')]
+    const idx = paras.indexOf(para)
+    if (idx < 0) return
+    const cur = levelOf(para)
+    const next = Math.max(0, Math.min(3, cur + dir))
+    if (next === cur) return
+    setLevel(para, next)
+
+    // Bullets below that are deeper than this one are its children: they keep
+    // their relationship and move with it (clamped at the ends). A bullet at the
+    // same level or shallower starts a new branch and stops the cascade.
+    for (let i = idx + 1; i < paras.length; i++) {
+      const p = paras[i]
+      if (!/style-bullet/.test(p.className)) break
+      const lv = levelOf(p)
+      if (lv <= cur) break
+      setLevel(p, Math.max(0, Math.min(3, lv + dir)))
+    }
+
+    // Not in edit mode, so nothing else will commit this — save it now
+    if (!editingRef.current) {
+      const firstPara = content.querySelector('.note-para')
+      onSave(note.id, content.innerHTML, firstPara ? firstPara.textContent.trim() : note.text)
+    }
+  }, [note, onSave])
+
+  // The listeners below must attach ONCE: saving updates the `note` prop, which
+  // would otherwise re-run this effect mid-gesture and reset its one-per-swipe
+  // lock, letting a single sweep fire again.
+  const shiftBulletRef = useRef(shiftBullet)
+  shiftBulletRef.current = shiftBullet
+
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+    const THRESHOLD = 40
+
+    const bulletAt = (target) => (target && target.closest ? target.closest('.note-para.style-bullet') : null)
+
+    const tryShift = (para, dir) => shiftBulletRef.current(para, dir)
+    // A multi-touch drag starts a pointer sequence per finger — only the first
+    // one owns the gesture.
+    let activePointer = null
+
+    const onPointerDown = (e) => {
+      const para = bulletAt(e.target)
+      if (!para) return
+      if (activePointer !== null) return
+      activePointer = e.pointerId
+      const startX = e.clientX, startY = e.clientY
+      let done = false
+      const onMove = (e2) => {
+        if (done || e2.pointerId !== activePointer) return
+        const dx = e2.clientX - startX, dy = e2.clientY - startY
+        if (Math.abs(dy) > 24) { cleanup(); return }
+        if (Math.abs(dx) < THRESHOLD) return
+        done = true
+        tryShift(para, dx > 0 ? 1 : -1)
+        cleanup()
+      }
+      const cleanup = () => {
+        activePointer = null
+        document.removeEventListener('pointermove', onMove)
+        document.removeEventListener('pointerup', cleanup)
+        document.removeEventListener('pointercancel', cleanup)
+      }
+      document.addEventListener('pointermove', onMove)
+      document.addEventListener('pointerup', cleanup)
+      document.addEventListener('pointercancel', cleanup)
+    }
+
+    // Trackpad: accumulate horizontal deltas until they clear the threshold,
+    // then reset once the gesture goes quiet.
+    let acc = 0, accPara = null, timer = null, fired = false
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+      const para = bulletAt(e.target)
+      if (!para) return
+      e.preventDefault()
+      if (para !== accPara) { accPara = para; acc = 0; fired = false }
+      acc += -e.deltaX   // two-finger swipe right reports negative deltaX
+      // One level per gesture — the lock lifts once the swipe goes quiet
+      if (!fired && Math.abs(acc) >= THRESHOLD) {
+        fired = true
+        tryShift(para, acc > 0 ? 1 : -1)
+      }
+      clearTimeout(timer)
+      timer = setTimeout(() => { acc = 0; accPara = null; fired = false }, 200)
+    }
+
+    content.addEventListener('pointerdown', onPointerDown)
+    content.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      content.removeEventListener('pointerdown', onPointerDown)
+      content.removeEventListener('wheel', onWheel)
+      clearTimeout(timer)
+    }
+  }, [])
+
   // Save exits edit mode but keeps note open; Done closes the note
   const handleButtonClick = useCallback(() => {
     if (editing) {
@@ -586,6 +697,17 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       return (n && n !== content) ? n : null
     }
     const styleOf = (para) => (para.className.match(/style-(\w+)/) || [null, 'body'])[1]
+
+    // ---- Tab / Shift+Tab on a bullet: indent or outdent it (keyboard mirror of
+    // the swipe gesture). ----
+    if (e.key === 'Tab') {
+      const para = findPara(range.startContainer, range.startOffset)
+      if (para && /style-bullet/.test(para.className)) {
+        e.preventDefault()
+        shiftBulletRef.current(para, e.shiftKey ? -1 : 1)
+        return
+      }
+    }
 
     // ---- Backspace at the very start of a paragraph: merge it into the previous
     // paragraph, which keeps the previous (upper) paragraph's type style. ----

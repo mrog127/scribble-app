@@ -47,7 +47,7 @@ function scrollMenuIntoView(rowEl, setState) {
   const delta = Math.min(overflow, Math.max(0, room))
   if (delta <= 0) return
   scroller.scrollTo({ top: scroller.scrollTop + delta, behavior: 'smooth' })
-  setState(s => (s ? { ...s, top: s.top - delta, rTop: s.rTop != null ? s.rTop - delta : s.rTop } : s))
+  setState(s => (s ? { ...s, smoothTop: true, top: s.top - delta, rTop: s.rTop != null ? s.rTop - delta : s.rTop } : s))
 }
 
 /* The drag hook parks its clone in the animation portal at z-index 999 */
@@ -213,19 +213,37 @@ export function RowActionMenu({ state, onClose }) {
      would only push the menu off the opposite edge instead. Measured from the
      rendered menu rather than estimated from item count. */
   /* Side-anchored (link tile) menus sit beside the pressed item — to its right
-     if there's room, otherwise to its left, falling back to beneath it. Every
-     other long-press menu keeps the original position: under the row. */
+     if there's room, otherwise to its left, falling back to beneath it.
+     Row menus stay under the row as long as the whole menu clears the floating
+     control bar (and the fade above it); otherwise they flip above the row. */
   useLayoutEffect(() => {
-    if (!state || state.mode !== 'press' || !state.side) { setPressPos(null); return }
+    if (!state || state.mode !== 'press') { setPressPos(null); return }
     const el = menuRef.current
     if (!el) return
-    const w = el.getBoundingClientRect().width
+    const r = el.getBoundingClientRect()
     const { rTop, rLeft, rRight, appW } = state
-    // The lifted tile grows 4px on every side, so the gap is measured from that
-    const GAP = 8
-    if (rRight + GAP + w <= appW - EDGE_GAP) setPressPos({ dir: 'left', pos: { top: rTop - 4, left: rRight + GAP } })
-    else if (rLeft - GAP - w >= EDGE_GAP) setPressPos({ dir: 'right', pos: { top: rTop - 4, right: appW - rLeft + GAP } })
-    else setPressPos({ dir: 'top', pos: { top: state.top, right: appW - rRight } })
+
+    if (state.side) {
+      // The lifted tile grows 4px on every side, so the gap is measured from that
+      const GAP = 8
+      if (rRight + GAP + r.width <= appW - EDGE_GAP) setPressPos({ side: true, dir: 'left', pos: { top: rTop - 4, left: rRight + GAP } })
+      else if (rLeft - GAP - r.width >= EDGE_GAP) setPressPos({ side: true, dir: 'right', pos: { top: rTop - 4, right: appW - rLeft + GAP } })
+      else setPressPos({ side: true, dir: 'top', pos: { top: state.top, right: appW - rRight } })
+      return
+    }
+
+    const app = document.getElementById('app')
+    if (!app) return
+    const appRect = app.getBoundingClientRect()
+    // On mobile the floating bar's fade starts 8px above the bar itself
+    const bar = window.innerWidth < 1000 ? document.querySelector('.footer .add-row') : null
+    const limit = bar ? bar.getBoundingClientRect().top - 8 : Math.min(appRect.bottom, window.innerHeight) - EDGE_GAP
+    const fitsBelow = appRect.top + state.top + r.height <= limit
+    setPressPos({
+      side: false,
+      above: !fitsBelow,
+      pos: fitsBelow ? { top: state.top, right: state.right } : { top: rTop - r.height - 4, right: state.right },
+    })
   }, [state])
 
   useLayoutEffect(() => {
@@ -253,7 +271,7 @@ export function RowActionMenu({ state, onClose }) {
       <div className="row-menu-overlay" onPointerDown={onClose} onContextMenu={e => { e.preventDefault(); onClose() }}/>
       <div
         ref={menuRef}
-        className={`card-context-menu row-action-menu${state.mode === 'context' ? ' cursor-anchored' : ''}${pressPos ? ` side-anchored from-${pressPos.dir}` : ''}${open ? ' open' : ''}`}
+        className={`card-context-menu row-action-menu${state.mode === 'context' ? ' cursor-anchored' : ''}${pressPos?.side ? ` side-anchored from-${pressPos.dir}` : ''}${pressPos?.above ? ' menu-above' : ''}${state.smoothTop ? ' smooth-top' : ''}${open ? ' open' : ''}`}
         style={pos}
       >
         {state.items.map((item, i) => (

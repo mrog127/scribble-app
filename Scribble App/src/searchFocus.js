@@ -17,3 +17,9 @@ export function subscribeProjectFocus(fn) {
 export function requestProjectFocus(req) {
   listeners.forEach(fn => fn(req))
 }
+
+// The gallery's canvas sublabels reuse the search-result navigation (switch tab,
+// reveal, scroll, flash). App owns that routine; it registers it here.
+let openInCanvasFn = null
+export function setOpenInCanvas(fn) { openInCanvasFn = fn }
+export function openInCanvas(req) { if (openInCanvasFn) openInCanvasFn(req) }

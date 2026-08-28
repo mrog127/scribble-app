@@ -354,8 +354,10 @@ export function AppProvider({ children }) {
     const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
     if (!todo) return
     const current = todo.linkedNoteIds || []
-    if (current.includes(noteId)) return
-    const newIds = [...current, noteId]
+    // Stored ids are strings — compare and store as strings so detach can match
+    const id = String(noteId)
+    if (current.includes(id)) return
+    const newIds = [...current, id]
     updateProject(categoryId, projectId, proj => ({
       ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: newIds })
     }))
@@ -365,7 +367,7 @@ export function AppProvider({ children }) {
   const detachNoteFromTodo = useCallback((categoryId, projectId, todoId, noteId) => {
     const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
     if (!todo) return
-    const newIds = (todo.linkedNoteIds || []).filter(id => id !== noteId)
+    const newIds = (todo.linkedNoteIds || []).filter(id => String(id) !== String(noteId))
     updateProject(categoryId, projectId, proj => ({
       ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: newIds })
     }))
@@ -376,8 +378,9 @@ export function AppProvider({ children }) {
     const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
     if (!todo) return
     const current = todo.linkedLinkIds || []
-    if (current.includes(linkId)) return
-    const newIds = [...current, linkId]
+    const id = String(linkId)
+    if (current.includes(id)) return
+    const newIds = [...current, id]
     updateProject(categoryId, projectId, proj => ({
       ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: newIds })
     }))
@@ -387,7 +390,7 @@ export function AppProvider({ children }) {
   const detachLinkFromTodo = useCallback((categoryId, projectId, todoId, linkId) => {
     const todo = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.todos.find(t => t.id === todoId)
     if (!todo) return
-    const newIds = (todo.linkedLinkIds || []).filter(id => id !== linkId)
+    const newIds = (todo.linkedLinkIds || []).filter(id => String(id) !== String(linkId))
     updateProject(categoryId, projectId, proj => ({
       ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: newIds })
     }))

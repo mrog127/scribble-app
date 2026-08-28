@@ -539,6 +539,12 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     return () => scroll.removeEventListener('scroll', check)
   }, [])
 
+  // Nothing left to attach — close the panel rather than leaving it empty
+  useEffect(() => {
+    if (noteAttachOpen && attachableNotes.length === 0) setNoteAttachOpen(false)
+    if (linkAttachOpen && attachableLinks.length === 0) setLinkAttachOpen(false)
+  })
+
   // Tapping anywhere outside an open attach menu closes it.
   // (The attach buttons themselves are excluded so they can toggle / switch menus.)
   useEffect(() => {
@@ -570,8 +576,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     () => linkedLinkIds.map(id => projectLinks.find(l => String(l.id) === id)).filter(Boolean),
     [linkedLinkIds.join(','), projectLinks] // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const attachableNotes = projectNotes.filter(n => !linkedNoteIds.includes(String(n.id)))
-  const attachableLinks = projectLinks.filter(l => !linkedLinkIds.includes(String(l.id)))
+  // Archived notes/links aren't offered — only live ones can be attached
+  const attachableNotes = projectNotes.filter(n => !n.archived && !linkedNoteIds.includes(String(n.id)))
+  const attachableLinks = projectLinks.filter(l => !l.archived && !linkedLinkIds.includes(String(l.id)))
 
   // Drag-reorder for attached notes / links
   const noteAttachRef = useRef(null)

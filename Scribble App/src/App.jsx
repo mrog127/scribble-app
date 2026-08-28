@@ -10,7 +10,7 @@ import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
-import { requestProjectFocus } from './searchFocus.js'
+import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
 import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
 import { registerKeyboardKeeper, keepKeyboardAlive } from './keyboardKeeper.js'
 import { pasteInto } from './clipboard.js'
@@ -826,6 +826,9 @@ function AppInner() {
     }, 60)
   }, [closeSearch, handleTabChange])
 
+  // Let the gallery's canvas sublabels reuse this navigation
+  useEffect(() => setOpenInCanvas(openSearchResult), [openSearchResult])
+
   // Refs for swipe-to-change-tab gesture (avoids re-registering listeners on every state change)
   const activeTabRef = useRef(activeTab)
   const tabOrderRef = useRef(['star', ...categoryIds, 'menu'])
@@ -1589,13 +1592,15 @@ function AppInner() {
     return getCategoryAccent(idx)
   }, [activeTab, categories])
 
+  // The text box always wears the colour of wherever the item will land — so a
+  // destination picked in "Save to…" wins over the page you happen to be on.
   const footerAccent = useMemo(() => {
-    if (activeTab === 'star' && saveToProject) {
+    if (saveToProject) {
       const catIdx = categories.findIndex(c => c.id === saveToProject.categoryId)
       if (catIdx !== -1) return getCategoryAccent(catIdx)
     }
     return activeAccent
-  }, [activeTab, saveToProject, categories, activeAccent])
+  }, [saveToProject, categories, activeAccent])
 
   // Footer drop shadow only when the active page actually scrolls
   const pageScrollable = useScrollable(
@@ -2158,6 +2163,18 @@ function AppInner() {
                   inputMode="url"
                   tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
                 />
+                {!!linkUrlValue && (
+                  <button
+                    className="add-link-clear"
+                    aria-label="Clear link"
+                    tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
+                    onMouseDown={e => { e.preventDefault(); setLinkUrlValue(''); linkUrlRef.current?.focus() }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
                 {!linkUrlValue && (
                   <button
                     className="paste-btn"

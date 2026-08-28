@@ -138,7 +138,26 @@
   right: auto;
   left: auto;
   z-index: 121;
-  transition: opacity 160ms ease, transform 160ms ease, top 300ms ease;
+  /* `top` is deliberately NOT transitioned: the menu is positioned in a layout
+     effect, and easing that first placement made a flipped-up menu fly in from
+     its provisional spot below the row. */
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+/* Only the scroll-into-view nudge rides along on `top` */
+.row-action-menu.smooth-top { transition: opacity 160ms ease, transform 160ms ease, top 300ms ease; }
+
+/* Flipped above the row: rise 16px into place. Driven by a keyframe rather than
+   the transition so the direction is fixed from the frame `open` lands, whatever
+   the menu's provisional pre-placement transform was. */
+@keyframes row-menu-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.row-action-menu.menu-above { transform: translateY(16px); }
+.row-action-menu.menu-above.open {
+  transform: none;
+  animation: row-menu-rise 160ms ease both;
 }
 
 /* Cursor-anchored (right-click) menus settle their position in one measured
@@ -395,6 +414,32 @@
 .item-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 .source-label { display: flex; align-items: center; margin-top: 2px; }
+
+/* Gallery rows: the canvas name jumps to that canvas and flashes the item.
+   Desktop gets a hover box in the canvas's accent; touch gets the same box as
+   an invisible, finger-sized hit area. */
+.source-label-text.canvas-link { position: relative; cursor: pointer; }
+.source-label-text.canvas-link::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  bottom: 0;
+  left: -2px;
+  right: -2px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-light) 70%, transparent);
+  opacity: 0;
+  z-index: -1;
+}
+
+@media (hover: hover) {
+  .source-label-text.canvas-link:hover { color: var(--accent-dark); }
+  .source-label-text.canvas-link:hover::before { opacity: 1; }
+}
+
+@media (hover: none) {
+  .source-label-text.canvas-link::before { top: -12px; bottom: -12px; left: -8px; right: -8px; }
+}
 .source-label-text {
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 14px;
@@ -1008,6 +1053,13 @@
 .note-para.style-italic { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }
 .note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
 .note-para.style-bullet::before { content: "•"; position: absolute; left: 0; }
+
+/* Swipe a bullet sideways to indent it — three levels, 20px apart. Margin (not
+   padding) so the bullet glyph travels with the text. */
+.note-para.style-bullet { transition: margin-left 140ms ease; }
+.note-para.style-bullet.indent-1 { margin-left: 20px; }
+.note-para.style-bullet.indent-2 { margin-left: 40px; }
+.note-para.style-bullet.indent-3 { margin-left: 60px; }
 
 /* The underline decoration is an artifact of the Title style: it sits 8pt under
    the title text, and the title's 24px margin-bottom spaces it from the next para. */
@@ -1731,6 +1783,10 @@
 @media (hover: hover) {
   .project-tab-btn:hover:not(.selected)::before { background: rgba(0, 0, 0, 0.04); }
 }
+
+/* Every item of this type is checked or archived — nothing to count, so the
+   icon reads as muted. */
+.project-tab-btn.all-hidden svg { opacity: 0.5; }
 
 /* Project card header gets a touch more right padding past the three-dot menu.
    gap:0 so explicit margins control spacing (title → tabs = 16px, actions right). */
@@ -2677,6 +2733,27 @@
 @media (hover: hover) and (pointer: fine) {
   .paste-btn { display: none; }
 }
+
+/* Clear button on the footer's Add-link field — same icon, hit area and inset
+   as the one in the link card's edit state. */
+.add-link-clear {
+  position: absolute;
+  right: 10px;
+  top: 1px;
+  bottom: 0;
+  margin: auto 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.link-url-input { padding-right: 48px; }
 
 /* Icon only — the 32px hit area stays, the chrome around it goes */
 .link-edit-clear {

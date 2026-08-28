@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { getCategoryAccent } from '../theme.js'
 import CardTabs from './CardTabs.jsx'
+import AddCanvasRow from './AddCanvasRow.jsx'
 
 // "Move to..." card — pick a destination project. Nothing applies until Save.
 // Opens centered over a dim scrim. Reuses the .save-to-* styles. Defaults to the
@@ -45,7 +46,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
     const delta = (eRect.top - sRect.top) - (scroller.clientHeight - eRect.height) / 2
     scroller.scrollTop += delta
     scroller.classList.toggle('scrolled', scroller.scrollTop > 4)
-  }, [])
+  }, [tab])
 
   return createPortal(
     <div className={`move-to-overlay${open ? ' open' : ''}`} onPointerDown={() => finish(onCancel)}>
@@ -89,20 +90,26 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
               </div>
             )
           })
-        ) : tabProjects.length === 0 ? (
-          <p className="save-to-empty">No projects yet</p>
-        ) : tabProjects.map((proj, i) => (
-          <div key={proj.id}>
-            {i > 0 && <div className="save-to-divider"/>}
-            <button
-              className={`save-to-option${sel.projectId === proj.id ? ' selected' : ''}`}
-              onMouseDown={e => { e.preventDefault(); setSel({ categoryId: tab, projectId: proj.id }) }}
-            >
-              <div className={`save-to-radio${sel.projectId === proj.id ? ' filled' : ''}`}/>
-              <span>{proj.name}</span>
-            </button>
-          </div>
-        ))}
+        ) : (
+          <>
+            {tabProjects.map((proj, i) => (
+              <div key={proj.id}>
+                {i > 0 && <div className="save-to-divider"/>}
+                <button
+                  className={`save-to-option${sel.projectId === proj.id ? ' selected' : ''}`}
+                  onMouseDown={e => { e.preventDefault(); setSel({ categoryId: tab, projectId: proj.id }) }}
+                >
+                  <div className={`save-to-radio${sel.projectId === proj.id ? ' filled' : ''}`}/>
+                  <span>{proj.name}</span>
+                </button>
+              </div>
+            ))}
+            <AddCanvasRow
+              categoryId={tab}
+              onCreated={({ categoryId, projectId }) => setSel({ categoryId, projectId })}
+            />
+          </>
+        )}
       </div>
       {!pagesMode && <CardTabs categories={categories} selected={tab} onSelect={setTab} />}
     </div>

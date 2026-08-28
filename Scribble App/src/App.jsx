@@ -11,6 +11,7 @@ import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
+import AddCanvasRow from './components/AddCanvasRow.jsx'
 import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
 import { registerKeyboardKeeper, keepKeyboardAlive } from './keyboardKeeper.js'
 import { pasteInto } from './clipboard.js'
@@ -342,11 +343,11 @@ function AppInner() {
   const [linkUrlValue, setLinkUrlValue] = useState('')
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
-  // ---- "cc" canvas picker ----
-  // Typing `cc` as the very first two characters of the add field, then any
-  // non-space character, turns the field into a canvas search: the `cc` drops
-  // away, what follows becomes a highlighted token, and the Save-to list shows
-  // matching canvases from every page. Space commits the highlighted one.
+  // ---- "@" canvas picker ----
+  // Typing `@` as the very first character of the add field turns it into a
+  // canvas search: the `@` drops away, what follows becomes a highlighted token,
+  // and the Save-to list shows matching canvases from every page. Space commits
+  // the highlighted one.
   const [ccActive, setCcActive] = useState(false)
   const [ccPick, setCcPick] = useState(null)   // { categoryId, projectId } | null
 
@@ -401,10 +402,10 @@ function AppInner() {
       return
     }
     // Only the very start of an empty field can open the picker.
-    if (/^cc\S/i.test(raw)) {
+    if (/^@/.test(raw)) {
       setCcActive(true)
       setCcPick(null)
-      setInputValue(raw.slice(2))   // the "cc" itself drops away
+      setInputValue(raw.slice(1))   // the "@" itself drops away
       return
     }
     setInputValue(raw)
@@ -416,6 +417,23 @@ function AppInner() {
   const categoryDefaultRef = useRef(null)                    // scroll-based default project on a category page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
   const saveToScrollRef = useRef(null)                       // the Save to list scroller
+
+  // Whenever the Save-to list is shown (or its page / destination changes),
+  // centre the chosen canvas so the panel never opens scrolled away from it.
+  useEffect(() => {
+    if (!inputFocused || ccActive) return
+    const id = requestAnimationFrame(() => {
+      const scroller = saveToScrollRef.current
+      if (!scroller) return
+      const sel = scroller.querySelector('.save-to-option.selected')
+      if (!sel) return
+      const sRect = scroller.getBoundingClientRect()
+      const eRect = sel.getBoundingClientRect()
+      scroller.scrollTop += (eRect.top - sRect.top) - (scroller.clientHeight - eRect.height) / 2
+      scroller.classList.toggle('scrolled', scroller.scrollTop > 4)
+    })
+    return () => cancelAnimationFrame(id)
+  }, [inputFocused, ccActive, saveToTab, saveToProject])
   const scrollSelPendingRef = useRef(false)                  // scroll the Save to list to the selected option on open
   const prevInputFocused = useRef(false)
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
@@ -825,6 +843,59 @@ function AppInner() {
       setTimeout(settleAndScroll, 360)
     }, 60)
   }, [closeSearch, handleTabChange])
+
+  /* Three-dot menus open below their button; if the menu would hang off the
+     bottom of the window, flip it above instead. They're rendered inline all
+     over the app, so one observer on #app covers every one of them.
+     The flip is applied as inline style rather than a class: React owns these
+     elements' className and rewrites it on every re-render, which would drop the
+     flip mid-close and snap the menu back down. */
+  useEffect(() => {
+    const app = document.getElementById('app')
+    if (!app) return
+    const flipped = new WeakSet()
+    const timers = new WeakMap()
+
+    const place = (menu) => {
+      const r = menu.getBoundingClientRect()
+      if (r.bottom <= window.innerHeight - 8) return
+      const anchor = menu.parentElement?.getBoundingClientRect()
+      if (anchor && anchor.top - r.height - 6 < 8) return   // no room up there either
+      flipped.add(menu)
+      menu.style.top = 'auto'
+      menu.style.bottom = 'calc(100% + 6px)'
+      menu.style.transform = 'translateY(8px)'
+      requestAnimationFrame(() => { menu.style.transform = 'translateY(0)' })
+    }
+
+    const unplace = (menu) => {
+      if (!flipped.delete(menu)) return
+      menu.style.transform = 'translateY(8px)'   // fade out downward, in place
+      clearTimeout(timers.get(menu))
+      timers.set(menu, setTimeout(() => {
+        menu.style.top = ''
+        menu.style.bottom = ''
+        menu.style.transform = ''
+      }, 240))
+    }
+
+    const obs = new MutationObserver(muts => {
+      muts.forEach(m => {
+        const el = m.target
+        if (!el.classList || !el.classList.contains('card-context-menu')) return
+        if (el.classList.contains('row-action-menu')) return   // positioned from JS already
+        if (el.classList.contains('open')) {
+          if (flipped.has(el)) return
+          clearTimeout(timers.get(el))
+          place(el)
+        } else {
+          unplace(el)
+        }
+      })
+    })
+    obs.observe(app, { attributes: true, attributeFilter: ['class'], subtree: true })
+    return () => obs.disconnect()
+  }, [])
 
   // Let the gallery's canvas sublabels reuse this navigation
   useEffect(() => setOpenInCanvas(openSearchResult), [openSearchResult])
@@ -1544,6 +1615,9 @@ function AppInner() {
     requestAnimationFrame(() => {
       const ae = document.activeElement
       if (ae && addRowRef.current && addRowRef.current.contains(ae)) return
+      // Naming a new canvas moves focus into the Save-to panel — that's still
+      // the same compose session, so don't dismiss it.
+      if (ae && ae.closest && ae.closest('.save-to-panel')) return
       setInputFocused(false)
     })
   }, [])
@@ -1779,6 +1853,9 @@ function AppInner() {
                     setCcPick(null)
                     inputRef.current?.blur()
                     linkUrlRef.current?.blur()
+                    // Focus may be elsewhere (e.g. the new-canvas field), so blur
+                    // alone can't be relied on to dismiss the panel
+                    setInputFocused(false)
                   }}
                 >Cancel</button>
               </div>
@@ -1819,19 +1896,27 @@ function AppInner() {
                 ) : (() => {
                   const cat = categories.find(c => c.id === saveToTab)
                   const projs = (cat?.projects || []).filter(p => !p.archived)
-                  if (projs.length === 0) return <p className="save-to-empty">No projects yet</p>
-                  return projs.map((proj, i) => (
-                    <div key={proj.id}>
-                      {i > 0 && <div className="save-to-divider"/>}
-                      <button
-                        className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
-                        onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: saveToTab, projectId: proj.id }) }}
-                      >
-                        <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
-                        <span>{proj.name}</span>
-                      </button>
-                    </div>
-                  ))
+                  return (
+                    <>
+                      {projs.map((proj, i) => (
+                        <div key={proj.id}>
+                          {i > 0 && <div className="save-to-divider"/>}
+                          <button
+                            className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
+                            onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: saveToTab, projectId: proj.id }) }}
+                          >
+                            <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
+                            <span>{proj.name}</span>
+                          </button>
+                        </div>
+                      ))}
+                      <AddCanvasRow
+                        categoryId={saveToTab}
+                        onCreated={pick => setSaveToProject(pick)}
+                        onDone={() => inputRef.current?.focus({ preventScroll: true })}
+                      />
+                    </>
+                  )
                 })()}
               </div>
               {!ccActive && <CardTabs
@@ -1942,14 +2027,25 @@ function AppInner() {
         <div
           className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${searchOpen ? ' search-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
           style={{
-            '--accent-base': footerAccent.base,
-            '--accent-dark': footerAccent.dark,
-            '--accent-light': footerAccent.light,
-            '--accent-base-rgb': footerAccent.baseRgb,
+            '--accent-base': activeAccent.base,
+            '--accent-dark': activeAccent.dark,
+            '--accent-light': activeAccent.light,
+            '--accent-base-rgb': activeAccent.baseRgb,
           }}
         >
 
-          <div className="add-row" ref={addRowRef}>
+          {/* Only the text box follows the Save-to destination; the nav beneath it
+              keeps the page's own accent. */}
+          <div
+            className="add-row"
+            ref={addRowRef}
+            style={{
+              '--accent-base': footerAccent.base,
+              '--accent-dark': footerAccent.dark,
+              '--accent-light': footerAccent.light,
+              '--accent-base-rgb': footerAccent.baseRgb,
+            }}
+          >
             {/* Mobile floating action bar — leading circle (hidden on desktop).
                 Home page: gallery icon → jumps to the first project page.
                 Project page: easel icon → jumps back home.

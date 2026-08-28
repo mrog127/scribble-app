@@ -934,6 +934,75 @@ html, body, #root {
   box-sizing: border-box;
 }
 .save-to-option { isolation: isolate; }
+
+/* ---- "+ Add new canvas" row ---- */
+.save-to-option.save-to-add { color: var(--cb-dark); font-weight: 600; }
+.save-to-add-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cb-dark);
+}
+
+/* Its edit state: same row box, with the name field and the X / check buttons */
+.save-to-new-row { gap: 8px; cursor: default; }
+.save-to-new-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  padding: 0;
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #494949;
+  caret-color: var(--cb-base);
+}
+.save-to-new-input::placeholder { color: #B5B4B2; }
+.save-to-new-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .save-to-new-btn:hover { background: rgba(0, 0, 0, 0.04); }
+}
+
+/* The confirm button wears the same orbiting gradient stroke and accent glow as
+   every other send button, keyed to the list's --cb-* accent. */
+.save-to-new-send {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background:
+    linear-gradient(#F7F6F3, #F7F6F3) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--cb-dark) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--cb-dark) h s calc(l * 0.6) / 0.6)) border-box;
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--cb-base) 20%, transparent),
+    inset 6px 14px 12px var(--cb-light);
+  animation: mc-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
+}
 .save-to-option.selected { color: var(--cb-dark); }
 /* Full-width hover, matching project card rows */
 @media (hover: hover) {

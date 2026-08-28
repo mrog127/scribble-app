@@ -2109,9 +2109,9 @@ function AppInner() {
                 </span>
               )}
               <span className="mbar-placeholder" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                  <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                  <line x1="3.5" y1="10" x2="16.5" y2="10" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  <line x1="3.5" y1="10" x2="16.5" y2="10" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
                 <span className="mbar-placeholder-label">Add item</span>
               </span>

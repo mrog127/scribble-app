@@ -2927,10 +2927,6 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
 }
 
-/* Touch phones show the plus alone; every desktop width keeps the label beside it. */
-@media (max-width: 999.98px) and (hover: none) {
-  .mbar-placeholder-label { display: none; }
-}
 
 /* ---- Detail panel resize handle (desktop, detail open) ---- */
 .detail-resize-handle { display: none; }

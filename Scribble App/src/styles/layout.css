@@ -1159,6 +1159,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* Detail panel width — overridden inline on :root by the resize handle, so a
      size set once holds for every panel opened this session. */
   :root { --detail-w: min(500px, calc((100vw - 340px) / 2)); }
+  @media (max-width: 1240px) { :root { --detail-w: min(500px, 50vw); } }
   /* Left gutter that centres the app when nothing is pinned to the right edge */
   .phone { --gutter: 0px; }
 
@@ -1481,17 +1482,14 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .phone:has(.note-detail-page.open) .save-to-panel {
     display: none;
   }
+  /* No sidebar here — the cards take the left column, the panel keeps the same
+     resizable width (and default/min/max) as the three-column view. */
   .phone:has(.note-detail-page.open) .page {
     padding-left: 0;
-    padding-right: 50%;
   }
-  .phone:has(.note-detail-page.open) .note-detail-page {
-    width: 50%;
-  }
-  /* Popups confined to the right (detail) half */
-  .phone:has(.note-detail-page.open) .move-to-overlay,
-  .phone:has(.note-detail-page.open) .cal-overlay {
-    left: 50%;
+  .phone:has(.note-detail-page.open) .cards-area,
+  .phone:has(.note-detail-page.open) .category-page .page-header {
+    max-width: 100%;
   }
 }
 
@@ -2931,7 +2929,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 /* ---- Detail panel resize handle (desktop, detail open) ---- */
 .detail-resize-handle { display: none; }
 
-@media (min-width: 1241px) {
+@media (min-width: 1000px) {
   .phone:has(.note-detail-page.open) .detail-resize-handle {
     display: block;
     position: fixed;

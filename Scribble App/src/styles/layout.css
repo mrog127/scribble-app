@@ -1156,16 +1156,28 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .header-decoration { display: none; }
 
   /* ---- Cards column (everything right of the sidebar) ---- */
+  /* Detail panel width — overridden inline on :root by the resize handle, so a
+     size set once holds for every panel opened this session. */
+  :root { --detail-w: min(500px, calc((100vw - 340px) / 2)); }
+  /* Left gutter that centres the app when nothing is pinned to the right edge */
+  .phone { --gutter: 0px; }
+
   .page {
-    padding-left: 340px;
+    padding-left: calc(340px + var(--gutter));
     -webkit-mask-image: none;
     mask-image: none;
-    transition: padding 350ms ease, opacity 200ms ease;
+    /* Slightly ahead of the panel's 350ms slide so the column is always already
+       out of the way rather than being overlapped mid-animation. */
+    transition: padding 320ms ease, opacity 200ms ease;
   }
   .cards-area {
     padding: 48px 48px 56px 28px;   /* top aligns with the sidebar "Today is" label */
     max-width: 880px;
+    /* Animatable so the column widens with the detail panel instead of jumping */
+    transition: max-width 320ms ease;
   }
+  /* No detail panel: cards cap at 720px (plus the area's 28/48 side padding) */
+  .phone:not(:has(.note-detail-page.open)) .cards-area { max-width: 796px; }
   /* Don't render the outgoing page during a tab switch (avoids a
      duplicate fixed header); the incoming page animates in alone. */
   .page.page-exiting { display: none !important; }
@@ -1174,7 +1186,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .sidebar-date {
     display: block;
     position: fixed;
-    left: 0;
+    left: var(--gutter);
+    transition: left 350ms ease;
     top: 0;
     width: 340px;
     box-sizing: border-box;
@@ -1191,14 +1204,18 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      ("Thursday,") baseline, and the gap to the first card is exactly 24px. */
   /* Cap the header at the cards' width (left-aligned) so the title + icons
      never extend past the right edge of the cards below. */
-  .category-page .page-header { padding: 89px 48px 0 28px; max-width: 880px; }
+  .category-page .page-header { padding: 89px 48px 0 28px; max-width: 880px; transition: max-width 320ms ease; }
+  /* Header tracks the cards column's width */
+  .phone:not(:has(.note-detail-page.open)) .category-page .page-header { max-width: 796px; }
+  .phone:has(.note-detail-page.open) .category-page .page-header { max-width: calc(100vw - 340px - var(--detail-w)); }
   .category-page .underline-img { margin-bottom: 24px !important; }
   .category-page .cards-area { padding-top: 0; }
 
   /* ---- Sidebar: input + vertical nav, fixed below the header ---- */
   .footer {
     position: fixed;
-    left: 0;
+    left: var(--gutter);
+    transition: left 350ms ease;
     top: 199px;
     bottom: 0;
     width: 340px;
@@ -1391,7 +1408,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
      In link mode the textbox grows by 49px (second row), so the menu drops. */
   .save-to-panel.visible {
     position: fixed;
-    left: 0;
+    left: var(--gutter);
     top: 311px;
     bottom: 24px;
     width: 340px;   /* same box as the footer; with 28px side padding the card
@@ -1415,10 +1432,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* ---- Detail page open: split the area right of the sidebar evenly
      between the cards column and the detail panel ---- */
   .phone:has(.note-detail-page.open) .page {
-    padding-right: calc((100% - 340px) / 2);
+    padding-right: var(--detail-w);
   }
+  /* The exact width of the column beside the panel — a concrete length, so the
+     cap grows smoothly instead of jumping past the container on the first frame. */
   .phone:has(.note-detail-page.open) .cards-area {
-    max-width: none;   /* let the cards fill their half of the split */
+    max-width: calc(100vw - 340px - var(--detail-w));
   }
 
   /* With no detail panel open, the Schedule popup would otherwise span the whole
@@ -1437,7 +1456,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* "Move to" / "Schedule" popups open over the right panel only */
   .phone:has(.note-detail-page.open) .move-to-overlay,
   .phone:has(.note-detail-page.open) .cal-overlay {
-    left: calc(340px + (100% - 340px) / 2);
+    left: calc(100% - var(--detail-w));
   }
   /* Move-to / schedule menu open in the right panel: dim the sidebar, the cards,
      and the detail behind the menu to 20% (overriding the base 10%). */
@@ -1476,33 +1495,27 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
 }
 
-/* Beyond 1300px, stop widening the contents — cap the app at 1300px and centre
-   it. The transform makes .phone the containing block for its fixed children
-   (sidebar, detail panel, popups) so they track the centred app instead of the
-   viewport; the layout calcs above are already %-relative to the app. */
+/* Wide windows: the app spans the whole viewport. The sidebar stays pinned left
+   at its fixed width and the detail panel pinned right at its own, so the cards
+   column in the middle is the only thing that grows. The transform keeps .phone
+   the containing block for its fixed children, so the % calcs above still read
+   against the app. */
 @media (min-width: 1300px) {
   .phone {
-    max-width: 1300px;
+    max-width: none;
     transform: translateX(0);
-    /* Gradient moves up to .app-wrap so it spans the whole window rather than
-       stopping at the 1300px content cap. */
+    /* Gradient moves up to .app-wrap so it spans the whole window */
     background: transparent;
+    /* The app always spans the viewport — so the detail panel, pinned to the
+       right edge, never moves while it animates in. Centring the 1300px layout
+       is done with a left gutter instead, which animates away when a panel
+       opens. */
+    --gutter: calc((100vw - 1300px) / 2);
   }
-  /* When a detail page is open, fill the right margin (outside the centred app)
-     with the detail page's background so it reads as extending to the window edge. */
+  .phone:has(.note-detail-page.open) { --gutter: 0px; }
   .app-wrap {
     position: relative;
     background: linear-gradient(160deg, hsl(from #F2F0EB h calc(s * 0.86) calc(l * 1.08) / 0.5), 10%, hsl(from #F2F0EB h calc(s * 1.62) l / 0.5));
-  }
-  .app-wrap:has(.note-detail-page.open)::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    width: calc((100vw - 1300px) / 2);
-    background: #F7F6F3;   /* matches the detail page background */
-    pointer-events: none;
   }
 }
 
@@ -1569,7 +1582,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 @media (max-width: 999.98px) {
   .phone {
     --mbar-h: 48px;                                     /* bar height */
-    --mbar-bottom: calc(env(safe-area-inset-bottom) + 12px);  /* gap below the bar */
+    --mbar-bottom: calc(env(safe-area-inset-bottom) - 4px);  /* gap below the bar */
     --mbar-chrome: hsl(from #F7F6F3 h s calc(l * 1.01));   /* matches .card */
     --mbar-stroke: #C2C1BF;
     --mbar-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -1743,6 +1756,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     inset: 0;
     align-items: center;
     justify-content: center;
+    gap: 4px;
     pointer-events: none;
     opacity: 1;
     transition: opacity 120ms ease;
@@ -2391,6 +2405,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     inset: 0;
     align-items: center;
     justify-content: flex-start;   /* left-justified on desktop */
+    gap: 4px;
     padding-left: 16px;
     pointer-events: none;
     opacity: 1;
@@ -2902,3 +2917,42 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* A desktop window squeezed to the mobile layout has no home indicator and no
+   soft keyboard, so the bar (and the fade that keys off the same variable) sits
+   24px higher than it does on a touch device. */
+@media (max-width: 999.98px) and (hover: hover) and (pointer: fine) {
+  .phone {
+    --mbar-bottom: calc(env(safe-area-inset-bottom) + 20px);
+  }
+}
+
+/* Touch phones show the plus alone; every desktop width keeps the label beside it. */
+@media (max-width: 999.98px) and (hover: none) {
+  .mbar-placeholder-label { display: none; }
+}
+
+/* ---- Detail panel resize handle (desktop, detail open) ---- */
+.detail-resize-handle { display: none; }
+
+@media (min-width: 1241px) {
+  .phone:has(.note-detail-page.open) .detail-resize-handle {
+    display: block;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: var(--detail-w);
+    width: 8px;
+    margin-right: -4px;
+    z-index: 60;
+    cursor: ew-resize;
+  }
+}
+
+/* While dragging: no easing, and the resize cursor everywhere */
+body.resizing-detail { cursor: ew-resize; user-select: none; }
+body.resizing-detail .note-detail-page,
+body.resizing-detail .page,
+body.resizing-detail .cards-area,
+body.resizing-detail .category-page .page-header,
+body.resizing-detail .phone { transition: none !important; }

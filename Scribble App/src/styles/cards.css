@@ -147,6 +147,16 @@
   transition: opacity 160ms ease, transform 160ms ease;
 }
 
+/* Side-anchored (link tile) menus fade in quickly while moving 16px away from
+   the tile they belong to, rather than rising from below. */
+.row-action-menu.side-anchored { transition: opacity 120ms ease, transform 120ms ease; }
+.row-action-menu.from-left  { transform: translateX(-16px); }
+.row-action-menu.from-right { transform: translateX(16px); }
+.row-action-menu.from-top   { transform: translateY(-16px); }
+.row-action-menu.from-left.open,
+.row-action-menu.from-right.open,
+.row-action-menu.from-top.open { transform: none; }
+
 /* Right-click menu: the row holds its hover highlight instead of floating */
 .swipe-row.row-context-held .swipe-content::before {
   content: '';
@@ -833,13 +843,17 @@
   .note-detail-page {
     left: auto;
     right: 0;
-    width: calc((100% - 340px) / 2);   /* half the area right of the sidebar (relative to the app) */
+    width: var(--detail-w);   /* 500px by default; draggable between 400 and 750 */
+    /* Fade in while sliding a short way from the right — a full-width slide
+       fought with the columns reflowing beside it. */
+    opacity: 0;
     transform: translateX(100%);
+    transition: transform 350ms ease, opacity 250ms ease;
     background: #F7F6F3;   /* match the project card fill */
     border-left: 1px solid #C2C1BF;   /* match the project card stroke */
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.04);   /* soft shadow to the left */
   }
-  .note-detail-page.open { transform: translateX(0); }
+  .note-detail-page.open { opacity: 1; transform: translateX(0); }
 
   /* No home-indicator gap needed on desktop — drop the 16px beneath the footer */
   .detail-footer {
@@ -847,14 +861,15 @@
   }
 
   /* The row whose detail page is open gets a selector box: accent-light fill,
-     full row height, inset to the divider width (16px), 4px radius; label → accent-dark. */
+     full row height, 6px wider than the divider inset either side, 4px radius;
+     label → accent-dark. */
   .swipe-row.row-open .swipe-content::before {
     content: '';
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 16px;
-    right: 16px;
+    left: 10px;
+    right: 10px;
     background: rgba(0, 0, 0, 0.04);
     border-radius: 4px;
     z-index: -1;
@@ -1239,6 +1254,10 @@
 
 .todo-detail-underline { display: block; margin: 0 0 24px 0; }
 
+/* Tapping anywhere from the underline down to the Notes header opens the comment */
+.todo-comment-zone { padding-bottom: 40px; margin-bottom: -40px; cursor: text; }
+.todo-comment-zone .todo-detail-underline { margin: 0; }
+
 .todo-detail-title {
   font-family: 'Merriweather', Georgia, serif;
   font-size: 32px;
@@ -1251,6 +1270,27 @@
   margin-top: 24px;
   margin-bottom: 8px;
   cursor: text;
+}
+
+.todo-detail-comment {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 26px;
+  color: #575757;
+  outline: none;
+  caret-color: var(--accent-base);
+  word-wrap: break-word;
+  margin: 12px 0 0 0;
+  cursor: text;
+}
+
+.todo-detail-comment.hidden { display: none; }
+
+.todo-detail-comment.show-placeholder:empty::before {
+  content: attr(data-placeholder);
+  color: #8A8A8A;
+  pointer-events: none;
 }
 
 .mark-complete-btn {
@@ -1458,8 +1498,40 @@
 /* Swipe-to-unattach on attached note/link rows */
 /* Attachment rows aren't text-selectable, so dragging to reorder doesn't highlight
    the text of rows the floating row passes over (the page itself is selectable). */
-.todo-swipe-row { position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; }
-.todo-swipe-row + .todo-swipe-row { border-top: 1px solid #DBDAD8; }
+.todo-swipe-row { position: relative; overflow: visible; user-select: none; -webkit-user-select: none; }
+.todo-attach-row-wrap + .todo-attach-row-wrap .todo-swipe-row { border-top: 1px solid #DBDAD8; }
+
+/* Lifted (long-press) and held (right-click) attached rows read like a canvas
+   row: the box spills 20px past the content on either side, matching a card
+   row's own horizontal padding. */
+.todo-swipe-row.row-lifted { margin: 0 -16px; padding: 0 16px; }
+
+.todo-swipe-row.row-context-held .todo-swipe-content::before {
+  left: -16px;
+  right: -16px;
+}
+
+/* The outlink button drops out while the row is lifted, held or dragging — it
+   leaves the layout entirely so the URL runs to the row's right padding and
+   truncates there rather than at the button's old edge. */
+.todo-swipe-row.row-lifted .link-outlink-btn,
+.todo-swipe-row.row-context-held .link-outlink-btn,
+#animation-portal .todo-attached-row .link-outlink-btn { display: none; }
+
+/* Mouse hover on an attached row: the wash reaches 12px past the content */
+@media (hover: hover) {
+  .todo-swipe-row:hover .todo-swipe-content::before {
+    left: -12px;
+    right: -12px;
+  }
+}
+
+/* Attached links use the canvas tile grid, but the detail page supplies its own
+   side padding — so the grid runs edge to edge inside the section. */
+.todo-section .link-grid { padding: 4px 0 12px; }
+
+/* A lifted row needs its shadow to escape the row box */
+.todo-attach-row-wrap, .todo-swipe-row.row-lifted { overflow: visible; }
 
 .todo-swipe-content {
   position: relative;
@@ -2401,7 +2473,10 @@
   gap: 10px;
   padding: 4px 16px 12px;
 }
-.link-tile { max-width: 200px; }
+/* Tiles fill their grid column. The 200px cap used to leave slack between the
+   tile and its cell, which showed up as uneven space between rows; the column
+   rule (auto-fill / minmax) is what sets the breakpoints, and it's untouched. */
+.link-tile { max-width: none; }
 
 .link-tile {
   display: flex;
@@ -2409,7 +2484,7 @@
   border: 1px solid #C2C1BF;
   border-radius: 8px;
   background: hsl(from #F7F6F3 h s calc(l * 1.01));
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+  box-shadow: none;
   overflow: hidden;
   cursor: pointer;
   /* Long-press opens the row menu; suppress the iOS text/callout selection */
@@ -2475,51 +2550,64 @@
 /* Each half of a tile is its own target: image → the site, labels → the page */
 .link-tile-image, .link-tile-body { cursor: pointer; }
 
-/* ---- Link tile hover states (desktop only) ----
-   Each half advertises its own destination: the image dims and shows an
-   outbound arrow, the label block greys and shows the pencil. */
+/* ---- Link tile hover (desktop only) ----
+   The whole tile washes 6% black — the tile follows the link, and the pencil
+   is the one part that doesn't, so it keeps its own selector box on top. */
+.link-tile { position: relative; }
 .link-tile-image { position: relative; }
-.link-tile-image-hover {
+
+.link-tile-hover {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.06);
   opacity: 0;
   transition: opacity 120ms ease;
   pointer-events: none;
-}
-
-.link-tile-body { flex-direction: row; align-items: center; gap: 8px; }
-.link-tile-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.link-tile-edit {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  opacity: 0;
-  transition: opacity 120ms ease;
-  pointer-events: none;
+  z-index: 1;
 }
 
 @media (hover: hover) {
-  /* On a placeholder tile the two icons would stack, so the chain link steps
-     aside and the outbound arrow takes its place. */
-  .link-tile-image:hover .link-tile-fallback { opacity: 0; }
-
-  .link-tile-image:hover .link-tile-image-hover { opacity: 1; }
-  .link-tile-body:hover { background: rgba(0, 0, 0, 0.04); }
-  .link-tile-body:hover .link-tile-edit { opacity: 1; }
+  .link-tile:hover .link-tile-hover { opacity: 1; }
 }
 
-/* Touch: nothing to hover, so both affordances are simply always on. The label
-   block skips the grey wash — that only ever read as a hover cue. */
-@media (hover: none) {
-  .link-tile-edit { opacity: 1; }
-  .link-tile-image-hover { opacity: 1; }
-  .link-tile-fallback { opacity: 0; }
+/* Held for a drag or a long press: the tile grows 4px on every side and takes
+   the dragged-row drop shadow. */
+.link-grid-cell.cell-lifted { position: relative; z-index: 120; overflow: visible; }
+.link-tile.row-lifted { position: relative; z-index: 120; }
+
+.link-grid-cell.cell-lifted .link-tile,
+.link-tile.row-lifted {
+  margin: -4px;
+  max-width: 208px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+}
+
+.link-tile-body { flex-direction: row; align-items: center; gap: 8px; background: #FEFDFB; }
+.link-tile-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Same 32px selector box as a canvas card's plus and three-dot buttons */
+.link-tile-edit {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Desktop: the pencil only appears on hover. Touch has no hover, so it stays on. */
+@media (hover: hover) {
+  .link-tile-edit { opacity: 0; transition: opacity 120ms ease; }
+  .link-tile:hover .link-tile-edit { opacity: 1; }
+  .link-tile-edit:hover { background: rgba(0, 0, 0, 0.04); }
 }
 
 /* ---- Link detail page: card fills the page ----

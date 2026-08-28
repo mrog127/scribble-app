@@ -58,7 +58,12 @@ function displayUrl(url) {
 // Drag-to-reorder for the links grid. The list version picks an insert point
 // from clientY alone, which is meaningless across two columns — this one takes
 // the cell whose centre is nearest the pointer instead. Long-press to lift.
-function useGridDragReorder(containerRef, items, onReorder) {
+/* A lifted link tile owns the gesture — the tab-swipe carousel checks this so a
+   drag inside the grid doesn't also page between tabs. */
+let tileDragging = false
+export function isTileDragging() { return tileDragging }
+
+export function useGridDragReorder(containerRef, items, onReorder) {
   const dragRef = useRef(null)
   const flipRef = useRef(null)
   const itemsRef = useRef(items)
@@ -106,11 +111,43 @@ function useGridDragReorder(containerRef, items, onReorder) {
       const idx = cells.findIndex(c => c.dataset.swipeId === String(id))
       if (idx < 0) return false
       const el = cells[idx]
-      const rect = el.getBoundingClientRect()
-      el.style.opacity = '0.35'
-      el.style.transition = 'opacity 120ms ease'
-      dragRef.current = { cells, idx, currentIdx: idx, el, rect }
+      const appEl = document.getElementById('app'), portal = document.getElementById('animation-portal')
+      if (!appEl || !portal) return false
+      const appRect = appEl.getBoundingClientRect()
+      // Slots are the grid positions as they stood when the drag began — items
+      // shuffle between them, but the slots themselves never move.
+      const slots = cells.map(c => c.getBoundingClientRect())
+      const rect = slots[idx]
+      const clone = el.cloneNode(true)
+      clone.classList.add('cell-lifted')
+      clone.style.cssText = [
+        'position:absolute',
+        `left:${rect.left - appRect.left}px`,
+        `top:${rect.top - appRect.top}px`,
+        `width:${rect.width}px`,
+        `height:${rect.height}px`,
+        'margin:0', 'pointer-events:none', 'z-index:999',
+      ].join(';')
+      portal.appendChild(clone)
+      el.style.opacity = '0'
+      tileDragging = true
+      dragRef.current = { cells, slots, idx, currentIdx: idx, el, clone, rect, appRect }
       return true
+    }
+
+    // Shuffle every other cell into the slot it would hold if the drop happened now
+    const applyShifts = (st) => {
+      const order = st.cells.map((_, i) => i)
+      const [moved] = order.splice(st.idx, 1)
+      order.splice(st.currentIdx, 0, moved)
+      order.forEach((origIdx, slotIdx) => {
+        if (origIdx === st.idx) return
+        const from = st.slots[origIdx], to = st.slots[slotIdx]
+        const dx = to.left - from.left, dy = to.top - from.top
+        const cell = st.cells[origIdx]
+        cell.style.transition = 'transform 200ms ease'
+        cell.style.transform = (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) ? '' : `translate(${dx}px, ${dy}px)`
+      })
     }
 
     timer = setTimeout(() => { timer = null; started = begin() }, 250)
@@ -125,15 +162,19 @@ function useGridDragReorder(containerRef, items, onReorder) {
       ev.preventDefault()
       const st = dragRef.current
       if (!st) return
-      // Nearest cell centre wins — works in both axes
+      const dx = ev.clientX - startX, dy = ev.clientY - startY
+      st.clone.style.left = (st.rect.left - st.appRect.left + dx) + 'px'
+      st.clone.style.top = (st.rect.top - st.appRect.top + dy) + 'px'
+      // Nearest slot centre to the dragged tile's centre wins — the slots run
+      // left to right, top to bottom, so this is just the drop index.
+      const cx = st.rect.left + dx + st.rect.width / 2
+      const cy = st.rect.top + dy + st.rect.height / 2
       let best = st.currentIdx, bestD = Infinity
-      st.cells.forEach((c, i) => {
-        const r = c.getBoundingClientRect()
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2
-        const d = (ev.clientX - cx) ** 2 + (ev.clientY - cy) ** 2
+      st.slots.forEach((r, i) => {
+        const d = (cx - (r.left + r.width / 2)) ** 2 + (cy - (r.top + r.height / 2)) ** 2
         if (d < bestD) { bestD = d; best = i }
       })
-      st.currentIdx = best
+      if (best !== st.currentIdx) { st.currentIdx = best; applyShifts(st) }
     }
 
     const finish = (commit) => {
@@ -144,11 +185,21 @@ function useGridDragReorder(containerRef, items, onReorder) {
       document.removeEventListener('touchmove', preventScroll)
       const st = dragRef.current
       dragRef.current = null
+      tileDragging = false
       if (!st) return
+      // A lift ends in a pointerup that would otherwise click through to the
+      // tile and open the link — swallow that one click.
+      const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault() }
+      document.addEventListener('click', swallow, { capture: true, once: true })
+      setTimeout(() => document.removeEventListener('click', swallow, true), 350)
+      st.clone.remove()
       st.el.style.opacity = ''
-      st.el.style.transition = ''
-      if (!commit || st.currentIdx === st.idx) return
-      flipRef.current = st.cells.map(c => ({ el: c, rect: c.getBoundingClientRect() }))
+      const changed = commit && st.currentIdx !== st.idx
+      // Where each cell is sitting right now, so the committed reorder doesn't jump
+      const visual = st.cells.map((c, i) => i === st.idx ? st.slots[st.currentIdx] : c.getBoundingClientRect())
+      st.cells.forEach(c => { c.style.transition = ''; c.style.transform = '' })
+      if (!changed) return
+      flipRef.current = st.cells.map((el, i) => ({ el, rect: visual[i] }))
       const next = [...itemsRef.current]
       const [moved] = next.splice(st.idx, 1)
       next.splice(st.currentIdx, 0, moved)
@@ -561,7 +612,7 @@ const SHOW_PROJECT_INPUT = false
 
 // One tile in the links grid. Styled like the preview card on a link page:
 // the site's own og:image up top, title and host beneath.
-function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, onContextMenu, onOpenPage }) {
+export function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, onContextMenu, onOpenPage }) {
   const { ensureLinkImage } = useAppContext()
   const [failed, setFailed] = useState(false)
 
@@ -587,27 +638,26 @@ function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, on
             </svg>
           </div>
         )}
-        {/* Hover affordance: dims the image and names the action */}
-        <div className="link-tile-image-hover" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <path d="M14 5h5v5" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-            <path d="M19 5l-8 8" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-            <path d="M18 14.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.5" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
-          </svg>
-        </div>
       </div>
       <div className="link-tile-divider"/>
-      <div className="link-tile-body" onClick={onOpenPage}>
+      <div className="link-tile-body" onClick={() => openUrl(link.url)}>
         <div className="link-tile-text">
           <span className="link-tile-title">{link.title || hostOf(link.url)}</span>
           <span className="link-tile-url">{displayUrl(link.url)}</span>
         </div>
-        <span className="link-tile-edit" aria-hidden="true">
+        {/* The one part of the tile that doesn't follow the link — it opens the page */}
+        <button
+          className="link-tile-edit"
+          aria-label="Edit link"
+          onClick={e => { e.stopPropagation(); onOpenPage() }}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M4 20h4l10-10a2.83 2.83 0 10-4-4L4 16v4z" stroke="#959493" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-        </span>
+        </button>
       </div>
+      <div className="link-tile-hover" aria-hidden="true"/>
     </div>
   )
 }
@@ -2137,7 +2187,7 @@ export default function ProjectCard({ categoryId, project }) {
                       archived={archived}
                       onOpenPage={() => setOpenLinkId(l.id)}
                       onPointerDown={e => {
-                        rowMenu.press(e, buildRowItems('link', l))
+                        rowMenu.press(e, buildRowItems('link', l), { side: true })
                         if (!archived) onLinkDrag(e, l.id)
                       }}
                       onContextMenu={e => rowMenu.context(e, buildRowItems('link', l))}

@@ -41,6 +41,7 @@ function highlightMatch(text, q, tint) {
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
 import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
+import { isTileDragging } from './components/ProjectCard.jsx'
 
 // Pull-to-refresh: pull down at the top of the active page to re-fetch data.
 // Touch-only; drives a spinner via direct DOM for smoothness.
@@ -962,7 +963,7 @@ function AppInner() {
       // Allow drags that start anywhere on a page (incl. project-card text boxes)
       // or on the footer's text-box row (the add-row), but not the tab bar.
       if (!t.closest('.page') && !t.closest('.add-row')) return
-      dragRef.current = { startX: e.clientX, startY: e.clientY, id: e.pointerId, engaged: false, edge: false, dir: null, toTab: null, dx: 0, W: window.innerWidth, step: window.innerWidth + GUTTER, lastX: e.clientX, lastT: performance.now(), v: 0 }
+      dragRef.current = { fromTile: !!t.closest('.link-tile'), startX: e.clientX, startY: e.clientY, id: e.pointerId, engaged: false, edge: false, dir: null, toTab: null, dx: 0, W: window.innerWidth, step: window.innerWidth + GUTTER, lastX: e.clientX, lastT: performance.now(), v: 0 }
     }
 
     const onMove = (e) => {
@@ -981,6 +982,10 @@ function AppInner() {
       const dx = e.clientX - s.startX
       const dy = e.clientY - s.startY
       if (!s.engaged) {
+        // A link tile has been lifted for a grid reorder — it owns the gesture
+        if (isTileDragging()) { dragRef.current = null; return }
+        // Starting on a tile: hold off long enough for the lift to claim it
+        if (s.fromTile && Math.abs(dx) < 12) return
         // Hand off to vertical scrolling only when the gesture is clearly vertical:
         // a long drop AND meaningfully steeper than it is wide.
         if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.8) { dragRef.current = null; return }
@@ -2104,7 +2109,11 @@ function AppInner() {
                 </span>
               )}
               <span className="mbar-placeholder" aria-hidden="true">
-                <span className="mbar-placeholder-label">+ Add item</span>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  <line x1="3.5" y1="10" x2="16.5" y2="10" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                </svg>
+                <span className="mbar-placeholder-label">Add item</span>
               </span>
               <input
                 ref={inputRef}
@@ -2273,6 +2282,31 @@ function AppInner() {
         />
 
         {/* Below the control (z-index 2): the activated row flies under it */}
+        {/* Drag the detail panel's left edge to resize it (desktop; the width
+            lives on :root so every panel opened this session inherits it). */}
+        <div
+          className="detail-resize-handle"
+          onPointerDown={e => {
+            if (e.button !== 0) return
+            e.preventDefault()
+            const panel = document.querySelector('.note-detail-page')
+            const startW = panel ? panel.getBoundingClientRect().width : 500
+            const startX = e.clientX
+            const onMove = (e2) => {
+              const w = Math.max(400, Math.min(750, startW - (e2.clientX - startX)))
+              document.documentElement.style.setProperty('--detail-w', w + 'px')
+            }
+            const onUp = () => {
+              document.removeEventListener('pointermove', onMove)
+              document.removeEventListener('pointerup', onUp)
+              document.body.classList.remove('resizing-detail')
+            }
+            document.body.classList.add('resizing-detail')
+            document.addEventListener('pointermove', onMove)
+            document.addEventListener('pointerup', onUp)
+          }}
+        />
+
         <div id="animation-portal-under"></div>
         <div id="animation-portal"></div>
         <ArchiveAttachmentsModal />

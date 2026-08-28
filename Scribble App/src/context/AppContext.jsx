@@ -89,7 +89,7 @@ export function AppProvider({ children }) {
           name: proj.name,
           archived: proj.archived === true,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
-            id: t.id, text: t.text, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
+            id: t.id, text: t.text, comment: t.comment ?? null, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
             homeSortOrder: t.home_sort_order ?? null, catSortOrder: t.cat_sort_order ?? null,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
@@ -340,6 +340,14 @@ export function AppProvider({ children }) {
       ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, text })
     }))
     db(supabase.from('todos').update({ text }).eq('id', todoId))
+  }, [updateProject])
+
+  const updateProjectTodoComment = useCallback((categoryId, projectId, todoId, comment) => {
+    const value = comment && comment.trim() ? comment : null
+    updateProject(categoryId, projectId, proj => ({
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, comment: value })
+    }))
+    db(supabase.from('todos').update({ comment: value }).eq('id', todoId))
   }, [updateProject])
 
   const attachNoteToTodo = useCallback((categoryId, projectId, todoId, noteId) => {
@@ -1047,6 +1055,7 @@ export function AppProvider({ children }) {
       toggleProjectTodo,
       updateProjectNote,
       updateProjectTodoText,
+      updateProjectTodoComment,
       attachNoteToTodo,
       detachNoteFromTodo,
       attachLinkToTodo,

@@ -47,7 +47,7 @@ function scrollMenuIntoView(rowEl, setState) {
   const delta = Math.min(overflow, Math.max(0, room))
   if (delta <= 0) return
   scroller.scrollTo({ top: scroller.scrollTop + delta, behavior: 'smooth' })
-  setState(s => (s ? { ...s, top: s.top - delta } : s))
+  setState(s => (s ? { ...s, top: s.top - delta, rTop: s.rTop != null ? s.rTop - delta : s.rTop } : s))
 }
 
 /* The drag hook parks its clone in the animation portal at z-index 999 */
@@ -114,7 +114,7 @@ export function useRowMenu() {
     })
   }, [])
 
-  const press = useCallback((e, buildItems) => {
+  const press = useCallback((e, buildItems, opts = {}) => {
     if (e.button !== 0) return   // right-click is handled by `context`
     if (e.target.closest('.checkbox-wrap') || e.target.closest('.link-outlink-btn')) return
     const rowEl = e.currentTarget.closest('.swipe-row') || e.currentTarget
@@ -157,8 +157,13 @@ export function useRowMenu() {
         rowEl,
         items,
         mode: 'press',
+        side: !!opts.side,                 // tiles open beside; rows open beneath
         top: r.bottom - appRect.top + 4,   // 4px under the floating row
         right: appRect.right - r.right,    // right-aligned to the row's right edge
+        rTop: r.top - appRect.top,
+        rLeft: r.left - appRect.left,
+        rRight: r.right - appRect.left,
+        appW: appRect.width,
       })
 
       // Moving again un-parks the drag and drops the menu, so you can go
@@ -193,6 +198,7 @@ export function useRowMenu() {
 export function RowActionMenu({ state, onClose }) {
   const [open, setOpen] = useState(false)
   const [flip, setFlip] = useState({ x: 0, y: 0 })
+  const [pressPos, setPressPos] = useState(null)
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -206,6 +212,22 @@ export function RowActionMenu({ state, onClose }) {
      cursor; past the right → right edge on the cursor. A flip is skipped if it
      would only push the menu off the opposite edge instead. Measured from the
      rendered menu rather than estimated from item count. */
+  /* Side-anchored (link tile) menus sit beside the pressed item — to its right
+     if there's room, otherwise to its left, falling back to beneath it. Every
+     other long-press menu keeps the original position: under the row. */
+  useLayoutEffect(() => {
+    if (!state || state.mode !== 'press' || !state.side) { setPressPos(null); return }
+    const el = menuRef.current
+    if (!el) return
+    const w = el.getBoundingClientRect().width
+    const { rTop, rLeft, rRight, appW } = state
+    // The lifted tile grows 4px on every side, so the gap is measured from that
+    const GAP = 8
+    if (rRight + GAP + w <= appW - EDGE_GAP) setPressPos({ dir: 'left', pos: { top: rTop - 4, left: rRight + GAP } })
+    else if (rLeft - GAP - w >= EDGE_GAP) setPressPos({ dir: 'right', pos: { top: rTop - 4, right: appW - rLeft + GAP } })
+    else setPressPos({ dir: 'top', pos: { top: state.top, right: appW - rRight } })
+  }, [state])
+
   useLayoutEffect(() => {
     setFlip({ x: 0, y: 0 })
     if (!state || state.mode !== 'context') return
@@ -224,14 +246,14 @@ export function RowActionMenu({ state, onClose }) {
 
   const pos = state.mode === 'context'
     ? { top: state.top - flip.y, left: state.left - flip.x }
-    : { top: state.top, right: state.right }
+    : pressPos ? pressPos.pos : { top: state.top, right: state.right }
 
   return createPortal(
     <>
       <div className="row-menu-overlay" onPointerDown={onClose} onContextMenu={e => { e.preventDefault(); onClose() }}/>
       <div
         ref={menuRef}
-        className={`card-context-menu row-action-menu${state.mode === 'context' ? ' cursor-anchored' : ''}${open ? ' open' : ''}`}
+        className={`card-context-menu row-action-menu${state.mode === 'context' ? ' cursor-anchored' : ''}${pressPos ? ` side-anchored from-${pressPos.dir}` : ''}${open ? ' open' : ''}`}
         style={pos}
       >
         {state.items.map((item, i) => (

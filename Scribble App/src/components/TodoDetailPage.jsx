@@ -5,27 +5,14 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { NoteDetailPage } from './NoteCard.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
-import OutlinkButton from './OutlinkButton.jsx'
+import { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { pasteInto } from '../clipboard.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
+import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
 import { useScrollable } from '../useScrollable.js'
-
-// Open a (possibly scheme-less) URL in a new browser tab
-function openUrl(url) {
-  if (!url) return
-  let u = url.trim()
-  // A phone number in the link field → start a call instead of opening a URL
-  const digits = u.replace(/\D/g, '')
-  if (/^[+()\-.\s\d]+$/.test(u) && digits.length >= 7 && digits.length <= 15) {
-    window.location.href = 'tel:' + u.replace(/[^\d+]/g, '')
-    return
-  }
-  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'https://' + u
-  window.open(u, '_blank', 'noopener,noreferrer')
-}
 
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
@@ -117,17 +104,6 @@ function NoteRowIcon({ activated }) {
       <path d="M12 3v5h5" stroke={stroke} strokeWidth="1" fill="none"/>
       <line x1="5" y1="13" x2="15" y2="13" stroke={stroke} strokeWidth="1" strokeLinecap="round"/>
       <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={stroke} strokeWidth="1" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
-function LinkRowIcon({ activated }) {
-  const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      {activated && <circle cx="12" cy="12" r="8" fill="var(--accent-light)"/>}
-      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={stroke} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -270,47 +246,23 @@ function LinkComposer({ onAdd }) {
   )
 }
 
-function UnattachButton({ onUnattach }) {
-  return (
-    <button className="todo-unattach-btn" onMouseDown={e => { e.preventDefault(); onUnattach(e.currentTarget) }}>
-      <div className="todo-unattach-inner">
-        <PaperclipIcon/>
-        <span className="todo-unattach-label">Unattach</span>
-      </div>
-    </button>
-  )
-}
-
-function AttachedNoteRow({ note, onOpen, onUnattach, onPointerDown, onDragPointerDown }) {
+function AttachedNoteRow({ note, onOpen, onPointerDown, onDragPointerDown, onMenuDown, onContextMenu }) {
   const preview = useMemo(() => extractNotePreview(note.editorHTML), [note.editorHTML])
   return (
-    <div className="todo-swipe-row" data-attach-id={note.id}>
-      <UnattachButton onUnattach={onUnattach} />
-      <div className="todo-swipe-content" onPointerDown={e => { onPointerDown(e, onOpen); onDragPointerDown && onDragPointerDown(e, note.id) }}>
-        <div className="todo-attached-row">
-          <div className="todo-attached-icon"><NoteRowIcon activated={note.activated}/></div>
-          <div className="todo-attached-text">
-            <span className="todo-attached-note-title">{note.text}</span>
-            {preview && <span className="todo-attached-note-preview">{preview}</span>}
+    <div className="todo-attach-row-wrap" data-attach-id={note.id}>
+      <div className="todo-swipe-row swipe-row">
+        <div
+          className="todo-swipe-content swipe-content"
+          onPointerDown={e => { onMenuDown(e); onPointerDown(e, onOpen); onDragPointerDown && onDragPointerDown(e, note.id) }}
+          onContextMenu={onContextMenu}
+        >
+          <div className="todo-attached-row">
+            <div className="todo-attached-icon"><NoteRowIcon activated={note.activated}/></div>
+            <div className="todo-attached-text">
+              <span className="todo-attached-note-title">{note.text}</span>
+              {preview && <span className="todo-attached-note-preview">{preview}</span>}
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function AttachedLinkRow({ link, onUnattach, onPointerDown, onDragPointerDown, onOpen }) {
-  return (
-    <div className="todo-swipe-row" data-attach-id={link.id}>
-      <UnattachButton onUnattach={onUnattach} />
-      <div className="todo-swipe-content" onPointerDown={e => { onPointerDown(e, onOpen); onDragPointerDown && onDragPointerDown(e, link.id) }}>
-        <div className="todo-attached-row">
-          <div className="todo-attached-icon"><LinkRowIcon activated={link.activated}/></div>
-          <div className="todo-attached-text">
-            <span className="todo-attached-link-title">{link.title}</span>
-            <span className="todo-attached-link-url">{displayUrl(link.url)}</span>
-          </div>
-          <OutlinkButton onOpen={() => openUrl(link.url)} />
         </div>
       </div>
     </div>
@@ -318,7 +270,7 @@ function AttachedLinkRow({ link, onUnattach, onPointerDown, onDragPointerDown, o
 }
 
 // Long-press drag-reorder for a todo's attached note/link rows (a flat list).
-// Operates on `.todo-swipe-row[data-attach-id]` children of containerRef.
+// Operates on `.todo-attach-row-wrap[data-attach-id]` children of containerRef.
 function useAttachDrag(containerRef, items, onReorder) {
   const dragRef = useRef(null)
   const flipRef = useRef(null)
@@ -342,7 +294,6 @@ function useAttachDrag(containerRef, items, onReorder) {
   }, [items])
 
   const onDragPointerDown = useCallback((e, id) => {
-    if (e.target.closest('.todo-unattach-btn')) return
     const startX = e.clientX, startY = e.clientY
     let started = false, longPressTimer = null
     const preventScroll = (ev) => { if (started) ev.preventDefault() }
@@ -350,7 +301,7 @@ function useAttachDrag(containerRef, items, onReorder) {
     const start = () => {
       const container = containerRef.current
       if (!container) return false
-      const rows = [...container.children].filter(c => c.classList && c.classList.contains('todo-swipe-row'))
+      const rows = [...container.children].filter(c => c.classList && c.classList.contains('todo-attach-row-wrap'))
       const snapshots = rows.map(el => ({ el, id: el.dataset.attachId, rect: el.getBoundingClientRect() }))
       const dragIdx = snapshots.findIndex(s => String(s.id) === String(id))
       if (dragIdx < 0) return false
@@ -358,15 +309,20 @@ function useAttachDrag(containerRef, items, onReorder) {
       const appEl = document.getElementById('app'), portal = document.getElementById('animation-portal')
       if (!appEl || !portal) return false
       const appRect = appEl.getBoundingClientRect()
-      const cloneTop = dragged.rect.top - appRect.top - 4
+      const cloneTop = dragged.rect.top - appRect.top
       const cloneInner = dragged.el.cloneNode(true)
-      cloneInner.style.cssText = 'pointer-events:none;background:#F2F0EB;'
+      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
       const clone = document.createElement('div')
-      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 4}px`, `top:${cloneTop}px`, `width:${dragged.rect.width + 8}px`, 'padding:4px 0', 'pointer-events:none', 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px', 'border:1px solid #C2C1BF', 'background:#F2F0EB', 'overflow:hidden', 'z-index:999'].join(';')
+      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 17}px`, `top:${cloneTop}px`, `width:${dragged.rect.width}px`, 'padding:0 16px', 'pointer-events:none', 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px', 'border:1px solid #C2C1BF', 'background:#F7F6F3', 'overflow:hidden', 'z-index:999'].join(';')
       clone.appendChild(cloneInner)
       portal.appendChild(clone)
       dragged.el.style.opacity = '0'
-      dragRef.current = { clone, snapshots, dragIdx, currentIdx: dragIdx, cloneTop, startY, draggedH: dragged.rect.height }
+      // The clone can't travel above the first row or below the last one
+      const firstTop = snapshots[0].rect.top
+      const lastBottom = snapshots[snapshots.length - 1].rect.bottom
+      const minTop = firstTop - appRect.top
+      const maxTop = lastBottom - dragged.rect.height - appRect.top
+      dragRef.current = { clone, snapshots, dragIdx, currentIdx: dragIdx, cloneTop, startY, draggedH: dragged.rect.height, minTop, maxTop }
       return true
     }
 
@@ -391,7 +347,8 @@ function useAttachDrag(containerRef, items, onReorder) {
       e2.preventDefault()
       const s = dragRef.current
       if (!s) return
-      s.clone.style.top = (s.cloneTop + (e2.clientY - s.startY)) + 'px'
+      const wanted = s.cloneTop + (e2.clientY - s.startY)
+      s.clone.style.top = Math.max(s.minTop, Math.min(s.maxTop, wanted)) + 'px'
       const nonDragged = s.snapshots.filter((_, i) => i !== s.dragIdx)
       let insertAt = nonDragged.length
       for (let j = 0; j < nonDragged.length; j++) { if (e2.clientY < nonDragged[j].rect.top + nonDragged[j].rect.height / 2) { insertAt = j; break } }
@@ -443,6 +400,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     setProjectTodoScheduled,
     setProjectNoteScheduled,
     updateProjectTodoText,
+    updateProjectTodoComment,
     attachNoteToTodo, detachNoteFromTodo,
     attachLinkToTodo, detachLinkFromTodo,
     addTodoNote, addTodoLink,
@@ -466,6 +424,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [openNoteId, setOpenNoteId] = useState(null)
   const [openAttachLinkId, setOpenAttachLinkId] = useState(null)
   const titleRef = useRef(null)
+  const commentRef = useRef(null)
   const completeBtnRef = useRef(null)
   const flashRef = useRef(null)
   const completePressed = useRef(false)
@@ -475,6 +434,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
   const [editingTitle, setEditingTitle] = useState(false)
+  const [editingComment, setEditingComment] = useState(false)
+  const pendingCommentFocus = useRef(false)
 
   const openMove = useCallback(() => {
     const titleEl = titleRef.current
@@ -594,6 +555,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   // Seed the editable title once (uncontrolled so the caret behaves)
   useEffect(() => {
     if (titleRef.current) titleRef.current.textContent = todo.text
+    if (commentRef.current) commentRef.current.textContent = todo.comment || ''
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todo.id])
 
@@ -613,11 +575,14 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   // Drag-reorder for attached notes / links
   const noteAttachRef = useRef(null)
-  const linkAttachRef = useRef(null)
+  const linkGridRef = useRef(null)
   const handleNoteReorder = useCallback((newIds) => reorderTodoNotes(categoryId, projectId, todo.id, newIds), [reorderTodoNotes, categoryId, projectId, todo.id])
-  const handleLinkReorder = useCallback((newIds) => reorderTodoLinks(categoryId, projectId, todo.id, newIds), [reorderTodoLinks, categoryId, projectId, todo.id])
+  const handleLinkReorder = useCallback(
+    (nextLinks) => reorderTodoLinks(categoryId, projectId, todo.id, nextLinks.map(l => String(l.id))),
+    [reorderTodoLinks, categoryId, projectId, todo.id]
+  )
   const { onDragPointerDown: onNoteAttachDrag } = useAttachDrag(noteAttachRef, attachedNotes, handleNoteReorder)
-  const { onDragPointerDown: onLinkAttachDrag } = useAttachDrag(linkAttachRef, attachedLinks, handleLinkReorder)
+  const { onDragPointerDown: onLinkGridDrag } = useGridDragReorder(linkGridRef, attachedLinks, handleLinkReorder)
 
   const saveTitle = useCallback(() => {
     const text = (titleRef.current?.textContent || '').trim()
@@ -625,8 +590,16 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     else if (!text && titleRef.current) titleRef.current.textContent = todo.text
   }, [categoryId, projectId, todo.id, todo.text, updateProjectTodoText])
 
+  const saveComment = useCallback(() => {
+    const text = (commentRef.current?.textContent || '').trim()
+    // contentEditable leaves a stray <br> behind — clear it so :empty (the placeholder) works
+    if (!text && commentRef.current) commentRef.current.innerHTML = ''
+    if (text !== (todo.comment || '')) updateProjectTodoComment(categoryId, projectId, todo.id, text)
+  }, [categoryId, projectId, todo.id, todo.comment, updateProjectTodoComment])
+
   const handleDone = () => {
     saveTitle()
+    saveComment()
     setIsOpen(false)
     setTimeout(onClose, 360)
   }
@@ -635,26 +608,80 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   // Editing state is only cleared here (not on blur) so a touch that blurs the title first can't trip "Done".
   const handleTopButton = (e) => {
     e.preventDefault()
-    if (editingTitle) {
+    if (editingTitle || editingComment) {
       titleRef.current?.blur()
+      commentRef.current?.blur()
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur()
       saveTitle()
+      saveComment()
+      window.getSelection()?.removeAllRanges()
       setEditingTitle(false)
+      setEditingComment(false)
     } else {
       handleDone()
     }
   }
 
+  const focusComment = useCallback(() => {
+    const el = commentRef.current
+    if (!el) return
+    el.focus()
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    range.collapse(false)
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }, [])
+
+  // Tapping the underline or the gap beneath it opens the comment with the caret in it
+  const handleCommentZoneDown = (e) => {
+    if (archived) return
+    if (e.target.closest && e.target.closest('.todo-detail-comment')) return
+    e.preventDefault()
+    if (todo.comment || editingTitle || editingComment) { focusComment(); return }
+    setEditingComment(true)
+    pendingCommentFocus.current = true
+  }
+
+  // The comment field only exists once it's shown — focus it on the render that reveals it
+  useEffect(() => {
+    if (!pendingCommentFocus.current) return
+    pendingCommentFocus.current = false
+    focusComment()
+  })
+
+  // Return from the title drops the caret into the comment line below the underline
   const handleTitleKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); titleRef.current?.blur() }
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    saveTitle()
+    if (!commentRef.current) { titleRef.current?.blur(); return }
+    focusComment()
+  }
+
+  // Comments are a single body-copy paragraph — Return saves and leaves edit mode
+  const handleCommentKeyDown = (e) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    commentRef.current?.blur()
+    saveComment()
+    window.getSelection()?.removeAllRanges()
+    setEditingTitle(false)
+    setEditingComment(false)
+  }
+
+  // Keep pasted content plain — no styles inside a comment
+  const handleCommentPaste = (e) => {
+    e.preventDefault()
+    const text = (e.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' ')
+    document.execCommand('insertText', false, text)
   }
 
   // Flash highlight + collapse, then detach — mirrors the homescreen "deactivate" animation
-  const handleUnattach = useCallback((btnEl, doDetach) => {
-    const row = btnEl?.closest('.todo-swipe-row')
+  const handleUnattach = useCallback((rowEl, doDetach) => {
+    const row = rowEl?.closest('.todo-attach-row-wrap, .link-grid-cell')
     if (!row) { doDetach(); return }
-    row.classList.remove('swiped-left')
-    const content = row.querySelector('.todo-swipe-content')
-    if (content) { content.style.transition = ''; content.style.transform = '' }
     const flashEl = row.querySelector('.todo-attached-row') || row
     const rgb = getComputedStyle(row).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
     setTimeout(() => {
@@ -675,125 +702,36 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     }, 200)
   }, [])
 
-  // Swipe-left to reveal the Unattach button (and tap to open when closed)
+  // Attached rows don't swipe — a clean tap opens them, a long press opens the menu
   const onRowPointerDown = useCallback((e, onTap) => {
-    if (e.target.closest('.todo-unattach-btn') || e.target.closest('.link-outlink-btn')) return
-    const row = e.currentTarget.closest('.todo-swipe-row')
-    if (!row) return
-    const content = row.querySelector('.todo-swipe-content')
-    const wasLeft = row.classList.contains('swiped-left')
-    const s = { startX: e.clientX, startY: e.clientY, dir: null, lastX: wasLeft ? -84 : 0 }
-
-    // Snap to open/closed based on current offset, clear inline transform so CSS takes over
-    const settle = () => {
-      if (content) { content.style.transition = ''; content.style.transform = '' }
-      if (s.lastX < -36) {
-        // Only one row open at a time — close any other open row first
-        document.querySelectorAll('.todo-swipe-row.swiped-left').forEach(r => {
-          if (r === row) return
-          r.classList.remove('swiped-left')
-          const c = r.querySelector('.todo-swipe-content')
-          if (c) { c.style.transition = ''; c.style.transform = '' }
-        })
-        row.classList.add('swiped-left')
-      } else {
-        row.classList.remove('swiped-left')
-      }
-      cleanup()
-    }
+    if (e.button !== 0) return
+    if (e.target.closest('.link-outlink-btn')) return
+    const startX = e.clientX, startY = e.clientY
+    let moved = false
 
     const onMove = (e2) => {
-      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      if (!s.dir) {
-        if (Math.abs(dy) > 8) { settle(); return }
-        if (Math.abs(dx) > 10) s.dir = dx < 0 ? 'left' : 'right'
-        else return
-      }
-      if (!content) return
-      const base = wasLeft ? -84 : 0
-      const newX = Math.max(-84, Math.min(0, base + dx))
-      s.lastX = newX
-      content.style.transition = 'none'
-      content.style.transform = `translateX(${newX}px)`
+      if (Math.abs(e2.clientX - startX) > 8 || Math.abs(e2.clientY - startY) > 8) moved = true
     }
-
-    const onUp = (e2) => {
-      const dx = e2.clientX - s.startX, dy = e2.clientY - s.startY
-      const isTap = !s.dir && Math.abs(dx) < 8 && Math.abs(dy) < 8
-      if (isTap) {
-        if (content) content.style.transition = ''
-        if (wasLeft) { row.classList.remove('swiped-left'); if (content) content.style.transform = '' }
-        else onTap()
-        cleanup(); return
-      }
-      settle()
-    }
-
     const cleanup = () => {
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
-      document.removeEventListener('pointercancel', settle)
+      document.removeEventListener('pointercancel', cleanup)
     }
+    const onUp = () => {
+      cleanup()
+      if (!moved && !isRowMenuOpen()) onTap()
+    }
+
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
-    document.addEventListener('pointercancel', settle)
+    document.addEventListener('pointercancel', cleanup)
   }, [])
 
-  // Two-finger (trackpad) horizontal swipe over an attached row reveals its Unattach button.
-  // Wheel events have no clean "end", so we debounce a settle after the gesture stops.
-  useEffect(() => {
-    const scroll = scrollRef.current
-    if (!scroll) return
-    const states = new Map()
+  const rowMenu = useRowMenu()
 
-    const onWheel = (e) => {
-      // Only act on predominantly-horizontal gestures (a two-finger sideways swipe)
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-      const content = e.target.closest && e.target.closest('.todo-swipe-content')
-      if (!content || !scroll.contains(content)) return
-      const row = content.closest('.todo-swipe-row')
-      if (!row) return
-      e.preventDefault()
-
-      let s = states.get(row)
-      if (!s) {
-        s = { x: row.classList.contains('swiped-left') ? -84 : 0, timer: null }
-        states.set(row, s)
-      }
-      s.x = Math.max(-84, Math.min(0, s.x - e.deltaX))
-      content.style.transition = 'none'
-      content.style.transform = `translateX(${s.x}px)`
-      // Reveal the button live, tracking the swipe — don't wait for the settle class
-      const btn = row.querySelector('.todo-unattach-btn')
-      if (btn) {
-        btn.style.transition = 'none'
-        btn.style.opacity = String(Math.min(1, -s.x / 84))
-      }
-
-      clearTimeout(s.timer)
-      s.timer = setTimeout(() => {
-        content.style.transition = ''
-        content.style.transform = ''
-        if (btn) { btn.style.transition = ''; btn.style.opacity = '' }
-        if (s.x < -36) {
-          // Only one row open at a time — close any other open row first
-          document.querySelectorAll('.todo-swipe-row.swiped-left').forEach(r => {
-            if (r === row) return
-            r.classList.remove('swiped-left')
-            const c = r.querySelector('.todo-swipe-content')
-            if (c) { c.style.transition = ''; c.style.transform = '' }
-          })
-          row.classList.add('swiped-left')
-        } else {
-          row.classList.remove('swiped-left')
-        }
-        states.delete(row)
-      }, 90)
-    }
-
-    scroll.addEventListener('wheel', onWheel, { passive: false })
-    return () => scroll.removeEventListener('wheel', onWheel)
-  }, [])
+  const unattachItems = useCallback((detach) => (rowEl) => ([
+    { label: 'Unattach', icon: <PaperclipIcon/>, onSelect: () => handleUnattach(rowEl, detach) },
+  ]), [handleUnattach])
 
   const openNote = attachedNotes.find(n => n.id === openNoteId)
 
@@ -825,7 +763,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <NoteListIcon/>
         {archived && <span className="detail-archived-label">Archived</span>}
         <span className="note-scroll-title" ref={scrollTitleRef} />
-        <button className="note-detail-done" onMouseDown={handleTopButton}>{editingTitle ? 'Save' : 'Done'}</button>
+        <button className="note-detail-done" onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : 'Done'}</button>
       </div>
 
       <div className="todo-detail-scroll" ref={scrollRef}>
@@ -840,8 +778,23 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           onBlur={saveTitle}
         />
 
-        <div className="todo-detail-underline">
-          <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
+        <div className="todo-comment-zone" onMouseDown={handleCommentZoneDown}>
+          <div className="todo-detail-underline">
+            <UnderlineSvg style={{ display: 'block', color: 'var(--accent-base)' }} />
+          </div>
+
+          <div
+            ref={commentRef}
+            className={`todo-detail-comment${(todo.comment || editingTitle || editingComment) ? '' : ' hidden'}${(editingTitle && !editingComment) ? ' show-placeholder' : ''}`}
+            contentEditable={!archived}
+            suppressContentEditableWarning
+            autoCapitalize="sentences"
+            data-placeholder={'Press "Return" to add a comment'}
+            onFocus={() => setEditingComment(true)}
+            onKeyDown={handleCommentKeyDown}
+            onPaste={handleCommentPaste}
+            onBlur={saveComment}
+          />
         </div>
 
         {/* ---- Notes ---- */}
@@ -881,9 +834,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 key={n.id}
                 note={n}
                 onOpen={() => setOpenNoteId(n.id)}
-                onUnattach={(btnEl) => handleUnattach(btnEl, () => detachNoteFromTodo(categoryId, projectId, todo.id, n.id))}
                 onPointerDown={onRowPointerDown}
                 onDragPointerDown={onNoteAttachDrag}
+                onMenuDown={e => !archived && rowMenu.press(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
+                onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
               />
             ))}
           </div>
@@ -925,24 +879,35 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             </div>
           </div>
 
-          <div ref={linkAttachRef}>
-            {attachedLinks.map(l => (
-              <AttachedLinkRow
-                key={l.id}
-                link={l}
-                onUnattach={(btnEl) => handleUnattach(btnEl, () => detachLinkFromTodo(categoryId, projectId, todo.id, l.id))}
-                onPointerDown={onRowPointerDown}
-                onDragPointerDown={onLinkAttachDrag}
-                onOpen={() => setOpenAttachLinkId(l.id)}
-              />
-            ))}
-          </div>
+          {attachedLinks.length > 0 && (
+            <div className="link-grid" ref={linkGridRef}>
+              {attachedLinks.map(l => (
+                <div key={l.id} className="link-grid-cell" data-swipe-id={l.id}>
+                  <LinkGridCard
+                    link={l}
+                    categoryId={categoryId}
+                    projectId={projectId}
+                    archived={archived}
+                    onOpenPage={() => setOpenAttachLinkId(l.id)}
+                    onPointerDown={e => {
+                      if (archived) return
+                      rowMenu.press(e, unattachItems(() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)), { side: true })
+                      onLinkGridDrag(e, l.id)
+                    }}
+                    onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)))}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className={`todo-composer${archived ? ' disabled' : ''}`}>
             <LinkComposer onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />
           </div>
         </div>
       </div>
+
+      <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
 
       {moveOpen && (
         <MoveToCard

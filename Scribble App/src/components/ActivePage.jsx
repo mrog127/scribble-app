@@ -12,7 +12,7 @@ import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import { openInCanvas } from '../searchFocus.js'
 import homepageDecoration from '../assets/Homepage decoration.png'
 import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
-import { useActivatePress, toAnchorRect, CalendarIcon } from './ScheduleBits.jsx'
+import { useActivatePress, toAnchorRect, CalendarIcon, RecurringCalendarIcon, isRecurring } from './ScheduleBits.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
@@ -257,7 +257,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     if (!item) return
     closeSwipeRow(el?.closest('.swipe-row'))
     const idx = categories.findIndex(c => c.id === item.categoryId)
-    setCalFor({ id, categoryId: item.categoryId, projectId: item.projectId, current: item.scheduledDate || null, anchorRect: toAnchorRect(el), accent: idx >= 0 ? getCategoryAccent(idx) : null })
+    setCalFor({ id, categoryId: item.categoryId, projectId: item.projectId, current: item.scheduledDate || null, recurrence: item.recurrence || null, anchorRect: toAnchorRect(el), accent: idx >= 0 ? getCategoryAccent(idx) : null })
   }, [items, categories])
   const [hideCompleted, setHideCompleted] = useState(() => {
     try { return localStorage.getItem('hc-activated-todos') !== 'false' } catch { return true }
@@ -598,7 +598,9 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
           anchorRect={calFor.anchorRect}
           initialDate={calFor.current}
           accent={calFor.accent}
-          onSelect={(d) => setProjectTodoScheduled(calFor.categoryId, calFor.projectId, calFor.id, d)}
+          allowRecurring
+          initialRecurrence={calFor.recurrence}
+          onSelect={(d, r) => setProjectTodoScheduled(calFor.categoryId, calFor.projectId, calFor.id, d, r)}
           onClose={() => setCalFor(null)}
         />
       )}

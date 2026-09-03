@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { CalendarIcon, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
+import { CalendarIcon, RecurringCalendarIcon, isRecurring, isScheduleLocked, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
@@ -463,7 +463,7 @@ function CollapsedTodosCard({ category }) {
     const item = allTodos.find(t => t.id === id)
     const isChecked = item?.checked
     const attachedNoteIds = item?.linkedNoteIds || []
-    if (!checkboxEl) { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id); if (!isChecked) promptArchiveAttachments(category.id, projectId, attachedNoteIds); return }
+    if (!checkboxEl) { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id); if (!isChecked && !isRecurring(item?.recurrence)) promptArchiveAttachments(category.id, projectId, attachedNoteIds); return }
     checkPopping.current[id] = true
     const popAnim = checkboxEl.animate(
       [{ transform: 'scale(0.82)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }],
@@ -478,7 +478,17 @@ function CollapsedTodosCard({ category }) {
         const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
         todoRow.animate([{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.18)`, offset: 0.2 }, { background: `rgba(${rgb},0)` }], { duration: 500, easing: 'ease', fill: 'none' })
       }
-      setTimeout(() => { snapshotForFlip(); toggleProjectTodo(category.id, projectId, id); promptArchiveAttachments(category.id, projectId, attachedNoteIds) }, 500)
+      setTimeout(() => {
+        snapshotForFlip()
+        toggleProjectTodo(category.id, projectId, id)
+        // A recurring item rolls to its next date and stays unchecked
+        if (isRecurring(item?.recurrence)) {
+          checkboxEl.classList.remove('checked')
+          todoRow?.classList.remove('checked')
+        } else {
+          promptArchiveAttachments(category.id, projectId, attachedNoteIds)
+        }
+      }, 500)
     } else {
       snapshotForFlip()
       toggleProjectTodo(category.id, projectId, id)
@@ -592,7 +602,7 @@ function CollapsedTodosCard({ category }) {
                 <div
                   className={`todo-row${t.checked ? ' checked' : ''}`}
                   data-id={t.id}
-                  onPointerDown={e => { rowMenu.press(e, buildRowItems(t)); onTodoTap(e, t.id); onDragPointerDown(e, t.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(t)); onTodoTap(e, t.id); if (!isScheduleLocked(t)) onDragPointerDown(e, t.id) }}
                         onContextMenu={e => rowMenu.context(e, buildRowItems(t))}
                 >
                   <div
@@ -620,7 +630,7 @@ function CollapsedTodosCard({ category }) {
                     </div>
                   </div>
                   {(t.scheduledDate && !t.activated) ? (
-                    <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span><CalendarIcon size={20}/></span>
+                    <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span>{isRecurring(t.recurrence) ? <RecurringCalendarIcon size={20}/> : <CalendarIcon size={20}/>}</span>
                   ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                     <span className="todo-attach-indicator">
                       {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 1 && (
@@ -657,7 +667,9 @@ function CollapsedTodosCard({ category }) {
           anchorRect={calFor.anchorRect}
           initialDate={calFor.current}
           accent={accent}
-          onSelect={(d) => setProjectTodoScheduled(category.id, calFor.projectId, calFor.id, d)}
+          allowRecurring
+          initialRecurrence={calFor.recurrence}
+          onSelect={(d, r) => setProjectTodoScheduled(category.id, calFor.projectId, calFor.id, d, r)}
           onClose={() => setCalFor(null)}
         />
       )}
@@ -849,7 +861,7 @@ function CollapsedNotesCard({ category }) {
                 <div
                   className={`note-row${n.archived ? ' archived' : ''}`}
                   data-note-id={n.id}
-                  onPointerDown={e => { rowMenu.press(e, buildRowItems(n)); onNoteTap(e, n.id); onDragPointerDown(e, n.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(n)); onNoteTap(e, n.id); if (!isScheduleLocked(n)) onDragPointerDown(e, n.id) }}
                         onContextMenu={e => rowMenu.context(e, buildRowItems(n))}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
@@ -1093,7 +1105,7 @@ function CollapsedLinksCard({ category }) {
               <div className="swipe-content">
                 <div
                   className={`note-row link-row${l.archived ? ' archived' : ''}`}
-                  onPointerDown={e => { rowMenu.press(e, buildRowItems(l)); onLinkPointerDown(e, l.id); onDragPointerDown(e, l.id) }}
+                  onPointerDown={e => { rowMenu.press(e, buildRowItems(l)); onLinkPointerDown(e, l.id); if (!isScheduleLocked(l)) onDragPointerDown(e, l.id) }}
                         onContextMenu={e => rowMenu.context(e, buildRowItems(l))}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { parseLocalDate } from './ScheduleBits.jsx'
+import { parseLocalDate, RECURRENCE_CYCLE, recurrenceLabel } from './ScheduleBits.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
 const toStr = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
@@ -8,12 +8,15 @@ const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 // Centered date picker over a dim scrim. Nothing commits until Save
 // (mirrors the "Move to..." card).
-// Props: initialDate ('YYYY-MM-DD'|null), onSelect(dateStr), onClose, accent
-export default function CalendarPopup({ initialDate, onSelect, onClose, accent }) {
+// Props: initialDate ('YYYY-MM-DD'|null), onSelect(dateStr, recurrence), onClose,
+// accent, and — for list items — allowRecurring + initialRecurrence.
+export default function CalendarPopup({ initialDate, onSelect, onClose, accent, allowRecurring = false, initialRecurrence = null }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const [pending, setPending] = useState(initialDate || null)
+  const [recur, setRecur] = useState(initialRecurrence || 'never')
+  const [recurMenu, setRecurMenu] = useState(false)
   const init = parseLocalDate(pending) || today
   const [view, setView] = useState({ y: init.getFullYear(), m: init.getMonth() })
   const [open, setOpen] = useState(false)
@@ -49,12 +52,18 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent }
     const date = new Date(view.y, view.m, d)
     date.setHours(0, 0, 0, 0)
     if (date < today) return
-    setPending(toStr(view.y, view.m, d))
+    const str = toStr(view.y, view.m, d)
+    // Pressing the selected date deselects it
+    setPending(prev => (prev === str ? null : str))
   }
 
-  const changed = (pending || null) !== (initialDate || null)
+  const changed = (pending || null) !== (initialDate || null) ||
+    (allowRecurring && recur !== (initialRecurrence || 'never'))
+  // "Save" once there's a date to save — or once an existing date has been
+  // deselected, which saves as clearing the schedule.
+  const canSave = changed && (!!pending || !!initialDate)
   const onHeaderBtn = () => {
-    if (changed && pending) onSelect(pending)
+    if (canSave) onSelect(pending, allowRecurring ? recur : undefined)
     close()
   }
 
@@ -69,12 +78,16 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent }
     <div className={`cal-overlay${open ? ' open' : ''}`} onPointerDown={close} style={style}>
       <div
         className={`cal-card${open ? ' open' : ''}`}
-        onPointerDown={e => e.stopPropagation()}
+        onPointerDown={e => {
+          e.stopPropagation()
+          // Any press elsewhere in the card closes the recurrence menu
+          if (recurMenu && !e.target.closest('.cal-recur-wrap')) setRecurMenu(false)
+        }}
       >
         <div className="save-to-header">
           <p className="save-to-title">Schedule for...</p>
           <button className="save-to-cancel" onPointerDown={e => { e.preventDefault(); onHeaderBtn() }}>
-            {changed ? 'Save' : 'Cancel'}
+            {canSave ? 'Save' : 'Cancel'}
           </button>
         </div>
 
@@ -113,6 +126,30 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent }
               )
             })}
           </div>
+
+          {allowRecurring && (
+            <>
+              <div className="cal-recur-divider"/>
+              <div className="cal-recur-row">
+                <span className="cal-recur-label">Recurring</span>
+                <div className="cal-recur-wrap">
+                  <button
+                    className="save-to-cancel cal-recur-btn"
+                    onPointerDown={e => { e.preventDefault(); setRecurMenu(v => !v) }}
+                  >{recurrenceLabel(recur)}</button>
+                  <div className={`card-context-menu cal-recur-menu${recurMenu ? ' open' : ''}`}>
+                    {RECURRENCE_CYCLE.map(r => (
+                      <button
+                        key={r}
+                        className="card-context-item"
+                        onPointerDown={e => { e.preventDefault(); setRecur(r); setRecurMenu(false) }}
+                      >{recurrenceLabel(r)}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>,

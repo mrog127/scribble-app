@@ -2336,9 +2336,10 @@
 
 .cal-card {
   width: calc(100% - 48px); /* 24px from the left and right screen edges */
-  /* Never larger than 500×500, on any screen or from any entry point */
+  /* Never larger than 500 wide; tall enough for the month plus the Recurring
+     row, and never taller than the screen it sits on */
   max-width: 500px;
-  max-height: 500px;
+  max-height: min(620px, calc(100% - 48px));
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -2354,7 +2355,7 @@
 }
 .cal-card.open { opacity: 1; transform: scale(1); }
 
-.cal-body { padding: 10px 16px 16px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.cal-body { padding: 10px 16px 12px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 /* Stop iOS from selecting text / showing the copy callout on long-press */
 .swipe-row,
@@ -2452,8 +2453,45 @@
   border-radius: 8px;
 }
 
+/* Recurring row under the month grid: label left, status button right.
+   The divider runs the full width of the card, past the body's side padding. */
+.cal-recur-divider {
+  height: 1px;
+  background: #DBDAD8;
+  margin: 12px -16px 0;
+}
+.cal-recur-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0;
+  /* Sits the same distance from the divider above it as from the card's
+     bottom edge (the body's 12px bottom padding). */
+  margin-top: 12px;
+}
+.cal-recur-label {
+  font-family: 'Open Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* The status button opens a menu of the options — a three-dot menu without the
+   icons, opening upward since the row sits at the bottom of the card. */
+.cal-recur-wrap { position: relative; flex-shrink: 0; }
+.cal-recur-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+  transform: translateY(8px);
+}
+.cal-recur-menu.open { transform: translateY(0); }
+.cal-recur-menu .card-context-item { padding: 0 16px; }
+/* Let the menu escape the card the way a card's own context menu does */
+.cal-card:has(.cal-recur-menu.open) { overflow: visible; }
+
 /* Header reuses .save-to-header / .save-to-title / .save-to-cancel from layout.css */
-.cal-card .save-to-header { padding: 14px 16px 8px; }
+.cal-card .save-to-header { padding: 14px 16px 8px; background: transparent; }
 
 
 /* ---- Link page: inline title / URL editor ---- */

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { supabase, functionsUrl, functionsKey } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
+import { isRecurring, nextRecurrence } from '../components/ScheduleBits.jsx'
 
 export const AppContext = createContext(null)
 
@@ -90,6 +91,7 @@ export function AppProvider({ children }) {
           archived: proj.archived === true,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
             id: t.id, text: t.text, comment: t.comment ?? null, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
+            recurrence: t.recurrence ?? null, recurAnchor: t.recur_anchor ?? null,
             homeSortOrder: t.home_sort_order ?? null, catSortOrder: t.cat_sort_order ?? null,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
@@ -318,6 +320,23 @@ export function AppProvider({ children }) {
     const proj = cat?.projects.find(p => p.id === projectId)
     const todo = proj?.todos.find(t => t.id === todoId)
     if (!todo) return
+    // A recurring item is never "completed": checking it rolls the series on to
+    // the next occurrence and drops it back among the unchecked items, showing
+    // the new date. Unchecking one (it can't be checked) is unaffected.
+    if (!todo.checked && isRecurring(todo.recurrence)) {
+      const next = nextRecurrence(todo.recurAnchor || todo.scheduledDate, todo.recurrence)
+      updateProject(categoryId, projectId, proj => {
+        const t = proj.todos.find(x => x.id === todoId)
+        if (!t) return proj
+        const rolled = { ...t, checked: false, activated: false, scheduledDate: next, recurAnchor: next }
+        const rest = proj.todos.filter(x => x.id !== todoId)
+        return { ...proj, todos: [...rest.filter(x => !x.checked), rolled, ...rest.filter(x => x.checked)] }
+      })
+      db(supabase.from('todos').update({
+        checked: false, activated: false, scheduled_date: next, recur_anchor: next,
+      }).eq('id', todoId))
+      return
+    }
     const newChecked = !todo.checked
     // Reorder so a checked item lands at the top of the checked group and an
     // unchecked item lands at the bottom of the unchecked group (mirrors
@@ -695,11 +714,22 @@ export function AppProvider({ children }) {
   }, [updateProject])
 
   // ---- Scheduled activation: set a date (or pass null to clear) ----
-  const setProjectTodoScheduled = useCallback((categoryId, projectId, todoId, dateStr) => {
+  // `recurrence` is optional: omit it to leave the item's repeat setting alone,
+  // pass 'never'/'weekly'/'monthly'/'yearly' to set it. Clearing the schedule
+  // (dateStr = null) also ends the series.
+  const setProjectTodoScheduled = useCallback((categoryId, projectId, todoId, dateStr, recurrence) => {
+    const setsRecur = recurrence !== undefined || !dateStr
+    const recur = !dateStr ? null : (isRecurring(recurrence) ? recurrence : null)
+    const patch = { scheduledDate: dateStr, ...(dateStr ? { activated: false } : {}) }
+    if (setsRecur) { patch.recurrence = recur; patch.recurAnchor = recur ? dateStr : null }
     updateProject(categoryId, projectId, proj => ({
-      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, scheduledDate: dateStr, activated: dateStr ? false : t.activated })
+      ...proj, todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, ...patch })
     }))
-    dbw(supabase.from('todos').update({ scheduled_date: dateStr, ...(dateStr ? { activated: false } : {}) }).eq('id', todoId), 'scheduleTodo')
+    dbw(supabase.from('todos').update({
+      scheduled_date: dateStr,
+      ...(dateStr ? { activated: false } : {}),
+      ...(setsRecur ? { recurrence: recur, recur_anchor: recur ? dateStr : null } : {}),
+    }).eq('id', todoId), 'scheduleTodo')
   }, [updateProject])
 
   const setProjectNoteScheduled = useCallback((categoryId, projectId, noteId, dateStr) => {

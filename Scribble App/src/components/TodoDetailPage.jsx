@@ -12,6 +12,7 @@ import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { pasteInto } from '../clipboard.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
+import { isRecurring } from './ScheduleBits.jsx'
 import { useScrollable } from '../useScrollable.js'
 
 // Strip the scheme for a cleaner one-line preview
@@ -571,7 +572,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     }
     const wasChecked = todo.checked
     toggleProjectTodo(categoryId, projectId, todo.id)
-    if (!wasChecked) promptArchiveAttachments(categoryId, projectId, todo.linkedNoteIds || [])
+    // A recurring item rolls to its next date instead of completing
+    if (!wasChecked && !isRecurring(todo.recurrence)) promptArchiveAttachments(categoryId, projectId, todo.linkedNoteIds || [])
   }, [archived, todo.checked, todo.id, todo.linkedNoteIds, categoryId, projectId, toggleProjectTodo, promptArchiveAttachments])
 
   // Pointer left the button before release: restore size, don't toggle
@@ -1048,7 +1050,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         activated={!!todo.activated}
         scheduledDate={todo.scheduledDate}
         onToggleActive={() => toggleProjectTodoActivated(categoryId, projectId, todo.id)}
-        onSchedule={(date) => setProjectTodoScheduled(categoryId, projectId, todo.id, date)}
+        allowRecurring
+        recurrence={todo.recurrence || null}
+        onSchedule={(date, r) => setProjectTodoScheduled(categoryId, projectId, todo.id, date, r)}
         onClearSchedule={() => setProjectTodoScheduled(categoryId, projectId, todo.id, null)}
         accent={accent}
         projectName={projectName}

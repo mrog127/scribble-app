@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
-import { CalendarIcon, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
+import { CalendarIcon, RecurringCalendarIcon, isRecurring, isScheduleLocked, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
 import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
@@ -987,7 +987,7 @@ export default function ProjectCard({ categoryId, project }) {
         sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
       }
       toggleProjectTodo(categoryId, project.id, id)
-      if (!isChecked) promptArchiveAttachments(categoryId, project.id, attachedNoteIds)
+      if (!isChecked && !isRecurring(todoItem?.recurrence)) promptArchiveAttachments(categoryId, project.id, attachedNoteIds)
       return
     }
     checkPopping.current[id] = true
@@ -1020,7 +1020,14 @@ export default function ProjectCard({ categoryId, project }) {
           sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
         }
         toggleProjectTodo(categoryId, project.id, id)
-        promptArchiveAttachments(categoryId, project.id, attachedNoteIds)
+        // A recurring item isn't completed — it rolls to its next date and stays
+        // unchecked, so the ticked look has to come back off.
+        if (isRecurring(todoItem?.recurrence)) {
+          checkboxEl.classList.remove('checked')
+          todoRow?.classList.remove('checked')
+        } else {
+          promptArchiveAttachments(categoryId, project.id, attachedNoteIds)
+        }
       }, 500)
     } else {
       if (todoContainerRef.current) {
@@ -1568,8 +1575,8 @@ export default function ProjectCard({ categoryId, project }) {
   }, [project.id])
 
   // ---- Scheduling ----
-  const setScheduledByType = useCallback((type, id, dateStr) => {
-    if (type === 'todo') setProjectTodoScheduled(categoryId, project.id, id, dateStr)
+  const setScheduledByType = useCallback((type, id, dateStr, recurrence) => {
+    if (type === 'todo') setProjectTodoScheduled(categoryId, project.id, id, dateStr, recurrence)
     else if (type === 'note') setProjectNoteScheduled(categoryId, project.id, id, dateStr)
     else if (type === 'link') setProjectLinkScheduled(categoryId, project.id, id, dateStr)
   }, [categoryId, project.id, setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled])
@@ -1582,7 +1589,7 @@ export default function ProjectCard({ categoryId, project }) {
   const handleScheduleOpen = useCallback((type, item, el) => {
     const anchorRect = toAnchorRect(el)
     closeSwipeRow(el?.closest('.swipe-row'))
-    setCalendarFor({ type, id: item.id, current: item.scheduledDate || null, anchorRect })
+    setCalendarFor({ type, id: item.id, current: item.scheduledDate || null, recurrence: item.recurrence || null, anchorRect })
   }, [])
 
   // ---- Long-press row menu ----
@@ -1638,11 +1645,11 @@ export default function ProjectCard({ categoryId, project }) {
     ]
   }, [archived, handleActivate, handleScheduleClear, handleScheduleOpen, handleRetrieve, handleArchive, handleRetrieveLink, handleArchiveLink, handleDelete])
 
-  const handleCalendarSelect = useCallback((dateStr) => {
+  const handleCalendarSelect = useCallback((dateStr, recurrence) => {
     setCalendarFor(prev => {
       if (!prev) return null
       if (prev.type === 'create') setAddScheduledDate(dateStr)
-      else setScheduledByType(prev.type, prev.id, dateStr)
+      else setScheduledByType(prev.type, prev.id, dateStr, recurrence)
       return prev
     })
   }, [setScheduledByType])
@@ -2052,7 +2059,7 @@ export default function ProjectCard({ categoryId, project }) {
                       <div
                         className={`todo-row${t.checked ? ' checked' : ''}`}
                         data-id={t.id}
-                        onPointerDown={e => { rowMenu.press(e, buildRowItems('todo', t)); onTodoTap(e, t.id); if (!archived) onTodoDrag(e, t.id) }}
+                        onPointerDown={e => { rowMenu.press(e, buildRowItems('todo', t)); onTodoTap(e, t.id); if (!archived && !isScheduleLocked(t)) onTodoDrag(e, t.id) }}
                         onContextMenu={e => rowMenu.context(e, buildRowItems('todo', t))}
                       >
                         <div
@@ -2079,7 +2086,7 @@ export default function ProjectCard({ categoryId, project }) {
                           <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
                         </div>
                         {(t.scheduledDate && !t.activated) ? (
-                          <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span><CalendarIcon size={20}/></span>
+                          <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(t.scheduledDate)}</span>{isRecurring(t.recurrence) ? <RecurringCalendarIcon size={20}/> : <CalendarIcon size={20}/>}</span>
                         ) : ((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 0 && (
                           <span className="todo-attach-indicator">
                             {((t.linkedNoteIds?.length || 0) + (t.linkedLinkIds?.length || 0)) > 1 && (
@@ -2120,7 +2127,7 @@ export default function ProjectCard({ categoryId, project }) {
                       <div
                         className={`note-row${n.archived ? ' archived' : ''}`}
                         data-note-id={n.id}
-                        onPointerDown={e => { rowMenu.press(e, buildRowItems('note', n)); onNotePointerDown(e, n.id); if (!archived) onNoteDrag(e, n.id) }}
+                        onPointerDown={e => { rowMenu.press(e, buildRowItems('note', n)); onNotePointerDown(e, n.id); if (!archived && !isScheduleLocked(n)) onNoteDrag(e, n.id) }}
                         onContextMenu={e => rowMenu.context(e, buildRowItems('note', n))}
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
@@ -2188,7 +2195,7 @@ export default function ProjectCard({ categoryId, project }) {
                       onOpenPage={() => setOpenLinkId(l.id)}
                       onPointerDown={e => {
                         rowMenu.press(e, buildRowItems('link', l), { side: true })
-                        if (!archived) onLinkDrag(e, l.id)
+                        if (!archived && !isScheduleLocked(l)) onLinkDrag(e, l.id)
                       }}
                       onContextMenu={e => rowMenu.context(e, buildRowItems('link', l))}
                     />
@@ -2332,6 +2339,8 @@ export default function ProjectCard({ categoryId, project }) {
           anchorRect={calendarFor.anchorRect}
           initialDate={calendarFor.type === 'create' ? addScheduledDate : calendarFor.current}
           accent={calAccent}
+          allowRecurring={calendarFor.type === 'todo'}
+          initialRecurrence={calendarFor.recurrence}
           onSelect={handleCalendarSelect}
           onClose={() => setCalendarFor(null)}
         />

@@ -2,7 +2,7 @@
 // Left: the Active/Inactive toggle. Right: the project this item lives in.
 
 import { useState, useRef, useEffect } from 'react'
-import { CalendarIcon, formatSchedule, isScheduleReached } from './ScheduleBits.jsx'
+import { CalendarIcon, RecurringCalendarIcon, isRecurring, formatSchedule, isScheduleReached } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 
 function FolderIcon({ active }) {
@@ -46,7 +46,7 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false, menuItems }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false, menuItems, allowRecurring = false, recurrence = null }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
@@ -76,12 +76,11 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
     setCalOpen(true)
   }
 
-  // Scheduling moved off a long-press on Display and into the three-dot menu.
-  const scheduleItem = canSchedule && {
-    label: hasSchedule ? 'Reschedule' : 'Schedule',
-    icon: <CalendarIcon size={18}/>,
-    onSelect: openCalendar,
-  }
+  // The menu schedules an unscheduled item and clears a scheduled one —
+  // rescheduling happens by tapping the date on the Display button.
+  const scheduleItem = canSchedule && (hasSchedule
+    ? { label: 'Clear Schedule', icon: <CalendarIcon size={18}/>, onSelect: () => onClearSchedule() }
+    : { label: 'Schedule', icon: <CalendarIcon size={18}/>, onSelect: openCalendar })
   const items = [scheduleItem, ...(menuItems || [])].filter(Boolean)
 
   return (
@@ -96,10 +95,15 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
             className={`project-active-btn${active ? ' on' : ''}${scheduled ? ' scheduled' : ''}${disabledActive ? ' disabled' : ''}`}
             onMouseDown={disabledActive ? undefined : (e) => {
               e.preventDefault()
-              if (hasSchedule) onClearSchedule(); else onToggleActive()
+              // Tapping the date reopens the scheduler; otherwise it toggles Display
+              if (scheduled) openCalendar()
+              else if (hasSchedule) onClearSchedule()
+              else onToggleActive()
             }}
           >
-            {scheduled ? <CalendarIcon size={20}/> : <ActivateIcon activated={active}/>}
+            {scheduled
+              ? (isRecurring(recurrence) ? <RecurringCalendarIcon size={20}/> : <CalendarIcon size={20}/>)
+              : <ActivateIcon activated={active}/>}
             <span className={scheduled ? 'schedule-date' : undefined}>{scheduled ? formatSchedule(scheduledDate) : (active ? 'Displayed' : 'Display')}</span>
           </button>
         </div>
@@ -159,7 +163,9 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
           anchorRect={anchorRect}
           initialDate={scheduledDate || null}
           accent={accent}
-          onSelect={(date) => onSchedule(date)}
+          allowRecurring={allowRecurring}
+          initialRecurrence={recurrence}
+          onSelect={(date, r) => onSchedule(date, r)}
           onClose={() => setCalOpen(false)}
         />
       )}

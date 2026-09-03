@@ -2909,3 +2909,13 @@
 .todo-section-card .todo-attach-panel { left: 16px; right: 16px; }
 .todo-section-card .todo-composer { margin: 0; }
 .todo-section-card .todo-composer .project-input-wrap { margin: 8px 16px 12px; }
+
+
+/* Mobile: the section cards reach the same 8px from the screen edges as canvas
+   cards do (the list-item page's own scroll padding is 32px, so pull back 24). */
+@media (max-width: 999.98px) {
+  .todo-section-card {
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+}

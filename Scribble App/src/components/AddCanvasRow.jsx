@@ -33,7 +33,7 @@ function PlusIcon() {
   canvas on that page and hands it back to be selected, the X restores the row
   and leaves the previous selection alone.
 */
-export default function AddCanvasRow({ categoryId, onCreated, onDone }) {
+export default function AddCanvasRow({ categoryId, onCreated, onDone, active = true }) {
   const { addProject } = useAppContext()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -42,6 +42,8 @@ export default function AddCanvasRow({ categoryId, onCreated, onDone }) {
   useEffect(() => { if (adding) inputRef.current?.focus() }, [adding])
   // Switching pages abandons a half-typed name
   useEffect(() => { setAdding(false); setName('') }, [categoryId])
+  // Closing the menu does too — it reopens on the plain "Add new canvas" row
+  useEffect(() => { if (!active) { setAdding(false); setName('') } }, [active])
 
   if (!categoryId) return null
 

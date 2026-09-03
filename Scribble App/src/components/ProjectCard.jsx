@@ -572,7 +572,7 @@ function extractNotePreview(editorHTML) {
 
 // Renders the title line (clamped to 2 lines) and, when the title
 // naturally fits on one line, a single truncated preview line below it.
-function NoteRowContent({ note }) {
+export function NoteRowContent({ note }) {
   const titleRef = useRef(null)
   const [isMultiLine, setIsMultiLine] = useState(false)
 

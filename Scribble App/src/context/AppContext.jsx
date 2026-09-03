@@ -111,14 +111,21 @@ export function AppProvider({ children }) {
     const todayStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
     const dueTodoIds = [], dueNoteIds = [], dueLinkIds = []
     const isDue = (s) => s && s <= todayStr
+    // An item that comes due slots in at the TOP of its homescreen card. Home
+    // order is ascending and manual reordering writes 0…n, so a negative value
+    // sorts above everything; using -epoch means each day's batch also lands
+    // above the batches before it. (Mirrors activate_due_scheduled() in SQL.)
+    const dueOrder = -Math.floor(Date.now() / 1000)
+    const due = (item) => ({ ...item, activated: true, scheduledDate: null, homeSortOrder: dueOrder })
     builtCats.forEach(cat => cat.projects.forEach(proj => {
-      proj.todos = proj.todos.map(t => { if (isDue(t.scheduledDate)) { dueTodoIds.push(t.id); return { ...t, activated: true, scheduledDate: null } } return t })
-      proj.notes = proj.notes.map(n => { if (isDue(n.scheduledDate)) { dueNoteIds.push(n.id); return { ...n, activated: true, scheduledDate: null } } return n })
-      proj.links = proj.links.map(l => { if (isDue(l.scheduledDate)) { dueLinkIds.push(l.id); return { ...l, activated: true, scheduledDate: null } } return l })
+      proj.todos = proj.todos.map(t => { if (isDue(t.scheduledDate)) { dueTodoIds.push(t.id); return due(t) } return t })
+      proj.notes = proj.notes.map(n => { if (isDue(n.scheduledDate)) { dueNoteIds.push(n.id); return due(n) } return n })
+      proj.links = proj.links.map(l => { if (isDue(l.scheduledDate)) { dueLinkIds.push(l.id); return due(l) } return l })
     }))
-    if (dueTodoIds.length) db(supabase.from('todos').update({ activated: true, scheduled_date: null }).in('id', dueTodoIds))
-    if (dueNoteIds.length) db(supabase.from('notes').update({ activated: true, scheduled_date: null }).in('id', dueNoteIds))
-    if (dueLinkIds.length) db(supabase.from('links').update({ activated: true, scheduled_date: null }).in('id', dueLinkIds))
+    const dueUpdate = { activated: true, scheduled_date: null, home_sort_order: dueOrder }
+    if (dueTodoIds.length) db(supabase.from('todos').update(dueUpdate).in('id', dueTodoIds))
+    if (dueNoteIds.length) db(supabase.from('notes').update(dueUpdate).in('id', dueNoteIds))
+    if (dueLinkIds.length) db(supabase.from('links').update(dueUpdate).in('id', dueLinkIds))
 
     setCategories(builtCats)
     setActiveTodos((aTodos || []).map(t => ({ id: t.id, text: t.text, checked: t.checked, activated: t.activated, source: 'Active' })))

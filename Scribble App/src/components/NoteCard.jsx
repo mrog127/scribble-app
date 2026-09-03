@@ -594,13 +594,21 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // lock, letting a single sweep fire again.
   const shiftBulletRef = useRef(shiftBullet)
   shiftBulletRef.current = shiftBullet
+  const getCursorParaRef = useRef(getCursorPara)
+  getCursorParaRef.current = getCursorPara
 
   useEffect(() => {
     const content = contentRef.current
     if (!content) return
     const THRESHOLD = 40
 
-    const bulletAt = (target) => (target && target.closest ? target.closest('.note-para.style-bullet') : null)
+    // The gesture indents the line the cursor is on, wherever the swipe lands —
+    // so it doesn't have to start on the bullet itself.
+    const cursorBullet = () => {
+      const para = getCursorParaRef.current() || lastCursorParaRef.current
+      if (!para || !content.contains(para)) return null
+      return /style-bullet/.test(para.className) ? para : null
+    }
 
     const tryShift = (para, dir) => shiftBulletRef.current(para, dir)
     // A multi-touch drag starts a pointer sequence per finger — only the first
@@ -608,7 +616,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     let activePointer = null
 
     const onPointerDown = (e) => {
-      const para = bulletAt(e.target)
+      // Read the caret before the browser's own pointerdown handling moves it
+      const para = cursorBullet()
       if (!para) return
       if (activePointer !== null) return
       activePointer = e.pointerId
@@ -639,7 +648,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     let acc = 0, accPara = null, timer = null, fired = false
     const onWheel = (e) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-      const para = bulletAt(e.target)
+      const para = cursorBullet()
       if (!para) return
       e.preventDefault()
       if (para !== accPara) { accPara = para; acc = 0; fired = false }
@@ -771,9 +780,11 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       }
     }
 
-    // Split at the cursor into a new paragraph that keeps the same type style.
+    // Split at the cursor into a new paragraph that keeps the same type style —
+    // and, for a bullet, the same indent depth as the line it came from.
     const newPara = document.createElement('div')
-    newPara.className = 'note-para style-' + paraStyle
+    const indent = (currentPara.className.match(/indent-\d/) || [])[0]
+    newPara.className = 'note-para style-' + paraStyle + (paraStyle === 'bullet' && indent ? ' ' + indent : '')
     const afterRange = document.createRange()
     afterRange.setStart(range.startContainer, range.startOffset)
     afterRange.setEnd(currentPara, currentPara.childNodes.length)
@@ -839,6 +850,138 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     handleInput()
     if (editorRef.current) checkBottomOverflow(editorRef.current)
   }, [handleInput, checkBottomOverflow])
+
+
+  // ---- Paste: everything lands in the note's own type styles ----
+  // Pasted markup is read for structure only (h1 → Title, h2 → Heading, h3-h6 and
+  // all-bold lines → H3, list items → Bullet, everything else → Body); no foreign
+  // fonts, colours or spacing survive.
+  const blocksFromHtml = useCallback((html) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    const out = []
+    const clean = (t) => (t || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
+    const push = (style, text) => { const t = clean(text); if (t) out.push({ style, text: t }) }
+
+    // A block whose whole text sits inside a <b>/<strong> (or <i>/<em>) reads as
+    // that style; an inline font-weight/style says the same thing.
+    const inlineStyleOf = (el) => {
+      const t = clean(el.textContent)
+      if (!t) return null
+      const b = el.querySelector('b, strong')
+      if (b && clean(b.textContent) === t) return 'bold'
+      const i = el.querySelector('i, em')
+      if (i && clean(i.textContent) === t) return 'italic'
+      const fw = el.style?.fontWeight
+      if (fw && (fw === 'bold' || parseInt(fw, 10) >= 600)) return 'bold'
+      if (el.style?.fontStyle === 'italic') return 'italic'
+      return null
+    }
+
+    const BLOCK = /^(p|div|section|article|main|aside|header|footer|blockquote|pre|figure|figcaption|table|tbody|tr|td|th|h[1-6]|ul|ol|li|dl|dt|dd)$/
+
+    const walk = (node) => {
+      let buffer = ''
+      const flush = () => { push('body', buffer); buffer = '' }
+      for (const child of node.childNodes) {
+        if (child.nodeType === 3) { buffer += child.nodeValue; continue }
+        if (child.nodeType !== 1) continue
+        const tag = child.tagName.toLowerCase()
+        if (tag === 'br') { flush(); continue }
+        if (tag === 'style' || tag === 'script' || tag === 'meta') continue
+        if (!BLOCK.test(tag)) { buffer += child.textContent; continue }
+        flush()
+        if (tag === 'h1') { push('title', child.textContent); continue }
+        if (tag === 'h2') { push('heading', child.textContent); continue }
+        if (/^h[3-6]$/.test(tag)) { push('bold', child.textContent); continue }
+        if (tag === 'li') {
+          // Nested lists inside the item become their own bullets
+          const nested = [...child.children].filter(c => /^(ul|ol)$/i.test(c.tagName))
+          const own = clean([...child.childNodes].filter(c => !nested.includes(c)).map(c => c.textContent).join(' '))
+          push('bullet', own)
+          nested.forEach(walk)
+          continue
+        }
+        if (tag === 'ul' || tag === 'ol' || tag === 'table' || tag === 'tbody' || tag === 'tr' || tag === 'dl') { walk(child); continue }
+        // A container with blocks inside is recursed; a leaf paragraph is emitted
+        if ([...child.children].some(c => BLOCK.test(c.tagName.toLowerCase()))) { walk(child); continue }
+        push(inlineStyleOf(child) || 'body', child.textContent)
+      }
+      flush()
+    }
+
+    walk(doc.body)
+    return out
+  }, [])
+
+  const blocksFromText = useCallback((text) => (
+    text.split(/\r\n|\r|\n/).map(line => {
+      const t = line.replace(/ /g, ' ').trim()
+      if (!t) return null
+      const bullet = /^([•▪◦*-]|\d+[.)])\s+/.test(t)
+      return { style: bullet ? 'bullet' : 'body', text: bullet ? t.replace(/^([•▪◦*-]|\d+[.)])\s+/, '') : t }
+    }).filter(Boolean)
+  ), [])
+
+  const handlePaste = useCallback((e) => {
+    if (!editingRef.current) return
+    const dt = e.clipboardData
+    if (!dt) return
+    e.preventDefault()
+    const html = dt.getData('text/html')
+    const plain = dt.getData('text/plain') || ''
+    let blocks = html ? blocksFromHtml(html) : []
+    if (!blocks.length) blocks = blocksFromText(plain)
+    if (!blocks.length) return
+
+    const content = contentRef.current
+    const sel = window.getSelection()
+    if (!content || !sel || sel.rangeCount === 0) return
+    const range = sel.getRangeAt(0)
+    range.deleteContents()
+
+    let para = getCursorPara() || lastCursorParaRef.current
+    if (!para || !content.contains(para)) para = content.querySelector('.note-para:last-of-type')
+    if (!para) {
+      para = document.createElement('div')
+      para.className = 'note-para style-body'
+      content.appendChild(para)
+    }
+
+    const made = []
+    blocks.forEach((b, i) => {
+      if (i === 0) {
+        // The paragraph the caret is in takes the first block: an empty one adopts
+        // its style outright, otherwise the text just joins the line.
+        if (!(para.textContent || '').trim()) {
+          para.className = 'note-para style-' + b.style
+          para.textContent = b.text
+        } else {
+          range.insertNode(document.createTextNode(b.text))
+          para.normalize()
+        }
+        made.push(para)
+        return
+      }
+      const div = document.createElement('div')
+      div.className = 'note-para style-' + b.style
+      div.textContent = b.text
+      const prev = made[made.length - 1]
+      prev.parentNode.insertBefore(div, prev.nextSibling)
+      made.push(div)
+    })
+
+    const last = made[made.length - 1]
+    const r = document.createRange()
+    r.selectNodeContents(last)
+    r.collapse(false)
+    sel.removeAllRanges()
+    sel.addRange(r)
+
+    const m = last.className.match(/style-(\w+)/)
+    if (m) { setCurrentStyle(m[1]); updateStyleIndicator(m[1]) }
+    lastCursorParaRef.current = last
+    handleEditorInput()
+  }, [blocksFromHtml, blocksFromText, getCursorPara, updateStyleIndicator, handleEditorInput])
 
   // Copy the note's text WITH styling so it can be pasted into the iOS Notes app.
   // Builds an HTML payload (h1/h2/h3, <ul><li> for bullets) plus a plain-text
@@ -971,6 +1114,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           contentEditable={false}
           onKeyDown={handleKeyDown}
           onInput={handleEditorInput}
+          onPaste={handlePaste}
           onClick={handleContentClick}
         />
         <div

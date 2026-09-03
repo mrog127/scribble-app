@@ -1490,13 +1490,25 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
   /* Link mode adds a second input row — push the menu down so it stays below it */
   #app:has(.add-link-url-wrap.open) .save-to-panel.visible { top: 360px; }
-  /* Keep the cards in place but dim them to 20% while the picker is open */
+  /* Keep the cards in place but dim them to 20% while the picker is open.
+     Dim the page's contents rather than the page itself, so the canvas the item
+     is headed for can stay at full opacity. */
   .phone.save-panel-open .page {
     flex: 1;
-    opacity: 0.2;
+    opacity: 1;
     min-height: 0;
     overflow-y: auto;
     pointer-events: none;
+  }
+  .phone.save-panel-open .page > .page-header {
+    opacity: 0.2 !important;
+  }
+  .phone.save-panel-open .page > .cards-area > * {
+    opacity: 0.2;
+    transition: opacity 200ms ease;
+  }
+  .phone.save-panel-open .page > .cards-area > .save-target {
+    opacity: 1;
   }
 
   /* ---- Detail page open: split the area right of the sidebar evenly

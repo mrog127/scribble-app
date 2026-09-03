@@ -105,7 +105,7 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent }
                 <button
                   key={i}
                   className={`cal-cell${isPast ? ' past' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}`}
-                  disabled={isPast}
+                  disabled={isPast || isToday}
                   onPointerDown={e => { e.preventDefault(); pick(d) }}
                 >
                   {d}

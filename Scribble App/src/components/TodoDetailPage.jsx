@@ -5,7 +5,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { NoteDetailPage } from './NoteCard.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
-import { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
+import { LinkGridCard, NoteRowContent, useGridDragReorder } from './ProjectCard.jsx'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
@@ -64,6 +64,14 @@ function PaperclipIcon() {
   )
 }
 
+function PlusIcon() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <path d="M16 8 L16 24 M8 16 L24 16" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+    </svg>
+  )
+}
+
 function CheckIcon() {
   return (
     <svg className="mc-check" width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -109,11 +117,13 @@ function NoteRowIcon({ activated }) {
 }
 
 // ---- Inline composer (matches the project-card footer input) ----
-function NoteComposer({ onAdd }) {
+function NoteComposer({ onAdd, autoFocus, onDismiss }) {
   const [value, setValue] = useState('')
   const [focused, setFocused] = useState(false)
   const [active, setActive] = useState(false)
   const inputRef = useRef(null)
+
+  useEffect(() => { if (autoFocus) inputRef.current?.focus() }, [autoFocus])
 
   const submit = () => {
     const text = value.trim()
@@ -124,6 +134,7 @@ function NoteComposer({ onAdd }) {
     // keyboard so focus can transfer to the editor when it does.
     keepKeyboardAlive()
     inputRef.current?.blur()
+    if (onDismiss) onDismiss()
   }
 
   const sendVisible = focused || !!value.trim()
@@ -138,7 +149,11 @@ function NoteComposer({ onAdd }) {
           value={value}
           onChange={e => setValue(e.target.value)}
           onFocus={() => setFocused(true)}
-          onBlur={() => requestAnimationFrame(() => setFocused(false))}
+          onBlur={() => requestAnimationFrame(() => {
+            setFocused(false)
+            // The box only exists while it's being typed in
+            if (!value.trim() && onDismiss) onDismiss()
+          })}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
         />
         <button className={`project-send-btn${sendVisible ? ' visible' : ''}`} onMouseDown={e => { e.preventDefault(); submit() }}>
@@ -163,7 +178,7 @@ function NoteComposer({ onAdd }) {
   )
 }
 
-function LinkComposer({ onAdd }) {
+function LinkComposer({ onAdd, autoFocus, onDismiss }) {
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [focused, setFocused] = useState(false)
@@ -171,6 +186,8 @@ function LinkComposer({ onAdd }) {
   const titleRef = useRef(null)
   const urlRef = useRef(null)
   const wrapRef = useRef(null)
+
+  useEffect(() => { if (autoFocus) titleRef.current?.focus() }, [autoFocus])
 
   const submit = () => {
     const u = url.trim()
@@ -180,12 +197,15 @@ function LinkComposer({ onAdd }) {
     setUrl('')
     titleRef.current?.blur()
     urlRef.current?.blur()
+    if (onDismiss) onDismiss()
   }
 
   const onBlur = () => requestAnimationFrame(() => {
     const ae = document.activeElement
     if (ae && wrapRef.current && wrapRef.current.contains(ae)) return
     setFocused(false)
+    // The box only exists while it's being typed in
+    if (!title.trim() && !url.trim() && onDismiss) onDismiss()
   })
 
   const sendVisible = focused || !!title.trim() || !!url.trim()
@@ -246,9 +266,10 @@ function LinkComposer({ onAdd }) {
   )
 }
 
-function AttachedNoteRow({ note, onOpen, onPointerDown, onDragPointerDown, onMenuDown, onContextMenu }) {
-  const preview = useMemo(() => extractNotePreview(note.editorHTML), [note.editorHTML])
+function AttachedNoteRow({ note, divider, onOpen, onPointerDown, onDragPointerDown, onMenuDown, onContextMenu }) {
   return (
+    <>
+    {divider && <div className="divider"/>}
     <div className="todo-attach-row-wrap" data-attach-id={note.id}>
       <div className="todo-swipe-row swipe-row">
         <div
@@ -256,17 +277,65 @@ function AttachedNoteRow({ note, onOpen, onPointerDown, onDragPointerDown, onMen
           onPointerDown={e => { onMenuDown(e); onPointerDown(e, onOpen); onDragPointerDown && onDragPointerDown(e, note.id) }}
           onContextMenu={onContextMenu}
         >
-          <div className="todo-attached-row">
-            <div className="todo-attached-icon"><NoteRowIcon activated={note.activated}/></div>
-            <div className="todo-attached-text">
-              <span className="todo-attached-note-title">{note.text}</span>
-              {preview && <span className="todo-attached-note-preview">{preview}</span>}
+          <div className={`note-row${note.archived ? ' archived' : ''}`}>
+            <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+              <NoteRowIcon activated={note.activated}/>
+            </div>
+            <div className="item-content">
+              <NoteRowContent note={note}/>
             </div>
           </div>
         </div>
       </div>
     </div>
+    </>
   )
+}
+
+// Collapse / expand a section card from its header, exactly as a canvas card does:
+// the body animates its height over 250ms and the state persists per section.
+function useSectionCollapse(storageKey) {
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(storageKey) === 'true' } catch { return false }
+  })
+  const bodyRef = useRef(null)
+  const mountedRef = useRef(false)
+
+  useLayoutEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    // First run: apply the persisted state with no animation.
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      if (collapsed) { el.style.height = '0px'; el.style.overflow = 'hidden' }
+      return
+    }
+    const full = el.scrollHeight
+    el.style.overflow = 'hidden'
+    el.style.height = (collapsed ? full : 0) + 'px'
+    el.offsetHeight // force reflow
+    el.style.transition = 'height 250ms ease'
+    el.style.height = (collapsed ? 0 : full) + 'px'
+    const done = (e) => {
+      if (e && e.propertyName !== 'height') return
+      el.style.transition = ''
+      if (!collapsed) { el.style.height = ''; el.style.overflow = '' }
+      el.removeEventListener('transitionend', done)
+    }
+    el.addEventListener('transitionend', done)
+    return () => el.removeEventListener('transitionend', done)
+  }, [collapsed])
+
+  const onHeaderClick = useCallback((e) => {
+    if (e.target.closest('button, input, .card-context-menu')) return
+    setCollapsed(prev => {
+      const next = !prev
+      try { localStorage.setItem(storageKey, next ? 'true' : 'false') } catch {}
+      return next
+    })
+  }, [storageKey])
+
+  return { collapsed, bodyRef, onHeaderClick }
 }
 
 // Long-press drag-reorder for a todo's attached note/link rows (a flat list).
@@ -420,6 +489,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   const [isOpen, setIsOpen] = useState(false)
   const [noteAttachOpen, setNoteAttachOpen] = useState(false)
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false)
+  const [linkComposerOpen, setLinkComposerOpen] = useState(false)
+  const noteSection = useSectionCollapse(`collapsed-todo-${todo.id}-notes`)
+  const linkSection = useSectionCollapse(`collapsed-todo-${todo.id}-links`)
   const [linkAttachOpen, setLinkAttachOpen] = useState(false)
   const [openNoteId, setOpenNoteId] = useState(null)
   const [openAttachLinkId, setOpenAttachLinkId] = useState(null)
@@ -538,12 +611,6 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     scroll.addEventListener('scroll', check, { passive: true })
     return () => scroll.removeEventListener('scroll', check)
   }, [])
-
-  // Nothing left to attach — close the panel rather than leaving it empty
-  useEffect(() => {
-    if (noteAttachOpen && attachableNotes.length === 0) setNoteAttachOpen(false)
-    if (linkAttachOpen && attachableLinks.length === 0) setLinkAttachOpen(false)
-  })
 
   // Tapping anywhere outside an open attach menu closes it.
   // (The attach buttons themselves are excluded so they can toggle / switch menus.)
@@ -754,6 +821,162 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     },
   ]
 
+  // Notes lead by default; with nothing in Notes but links attached, Links leads.
+  const linksFirst = attachedNotes.length === 0 && attachedLinks.length > 0
+
+  const notesSection = (
+        <div key="notes" className="todo-section card todo-section-card">
+          <div className={`card-header${noteSection.collapsed ? ' collapsed' : ''}`} onClick={noteSection.onHeaderClick}>
+            <span className="card-title">Notes</span>
+            <div className="project-header-actions">
+              {!archived && (
+                <button
+                  className="todo-attach-btn section-attach-btn"
+                  aria-label="Attach a note"
+                  onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteAttachOpen(v => !v) }}
+                >
+                  <span className={`project-tab-count${attachedNotes.length > 0 ? '' : ' empty'}`}>{attachedNotes.length > 0 ? attachedNotes.length : ''}</span>
+                  <PaperclipIcon/>
+                </button>
+              )}
+              {!archived && (
+                <button
+                  type="button"
+                  className="project-add-btn"
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(v => !v) }}
+                >
+                  <PlusIcon/>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="project-items" ref={noteSection.bodyRef}>
+          <div className="todo-attach-anchor">
+            <div className={`todo-attach-panel${noteAttachOpen ? ' open' : ''}`}>
+              {attachableNotes.length === 0 ? (
+                <div className="todo-attach-empty">No other notes in this project</div>
+              ) : attachableNotes.map(n => {
+                const preview = extractNotePreview(n.editorHTML)
+                return (
+                  <button
+                    key={n.id}
+                    className="todo-attach-item"
+                    onMouseDown={e => { e.preventDefault(); attachNoteToTodo(categoryId, projectId, todo.id, n.id) }}
+                  >
+                    <span className="note-text">{n.text}</span>
+                    {preview && <span className="note-preview-text">{preview}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div ref={noteAttachRef}>
+            {attachedNotes.map((n, i) => (
+              <AttachedNoteRow
+                key={n.id}
+                divider={i > 0}
+                note={n}
+                onOpen={() => setOpenNoteId(n.id)}
+                onPointerDown={onRowPointerDown}
+                onDragPointerDown={onNoteAttachDrag}
+                onMenuDown={e => !archived && rowMenu.press(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
+                onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
+              />
+            ))}
+          </div>
+
+          {noteComposerOpen && !archived && (
+          <div className={`todo-composer${archived ? ' disabled' : ''}`}>
+            <NoteComposer autoFocus onDismiss={() => setNoteComposerOpen(false)} onAdd={(text, active) => {
+              const holder = { id: null }
+              holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId })
+              setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenNoteId(holder.id) } }, 650)
+            }} />
+          </div>
+          )}
+          </div>
+        </div>
+
+  )
+
+  const linksSection = (
+        <div key="links" className="todo-section card todo-section-card">
+          <div className={`card-header${linkSection.collapsed ? ' collapsed' : ''}`} onClick={linkSection.onHeaderClick}>
+            <span className="card-title">Links</span>
+            <div className="project-header-actions">
+              {!archived && (
+                <button
+                  className="todo-attach-btn section-attach-btn"
+                  aria-label="Attach a link"
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(v => !v) }}
+                >
+                  <span className={`project-tab-count${attachedLinks.length > 0 ? '' : ' empty'}`}>{attachedLinks.length > 0 ? attachedLinks.length : ''}</span>
+                  <PaperclipIcon/>
+                </button>
+              )}
+              {!archived && (
+                <button
+                  type="button"
+                  className="project-add-btn"
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setLinkComposerOpen(v => !v) }}
+                >
+                  <PlusIcon/>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="project-items" ref={linkSection.bodyRef}>
+          <div className="todo-attach-anchor">
+            <div className={`todo-attach-panel${linkAttachOpen ? ' open' : ''}`}>
+              {attachableLinks.length === 0 ? (
+                <div className="todo-attach-empty">No other links in this project</div>
+              ) : attachableLinks.map(l => (
+                <button
+                  key={l.id}
+                  className="todo-attach-item"
+                  onMouseDown={e => { e.preventDefault(); attachLinkToTodo(categoryId, projectId, todo.id, l.id) }}
+                >
+                  <span className="note-text">{l.title}</span>
+                  <span className="note-preview-text">{displayUrl(l.url)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {attachedLinks.length > 0 && (
+            <div className="link-grid" ref={linkGridRef}>
+              {attachedLinks.map(l => (
+                <div key={l.id} className="link-grid-cell" data-swipe-id={l.id}>
+                  <LinkGridCard
+                    link={l}
+                    categoryId={categoryId}
+                    projectId={projectId}
+                    archived={archived}
+                    onOpenPage={() => setOpenAttachLinkId(l.id)}
+                    onPointerDown={e => {
+                      if (archived) return
+                      rowMenu.press(e, unattachItems(() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)), { side: true })
+                      onLinkGridDrag(e, l.id)
+                    }}
+                    onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)))}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {linkComposerOpen && !archived && (
+          <div className={`todo-composer${archived ? ' disabled' : ''}`}>
+            <LinkComposer autoFocus onDismiss={() => setLinkComposerOpen(false)} onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />
+          </div>
+          )}
+          </div>
+        </div>
+  )
+
   return (
     <div
       ref={pageRef}
@@ -804,114 +1027,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           />
         </div>
 
-        {/* ---- Notes ---- */}
-        <div className="todo-section">
-          <div className="todo-section-header">
-            <span className="todo-section-title">Notes</span>
-            {attachableNotes.length > 0 && !archived && (
-              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteAttachOpen(v => !v) }}>
-                <PaperclipIcon/><span>Attach</span>
-              </button>
-            )}
-          </div>
-
-          <div className="todo-attach-anchor">
-            <div className={`todo-attach-panel${noteAttachOpen ? ' open' : ''}`}>
-              {attachableNotes.length === 0 ? (
-                <div className="todo-attach-empty">No other notes in this project</div>
-              ) : attachableNotes.map(n => {
-                const preview = extractNotePreview(n.editorHTML)
-                return (
-                  <button
-                    key={n.id}
-                    className="todo-attach-item"
-                    onMouseDown={e => { e.preventDefault(); attachNoteToTodo(categoryId, projectId, todo.id, n.id) }}
-                  >
-                    <span className="note-text">{n.text}</span>
-                    {preview && <span className="note-preview-text">{preview}</span>}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div ref={noteAttachRef}>
-            {attachedNotes.map(n => (
-              <AttachedNoteRow
-                key={n.id}
-                note={n}
-                onOpen={() => setOpenNoteId(n.id)}
-                onPointerDown={onRowPointerDown}
-                onDragPointerDown={onNoteAttachDrag}
-                onMenuDown={e => !archived && rowMenu.press(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
-                onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
-              />
-            ))}
-          </div>
-
-          <div className={`todo-composer${archived ? ' disabled' : ''}`}>
-            <NoteComposer onAdd={(text, active) => {
-              const holder = { id: null }
-              holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId })
-              setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenNoteId(holder.id) } }, 650)
-            }} />
-          </div>
-        </div>
-
-        {/* ---- Links ---- */}
-        <div className="todo-section">
-          <div className="todo-section-header">
-            <span className="todo-section-title">Links</span>
-            {attachableLinks.length > 0 && !archived && (
-              <button className="todo-attach-btn" onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(v => !v) }}>
-                <PaperclipIcon/><span>Attach</span>
-              </button>
-            )}
-          </div>
-
-          <div className="todo-attach-anchor">
-            <div className={`todo-attach-panel${linkAttachOpen ? ' open' : ''}`}>
-              {attachableLinks.length === 0 ? (
-                <div className="todo-attach-empty">No other links in this project</div>
-              ) : attachableLinks.map(l => (
-                <button
-                  key={l.id}
-                  className="todo-attach-item"
-                  onMouseDown={e => { e.preventDefault(); attachLinkToTodo(categoryId, projectId, todo.id, l.id) }}
-                >
-                  <span className="note-text">{l.title}</span>
-                  <span className="note-preview-text">{displayUrl(l.url)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {attachedLinks.length > 0 && (
-            <div className="link-grid" ref={linkGridRef}>
-              {attachedLinks.map(l => (
-                <div key={l.id} className="link-grid-cell" data-swipe-id={l.id}>
-                  <LinkGridCard
-                    link={l}
-                    categoryId={categoryId}
-                    projectId={projectId}
-                    archived={archived}
-                    onOpenPage={() => setOpenAttachLinkId(l.id)}
-                    onPointerDown={e => {
-                      if (archived) return
-                      rowMenu.press(e, unattachItems(() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)), { side: true })
-                      onLinkGridDrag(e, l.id)
-                    }}
-                    onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachLinkFromTodo(categoryId, projectId, todo.id, l.id)))}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className={`todo-composer${archived ? ' disabled' : ''}`}>
-            <LinkComposer onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />
-          </div>
-        </div>
+        {linksFirst ? [linksSection, notesSection] : [notesSection, linksSection]}
       </div>
 
       <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />

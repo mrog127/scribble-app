@@ -612,7 +612,7 @@
 .link-preview-card {
   margin: 28px 0 0;
   border: 1px solid #C2C1BF;
-  border-radius: 8px;
+  border-radius: 16px;   /* same as a canvas card */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
   overflow: hidden;
   cursor: pointer;
@@ -837,7 +837,18 @@
 }
 
 /* Note rows */
-.note-row { display: flex; align-items: flex-start; padding: 10px 20px; }
+/* Every note row is as tall as one with a sublabel (10 + 22.4 title + 2 + 19.6
+   preview + 10), so a title-only row doesn't sit shorter than its neighbours. */
+.note-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 20px;
+  min-height: 64px;
+  box-sizing: border-box;
+}
+/* No sublabel — the title centres in the row's full height instead of sitting
+   where the two-line pair would start. */
+.note-row:not(:has(.note-preview-text)) { align-items: center; }
 .note-text { display: block; width: 100%; font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 500; color: #1a1a1a; line-height: 1.4; word-wrap: break-word; }
 .note-text.accent { color: #7069FE; }
 
@@ -1398,7 +1409,8 @@
 }
 .mark-complete-btn .mc-check { display: block; }
 
-.todo-section { margin-top: 40px; }
+/* Matches a link page: 8px under the underline + the preview card's own 28px */
+.todo-section { margin-top: 36px; }
 
 .todo-section-header {
   display: flex;
@@ -2324,6 +2336,11 @@
 
 .cal-card {
   width: calc(100% - 48px); /* 24px from the left and right screen edges */
+  /* Never larger than 500×500, on any screen or from any entry point */
+  max-width: 500px;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   background: #F7F6F3;
   border: 1px solid #C2C1BF;
@@ -2337,7 +2354,7 @@
 }
 .cal-card.open { opacity: 1; transform: scale(1); }
 
-.cal-body { padding: 10px 16px 16px; }
+.cal-body { padding: 10px 16px 16px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 /* Stop iOS from selecting text / showing the copy callout on long-press */
 .swipe-row,
@@ -2411,13 +2428,28 @@
   font-weight: 500;
   color: #3D3D3D;
 }
+@media (hover: hover) {
+  .cal-cell:hover:not(.empty):not(.past):not(.today):not(.selected) {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+  }
+}
 .cal-cell.empty { pointer-events: none; }
 .cal-cell.past { color: #C2C1BF; pointer-events: none; }
-.cal-cell.today { color: var(--accent-dark); font-weight: 500; }
-.cal-cell.selected {
+/* Today wears the light highlight box; it marks the date rather than offering
+   it, so it isn't selectable. The selected day is the dark colour. */
+.cal-cell.today {
+  pointer-events: none;
   background: var(--accent-light);
   color: var(--accent-dark);
-  border-radius: 4px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.cal-cell.selected,
+.cal-cell.today.selected {
+  background: var(--accent-dark);
+  color: #FFFFFF;
+  border-radius: 8px;
 }
 
 /* Header reuses .save-to-header / .save-to-title / .save-to-cancel from layout.css */
@@ -2442,6 +2474,12 @@
   cursor: pointer;
 }
 .link-edit-btn:active { background: rgba(0, 0, 0, 0.04); }
+/* Sits above the preview card's hover wash, and takes the same 4% selector box
+   as every other icon button. */
+.link-preview-card .link-edit-btn { position: relative; z-index: 2; border-radius: 4px; }
+@media (hover: hover) {
+  .link-edit-btn:hover { background: rgba(0, 0, 0, 0.04); }
+}
 
 .link-edit { background: hsl(from #F7F6F3 h s calc(l * 1.01)); }
 .link-edit-row { display: flex; align-items: center; padding: 0 8px 0 16px; }
@@ -2627,6 +2665,26 @@
   .link-tile:hover .link-tile-hover { opacity: 1; }
 }
 
+/* The link page's preview card washes the same 6% black on hover as a tile.
+   The URL editor sits above the wash so it stays legible while open. */
+.link-preview-card { position: relative; }
+.link-preview-card > .link-edit { position: relative; z-index: 2; }
+.link-preview-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+  z-index: 1;
+}
+@media (hover: hover) {
+  .link-preview-card:hover::after { opacity: 1; }
+  /* Hovering the edit button targets the button, not the link — drop the wash */
+  .link-preview-card:has(.link-edit-btn:hover)::after { opacity: 0; }
+}
+
 /* Held for a drag or a long press: the tile grows 4px on every side and takes
    the dragged-row drop shadow. */
 .link-grid-cell.cell-lifted { position: relative; z-index: 120; overflow: visible; }
@@ -2678,6 +2736,8 @@
 }
 .link-detail-scroll > .todo-detail-title,
 .link-detail-scroll > .todo-detail-underline { flex: 0 0 auto; }
+/* Same gap under the underline as a list-item page's first card */
+.link-detail-scroll > .todo-detail-underline { margin-bottom: 8px; }
 
 .link-detail-scroll .link-preview-card {
   flex: 1 1 auto;
@@ -2765,3 +2825,87 @@
   box-shadow: none;
   border-radius: 6px;
 }
+
+
+/* ---- List-item page: Notes / Links sections styled as canvas cards ---- */
+/* Label top-left, plus + attach buttons top-right, canvas rows and link tiles
+   inside — the only thing left out is the content-type tab bar. */
+.todo-section-card {
+  overflow: visible;          /* the attach panel drops out of the card */
+  margin-bottom: 0;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.04);
+}
+
+/* 16px between the section cards */
+.todo-section-card + .todo-section-card { margin-top: 16px; }
+
+/* 12px between the plus / attach icons and the card's right edge */
+.todo-section-card .card-header { padding-right: 12px; }
+
+/* Attach button, sized like the plus beside it. Widens for its count, which
+   matches the canvas card's content-tab counts. */
+.todo-attach-btn.section-attach-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;   /* between the count and the paperclip */
+  color: #242424;
+}
+
+/* The count's slot is always there — with nothing attached the paperclip still
+   sits where it does with a number beside it. */
+.todo-attach-btn.section-attach-btn .project-tab-count {
+  min-width: 9px;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: right;
+}
+
+/* No gap between the attach button and the plus */
+.todo-section-card .project-header-actions { gap: 0; }
+
+/* Tapping a section header collapses the card to just its header */
+.todo-section-card > .card-header {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: padding-bottom 250ms ease;
+}
+/* Collapsed reads exactly like an empty open card — same header height, and the
+   attach / add buttons stay put. */
+@media (hover: hover) {
+  .todo-attach-btn.section-attach-btn:hover::after { left: 0; right: 0; }
+  /* With a count beside the paperclip the hover box reaches 4px further either side */
+  .todo-attach-btn.section-attach-btn:has(.project-tab-count):hover::after {
+    left: -6px;
+    right: -6px;
+  }
+  /* Nothing attached: the count keeps its slot in the layout, but the hover box
+     is just a square around the paperclip. */
+  .todo-attach-btn.section-attach-btn:has(.project-tab-count.empty):hover::after {
+    left: auto;
+    right: -6px;
+    width: 32px;
+  }
+}
+
+/* Rows sit inside the card now, so the lift / hover washes stop at its edges */
+.todo-section-card .todo-swipe-row.row-lifted { margin: 0; padding: 0; }
+.todo-section-card .todo-swipe-row.row-context-held .todo-swipe-content::before {
+  left: 0;
+  right: 0;
+}
+@media (hover: hover) {
+  .todo-section-card .todo-swipe-row:hover .todo-swipe-content::before {
+    left: 0;
+    right: 0;
+  }
+}
+
+/* Link tiles and the attach panel take the card's own side padding */
+.todo-section-card .link-grid { padding: 4px 16px 12px; }
+.todo-section-card .todo-attach-panel { left: 16px; right: 16px; }
+.todo-section-card .todo-composer { margin: 0; }
+.todo-section-card .todo-composer .project-input-wrap { margin: 8px 16px 12px; }

@@ -417,6 +417,7 @@ function AppInner() {
   const categoryDefaultRef = useRef(null)                    // scroll-based default project on a category page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
   const saveToScrollRef = useRef(null)                       // the Save to list scroller
+  const lastPickedRef = useRef(null)                         // { tab, target } last canvas chosen on this page (cleared on page change)
 
   // Whenever the Save-to list is shown (or its page / destination changes),
   // centre the chosen canvas so the panel never opens scrolled away from it.
@@ -460,6 +461,10 @@ function AppInner() {
   // The footer text box is available on the homescreen and on every category page
   // (items are always added from the footer); only the Menu page has none.
   const footerInputMode = activeTab === 'star' || categoryIds.includes(activeTab)
+
+  // A canvas chosen in "Save to..." is remembered only for as long as we stay on
+  // the same page; changing pages drops it so the page's own default takes over.
+  useEffect(() => { lastPickedRef.current = null }, [activeTab])
 
   // Reset to star tab if active category tab is deleted
   useEffect(() => {
@@ -508,6 +513,14 @@ function AppInner() {
   const computeSaveDefault = useCallback(() => {
     const firstActive = (cat) => cat?.projects.find(p => !p.archived) || null
     if (categoryIds.includes(activeTab)) {
+      // Last canvas picked while on this page wins over the scroll-based default.
+      const picked = lastPickedRef.current
+      if (picked?.target) {
+        const pc = categories.find(c => c.id === picked.target.categoryId)
+        if (pc?.projects.some(p => p.id === picked.target.projectId && !p.archived)) {
+          return { tab: picked.tab, target: picked.target }
+        }
+      }
       const cat = categories.find(c => c.id === activeTab)
       const measured = categoryDefaultRef.current
       let proj = null
@@ -541,10 +554,12 @@ function AppInner() {
         setSaveToTab(categoryId)
         setSaveToProject({ categoryId, projectId })
       } else {
+        setToolbarType('list')     // every fresh open starts on the list type
         const { tab, target } = computeSaveDefault()
         setSaveToTab(tab)
         setSaveToProject(target)
       }
+      setAddAsActiveFlag(false)     // new items are not displayed unless asked
       scrollSelPendingRef.current = true   // scroll the list to the selected canvas
     }
     prevInputFocused.current = inputFocused
@@ -567,6 +582,18 @@ function AppInner() {
     })
     return () => cancelAnimationFrame(raf)
   }, [saveToProject, saveToTab, inputFocused, footerInputMode])
+
+  // Desktop: while the Save-to panel is open the page dims, but the canvas the
+  // item is headed for stays at full opacity. Tag its wrapper in the live DOM.
+  useEffect(() => {
+    const on = inputFocused && footerInputMode
+    const sel = on && saveToProject
+      ? document.querySelector(`[data-project-id="${saveToProject.projectId}"]`)
+      : null
+    document.querySelectorAll('.save-target').forEach(el => { if (el !== sel) el.classList.remove('save-target') })
+    if (sel) sel.classList.add('save-target')
+    return () => { sel?.classList.remove('save-target') }
+  }, [inputFocused, footerInputMode, saveToProject, activeTab, categories])
 
   // Register the compose handler so a project card's "Add ..." button can open
   // the footer preset to that project + content type (focus synchronously).
@@ -1903,7 +1930,12 @@ function AppInner() {
                           {i > 0 && <div className="save-to-divider"/>}
                           <button
                             className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
-                            onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: saveToTab, projectId: proj.id }) }}
+                            onMouseDown={e => {
+                              e.preventDefault()
+                              const pick = { categoryId: saveToTab, projectId: proj.id }
+                              setSaveToProject(pick)
+                              lastPickedRef.current = { tab: saveToTab, target: pick }
+                            }}
                           >
                             <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
                             <span>{proj.name}</span>
@@ -1911,8 +1943,9 @@ function AppInner() {
                         </div>
                       ))}
                       <AddCanvasRow
+                        active={inputFocused}
                         categoryId={saveToTab}
-                        onCreated={pick => setSaveToProject(pick)}
+                        onCreated={pick => { setSaveToProject(pick); lastPickedRef.current = { tab: saveToTab, target: pick } }}
                         onDone={() => inputRef.current?.focus({ preventScroll: true })}
                       />
                     </>
@@ -1926,7 +1959,9 @@ function AppInner() {
                   setSaveToTab(catId)
                   const cat = categories.find(c => c.id === catId)
                   const proj = cat?.projects.find(p => !p.archived)
-                  setSaveToProject(proj ? { categoryId: catId, projectId: proj.id } : null)
+                  const pick = proj ? { categoryId: catId, projectId: proj.id } : null
+                  setSaveToProject(pick)
+                  lastPickedRef.current = { tab: catId, target: pick }
                 }}
               />}
             </div>
@@ -2313,7 +2348,15 @@ function AppInner() {
 
           <div className="tab-area">
             {/* Input toolbar */}
-            <div className={`input-toolbar${inputFocused ? ' visible' : ''}${toolbarFadedIn ? ' faded-in' : ''}`}>
+            <div
+              className={`input-toolbar${inputFocused ? ' visible' : ''}${toolbarFadedIn ? ' faded-in' : ''}`}
+              style={{
+                '--accent-base': footerAccent.base,
+                '--accent-dark': footerAccent.dark,
+                '--accent-light': footerAccent.light,
+                '--accent-base-rgb': footerAccent.baseRgb,
+              }}
+            >
               <div className="toolbar-left">
                 <button
                   className={`toolbar-source-btn${addAsActiveFlag ? '' : ' inactive'}`}

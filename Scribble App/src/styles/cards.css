@@ -1409,8 +1409,8 @@
 }
 .mark-complete-btn .mc-check { display: block; }
 
-/* Matches a link page: 8px under the underline + the preview card's own 28px */
-.todo-section { margin-top: 36px; }
+/* Matches a link page: nothing under the underline + the card's own 28px */
+.todo-section { margin-top: 28px; }
 
 .todo-section-header {
   display: flex;
@@ -2737,7 +2737,7 @@
 .link-detail-scroll > .todo-detail-title,
 .link-detail-scroll > .todo-detail-underline { flex: 0 0 auto; }
 /* Same gap under the underline as a list-item page's first card */
-.link-detail-scroll > .todo-detail-underline { margin-bottom: 8px; }
+.link-detail-scroll > .todo-detail-underline { margin-bottom: 0; }
 
 .link-detail-scroll .link-preview-card {
   flex: 1 1 auto;

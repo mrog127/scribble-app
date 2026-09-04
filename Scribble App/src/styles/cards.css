@@ -59,17 +59,20 @@
 .card-source-label {
   align-self: flex-start;
   margin-top: 4px;
-  color: var(--accent-dark);
 }
-/* Clear the pushpin (16px + its 6px gap) so it lines up with the title text */
-.card-title-wrap:has(.card-pin-icon) .card-source-label { margin-left: 22px; }
 
-/* Pushpin beside a pinned canvas's title */
+/* Pushpin beside a pinned canvas's title. On a pinned card the header's left
+   padding drops to 19px so the 22px pin centres on the rows' checkbox column
+   (20 + 20/2), and the pin's 15px gap puts the title on the row labels (56).
+   It sits beside the title block rather than inside it, so it centres with the
+   plus and three-dot buttons: on the title alone, or between the title and the
+   easel sublabel when the Gallery shows one. */
 .card-pin-icon {
   flex-shrink: 0;
-  margin-right: 6px;
+  margin-right: 15px;
   display: block;
 }
+.project-card > .card-header:has(.card-pin-icon) { padding-left: 19px; }
 
 .card-title {
   font-family: 'Merriweather', Georgia, serif;
@@ -464,10 +467,21 @@
 @media (hover: hover) {
   .source-label-text.canvas-link:hover { color: var(--accent-dark); }
   .source-label-text.canvas-link:hover::before { opacity: 1; }
+  /* The label owns the highlight while it's under the cursor — the row lets go */
+  .swipe-row:has(.canvas-link:hover) .swipe-content::before { opacity: 0; }
 }
 
 @media (hover: none) {
-  .source-label-text.canvas-link::before { top: -12px; bottom: -12px; left: -8px; right: -8px; }
+  /* A finger-sized hit area, kept separate from the visible box above so the
+     highlight itself stays snug around the label. */
+  .source-label-text.canvas-link::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    bottom: -12px;
+    left: -8px;
+    right: -8px;
+  }
 }
 .source-label-text {
   font-family: 'Open Sans', system-ui, sans-serif;

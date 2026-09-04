@@ -613,7 +613,7 @@ const SHOW_PROJECT_INPUT = false
 // Pushpin shown to the left of a pinned canvas's title.
 function PinnedTitleIcon() {
   return (
-    <svg className="card-pin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <svg className="card-pin-icon" width="22" height="22" viewBox="0 0 24 24" fill="none">
       <g transform="rotate(45 12 12)">
         <path d="M9 3h6l-1 5 3.5 3.5H6.5L10 8 9 3z" stroke="#242424" strokeWidth="1" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
         <line x1="12" y1="11.5" x2="12" y2="21" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
@@ -1910,9 +1910,9 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
             </div>
           ) : (
             <>
+              {project.pinned && <PinnedTitleIcon/>}
               <div className="card-title-wrap">
                 <div className="card-title-row">
-                  {project.pinned && <PinnedTitleIcon/>}
                   <span className={`card-title${archived ? ' archived-title' : ''}`}>{project.name}</span>
                 </div>
                 {sourceLabel && (

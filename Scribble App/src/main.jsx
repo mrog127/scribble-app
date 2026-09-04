@@ -3,13 +3,12 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './styles/layout.css'
 import './styles/cards.css'
-// Mirrors the desktop hover styles onto :active for touch — must come last so
-// it can override the hover rules it was generated from.
+// Mirrors the desktop hover styles onto .is-pressed for touch — must come last
+// so it can override the hover rules it was generated from.
 import './styles/touch-press.css'
+import { installPressState } from './pressState.js'
 
-// iOS only applies :active to non-interactive elements when the document has a
-// touch handler, so give the body an empty one.
-document.body.setAttribute('ontouchstart', '')
+installPressState()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

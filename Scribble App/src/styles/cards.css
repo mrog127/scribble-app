@@ -2874,8 +2874,8 @@
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.04);
 }
 
-/* 16px between the section cards */
-.todo-section-card + .todo-section-card { margin-top: 16px; }
+/* Same gap as between canvas cards */
+.todo-section-card + .todo-section-card { margin-top: 10px; }
 
 /* 12px between the plus / attach icons and the card's right edge */
 .todo-section-card .card-header { padding-right: 12px; }
@@ -2902,7 +2902,7 @@
 }
 
 /* No gap between the attach button and the plus */
-.todo-section-card .project-header-actions { gap: 0; }
+.todo-section-card .project-header-actions { gap: 2px; }
 
 /* Tapping a section header collapses the card to just its header */
 .todo-section-card > .card-header {
@@ -2952,8 +2952,62 @@
 /* Mobile: the section cards reach the same 8px from the screen edges as canvas
    cards do (the list-item page's own scroll padding is 32px, so pull back 24). */
 @media (max-width: 999.98px) {
-  .todo-section-card {
+  .todo-section-card,
+  .link-detail-scroll .link-preview-card {
     margin-left: -16px;
     margin-right: -16px;
   }
+}
+
+
+/* ---- A section card with nothing attached ----
+   Same card shape, but no fill and no drop shadow, and its label and buttons
+   read in the light gray. */
+.todo-section-card.empty-card {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  transition: background 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+}
+.todo-section-card.empty-card .card-title,
+.todo-section-card.empty-card .todo-attach-btn,
+.todo-section-card.empty-card .project-tab-count { transition: color 250ms ease; }
+.todo-section-card.empty-card .project-add-btn svg path { transition: stroke 250ms ease; }
+/* Two empty cards read as one block: no gap, a divider between them instead.
+   The divider is inset to line up with the card titles. */
+.todo-section-card.empty-card + .todo-section-card.empty-card {
+  margin-top: 0;
+  position: relative;
+}
+.todo-section-card.empty-card + .todo-section-card.empty-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  background: #DBDAD8;
+}
+@media (hover: hover) {
+  /* The divider gives way to a card's own outline on hover — whether the
+     hovered card is the one below it or the one above it. */
+  .todo-section-card.empty-card + .todo-section-card.empty-card:hover::before,
+  .todo-section-card.empty-card:hover + .todo-section-card.empty-card::before { display: none; }
+}
+.todo-section-card.empty-card .card-title { color: #B5B4B2; }
+.todo-section-card.empty-card .todo-attach-btn,
+.todo-section-card.empty-card .project-tab-count { color: #B5B4B2; }
+.todo-section-card.empty-card .project-add-btn svg path { stroke: #B5B4B2; }
+
+/* Hovering one brings it up to the filled state it has with attachments */
+@media (hover: hover) {
+  .todo-section-card.empty-card:hover {
+    background: hsl(from #F7F6F3 h s calc(l * 1.01));
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.04);
+    border-color: #C2C1BF;
+  }
+  .todo-section-card.empty-card:hover .card-title,
+  .todo-section-card.empty-card:hover .todo-attach-btn,
+  .todo-section-card.empty-card:hover .project-tab-count { color: #242424; }
+  .todo-section-card.empty-card:hover .project-add-btn svg path { stroke: #242424; }
 }

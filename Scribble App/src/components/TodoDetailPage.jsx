@@ -65,10 +65,10 @@ function PaperclipIcon() {
   )
 }
 
-function PlusIcon() {
+function PlusIcon({ color = '#242424' }) {
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <path d="M16 8 L16 24 M8 16 L24 16" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+      <path d="M16 8 L16 24 M8 16 L24 16" stroke={color} strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
     </svg>
   )
 }
@@ -825,9 +825,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
   // Notes lead by default; with nothing in Notes but links attached, Links leads.
   const linksFirst = attachedNotes.length === 0 && attachedLinks.length > 0
-
   const notesSection = (
-        <div key="notes" className="todo-section card todo-section-card">
+        <div key="notes" className={`todo-section card todo-section-card${attachedNotes.length === 0 ? ' empty-card' : ''}`}>
           <div className={`card-header${noteSection.collapsed ? ' collapsed' : ''}`} onClick={noteSection.onHeaderClick}>
             <span className="card-title">Notes</span>
             <div className="project-header-actions">
@@ -904,7 +903,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   )
 
   const linksSection = (
-        <div key="links" className="todo-section card todo-section-card">
+        <div key="links" className={`todo-section card todo-section-card${attachedLinks.length === 0 ? ' empty-card' : ''}`}>
           <div className={`card-header${linkSection.collapsed ? ' collapsed' : ''}`} onClick={linkSection.onHeaderClick}>
             <span className="card-title">Links</span>
             <div className="project-header-actions">

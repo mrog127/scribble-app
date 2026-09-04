@@ -7,6 +7,8 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { EyeIcon, EyeOffIcon, CalendarMenuIcon } from './MenuIcons.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
+import ProjectCard from './ProjectCard.jsx'
+import { useCardDragReorder } from './useCardDragReorder.js'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import { openInCanvas } from '../searchFocus.js'
@@ -1005,7 +1007,7 @@ export default function ActivePage({
   onOpenSettings,
 }) {
   const pageRef = useRef(null)
-  const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated, reorderPinnedProjects } = useAppContext()
 
   // Fade a drop shadow in behind the cards over the first 56px of scrolling (0% → 4%)
   const handleScroll = useCallback((e) => {
@@ -1022,6 +1024,32 @@ export default function ActivePage({
     }, 3000)
     return () => clearInterval(id)
   }, [])
+
+  // Pinned canvases are mirrored at the top of the Gallery, in their own order
+  const pinnedProjects = categories.flatMap((cat, catIdx) =>
+    cat.projects.filter(p => p.pinned && !p.archived)
+      .map(p => ({ ...p, categoryId: cat.id, categoryName: cat.name, accent: getCategoryAccent(catIdx) }))
+  ).sort((a, b) => (a.pinOrder ?? Infinity) - (b.pinOrder ?? Infinity))
+
+  const pinnedRef = useRef(null)
+  const handlePinnedReorder = useCallback((newOrder) => {
+    reorderPinnedProjects(newOrder.map(p => ({ categoryId: p.categoryId, projectId: p.id })))
+  }, [reorderPinnedProjects])
+  const { onCardHeaderPointerDown: onPinnedCardDrag } = useCardDragReorder(pinnedRef, pinnedProjects, handlePinnedReorder)
+
+  useEffect(() => {
+    const container = pinnedRef.current
+    if (!container) return
+    const handler = (e) => {
+      const header = e.target.closest('.card-header')
+      if (!header) return
+      const wrapper = header.closest('[data-project-id]')
+      if (!wrapper) return
+      onPinnedCardDrag(e, wrapper.dataset.projectId)
+    }
+    container.addEventListener('pointerdown', handler)
+    return () => container.removeEventListener('pointerdown', handler)
+  }, [onPinnedCardDrag])
 
   const now = new Date()
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' })
@@ -1075,8 +1103,7 @@ export default function ActivePage({
       style={{ '--accent-base': ACCENT_COLORS[0].base, '--accent-dark': ACCENT_COLORS[0].dark, '--accent-light': ACCENT_COLORS[0].light, '--accent-base-rgb': ACCENT_COLORS[0].baseRgb }}
     >
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
-        <p className="active-today-label">Today is</p>
-        {/* Settings gear — right edge, vertically centred on the "Today is" line.
+        {/* Settings gear — right edge, in the same place it has always sat.
             Mobile only; desktop reaches Settings from the sidebar nav. */}
         <button className="home-settings-btn" aria-label="Settings" onClick={onOpenSettings}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -1099,6 +1126,32 @@ export default function ActivePage({
       )}
 
       <div className="cards-area" id="cardsArea">
+        {pinnedProjects.length > 0 && (
+          <div className="pinned-canvases" ref={pinnedRef}>
+            {pinnedProjects.map(p => (
+              <div
+                key={`${p.categoryId}-${p.id}`}
+                data-project-id={p.id}
+                /* The card keeps its own easel's colours, not the Gallery's */
+                style={{
+                  '--accent-base': p.accent.base,
+                  '--accent-dark': p.accent.dark,
+                  '--accent-light': p.accent.light,
+                  '--accent-base-rgb': p.accent.baseRgb,
+                }}
+              >
+                <ProjectCard
+                  categoryId={p.categoryId}
+                  project={p}
+                  sourceLabel={{
+                    name: p.categoryName,
+                    onOpen: () => openInCanvas({ type: 'canvas', projectId: p.id, categoryId: p.categoryId }),
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
         <TodoCard
           todos={todos}
           onToggle={onToggleTodo}

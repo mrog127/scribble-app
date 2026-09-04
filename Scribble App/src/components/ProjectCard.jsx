@@ -5,7 +5,7 @@ import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { CalendarIcon, RecurringCalendarIcon, isRecurring, isScheduleLocked, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
-import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon, PinMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
@@ -610,6 +610,18 @@ export function NoteRowContent({ note }) {
 // cards.css to make room for it again).
 const SHOW_PROJECT_INPUT = false
 
+// Pushpin shown to the left of a pinned canvas's title.
+function PinnedTitleIcon() {
+  return (
+    <svg className="card-pin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <g transform="rotate(45 12 12)">
+        <path d="M9 3h6l-1 5 3.5 3.5H6.5L10 8 9 3z" stroke="#242424" strokeWidth="1" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+        <line x1="12" y1="11.5" x2="12" y2="21" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+      </g>
+    </svg>
+  )
+}
+
 // One tile in the links grid. Styled like the preview card on a link page:
 // the site's own og:image up top, title and host beneath.
 export function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, onContextMenu, onOpenPage }) {
@@ -662,7 +674,7 @@ export function LinkGridCard({ link, categoryId, projectId, archived, onPointerD
   )
 }
 
-export default function ProjectCard({ categoryId, project }) {
+export default function ProjectCard({ categoryId, project, sourceLabel }) {
   const [activeTab, setActiveTab] = useState('list')
 
   // A search result can ask this canvas to open on a particular content type and,
@@ -759,7 +771,7 @@ export default function ProjectCard({ categoryId, project }) {
     archiveProjectLink, unarchiveProjectLink,
     setProjectTodoScheduled, setProjectNoteScheduled, setProjectLinkScheduled,
     updateProjectNote, reorderProjectTodos, reorderProjectNotes, reorderProjectLinks,
-    renameProject, archiveProject, unarchiveProject, deleteProject, moveProject,
+    renameProject, archiveProject, unarchiveProject, deleteProject, moveProject, toggleProjectPinned,
     moveProjectTodo, moveProjectNote, moveProjectLink,
     openDetail, setOpenDetail, setAutoEditNoteId, requestCompose,
   } = useAppContext()
@@ -1276,7 +1288,7 @@ export default function ProjectCard({ categoryId, project }) {
     if (renaming || isEmptyCanvas) return
     // A tab tap already expanded the card — don't let its click toggle it back.
     if (suppressHeaderToggleRef.current) { suppressHeaderToggleRef.current = false; return }
-    if (e.target.closest('button, input, .dots-menu-wrap, .project-tab-bar, .card-context-menu')) return
+    if (e.target.closest('button, input, .dots-menu-wrap, .project-tab-bar, .card-context-menu, .card-source-label')) return
     applyCollapsed(!collapsedRef.current)
   }, [renaming, isEmptyCanvas, applyCollapsed])
 
@@ -1898,7 +1910,19 @@ export default function ProjectCard({ categoryId, project }) {
             </div>
           ) : (
             <>
-              <span className={`card-title${archived ? ' archived-title' : ''}`}>{project.name}</span>
+              <div className="card-title-wrap">
+                <div className="card-title-row">
+                  {project.pinned && <PinnedTitleIcon/>}
+                  <span className={`card-title${archived ? ' archived-title' : ''}`}>{project.name}</span>
+                </div>
+                {sourceLabel && (
+                  <span
+                    className="card-source-label source-label-text canvas-link"
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); sourceLabel.onOpen() }}
+                  >{sourceLabel.name}</span>
+                )}
+              </div>
               {showTabs && (
                 <div className="project-tab-bar" ref={tabBarRef}>
                   <div className="project-tab-indicator" ref={tabIndicatorRef}/>
@@ -2001,6 +2025,15 @@ export default function ProjectCard({ categoryId, project }) {
                   >
                     <FolderMenuIcon/>
                     Move Canvas
+                  </button>
+                )}
+                {!archived && (
+                  <button
+                    className="card-context-item"
+                    onMouseDown={e => { e.preventDefault(); closeCardMenu(); toggleProjectPinned(categoryId, project.id) }}
+                  >
+                    <PinMenuIcon/>
+                    {project.pinned ? 'Unpin from Gallery' : 'Pin to Gallery'}
                   </button>
                 )}
                 {archived ? (

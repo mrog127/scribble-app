@@ -1,0 +1,334 @@
+import { useRef, useCallback, useLayoutEffect } from 'react'
+
+// ---- Card drag-to-reorder hook ----
+// Shared by the category pages and the Gallery's pinned canvases.
+export function useCardDragReorder(containerRef, projects, onReorder) {
+  const dragRef = useRef(null)
+  const flipRef = useRef(null)
+  const needsExpandAll = useRef(false)
+  const projectsRef = useRef(projects)
+  projectsRef.current = projects
+
+  // Expand all cards back to their natural height
+  const expandAllCards = useCallback((container) => {
+    const wrappers = [...container.querySelectorAll('[data-project-id]')]
+    wrappers.forEach(wrapper => {
+      const cardEl = wrapper.querySelector(':scope > .card')
+      if (!cardEl) return
+      cardEl.style.overflow = 'hidden'
+      const fullH = cardEl.scrollHeight
+      cardEl.style.transition = 'max-height 300ms ease, opacity 200ms ease'
+      cardEl.style.maxHeight = fullH + 'px'
+      cardEl.style.opacity = '1'
+      setTimeout(() => {
+        cardEl.style.overflow = ''
+        cardEl.style.maxHeight = ''
+        cardEl.style.transition = ''
+        cardEl.style.opacity = ''
+      }, 300)
+    })
+  }, [])
+
+  // FLIP animation after state reorder, then expand all
+  useLayoutEffect(() => {
+    const flip = flipRef.current
+    if (!flip) return
+    flipRef.current = null
+    const container = containerRef.current
+    if (!container) return
+
+    // Ensure all transforms are clear so we can read new positions cleanly
+    flip.forEach(({ el }) => { el.style.transition = 'none'; el.style.transform = '' })
+    document.body.offsetHeight
+
+    const frames = flip
+      .map(({ el, fromTop }) => ({ el, dy: fromTop - el.getBoundingClientRect().top }))
+      .filter(f => Math.abs(f.dy) > 1)
+
+    if (frames.length) {
+      frames.forEach(({ el, dy }) => {
+        el.style.transition = 'none'
+        el.style.transform = `translateY(${dy}px)`
+      })
+      document.body.offsetHeight
+      requestAnimationFrame(() => {
+        frames.forEach(({ el }) => {
+          el.style.transition = 'transform 260ms ease'
+          el.style.transform = ''
+        })
+        setTimeout(() => {
+          frames.forEach(({ el }) => { el.style.transition = '' })
+          // Expand after FLIP settles
+          if (needsExpandAll.current) {
+            needsExpandAll.current = false
+            expandAllCards(container)
+          }
+        }, 260)
+      })
+    } else if (needsExpandAll.current) {
+      needsExpandAll.current = false
+      expandAllCards(container)
+    }
+  }, [projects, containerRef, expandAllCards])
+
+  const onCardHeaderPointerDown = useCallback((e, projectId) => {
+    if (e.target.closest('.dots-menu-wrap') || e.target.closest('.card-rename-wrap')) return
+
+    const startX = e.clientX, startY = e.clientY
+    let started = false
+    let longPressTimer = null
+    const preventScroll = (ev) => { if (started) ev.preventDefault() }
+
+    const start = (clientY) => {
+      const container = containerRef.current
+      if (!container) return false
+
+      const wrappers = [...container.querySelectorAll('[data-project-id]')]
+      const snapshots = wrappers.map(el => ({
+        el,
+        id: el.dataset.projectId,
+        rect: el.getBoundingClientRect(),
+      }))
+      const dragIdx = snapshots.findIndex(s => s.id === projectId)
+      if (dragIdx < 0) return false
+
+      const dragged = snapshots[dragIdx]
+      const cardEl = dragged.el.querySelector(':scope > .card')
+      if (!cardEl) return false
+      const headerEl = cardEl.querySelector('.card-header')
+      if (!headerEl) return false
+
+      const appEl = document.getElementById('app')
+      const portal = document.getElementById('animation-portal')
+      if (!appEl || !portal) return false
+      const appRect = appEl.getBoundingClientRect()
+
+      // Compute collapsed height for dragged card: header with equal top/bottom padding
+      const cs = getComputedStyle(headerEl)
+      const padTop = parseFloat(cs.paddingTop) || 22
+      const padBottom = parseFloat(cs.paddingBottom) || 10
+      const headerRect = headerEl.getBoundingClientRect()
+      // Extra bottom to match top padding
+      const collapsedH = headerRect.height + (padTop - padBottom)
+
+      const pageEl = dragged.el.closest('.page')
+
+      // Build ghost — collapsed-card clone following the pointer
+      const headerClone = headerEl.cloneNode(true)
+      headerClone.style.paddingBottom = padTop + 'px'
+      headerClone.style.pointerEvents = 'none'
+      const dotsEl = headerClone.querySelector('.dots-menu-wrap')
+      if (dotsEl) dotsEl.style.opacity = '0.35'
+
+      const ghostCard = document.createElement('div')
+      ghostCard.style.cssText = [
+        'background:#F7F6F3',
+        'border:1px solid #C2C1BF',
+        'border-radius:8px',
+        'overflow:hidden',
+        'box-shadow:0 8px 28px rgba(0,0,0,0.20)',
+      ].join(';')
+      ghostCard.appendChild(headerClone)
+
+      const ghost = document.createElement('div')
+      ghost.style.cssText = [
+        'position:absolute',
+        `left:${dragged.rect.left - appRect.left}px`,
+        `top:${dragged.rect.top - appRect.top}px`,
+        `width:${dragged.rect.width}px`,
+        'pointer-events:none',
+        'z-index:9999',
+      ].join(';')
+      ghost.appendChild(ghostCard)
+      portal.appendChild(ghost)
+
+      // Collapse ALL cards simultaneously
+      // First pass: lock in current heights (no transition)
+      snapshots.forEach(snap => {
+        const cEl = snap.el.querySelector(':scope > .card')
+        if (!cEl) return
+        const fullH = cEl.getBoundingClientRect().height
+        cEl.style.overflow = 'hidden'
+        cEl.style.transition = 'none'
+        cEl.style.maxHeight = fullH + 'px'
+      })
+      document.body.offsetHeight // single reflow
+
+      // Second pass: animate to collapsed height
+      requestAnimationFrame(() => {
+        snapshots.forEach((snap, i) => {
+          const cEl = snap.el.querySelector(':scope > .card')
+          if (!cEl) return
+          const cHeaderEl = cEl.querySelector('.card-header')
+          const ccs = cHeaderEl ? getComputedStyle(cHeaderEl) : null
+          const cPadTop = ccs ? (parseFloat(ccs.paddingTop) || 22) : 22
+          const cPadBottom = ccs ? (parseFloat(ccs.paddingBottom) || 10) : 10
+          const cHeaderH = cHeaderEl ? cHeaderEl.getBoundingClientRect().height : collapsedH
+          const cCollapsed = cHeaderH + (cPadTop - cPadBottom)
+          if (i === dragIdx) {
+            cEl.style.transition = 'max-height 220ms ease, opacity 180ms ease'
+            cEl.style.opacity = '0'
+          } else {
+            cEl.style.transition = 'max-height 220ms ease'
+          }
+          cEl.style.maxHeight = cCollapsed + 'px'
+        })
+      })
+
+      const cloneTop = dragged.rect.top - appRect.top
+
+      dragRef.current = {
+        ghost, snapshots, dragIdx, currentIdx: dragIdx,
+        cloneTop, startY: clientY,
+        collapsedH, projectId,
+        pageEl, appRect,
+        scrollRaf: null,
+      }
+      return true
+    }
+
+    const doStart = (clientY) => {
+      if (started) return
+      started = start(clientY)
+    }
+
+    longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY) }, 250)
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+
+    const applyShifts = (snapshots, dragIdx, newIdx, ghostH) => {
+      snapshots.forEach((snap, i) => {
+        if (i === dragIdx) return
+        let dy = 0
+        if (newIdx < dragIdx && i >= newIdx && i < dragIdx) dy = ghostH
+        if (newIdx > dragIdx && i > dragIdx && i <= newIdx) dy = -ghostH
+        snap.el.style.transition = 'transform 180ms ease'
+        snap.el.style.transform = dy ? `translateY(${dy}px)` : ''
+      })
+    }
+
+    const onMove = (e2) => {
+      const dx = Math.abs(e2.clientX - startX), dy2 = Math.abs(e2.clientY - startY)
+      if (longPressTimer && (dx > 8 || dy2 > 8)) {
+        clearTimeout(longPressTimer); longPressTimer = null
+        document.removeEventListener('touchmove', preventScroll)
+      }
+      if (!started) return
+      e2.preventDefault()
+      const s = dragRef.current
+      if (!s) return
+
+      const rawTop = s.cloneTop + (e2.clientY - s.startY)
+      s.ghost.style.top = rawTop + 'px'
+
+      // Edge scroll
+      if (s.pageEl) {
+        if (s.scrollRaf) { cancelAnimationFrame(s.scrollRaf); s.scrollRaf = null }
+        const pageRect = s.pageEl.getBoundingClientRect()
+        const ZONE = 80, SPEED = 6
+        const nearTop = e2.clientY - pageRect.top < ZONE && s.pageEl.scrollTop > 0
+        const nearBottom = pageRect.bottom - e2.clientY < ZONE
+        if (nearTop || nearBottom) {
+          const scroll = () => {
+            if (!dragRef.current) return
+            if (nearTop) s.pageEl.scrollTop -= SPEED
+            if (nearBottom) s.pageEl.scrollTop += SPEED
+            s.scrollRaf = requestAnimationFrame(scroll)
+          }
+          s.scrollRaf = requestAnimationFrame(scroll)
+        }
+      }
+
+      // Use LIVE rects for insertion — these reflect post-collapse + current translateY
+      const ghostH = s.collapsedH
+      const nonDragged = s.snapshots.filter((_, i) => i !== s.dragIdx)
+      let insertAt = nonDragged.length
+      for (let j = 0; j < nonDragged.length; j++) {
+        const liveRect = nonDragged[j].el.getBoundingClientRect()
+        if (e2.clientY < liveRect.top + liveRect.height / 2) { insertAt = j; break }
+      }
+      const newIdx = Math.min(insertAt, s.snapshots.length - 1)
+      if (newIdx !== s.currentIdx) {
+        s.currentIdx = newIdx
+        applyShifts(s.snapshots, s.dragIdx, s.currentIdx, ghostH)
+      }
+    }
+
+    const finish = (drop) => {
+      clearTimeout(longPressTimer); longPressTimer = null
+      document.removeEventListener('pointermove', onMove, { passive: false })
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      document.removeEventListener('touchmove', preventScroll)
+
+      const s = dragRef.current
+      if (s?.scrollRaf) { cancelAnimationFrame(s.scrollRaf); s.scrollRaf = null }
+      dragRef.current = null
+
+      if (!s || !started) return
+
+      const container = containerRef.current
+
+      // No movement or cancel — animate ghost back, expand everything
+      if (!drop || s.currentIdx === s.dragIdx) {
+        s.ghost.style.transition = 'opacity 200ms ease'
+        s.ghost.style.opacity = '0'
+        setTimeout(() => {
+          s.ghost.remove()
+          s.snapshots.forEach(snap => { snap.el.style.transition = ''; snap.el.style.transform = '' })
+          const draggedCard = s.snapshots[s.dragIdx].el.querySelector(':scope > .card')
+          if (draggedCard) draggedCard.style.opacity = '1'
+          if (container) expandAllCards(container)
+        }, 200)
+        return
+      }
+
+      // --- Drop with reorder ---
+
+      // Compute ghost's landing position while transforms are still applied
+      const appEl = document.getElementById('app')
+      const currentAppRect = appEl ? appEl.getBoundingClientRect() : s.appRect
+      const landingSnap = s.snapshots[s.currentIdx]
+      const landingLive = landingSnap.el.getBoundingClientRect()
+      let landingTop
+      if (s.currentIdx > s.dragIdx) {
+        // Gap is below card at currentIdx (which shifted up)
+        landingTop = landingLive.top + landingLive.height - currentAppRect.top
+      } else {
+        // Gap is above card at currentIdx (which shifted down)
+        landingTop = landingLive.top - s.collapsedH - currentAppRect.top
+      }
+
+      // Animate ghost to landing slot
+      s.ghost.style.transition = 'top 160ms ease'
+      s.ghost.style.top = landingTop + 'px'
+
+      setTimeout(() => {
+        s.ghost.remove()
+
+        // Snapshot positions WITH transforms for FLIP start points
+        const fromTops = s.snapshots.map(snap => snap.el.getBoundingClientRect().top)
+
+        // Reset transforms instantly — FLIP will recreate the visual motion
+        s.snapshots.forEach(snap => { snap.el.style.transition = 'none'; snap.el.style.transform = '' })
+
+        flipRef.current = s.snapshots.map((snap, i) => ({ el: snap.el, fromTop: fromTops[i] }))
+        needsExpandAll.current = true
+
+        const ids = s.snapshots.map(sn => sn.id)
+        const [movedId] = ids.splice(s.dragIdx, 1)
+        ids.splice(s.currentIdx, 0, movedId)
+        const newOrder = ids.map(id => projectsRef.current.find(p => p.id === id)).filter(Boolean)
+        onReorder(newOrder)
+      }, 160)
+    }
+
+    const onUp = () => finish(true)
+    const onCancel = () => finish(false)
+
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
+  }, [containerRef, onReorder, expandAllCards])
+
+  return { onCardHeaderPointerDown }
+}

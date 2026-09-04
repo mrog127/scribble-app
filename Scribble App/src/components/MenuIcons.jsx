@@ -73,6 +73,18 @@ export function ArchiveMenuIcon() {
   )
 }
 
+// Pushpin — "Pin to Gallery"
+export function PinMenuIcon() {
+  return (
+    <svg {...base}>
+      <g transform="rotate(45 12 12)">
+        <path d="M9 3h6l-1 5 3.5 3.5H6.5L10 8 9 3z" {...stroke}/>
+        <line x1="12" y1="11.5" x2="12" y2="21" {...stroke}/>
+      </g>
+    </svg>
+  )
+}
+
 // Easel — "Send to Gallery" (matches the Display control's glyph)
 export function GalleryMenuIcon() {
   return (

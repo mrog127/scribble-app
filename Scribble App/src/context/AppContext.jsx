@@ -89,6 +89,8 @@ export function AppProvider({ children }) {
           id: proj.id,
           name: proj.name,
           archived: proj.archived === true,
+          pinned: proj.pinned === true,
+          pinOrder: proj.pin_order ?? null,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
             id: t.id, text: t.text, comment: t.comment ?? null, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
             recurrence: t.recurrence ?? null, recurAnchor: t.recur_anchor ?? null,
@@ -894,6 +896,33 @@ export function AppProvider({ children }) {
     Promise.all(newOrder.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
   }, [])
 
+  // ---- Pinned canvases ----
+  // A pinned canvas is mirrored at the top of the Gallery page. pin_order keeps
+  // the pinned section in the order the user arranged it there.
+  const toggleProjectPinned = useCallback((categoryId, projectId) => {
+    const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
+    if (!proj) return
+    const next = !proj.pinned
+    // A newly pinned canvas goes to the top of the pinned section
+    const minOrder = categoriesRef.current.reduce((min, c) => c.projects.reduce(
+      (m, p) => (p.pinned && p.pinOrder != null && p.pinOrder < m ? p.pinOrder : m), min), 0)
+    const pinOrder = next ? minOrder - 1 : null
+    setCategories(prev => prev.map(c => c.id !== categoryId ? c : {
+      ...c, projects: c.projects.map(p => p.id !== projectId ? p : { ...p, pinned: next, pinOrder })
+    }))
+    dbw(supabase.from('projects').update({ pinned: next, pin_order: pinOrder }).eq('id', projectId), 'togglePin')
+  }, [])
+
+  // newOrder: the pinned projects as { categoryId, projectId }, in their new order
+  const reorderPinnedProjects = useCallback((newOrder) => {
+    const rank = new Map(newOrder.map((p, i) => [String(p.projectId), i]))
+    setCategories(prev => prev.map(c => ({
+      ...c,
+      projects: c.projects.map(p => (rank.has(String(p.id)) ? { ...p, pinOrder: rank.get(String(p.id)) } : p)),
+    })))
+    Promise.all(newOrder.map((p, i) => supabase.from('projects').update({ pin_order: i }).eq('id', p.projectId)))
+  }, [])
+
   // ---- Categories ----
   const addCategory = useCallback((name) => {
     const id = `cat-${Date.now()}`
@@ -1147,6 +1176,8 @@ export function AppProvider({ children }) {
       reorderCategoryNotes,
       reorderCategoryLinks,
       reorderProjects,
+      toggleProjectPinned,
+      reorderPinnedProjects,
       renameProject,
       archiveProject,
       unarchiveProject,

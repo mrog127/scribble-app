@@ -43,6 +43,34 @@
   gap: 10px;
 }
 
+/* Title column: the title row, plus (on a pinned card in the Gallery) the easel
+   it lives on, 4px beneath. */
+.card-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.card-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.card-source-label {
+  align-self: flex-start;
+  margin-top: 4px;
+  color: var(--accent-dark);
+}
+/* Clear the pushpin (16px + its 6px gap) so it lines up with the title text */
+.card-title-wrap:has(.card-pin-icon) .card-source-label { margin-left: 22px; }
+
+/* Pushpin beside a pinned canvas's title */
+.card-pin-icon {
+  flex-shrink: 0;
+  margin-right: 6px;
+  display: block;
+}
+
 .card-title {
   font-family: 'Merriweather', Georgia, serif;
   font-size: 18px;

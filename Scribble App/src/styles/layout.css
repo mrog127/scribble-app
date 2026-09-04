@@ -113,7 +113,7 @@ html, body, #root {
 /* Keyed off the class too: the id is absent while the page is mid-transition,
    which made the header snap between paddings on arrival. */
 #page-star > .page-header,
-.home-page > .page-header { padding: 48px 16px 8px; }
+.home-page > .page-header { padding: 40px 16px 8px; }
 
 .active-title {
   font-family: 'Merriweather', Georgia, serif;
@@ -153,7 +153,7 @@ html, body, #root {
   margin: 8px 0 0 8px;
   line-height: 1.2;
   position: relative;
-  z-index: 1;
+  z-index: 0;
 }
 
 .active-month-date {
@@ -164,15 +164,16 @@ html, body, #root {
   margin: 0 0 24px 8px;
   line-height: 1.2;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
-/* Squiggle decoration sits between the day name and date, layered above both.
-   Negative margins keep it overlapping without taking vertical space. */
+/* Squiggle decoration sits between the day name and date: over the day name,
+   under the date. Negative margins keep it overlapping without taking vertical
+   space. */
 .active-date-decoration {
   display: block;
   position: relative;
-  z-index: 2;
+  z-index: 1;
   width: 148px;
   height: 55px;
   margin: -33px 0 -22px -1px;
@@ -1276,7 +1277,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     top: 0;
     width: 340px;
     box-sizing: border-box;
-    padding: 48px 32px 0;
+    padding: 40px 32px 0;
     z-index: 30;
   }
 
@@ -3062,41 +3063,53 @@ body.resizing-detail .phone { transition: none !important; }
   align-items: center;
   min-height: 60px;
   box-sizing: border-box;
-  padding: 8px 20px 8px 16px;
+  padding: 8px 20px 8px 8px;
   text-align: left;
-  /* A 20% wash of the canvas colour over white, so nothing shows through */
-  background-color: #FFFFFF;
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--accent-light) 20%, transparent),
-    color-mix(in srgb, var(--accent-light) 20%, transparent));
-  border: 1px solid var(--accent-dark);
+  /* Canvas-card fill with the Mark-as-Complete button's orbiting inner glow and
+     stroke — the border is transparent so the gradient border-box shows. */
+  border: 1px solid transparent;
+  background:
+    linear-gradient(hsl(from #F7F6F3 h s calc(l * 1.01)), hsl(from #F7F6F3 h s calc(l * 1.01))) padding-box,
+    linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--accent-dark) h s calc(l * 1.5) / 0.6),
+      hsl(from var(--accent-dark) h s calc(l * 0.6) / 0.6)) border-box;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 6px 6px color-mix(in srgb, var(--accent-base) 20%, transparent),
+    inset 10px 12px 12px hsl(from var(--accent-light) h calc(s * 1.1) l);
   cursor: pointer;
   /* The footer is pointer-transparent in the mobile floating-bar layout, so the
      toast has to opt back in. */
   pointer-events: auto;
-  animation: add-toast-in 200ms ease;
+  animation: add-toast-in 200ms ease, mc-inner-orbit 2.5s linear infinite, cb-stroke-orbit 2.5s linear infinite;
 }
 .add-toast.leaving { animation: add-toast-out 200ms ease forwards; }
+
+/* Hover wash: sits on the fill only, beneath the icon, labels and arrow */
+.add-toast::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--accent-light) 50%, transparent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+.add-toast-icon,
+.add-toast-text,
+.add-toast-arrow { position: relative; z-index: 1; }
 @media (hover: hover) {
-  .add-toast:hover {
-    background-image: linear-gradient(
-      color-mix(in srgb, var(--accent-light) 40%, transparent),
-      color-mix(in srgb, var(--accent-light) 40%, transparent));
-  }
+  .add-toast:hover::after { opacity: 1; }
 }
 
-.add-toast-row {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
 .add-toast-icon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  margin-right: 4px;
+  padding: 0 4px;
+  margin-right: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3113,7 +3126,6 @@ body.resizing-detail .phone { transition: none !important; }
   font-size: 16px;
   font-weight: 500;
   line-height: 1.4;
-  margin-top: 2px;
   color: var(--accent-dark);
   overflow: hidden;
   white-space: nowrap;

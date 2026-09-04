@@ -1529,7 +1529,7 @@ function AppInner() {
         // Cursor on it when the time is up: hold until it moves away
         if (addToastHover.current) { addToastPending.current = true; return }
         beginToastExit()
-      }, 4000)
+      }, 5000)
     }, 500)
   }, [categories, beginToastExit])
 
@@ -1853,7 +1853,6 @@ function AppInner() {
 
         {/* Persistent date header — shown in the left sidebar on desktop only */}
         <div className="sidebar-date">
-          <p className="active-today-label">Today is</p>
           <p className="active-day-name">{dayName},</p>
           <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
           <p className="active-month-date">{monthDate}</p>
@@ -2145,12 +2144,10 @@ function AppInner() {
                 })
               }}
             >
+              <span className="add-toast-icon"><ToastTypeIcon type={addToast.type}/></span>
               <span className="add-toast-text">
                 <span className="add-toast-canvas">Added to {addToast.canvasName}</span>
-                <span className="add-toast-row">
-                  <span className="add-toast-icon"><ToastTypeIcon type={addToast.type}/></span>
-                  <span className="add-toast-title">{addToast.title}</span>
-                </span>
+                <span className="add-toast-title">{addToast.title}</span>
               </span>
               <svg className="add-toast-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h13M12.5 6l6 6-6 6" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>

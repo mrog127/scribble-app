@@ -2567,18 +2567,7 @@ function AppInner() {
   )
 }
 
-function AuthGate() {
-  const { user } = useAuth()
-  if (user === undefined) return null // still loading session
-  if (!user) return <AuthScreen />
-  return (
-    <AppProvider>
-      <AppInner />
-    </AppProvider>
-  )
-}
-
-export default // Content-type glyph for the add toast — the same shapes as the footer toolbar.
+// Content-type glyph for the add toast — the same shapes as the footer toolbar.
 function ToastTypeIcon({ type, size = 16 }) {
   if (type === 'note') {
     return (
@@ -2610,7 +2599,18 @@ function ToastTypeIcon({ type, size = 16 }) {
   )
 }
 
-function App() {
+function AuthGate() {
+  const { user } = useAuth()
+  if (user === undefined) return null // still loading session
+  if (!user) return <AuthScreen />
+  return (
+    <AppProvider>
+      <AppInner />
+    </AppProvider>
+  )
+}
+
+export default function App() {
   return (
     <AuthProvider>
       <AuthGate />

@@ -121,9 +121,13 @@
   .project-add-btn.is-pressed { background: rgba(0, 0, 0, 0.04); border-radius: 4px; }
 
 
+  /* The box belongs to the cell, but on touch the press lands on the button
+     inside it — the :has() variants let that press light the same box. */
   .detail-footer-cell.is-pressed::after,
+  .detail-footer-cell:has(button.is-pressed)::after,
   .detail-footer-copy-btn.is-pressed::after,
-  .project-toolbar-left.is-pressed::after {
+  .project-toolbar-left.is-pressed::after,
+  .project-toolbar-left:has(button.is-pressed)::after {
     content: '';
     position: absolute;
     top: 50%;

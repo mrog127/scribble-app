@@ -2173,9 +2173,13 @@
 /* 4% hover box over the active / location / copy buttons:
    24px tall (divider height), inset 8px from the bounding dividers/edges, 4px radius */
 @media (hover: hover) {
+  /* The box belongs to the cell, but on touch the press lands on the button
+     inside it — the :has() variants let that press light the same box. */
   .detail-footer-cell:hover::after,
+  .detail-footer-cell:has(button:hover)::after,
   .detail-footer-copy-btn:hover::after,
-  .project-toolbar-left:hover::after {
+  .project-toolbar-left:hover::after,
+  .project-toolbar-left:has(button:hover)::after {
     content: '';
     position: absolute;
     top: 50%;

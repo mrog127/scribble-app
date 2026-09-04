@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import ProjectCard from './ProjectCard.jsx'
 import CategoryCollapsedView from './CategoryCollapsedView.jsx'
-import { EyeIcon, EyeOffIcon, ArchiveMenuIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, EditIcon, GalleryMenuIcon, GalleryOffMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent } from '../theme.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
@@ -396,10 +396,13 @@ function useCardDragReorder(containerRef, projects, onReorder) {
 }
 
 export default function CategoryPage({ categoryId, collapsed = false, onToggleCollapsed, onScroll, headerOpacity, headerTranslate, pageAnimClass = '', isExiting = false }) {
-  const { categories, addProject, reorderProjects } = useAppContext()
+  const { categories, addProject, reorderProjects, archiveCategory, renameCategory, toggleCategoryHomescreen } = useAppContext()
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef(null)
   const [showArchivedCanvases, setShowArchivedCanvases] = useState(() => {
     try { return localStorage.getItem(`arch-canvases-${categoryId}`) === 'true' } catch { return false }
   })
@@ -521,8 +524,16 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
     }, 150)
   }, [title, categoryId, addProject])
 
+  const commitRename = () => {
+    if (!renaming) return
+    const next = renameValue.trim()
+    if (next && next !== category?.name) renameCategory(categoryId, next)
+    setRenaming(false)
+  }
+
   if (!category) return null
 
+  const inGallery = category.sendToHomescreen !== false
   const activeProjects = category.projects.filter(p => !p.archived)
   const archivedProjects = category.projects.filter(p => p.archived)
   const archivedCanvasCount = archivedProjects.length
@@ -539,8 +550,34 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
         style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}
       >
         <div className="category-header-row">
-          <p className="active-title" style={{ marginBottom: '0' }}>{category.name}</p>
+          {renaming ? (
+            <input
+              ref={renameInputRef}
+              className="active-title category-title-input"
+              value={renameValue}
+              autoFocus
+              onChange={e => setRenameValue(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+                if (e.key === 'Escape') { e.preventDefault(); setRenaming(false) }
+              }}
+              onBlur={commitRename}
+            />
+          ) : (
+            <p className="active-title" style={{ marginBottom: '0' }}>{category.name}</p>
+          )}
           <div className="category-header-actions">
+          {renaming ? (
+            <button
+              className="project-send-btn visible"
+              aria-label="Save name"
+              onMouseDown={e => { e.preventDefault(); commitRename() }}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10.5 L8.5 15 L16 5.5" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          ) : (<>
             <button
               className="category-header-btn"
               onMouseDown={e => { e.preventDefault(); toggleCollapsed() }}
@@ -579,13 +616,33 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                 )}
                 <button
                   className="card-context-item"
-                  onMouseDown={e => { e.preventDefault(); setMenuOpen(false) }}
+                  onMouseDown={e => { e.preventDefault(); setMenuOpen(false); toggleCategoryHomescreen(categoryId) }}
+                >
+                  {inGallery ? <GalleryOffMenuIcon/> : <GalleryMenuIcon/>}
+                  {inGallery ? 'Hide from Gallery' : 'Send to Gallery'}
+                </button>
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    setMenuOpen(false)
+                    setRenameValue(category.name)
+                    setRenaming(true)
+                  }}
+                >
+                  <EditIcon/>
+                  Rename
+                </button>
+                <button
+                  className="card-context-item"
+                  onMouseDown={e => { e.preventDefault(); setMenuOpen(false); archiveCategory(categoryId) }}
                 >
                   <ArchiveMenuIcon/>
                   Archive Easel
                 </button>
               </div>
             </div>
+          </>)}
           </div>
         </div>
         <UnderlineSvg className="underline-img" style={{ marginTop: '8px', marginBottom: '18px', color: pageAccent ? pageAccent.base : 'var(--accent-base)' }} />

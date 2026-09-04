@@ -414,10 +414,9 @@ function AppInner() {
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
   const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
-  const categoryDefaultRef = useRef(null)                    // scroll-based default project on a category page
+  const pageAddedRef = useRef(null)                          // { tab, categoryId, projectId } last canvas added to while on this page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
   const saveToScrollRef = useRef(null)                       // the Save to list scroller
-  const lastPickedRef = useRef(null)                         // { tab, target } last canvas chosen on this page (cleared on page change)
 
   // Whenever the Save-to list is shown (or its page / destination changes),
   // centre the chosen canvas so the panel never opens scrolled away from it.
@@ -462,9 +461,9 @@ function AppInner() {
   // (items are always added from the footer); only the Menu page has none.
   const footerInputMode = activeTab === 'star' || categoryIds.includes(activeTab)
 
-  // A canvas chosen in "Save to..." is remembered only for as long as we stay on
-  // the same page; changing pages drops it so the page's own default takes over.
-  useEffect(() => { lastPickedRef.current = null }, [activeTab])
+  // The canvas last added to is remembered only for as long as we stay on the
+  // same page; changing pages drops it so the top canvas takes over again.
+  useEffect(() => { pageAddedRef.current = null }, [activeTab])
 
   // Reset to star tab if active category tab is deleted
   useEffect(() => {
@@ -473,61 +472,23 @@ function AppInner() {
     }
   }, [categories]) // eslint-disable-line
 
-  // Which project card is the scroll-based default on an expanded category page:
-  // the top card when scrolled to top, the bottom card when scrolled to bottom,
-  // otherwise the card most centered in the view. Read from the live DOM, so it
-  // must be called on focus, before the Save to panel collapses the page. Returns
-  // a project id (string) or null (e.g. a collapsed page has no project cards).
-  const measureCategoryDefault = (categoryId) => {
-    const page = document.getElementById(`page-${categoryId}`)
-    if (!page) return null
-    // Non-archived project cards are wrapped in [data-project-id]; archived ones
-    // use [data-archived-id], so this is exactly the addable cards.
-    const cards = [...page.querySelectorAll('[data-project-id]')]
-    if (!cards.length) return null
-    const atTop = page.scrollTop <= 4
-    const atBottom = page.scrollTop + page.clientHeight >= page.scrollHeight - 4
-    let chosen
-    if (atTop) chosen = cards[0]
-    else if (atBottom) chosen = cards[cards.length - 1]
-    else {
-      const pr = page.getBoundingClientRect()
-      const center = pr.top + pr.height / 2
-      let best = cards[0], bestDist = Infinity
-      for (const c of cards) {
-        const r = c.getBoundingClientRect()
-        const d = Math.abs((r.top + r.height / 2) - center)
-        if (d < bestDist) { bestDist = d; best = c }
-      }
-      chosen = best
-    }
-    return chosen.getAttribute('data-project-id')
-  }
-
-  // The default destination for the "Save to..." card, by context:
-  //  - any category page → that category's tab; the project follows the scroll
-  //    position captured into categoryDefaultRef (collapsed pages fall back to the
-  //    top project, since they show no project cards)
-  //  - homescreen → the project last added to this session, else the first project
-  //    of the first tab. Archived projects are never offered.
+  // The default destination for the "Save to..." card:
+  //  - a project page → whichever canvas was last added to while on this page,
+  //    else the page's top canvas
+  //  - homescreen → the project last added to this session, else the first
+  //    project of the first tab
+  // Archived projects are never offered.
   const computeSaveDefault = useCallback(() => {
     const firstActive = (cat) => cat?.projects.find(p => !p.archived) || null
     if (categoryIds.includes(activeTab)) {
-      // Last canvas picked while on this page wins over the scroll-based default.
-      const picked = lastPickedRef.current
-      if (picked?.target) {
-        const pc = categories.find(c => c.id === picked.target.categoryId)
-        if (pc?.projects.some(p => p.id === picked.target.projectId && !p.archived)) {
-          return { tab: picked.tab, target: picked.target }
+      const added = pageAddedRef.current
+      if (added && added.tab === activeTab) {
+        const ac = categories.find(c => c.id === added.categoryId)
+        if (ac?.projects.some(p => p.id === added.projectId && !p.archived)) {
+          return { tab: added.categoryId, target: { categoryId: added.categoryId, projectId: added.projectId } }
         }
       }
-      const cat = categories.find(c => c.id === activeTab)
-      const measured = categoryDefaultRef.current
-      let proj = null
-      if (measured && measured.categoryId === activeTab && measured.projectId != null) {
-        proj = cat?.projects.find(p => String(p.id) === String(measured.projectId) && !p.archived) || null
-      }
-      if (!proj) proj = firstActive(cat)
+      const proj = firstActive(categories.find(c => c.id === activeTab))
       return { tab: activeTab, target: proj ? { categoryId: activeTab, projectId: proj.id } : null }
     }
     const last = lastAddedRef.current
@@ -1534,14 +1495,91 @@ function AppInner() {
     }, 260)
   }, [inputFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Added somewhere you can't see: a toast above the footer that jumps to it.
+  const [addToast, setAddToast] = useState(null)
+  const addToastTimer = useRef(null)
+  const addToastDelay = useRef(null)
+  const addToastHover = useRef(false)
+  const addToastPending = useRef(false)   // the 4s is up but the cursor is on it
+  const [addToastLeaving, setAddToastLeaving] = useState(false)
+
+  // The exit animation runs to completion once started — hovering can only hold
+  // the toast in its resting state, never interrupt either animation.
+  const beginToastExit = useCallback(() => {
+    addToastPending.current = false
+    setAddToastLeaving(true)
+    addToastTimer.current = setTimeout(() => { setAddToastLeaving(false); setAddToast(null) }, 200)
+  }, [])
+  useEffect(() => () => { clearTimeout(addToastTimer.current); clearTimeout(addToastDelay.current) }, [])
+
+  const showAddToast = useCallback((holder, { categoryId, projectId, type, title }) => {
+    const catIdx = categories.findIndex(c => c.id === categoryId)
+    const accent = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    const canvasName = categories.find(c => c.id === categoryId)
+      ?.projects.find(p => p.id === projectId)?.name || ''
+    clearTimeout(addToastTimer.current)
+    clearTimeout(addToastDelay.current)
+    // Half a second after the add view has closed and the page is back
+    setAddToastLeaving(false)
+    addToastHover.current = false
+    addToastPending.current = false
+    addToastDelay.current = setTimeout(() => {
+      setAddToast({ key: Date.now(), holder, categoryId, projectId, type, title, canvasName, accent })
+      addToastTimer.current = setTimeout(() => {
+        // Cursor on it when the time is up: hold until it moves away
+        if (addToastHover.current) { addToastPending.current = true; return }
+        beginToastExit()
+      }, 4000)
+    }, 500)
+  }, [categories, beginToastExit])
+
+  // A row you just added gets the same treatment as a search result: scrolled
+  // into view and flashed. Only when it lands on the page you're looking at —
+  // the canvas you're on, or the gallery for something added as Displayed.
+  const flashNewRow = useCallback((holder, { categoryId, projectId, type }) => {
+    const onHome = activeTab === 'star'
+    const focusReq = onHome ? null : { projectId, categoryId, type, expand: true }
+    const findRow = () => (holder.id == null
+      ? null
+      : document.querySelector(`.page:not(.page-exiting) [data-swipe-id="${holder.id}"]`))
+    const flash = (row) => {
+      row.classList.remove('search-flash')
+      void row.offsetWidth
+      row.classList.add('search-flash')
+      setTimeout(() => row.classList.remove('search-flash'), 1500)
+    }
+    let tries = 0
+    const hunt = setInterval(() => {
+      if (focusReq) requestProjectFocus(focusReq)
+      if (!findRow()) { if (++tries > 40) clearInterval(hunt); return }
+      clearInterval(hunt)
+      // Let the add animation and any tab switch settle, scroll, then flash —
+      // re-finding the row each time, since its temp id is swapped for the real
+      // one as soon as the insert comes back.
+      setTimeout(() => {
+        findRow()?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setTimeout(() => { const row = findRow(); if (row) flash(row) }, 500)
+      }, 400)
+    }, 60)
+  }, [activeTab])
+
   const addItem = useCallback(() => {
     // Link mode: requires a URL and a destination project
     if (toolbarType === 'link') {
       const url = linkUrlValue.trim()
       if (!url) return
       if (footerInputMode && saveToProject) {
-        addProjectLink(saveToProject.categoryId, saveToProject.projectId, inputValue.trim(), url, addAsActiveFlag)
-        lastAddedRef.current = { categoryId: saveToProject.categoryId, projectId: saveToProject.projectId }
+        const { categoryId, projectId } = saveToProject
+        const holder = { id: null }
+        holder.id = addProjectLink(categoryId, projectId, inputValue.trim(), url, addAsActiveFlag, null, (rid) => { holder.id = rid })
+        lastAddedRef.current = { categoryId, projectId }
+        pageAddedRef.current = { tab: activeTab, categoryId, projectId }
+        const title = inputValue.trim() || url
+        if (activeTab === 'star' ? addAsActiveFlag : activeTab === categoryId) {
+          flashNewRow(holder, { categoryId, projectId, type: 'link' })
+        } else {
+          showAddToast(holder, { categoryId, projectId, type: 'link', title })
+        }
       }
       setInputValue('')
       setLinkUrlValue('')
@@ -1562,6 +1600,7 @@ function AppInner() {
     if (footerInputMode && saveToProject) {
       const { categoryId, projectId } = saveToProject
       lastAddedRef.current = { categoryId, projectId }
+      pageAddedRef.current = { tab: activeTab, categoryId, projectId }
 
       if (addAsActiveFlag && (toolbarType === 'list' || toolbarType === 'note')) {
         // Capture input position BEFORE blur for the fly animation
@@ -1576,25 +1615,38 @@ function AppInner() {
           : inputRect
 
         let newId
+        const holder = { id: null }
         if (toolbarType === 'list') {
-          newId = addProjectTodo(categoryId, projectId, text, true)
+          newId = addProjectTodo(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
         } else {
-          const holder = { id: null }
           newId = addProjectNote(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
-          holder.id = newId
           openNoteSoon('note', holder)
         }
+        holder.id = newId
 
         if (animRect && appRect && newId != null) {
           pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
         }
+        if (activeTab === 'star' ? true : activeTab === categoryId) {
+          flashNewRow(holder, { categoryId, projectId, type: toolbarType })
+        } else {
+          showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
+        }
       } else {
         // Inactive: add without animation
-        if (toolbarType === 'list') addProjectTodo(categoryId, projectId, text, addAsActiveFlag)
-        else if (toolbarType === 'note') {
-          const holder = { id: null }
+        const holder = { id: null }
+        if (toolbarType === 'list') {
+          holder.id = addProjectTodo(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
+        } else if (toolbarType === 'note') {
           holder.id = addProjectNote(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
           openNoteSoon('note', holder)
+        }
+        // An inactive item never shows on the gallery, so only flash it when
+        // you're on its own canvas's page — otherwise the toast points at it.
+        if (activeTab === categoryId) {
+          flashNewRow(holder, { categoryId, projectId, type: toolbarType })
+        } else {
+          showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
         }
       }
 
@@ -1635,7 +1687,7 @@ function AppInner() {
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
-  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {
@@ -1930,12 +1982,7 @@ function AppInner() {
                           {i > 0 && <div className="save-to-divider"/>}
                           <button
                             className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
-                            onMouseDown={e => {
-                              e.preventDefault()
-                              const pick = { categoryId: saveToTab, projectId: proj.id }
-                              setSaveToProject(pick)
-                              lastPickedRef.current = { tab: saveToTab, target: pick }
-                            }}
+                            onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: saveToTab, projectId: proj.id }) }}
                           >
                             <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
                             <span>{proj.name}</span>
@@ -1945,7 +1992,7 @@ function AppInner() {
                       <AddCanvasRow
                         active={inputFocused}
                         categoryId={saveToTab}
-                        onCreated={pick => { setSaveToProject(pick); lastPickedRef.current = { tab: saveToTab, target: pick } }}
+                        onCreated={pick => setSaveToProject(pick)}
                         onDone={() => inputRef.current?.focus({ preventScroll: true })}
                       />
                     </>
@@ -1959,9 +2006,7 @@ function AppInner() {
                   setSaveToTab(catId)
                   const cat = categories.find(c => c.id === catId)
                   const proj = cat?.projects.find(p => !p.archived)
-                  const pick = proj ? { categoryId: catId, projectId: proj.id } : null
-                  setSaveToProject(pick)
-                  lastPickedRef.current = { tab: catId, target: pick }
+                  setSaveToProject(proj ? { categoryId: catId, projectId: proj.id } : null)
                 }}
               />}
             </div>
@@ -2068,6 +2113,50 @@ function AppInner() {
             '--accent-base-rgb': activeAccent.baseRgb,
           }}
         >
+
+          {addToast && (
+            <button
+              key={addToast.key}
+              className={`add-toast${addToastLeaving ? ' leaving' : ''}`}
+              onPointerEnter={() => { addToastHover.current = true }}
+              onPointerLeave={() => {
+                addToastHover.current = false
+                if (addToastPending.current) beginToastExit()
+              }}
+              style={{
+                '--accent-base': addToast.accent.base,
+                '--accent-dark': addToast.accent.dark,
+                '--accent-light': addToast.accent.light,
+                '--accent-base-rgb': addToast.accent.baseRgb,
+              }}
+              onPointerDown={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                const t = addToast
+                clearTimeout(addToastTimer.current)
+                clearTimeout(addToastDelay.current)
+                setAddToastLeaving(false)
+                setAddToast(null)
+                openSearchResult({
+                  type: t.type,
+                  projectId: t.projectId,
+                  categoryId: t.categoryId,
+                  itemId: t.holder.id,
+                })
+              }}
+            >
+              <span className="add-toast-text">
+                <span className="add-toast-canvas">Added to {addToast.canvasName}</span>
+                <span className="add-toast-row">
+                  <span className="add-toast-icon"><ToastTypeIcon type={addToast.type}/></span>
+                  <span className="add-toast-title">{addToast.title}</span>
+                </span>
+              </span>
+              <svg className="add-toast-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h13M12.5 6l6 6-6 6" stroke="var(--accent-dark)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
 
           {/* Only the text box follows the Save-to destination; the nav beneath it
               keeps the page's own accent. */}
@@ -2260,13 +2349,7 @@ function AppInner() {
                 placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (isMobileView ? 'Add an item' : 'Scribble something down...')}
                 value={inputValue}
                 onChange={e => handleAddInputChange(e.target.value)}
-                onFocus={() => {
-                  // Capture the scroll-based default project before the page collapses.
-                  categoryDefaultRef.current = categoryIds.includes(activeTab)
-                    ? { categoryId: activeTab, projectId: measureCategoryDefault(activeTab) }
-                    : null
-                  setInputFocused(true)
-                }}
+                onFocus={() => setInputFocused(true)}
                 onBlur={handleAddInputBlur}
                 onKeyDown={e => { if (toolbarType === 'link') { if (e.key === 'Enter') { e.preventDefault(); linkUrlRef.current?.focus() } } else handleKeyDown(e) }}
                 autoComplete="off"
@@ -2495,7 +2578,39 @@ function AuthGate() {
   )
 }
 
-export default function App() {
+export default // Content-type glyph for the add toast — the same shapes as the footer toolbar.
+function ToastTypeIcon({ type, size = 16 }) {
+  if (type === 'note') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 20 22" fill="none">
+        <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" strokeWidth="1" fill="none"/>
+        <path d="M12 3v5h5" stroke="currentColor" strokeWidth="1" fill="none"/>
+        <line x1="5" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+        <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+      </svg>
+    )
+  }
+  if (type === 'link') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
+      <circle cx="5" cy="7" r="1.5" fill="currentColor"/>
+      <line x1="9" y1="7" x2="19" y2="7" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+      <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+      <line x1="9" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+      <circle cx="5" cy="17" r="1.5" fill="currentColor"/>
+      <line x1="9" y1="17" x2="14" y2="17" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function App() {
   return (
     <AuthProvider>
       <AuthGate />

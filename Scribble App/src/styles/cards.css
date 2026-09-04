@@ -1982,6 +1982,9 @@
 
 .project-input::placeholder { color: #B5B4B2; }
 
+/* The project-page rename check sits inline in the header, not over an input */
+.category-header-actions .project-send-btn { position: static; }
+
 .project-send-btn {
   position: absolute;
   right: 4px;
@@ -3011,3 +3014,7 @@
   .todo-section-card.empty-card:hover .project-tab-count { color: #242424; }
   .todo-section-card.empty-card:hover .project-add-btn svg path { stroke: #242424; }
 }
+
+
+/* The attach button reads as pressed while its menu is open */
+.todo-section-card.empty-card .todo-attach-btn.active { color: #242424; }

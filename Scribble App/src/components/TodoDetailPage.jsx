@@ -832,9 +832,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             <div className="project-header-actions">
               {!archived && (
                 <button
-                  className="todo-attach-btn section-attach-btn"
+                  className={`todo-attach-btn section-attach-btn${noteAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a note"
-                  onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteAttachOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false); setNoteAttachOpen(v => !v) }}
                 >
                   <span className={`project-tab-count${attachedNotes.length > 0 ? '' : ' empty'}`}>{attachedNotes.length > 0 ? attachedNotes.length : ''}</span>
                   <PaperclipIcon/>
@@ -844,7 +844,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   type="button"
                   className="project-add-btn"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setLinkComposerOpen(false); setNoteComposerOpen(v => !v) }}
                 >
                   <PlusIcon/>
                 </button>
@@ -863,7 +863,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                   <button
                     key={n.id}
                     className="todo-attach-item"
-                    onMouseDown={e => { e.preventDefault(); attachNoteToTodo(categoryId, projectId, todo.id, n.id) }}
+                    onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); attachNoteToTodo(categoryId, projectId, todo.id, n.id) }}
                   >
                     <span className="note-text">{n.text}</span>
                     {preview && <span className="note-preview-text">{preview}</span>}
@@ -909,9 +909,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             <div className="project-header-actions">
               {!archived && (
                 <button
-                  className="todo-attach-btn section-attach-btn"
+                  className={`todo-attach-btn section-attach-btn${linkAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a link"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false); setLinkAttachOpen(v => !v) }}
                 >
                   <span className={`project-tab-count${attachedLinks.length > 0 ? '' : ' empty'}`}>{attachedLinks.length > 0 ? attachedLinks.length : ''}</span>
                   <PaperclipIcon/>
@@ -921,7 +921,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   type="button"
                   className="project-add-btn"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setLinkComposerOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(v => !v) }}
                 >
                   <PlusIcon/>
                 </button>
@@ -938,7 +938,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   key={l.id}
                   className="todo-attach-item"
-                  onMouseDown={e => { e.preventDefault(); attachLinkToTodo(categoryId, projectId, todo.id, l.id) }}
+                  onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); attachLinkToTodo(categoryId, projectId, todo.id, l.id) }}
                 >
                   <span className="note-text">{l.title}</span>
                   <span className="note-preview-text">{displayUrl(l.url)}</span>

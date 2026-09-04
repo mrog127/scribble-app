@@ -73,6 +73,37 @@ export function ArchiveMenuIcon() {
   )
 }
 
+// Easel — "Send to Gallery" (matches the Display control's glyph)
+export function GalleryMenuIcon() {
+  return (
+    <svg {...base}>
+      <polyline points="3.6,8.2 12,3.1 20.4,8.2" {...stroke}/>
+      <line x1="6" y1="9.1" x2="6" y2="16.8" {...stroke}/>
+      <line x1="10" y1="9.1" x2="10" y2="16.8" {...stroke}/>
+      <line x1="14" y1="9.1" x2="14" y2="16.8" {...stroke}/>
+      <line x1="18" y1="9.1" x2="18" y2="16.8" {...stroke}/>
+      <line x1="4.2" y1="16.8" x2="19.8" y2="16.8" {...stroke}/>
+      <line x1="3.6" y1="20.4" x2="20.4" y2="20.4" {...stroke}/>
+    </svg>
+  )
+}
+
+// Easel with a slash — "Hide from Gallery"
+export function GalleryOffMenuIcon() {
+  return (
+    <svg {...base}>
+      <polyline points="3.6,8.2 12,3.1 20.4,8.2" {...stroke}/>
+      <line x1="6" y1="9.1" x2="6" y2="16.8" {...stroke}/>
+      <line x1="10" y1="9.1" x2="10" y2="16.8" {...stroke}/>
+      <line x1="14" y1="9.1" x2="14" y2="16.8" {...stroke}/>
+      <line x1="18" y1="9.1" x2="18" y2="16.8" {...stroke}/>
+      <line x1="4.2" y1="16.8" x2="19.8" y2="16.8" {...stroke}/>
+      <line x1="3.6" y1="20.4" x2="20.4" y2="20.4" {...stroke}/>
+      <line x1="3.5" y1="20.5" x2="20.5" y2="3.5" {...stroke}/>
+    </svg>
+  )
+}
+
 // Archive box with up arrow — "Unarchive / Retrieve"
 export function RetrieveMenuIcon() {
   return (

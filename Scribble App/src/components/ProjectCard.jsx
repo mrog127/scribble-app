@@ -709,10 +709,13 @@ export default function ProjectCard({ categoryId, project }) {
     try { return localStorage.getItem(`arch-link-project-${project.id}`) === 'true' } catch { return false }
   })
   // Tapping the card header collapses the card to just its header (and expands
-  // it again). Persisted per canvas.
-  const [collapsed, setCollapsed] = useState(() => {
+  // it again). Persisted per canvas. An empty canvas has nothing to collapse, so
+  // it stays expanded and its header ignores taps.
+  const [collapsedPref, setCollapsed] = useState(() => {
     try { return localStorage.getItem(`collapsed-project-${project.id}`) === 'true' } catch { return false }
   })
+  const isEmptyCanvas = project.todos.length === 0 && project.notes.length === 0 && project.links.length === 0
+  const collapsed = collapsedPref && !isEmptyCanvas
 
   const cardRef = useRef(null)
   const inputWrapRef = useRef(null)
@@ -1270,12 +1273,12 @@ export default function ProjectCard({ categoryId, project }) {
 
   // Tap anywhere on the header that isn't an interactive control to toggle.
   const handleHeaderClick = useCallback((e) => {
-    if (renaming) return
+    if (renaming || isEmptyCanvas) return
     // A tab tap already expanded the card — don't let its click toggle it back.
     if (suppressHeaderToggleRef.current) { suppressHeaderToggleRef.current = false; return }
     if (e.target.closest('button, input, .dots-menu-wrap, .project-tab-bar, .card-context-menu')) return
     applyCollapsed(!collapsedRef.current)
-  }, [renaming, applyCollapsed])
+  }, [renaming, isEmptyCanvas, applyCollapsed])
 
   // Capture the current items height before switching tabs so the height
   // animation starts from the right place (even if content changed in between).

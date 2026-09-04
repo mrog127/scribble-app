@@ -253,7 +253,7 @@ export function AppProvider({ children }) {
   }, [user])
 
   // ---- Project todos ----
-  const addProjectTodo = useCallback((categoryId, projectId, text, activated = false, scheduledDate = null) => {
+  const addProjectTodo = useCallback((categoryId, projectId, text, activated = false, scheduledDate = null, onCreated) => {
     if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
@@ -269,6 +269,7 @@ export function AppProvider({ children }) {
           ...proj,
           todos: proj.todos.map(t => t.id === tempId ? { ...t, id: data.id } : t)
         }))
+        if (data && onCreated) onCreated(data.id)
       })
     return tempId
   }, [user, updateProject])
@@ -294,7 +295,7 @@ export function AppProvider({ children }) {
     return tempId
   }, [user, updateProject])
 
-  const addProjectLink = useCallback((categoryId, projectId, title, url, activated = false, scheduledDate = null) => {
+  const addProjectLink = useCallback((categoryId, projectId, title, url, activated = false, scheduledDate = null, onCreated) => {
     if (scheduledDate) activated = false
     const tempId = Date.now()
     const finalTitle = (title && title.trim()) || url
@@ -311,6 +312,7 @@ export function AppProvider({ children }) {
           ...proj,
           links: proj.links.map(l => l.id === tempId ? { ...l, id: data.id } : l)
         }))
+        if (data && onCreated) onCreated(data.id)
       })
     return tempId
   }, [user, updateProject])

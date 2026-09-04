@@ -18,7 +18,10 @@
   }
 
 
-  .toolbar-left.is-pressed::after {
+  /* The box belongs to the wrapper, but a touch press lands on the button
+     inside it — the :has() variant lets that press light the same box. */
+  .toolbar-left.is-pressed::after,
+  .toolbar-left:has(button.is-pressed)::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -40,6 +43,48 @@
 
 
   .save-to-option.is-pressed:not(.selected) { background: rgba(0, 0, 0, 0.02); }
+
+
+    .mbar-circle::after,
+    .footer .add-row .link-input-stack:not(.search-stack)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: rgba(0, 0, 0, 0.04);
+      opacity: 0;
+      transition: opacity 120ms ease;
+      pointer-events: none;
+    }
+    .mbar-circle.is-pressed::after,
+    .footer .add-row .link-input-stack:not(.search-stack).is-pressed::after { opacity: 1; }
+    /* The gallery circle spends both its pseudos on the activation pulse, so its
+       tint goes on the element itself, over --mbar-chrome. */
+    .mbar-circle.mbar-gallery.is-pressed {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+    }
+    /* A text box in use shouldn't read as pressable */
+    .footer.keyboard-open .add-row .link-input-stack::after { opacity: 0; }
+  
+
+  .home-settings-btn.is-pressed::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.04);
+    z-index: 0;
+  }
+  /* Tab bar (the mobile control bar keys off the same rule) */
+  .tab-bar .icon-tab.is-pressed:not(.selected),
+  .tab-bar .text-tab.is-pressed:not(.selected) {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 999px;
+  }
 
 
   .search-result-row.is-pressed { background: rgba(0, 0, 0, 0.02); }

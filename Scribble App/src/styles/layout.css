@@ -648,7 +648,10 @@ html, body, #root {
 }
 
 @media (hover: hover) {
-  .toolbar-left:hover::after {
+  /* The box belongs to the wrapper, but a touch press lands on the button
+     inside it — the :has() variant lets that press light the same box. */
+  .toolbar-left:hover::after,
+  .toolbar-left:has(button:hover)::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -1793,6 +1796,33 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
   .mbar-circle svg { flex-shrink: 0; }
 
+  /* Same 2% tint the desktop pill gets, as an overlay so it doesn't disturb the
+     circle's own chrome. Mirrored onto touch presses by touch-press.css. */
+  .mbar-circle,
+  .footer .add-row .link-input-stack { position: relative; }
+  @media (hover: hover) {
+    .mbar-circle::after,
+    .footer .add-row .link-input-stack:not(.search-stack)::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: rgba(0, 0, 0, 0.04);
+      opacity: 0;
+      transition: opacity 120ms ease;
+      pointer-events: none;
+    }
+    .mbar-circle:hover::after,
+    .footer .add-row .link-input-stack:not(.search-stack):hover::after { opacity: 1; }
+    /* The gallery circle spends both its pseudos on the activation pulse, so its
+       tint goes on the element itself, over --mbar-chrome. */
+    .mbar-circle.mbar-gallery:hover {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+    }
+    /* A text box in use shouldn't read as pressable */
+    .footer.keyboard-open .add-row .link-input-stack::after { opacity: 0; }
+  }
+
   /* --- Resting pill --- */
   .footer .add-row .link-input-stack {
     height: var(--mbar-h);
@@ -2019,6 +2049,29 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
    sheet is suppressed above the breakpoint.
    ============================================= */
 .settings-sheet { display: none; }
+
+/* Same 32px 4% box the canvas plus button and the easel header buttons use */
+@media (hover: hover) {
+  .home-settings-btn:hover::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.04);
+    z-index: 0;
+  }
+  /* Tab bar (the mobile control bar keys off the same rule) */
+  .tab-bar .icon-tab:hover:not(.selected),
+  .tab-bar .text-tab:hover:not(.selected) {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 999px;
+  }
+}
+.home-settings-btn > * { position: relative; z-index: 1; }
 
 .home-settings-btn {
   display: none;
@@ -2417,11 +2470,11 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
   /* Hover tint: the same 2% black an unchecked checkbox gets, as an overlay so
      it doesn't disturb the pill's own background. */
-  .footer .add-row .mbar-search,
+  .footer .add-row .mbar-circle,
   .footer .add-row .link-input-stack { position: relative; }
 
   @media (hover: hover) {
-    .footer .add-row .mbar-search::after,
+    .footer .add-row .mbar-circle::after,
     .footer .add-row .link-input-stack:not(.search-stack)::after {
       content: '';
       position: absolute;
@@ -2432,7 +2485,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
       transition: opacity 120ms ease;
       pointer-events: none;
     }
-    .footer .add-row .mbar-search:hover::after,
+    .footer .add-row .mbar-circle:hover::after,
     .footer .add-row .link-input-stack:not(.search-stack):hover::after { opacity: 1; }
     /* An active text box shouldn't read as hoverable */
     .footer.keyboard-open .add-row .link-input-stack:hover::after { opacity: 0; }

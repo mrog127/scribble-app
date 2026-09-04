@@ -17,7 +17,8 @@ const CONTROL = [
   'button', 'a', '[role="button"]',
   '.swipe-row', '.card-context-item', '.save-to-option', '.search-result-row',
   '.dots-menu', '.canvas-link', '.add-toast', '.checkbox-wrap', '.todo-attach-item',
-  '.cal-cell', '.link-tile', '.toolbar-left', '.project-input-wrap', '.add-input',
+  '.cal-cell', '.link-tile', '.toolbar-left', '.project-input-wrap',
+  '.mbar-circle', '.link-input-stack', '.detail-footer-cell',
 ].join(', ')
 
 export function installPressState() {
@@ -44,13 +45,13 @@ export function installPressState() {
     control = target.closest(CONTROL) || target
     pointerId = e.pointerId
     cancelled = false
-    // Up to (and including) the control, so a rule written against it — or an
-    // inner wrapper — matches. It stops there: pressing a canvas link inside a
-    // row shouldn't light the whole row up as well.
-    for (let el = target; el; el = el.parentElement) {
+    // All the way up, so a rule written against any wrapper matches — the box
+    // often belongs to a container rather than the control itself. Where that
+    // would double up (a canvas link inside a row), the CSS suppresses the outer
+    // one with :has().
+    for (let el = target; el && el !== document.body; el = el.parentElement) {
       el.classList.add(PRESSED)
       chain.push(el)
-      if (el === control || el === document.body) break
     }
   }
 

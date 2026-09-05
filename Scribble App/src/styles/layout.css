@@ -1718,6 +1718,20 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
       black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
       transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
   }
+  /* Scrolled: the same fade at the top as at the bottom, mirrored. */
+  .page.scrolled {
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent 0px,
+      black 32px,
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
+    mask-image: linear-gradient(to bottom,
+      transparent 0px,
+      black 32px,
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
+  }
+
   .phone.save-panel-open .page { margin-bottom: 0; }
 
   /* Let content scroll clear of the bar: at the end of the scroll the last item
@@ -3024,7 +3038,10 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 
 .cc-overlay {
   position: absolute;
-  left: 16px;          /* matches the input's own left padding */
+  /* The input's text starts at its 12px left padding; the chip below adds 5px
+     of its own, so the overlay starts 5px earlier and the mirrored glyphs land
+     exactly on the real ones — which is where the caret is drawn. */
+  left: 7px;
   right: 16px;
   top: 0;
   bottom: 0;
@@ -3036,7 +3053,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 .cc-overlay-text {
   font-family: 'Open Sans', system-ui, sans-serif;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 400;   /* same as .add-input, so the mirror is the same width */
   line-height: 1;
   border-radius: 2px;
   padding: 6px 5px;   /* generous box around the query text */

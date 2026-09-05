@@ -345,15 +345,15 @@ function AppInner() {
   const [headerTranslate, setHeaderTranslate] = useState(0)
   // ---- "@" canvas picker ----
   // Typing `@` as the very first character of the add field turns it into a
-  // canvas search: the `@` drops away, what follows becomes a highlighted token,
-  // and the Save-to list shows matching canvases from every page. Space commits
-  // the highlighted one.
+  // canvas search: the `@` and what follows read as one highlighted token, and
+  // the Save-to list shows matching canvases from every page. Return commits the
+  // highlighted one; deleting the `@` leaves the picker.
   const [ccActive, setCcActive] = useState(false)
   const [ccPick, setCcPick] = useState(null)   // { categoryId, projectId } | null
 
   const ccMatches = useMemo(() => {
     if (!ccActive) return []
-    const q = inputValue.trim().toLowerCase()
+    const q = inputValue.replace(/^@/, '').trim().toLowerCase()
     const out = []
     categories.forEach((cat, catIdx) => {
       (cat.projects || []).forEach(proj => {
@@ -395,9 +395,9 @@ function AppInner() {
   // Runs on every keystroke in the add field.
   const handleAddInputChange = useCallback((raw) => {
     if (ccActive) {
-      // Space commits; anything else refines the search.
-      if (/\s/.test(raw)) { ccCommit(ccSelectedRef.current); return }
-      if (raw === '') { setCcActive(false); setCcPick(null) }
+      // The leading "@" holds the picker open — losing it leaves. Everything
+      // else refines the search, spaces included (canvas names have them).
+      if (!/^@/.test(raw)) { setCcActive(false); setCcPick(null) }
       setInputValue(raw)
       return
     }
@@ -405,7 +405,7 @@ function AppInner() {
     if (/^@/.test(raw)) {
       setCcActive(true)
       setCcPick(null)
-      setInputValue(raw.slice(1))   // the "@" itself drops away
+      setInputValue(raw)   // the "@" stays, as part of the token
       return
     }
     setInputValue(raw)
@@ -805,7 +805,7 @@ function AppInner() {
       // that were hidden), so one scroll pass lands against a moving layout.
       // Scroll, let it settle, then correct and only then flash.
       const settleAndScroll = () => {
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        scrollRowIntoView(row)
         const page = row.closest('.page')
         let done = false
         const finish = () => {
@@ -817,7 +817,7 @@ function AppInner() {
           const pr = page?.getBoundingClientRect()
           const offscreen = pr && (rect.top < pr.top + 24 || rect.bottom > pr.bottom - 24)
           if (offscreen) {
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            scrollRowIntoView(row)
             setTimeout(flash, 450)
           } else {
             flash()
@@ -1280,6 +1280,8 @@ function AppInner() {
     const translate = (1 - opacity) * -16
     setHeaderOpacity(opacity)
     setHeaderTranslate(translate)
+    // Content only fades out at the top once there's something above it
+    e.target.classList.toggle('scrolled', scrollY > 1)
   }, [])
 
   const handleTabsScroll = useCallback(() => {
@@ -1557,7 +1559,7 @@ function AppInner() {
       // re-finding the row each time, since its temp id is swapped for the real
       // one as soon as the insert comes back.
       setTimeout(() => {
-        findRow()?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        scrollRowIntoView(findRow())
         setTimeout(() => { const row = findRow(); if (row) flash(row) }, 500)
       }, 400)
     }, 60)
@@ -1702,8 +1704,13 @@ function AppInner() {
   }, [])
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') { e.preventDefault(); addItem() }
-  }, [addItem])
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    // In the canvas picker, Return picks the highlighted canvas rather than
+    // adding an item.
+    if (ccActive) { ccCommit(ccSelectedRef.current); return }
+    addItem()
+  }, [addItem, ccActive, ccCommit])
 
   const toggleTodo = useCallback((id) => toggleActiveTodo(id), [toggleActiveTodo])
   const deleteTodo = useCallback((id) => deleteActiveTodo(id), [deleteActiveTodo])
@@ -2128,10 +2135,13 @@ function AppInner() {
                 '--accent-light': addToast.accent.light,
                 '--accent-base-rgb': addToast.accent.baseRgb,
               }}
-              onPointerDown={e => {
+              /* Press to arm, release to go — so sliding off cancels it */
+              onPointerDown={e => { e.preventDefault(); e.stopPropagation() }}
+              onPointerUp={e => {
                 e.preventDefault()
                 e.stopPropagation()
                 const t = addToast
+                if (!t) return
                 clearTimeout(addToastTimer.current)
                 clearTimeout(addToastDelay.current)
                 setAddToastLeaving(false)
@@ -2353,7 +2363,8 @@ function AppInner() {
                 autoCorrect="off"
                 autoCapitalize="sentences"
                 spellCheck="false"
-                enterKeyHint={toolbarType === 'link' ? 'next' : 'send'}
+                /* In the canvas picker the return key selects rather than sends */
+                enterKeyHint={toolbarType === 'link' ? 'next' : (ccActive ? 'done' : 'send')}
               />
               <div className={`add-link-url-wrap${toolbarType === 'link' && inputFocused ? ' open' : ''}`}>
                 <div className="add-input-divider"/>
@@ -2562,6 +2573,26 @@ function AppInner() {
       </div>
     </div>
   )
+}
+
+// Bring a row into view by scrolling the PAGE only.
+//
+// element.scrollIntoView() scrolls every scrollable ancestor — and a box with
+// `overflow: hidden` still counts, so it will happily scroll a card's own body.
+// That's what leaves a card sitting with its header scrolled out of sight.
+function scrollRowIntoView(row) {
+  if (!row) return
+  const page = row.closest('.page')
+  if (!page) return
+  // Undo any inner box that a previous scrollIntoView (or a focus) nudged
+  for (let el = row.parentElement; el && el !== page; el = el.parentElement) {
+    if (el.scrollTop) el.scrollTop = 0
+    if (el.scrollLeft) el.scrollLeft = 0
+  }
+  const pr = page.getBoundingClientRect()
+  const rr = row.getBoundingClientRect()
+  const top = page.scrollTop + (rr.top - pr.top) - (page.clientHeight - rr.height) / 2
+  page.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
 }
 
 // Content-type glyph for the add toast — the same shapes as the footer toolbar.

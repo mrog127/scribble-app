@@ -25,7 +25,7 @@ export function installPressState() {
   let chain = []          // the elements currently carrying the class
   let control = null      // the element whose box the finger must stay inside
   let pointerId = null
-  let cancelled = false
+  let outside = false     // the finger has left the control's box
 
   const clear = () => {
     chain.forEach(el => el.classList.remove(PRESSED))
@@ -44,7 +44,7 @@ export function installPressState() {
     if (!target) return
     control = target.closest(CONTROL) || target
     pointerId = e.pointerId
-    cancelled = false
+    outside = false
     // All the way up, so a rule written against any wrapper matches — the box
     // often belongs to a container rather than the control itself. Where that
     // would double up (a canvas link inside a row), the CSS suppresses the outer
@@ -60,18 +60,26 @@ export function installPressState() {
     const r = control.getBoundingClientRect()
     const inside = e.clientX >= r.left && e.clientX <= r.right &&
                    e.clientY >= r.top && e.clientY <= r.bottom
-    if (!inside && !cancelled) {
+    if (!inside && !outside) {
       // Off the control: drop the highlight and don't let it fire
-      cancelled = true
+      outside = true
       clear()
-    } else if (inside && cancelled) {
-      cancelled = false
+    } else if (inside && outside) {
+      outside = false
     }
   }
 
   const onUp = (e) => {
     if (e.pointerId !== pointerId) return
-    if (cancelled) swallowNextTap()
+    // Only a release that actually lands off the control is swallowed. Anything
+    // else — a scroll that stole the gesture, a jitter that came back — must let
+    // the tap through, or controls that open on click stop responding.
+    if (outside && control) {
+      const r = control.getBoundingClientRect()
+      const off = e.clientX < r.left || e.clientX > r.right ||
+                  e.clientY < r.top || e.clientY > r.bottom
+      if (off) swallowNextTap()
+    }
     end()
   }
 
@@ -84,15 +92,16 @@ export function installPressState() {
   // its start element on some platforms — eat the next one.
   function swallowNextTap() {
     const eat = (ev) => { ev.stopPropagation(); ev.preventDefault() }
-    const types = ['mousedown', 'mouseup', 'click']
+    const types = ['mousedown', 'click']
     types.forEach(t => document.addEventListener(t, eat, true))
-    setTimeout(() => types.forEach(t => document.removeEventListener(t, eat, true)), 400)
+    setTimeout(() => types.forEach(t => document.removeEventListener(t, eat, true)), 300)
   }
 
   document.addEventListener('pointerdown', onDown, true)
   document.addEventListener('pointermove', onMove, true)
   document.addEventListener('pointerup', onUp, true)
   document.addEventListener('pointercancel', onCancel, true)
-  // A scroll steals the gesture — treat it as leaving the control
-  window.addEventListener('scroll', () => { if (pointerId !== null) { cancelled = true; clear() } }, true)
+  // A scroll steals the gesture: drop the highlight, but leave the tap alone —
+  // the browser decides whether a scrolled touch still counts as a tap.
+  window.addEventListener('scroll', () => { if (pointerId !== null) clear() }, true)
 }

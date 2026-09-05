@@ -3,6 +3,8 @@ import { supabase, functionsUrl, functionsKey } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
 import { isRecurring, nextRecurrence } from '../components/ScheduleBits.jsx'
+import { readCache, writeCache } from '../localCache.js'
+import { send } from '../outbox.js'
 
 export const AppContext = createContext(null)
 
@@ -12,7 +14,9 @@ const DEFAULT_CATEGORIES = [
 ]
 const DEFAULT_PROJECT = { id: 'proj-scheduling', category_id: 'personal', name: 'Scheduling', sort_order: 0 }
 
-const db = (promise) => promise.then(() => {}) // fire-and-forget helper
+// Fire-and-forget, but a write that failed because the network was gone is
+// queued and replayed on reconnect (see outbox.js) rather than lost.
+const db = (builder) => { send(builder) }
 
 // Normalize a linked-id column into a clean array of string ids.
 // Handles: a real array, a Postgres array literal string "{a,b}", a JSON string "[a,b]", "{}", or null.
@@ -26,10 +30,9 @@ function normalizeIds(v) {
   }
   return []
 }
-// Fire-and-forget, but surface DB errors to the console (e.g. missing column / stale schema cache)
-const dbw = (promise, label) => promise.then(({ error }) => {
-  if (error) console.error(`Supabase write failed [${label}]:`, error.message || error)
-})
+// Same, with a label on any error the server does report (e.g. missing column /
+// stale schema cache).
+const dbw = (builder, label) => { send(builder, label) }
 
 export function AppProvider({ children }) {
   const { user } = useAuth()
@@ -51,10 +54,34 @@ export function AppProvider({ children }) {
   useEffect(() => { activeNotesRef.current = activeNotes }, [activeNotes])
   useEffect(() => { categoriesRef.current = categories }, [categories])
 
+  // The last loaded state, kept locally so a fresh open paints from it while
+  // Supabase is still answering. Fresh data always wins if it lands first.
+  const freshLoadedRef = useRef(false)
+  const cacheKey = user ? `state-${user.id}` : null
+
   useEffect(() => {
     if (!user) return
+    let cancelled = false
+    readCache(`state-${user.id}`).then(cached => {
+      if (cancelled || freshLoadedRef.current || !cached) return
+      setCategories(cached.categories || [])
+      setActiveTodos(cached.activeTodos || [])
+      setActiveNotes(cached.activeNotes || [])
+      setLoading(false)
+    })
     loadAll()
+    return () => { cancelled = true }
   }, [user?.id]) // eslint-disable-line
+
+  // Re-save shortly after anything settles, so an edit made and then closed on
+  // straight away is still there next time.
+  useEffect(() => {
+    if (!cacheKey || loading) return
+    const t = setTimeout(() => {
+      writeCache(cacheKey, { categories, activeTodos, activeNotes, savedAt: Date.now() })
+    }, 500)
+    return () => clearTimeout(t)
+  }, [cacheKey, loading, categories, activeTodos, activeNotes])
 
   async function loadAll() {
     setLoading(true)
@@ -134,6 +161,7 @@ export function AppProvider({ children }) {
     setCategories(builtCats)
     setActiveTodos((aTodos || []).map(t => ({ id: t.id, text: t.text, checked: t.checked, activated: t.activated, source: 'Active' })))
     setActiveNotes((aNotes || []).map(n => ({ id: n.id, text: n.text, activated: n.activated, editorHTML: n.editor_html, source: 'Active', accent: false })))
+    freshLoadedRef.current = true
     setLoading(false)
 
     // Midnight reset: once per calendar day, deactivate any todos that are
@@ -209,7 +237,7 @@ export function AppProvider({ children }) {
 
   const reorderActiveTodos = useCallback((newOrder) => {
     setActiveTodos(newOrder)
-    Promise.all(newOrder.map((t, i) => supabase.from('todos').update({ sort_order: i }).eq('id', t.id)))
+    newOrder.forEach((t, i) => db(supabase.from('todos').update({ sort_order: i }).eq('id', t.id)))
   }, [])
 
   // ---- Active notes ----
@@ -237,7 +265,7 @@ export function AppProvider({ children }) {
 
   const reorderActiveNotes = useCallback((newOrder) => {
     setActiveNotes(newOrder)
-    Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ sort_order: i }).eq('id', n.id)))
+    newOrder.forEach((n, i) => db(supabase.from('notes').update({ sort_order: i }).eq('id', n.id)))
   }, [])
 
   // ---- Projects ----
@@ -795,17 +823,17 @@ export function AppProvider({ children }) {
 
   const reorderProjectTodos = useCallback((categoryId, projectId, newOrder) => {
     updateProject(categoryId, projectId, proj => ({ ...proj, todos: newOrder }))
-    Promise.all(newOrder.map((t, i) => supabase.from('todos').update({ sort_order: i }).eq('id', t.id)))
+    newOrder.forEach((t, i) => db(supabase.from('todos').update({ sort_order: i }).eq('id', t.id)))
   }, [updateProject])
 
   const reorderProjectNotes = useCallback((categoryId, projectId, newOrder) => {
     updateProject(categoryId, projectId, proj => ({ ...proj, notes: newOrder }))
-    Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ sort_order: i }).eq('id', n.id)))
+    newOrder.forEach((n, i) => db(supabase.from('notes').update({ sort_order: i }).eq('id', n.id)))
   }, [updateProject])
 
   const reorderProjectLinks = useCallback((categoryId, projectId, newOrder) => {
     updateProject(categoryId, projectId, proj => ({ ...proj, links: newOrder }))
-    Promise.all(newOrder.map((l, i) => supabase.from('links').update({ sort_order: i }).eq('id', l.id)))
+    newOrder.forEach((l, i) => db(supabase.from('links').update({ sort_order: i }).eq('id', l.id)))
   }, [updateProject])
 
   // ---- Cross-project home-screen ordering ----
@@ -822,7 +850,7 @@ export function AppProvider({ children }) {
         todos: proj.todos.map(t => orderMap.has(t.id) ? { ...t, homeSortOrder: orderMap.get(t.id) } : t)
       }))
     })))
-    Promise.all(newOrder.map((t, i) => supabase.from('todos').update({ home_sort_order: i }).eq('id', t.id)))
+    newOrder.forEach((t, i) => db(supabase.from('todos').update({ home_sort_order: i }).eq('id', t.id)))
   }, [])
 
   const reorderHomeNotes = useCallback((newOrder) => {
@@ -834,7 +862,7 @@ export function AppProvider({ children }) {
         notes: proj.notes.map(n => orderMap.has(n.id) ? { ...n, homeSortOrder: orderMap.get(n.id) } : n)
       }))
     })))
-    Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ home_sort_order: i }).eq('id', n.id)))
+    newOrder.forEach((n, i) => db(supabase.from('notes').update({ home_sort_order: i }).eq('id', n.id)))
   }, [])
 
   const reorderHomeLinks = useCallback((newOrder) => {
@@ -846,7 +874,7 @@ export function AppProvider({ children }) {
         links: proj.links.map(l => orderMap.has(l.id) ? { ...l, homeSortOrder: orderMap.get(l.id) } : l)
       }))
     })))
-    Promise.all(newOrder.map((l, i) => supabase.from('links').update({ home_sort_order: i }).eq('id', l.id)))
+    newOrder.forEach((l, i) => db(supabase.from('links').update({ home_sort_order: i }).eq('id', l.id)))
   }, [])
 
   // ---- Collapsed-category ordering (cat_sort_order) ----
@@ -862,7 +890,7 @@ export function AppProvider({ children }) {
         todos: proj.todos.map(t => orderMap.has(String(t.id)) ? { ...t, catSortOrder: orderMap.get(String(t.id)) } : t)
       }))
     }))
-    Promise.all(newOrder.map((t, i) => supabase.from('todos').update({ cat_sort_order: i }).eq('id', t.id)))
+    newOrder.forEach((t, i) => db(supabase.from('todos').update({ cat_sort_order: i }).eq('id', t.id)))
   }, [])
 
   const reorderCategoryNotes = useCallback((categoryId, newOrder) => {
@@ -874,7 +902,7 @@ export function AppProvider({ children }) {
         notes: proj.notes.map(n => orderMap.has(String(n.id)) ? { ...n, catSortOrder: orderMap.get(String(n.id)) } : n)
       }))
     }))
-    Promise.all(newOrder.map((n, i) => supabase.from('notes').update({ cat_sort_order: i }).eq('id', n.id)))
+    newOrder.forEach((n, i) => db(supabase.from('notes').update({ cat_sort_order: i }).eq('id', n.id)))
   }, [])
 
   const reorderCategoryLinks = useCallback((categoryId, newOrder) => {
@@ -886,14 +914,14 @@ export function AppProvider({ children }) {
         links: proj.links.map(l => orderMap.has(String(l.id)) ? { ...l, catSortOrder: orderMap.get(String(l.id)) } : l)
       }))
     }))
-    Promise.all(newOrder.map((l, i) => supabase.from('links').update({ cat_sort_order: i }).eq('id', l.id)))
+    newOrder.forEach((l, i) => db(supabase.from('links').update({ cat_sort_order: i }).eq('id', l.id)))
   }, [])
 
   const reorderProjects = useCallback((categoryId, newOrder) => {
     setCategories(prev => prev.map(cat =>
       cat.id !== categoryId ? cat : { ...cat, projects: newOrder }
     ))
-    Promise.all(newOrder.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
+    newOrder.forEach((p, i) => db(supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
   }, [])
 
   // ---- Pinned canvases ----
@@ -920,7 +948,7 @@ export function AppProvider({ children }) {
       ...c,
       projects: c.projects.map(p => (rank.has(String(p.id)) ? { ...p, pinOrder: rank.get(String(p.id)) } : p)),
     })))
-    Promise.all(newOrder.map((p, i) => supabase.from('projects').update({ pin_order: i }).eq('id', p.projectId)))
+    newOrder.forEach((p, i) => db(supabase.from('projects').update({ pin_order: i }).eq('id', p.projectId)))
   }, [])
 
   // ---- Categories ----
@@ -1014,7 +1042,7 @@ export function AppProvider({ children }) {
 
   const reorderCategories = useCallback((newOrder) => {
     setCategories(newOrder)
-    Promise.all(newOrder.map((cat, i) => supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)))
+    newOrder.forEach((cat, i) => db(supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)))
   }, [])
 
   const renameProject = useCallback((categoryId, projectId, newName) => {
@@ -1058,7 +1086,7 @@ export function AppProvider({ children }) {
     const newProjects = [...rest, { ...proj, archived: true }]
     setCategories(prev => prev.map(c => c.id !== categoryId ? c : { ...c, projects: newProjects }))
     dbw(supabase.from('projects').update({ archived: true }).eq('id', projectId), 'archiveProject')
-    Promise.all(newProjects.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
+    newProjects.forEach((p, i) => db(supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
   }, [])
 
   // Unarchive: clear the flag and place it at the bottom of the ACTIVE stack
@@ -1074,7 +1102,7 @@ export function AppProvider({ children }) {
     const newProjects = [...rest.slice(0, lastActiveIdx + 1), { ...proj, archived: false }, ...rest.slice(lastActiveIdx + 1)]
     setCategories(prev => prev.map(c => c.id !== categoryId ? c : { ...c, projects: newProjects }))
     dbw(supabase.from('projects').update({ archived: false }).eq('id', projectId), 'unarchiveProject')
-    Promise.all(newProjects.map((p, i) => supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
+    newProjects.forEach((p, i) => db(supabase.from('projects').update({ sort_order: i }).eq('id', p.id)))
   }, [])
 
   const deleteProject = useCallback(async (categoryId, projectId) => {

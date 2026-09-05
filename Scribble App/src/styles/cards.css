@@ -707,7 +707,17 @@
    list item's label (#595959 at 50% opacity); the icon is faded; the primary
    label (title) also gets a strikethrough. */
 .note-row.archived .note-text,
-.note-row.archived .note-preview-text { color: #595959; opacity: 0.5; }
+.note-row.archived /* Comment marker: sits inline right after the item's last word, so a wrapped
+   label puts it at the end of the last line. */
+.item-comment-icon {
+  display: inline-block;
+  margin-left: 0;   /* the gap is built into the icon itself */
+  vertical-align: middle;   /* centred on the word, not sat on its baseline */
+  flex-shrink: 0;
+}
+.checked-text .item-comment-icon { opacity: 0.5; }
+
+.note-preview-text { color: #595959; opacity: 0.5; }
 .note-row.archived .note-text { text-decoration: line-through; }
 .note-row.archived .checkbox-wrap { opacity: 0.5; }
 

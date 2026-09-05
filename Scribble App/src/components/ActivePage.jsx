@@ -551,7 +551,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
                     </div>
                   </div>
                   <div className="item-content">
-                    <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}</span>
+                    <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}{t.comment ? <CommentDotIcon/> : null}</span>
                     <div className="source-label">
                       <span
                         className="source-label-text canvas-link"
@@ -995,6 +995,20 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
         />
       )}
     </div>
+  )
+}
+
+// A list item with a comment shows a small speech bubble right after its text,
+// flowing with the label so it lands after the last word on the last line.
+function CommentDotIcon() {
+  return (
+    /* The 4px gap is part of the artwork (bars start at x=4 in a 16-wide box),
+       so no margin is needed and nothing in the cascade can close it up. */
+    <svg className="item-comment-icon" width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
+      <line x1="6" y1="2.5" x2="17" y2="2.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+      <line x1="6" y1="6" x2="17" y2="6" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+      <line x1="6" y1="9.5" x2="13" y2="9.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+    </svg>
   )
 }
 

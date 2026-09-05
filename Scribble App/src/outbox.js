@@ -56,21 +56,34 @@ function enqueue(entry) {
   announce()
 }
 
-// A dropped connection throws; a 4xx/5xx comes back as an error object. Only the
-// first is worth retrying — a rejected write won't start working on a retry.
-const isOffline = (err) =>
-  !navigator.onLine ||
-  err instanceof TypeError ||
-  /fetch|network|load failed/i.test(err?.message || '')
+// postgrest-js turns a failed fetch into a RESOLVED { error } rather than a
+// rejection, so a dropped connection looks much like a rejected write. Tell them
+// apart by the shape: a real PostgREST error carries a code, a network one
+// doesn't — and it reads like a fetch failure.
+const NETWORKY = /fetch|network|load failed|connection|offline|timed? ?out|dns/i
+
+const isOfflineError = (err) => {
+  if (!err) return false
+  if (!navigator.onLine) return true
+  if (err instanceof TypeError) return true
+  if (err.code) return false   // PostgREST / Postgres said no — retrying won't help
+  return NETWORKY.test(err.message || '')
+}
 
 // Send a builder, queueing it if the network is what failed.
 export async function send(builder, label = 'write') {
   try {
     const { error } = await builder
-    if (error) console.error(`Supabase write failed [${label}]:`, error.message || error)
+    if (error) {
+      if (isOfflineError(error)) {
+        enqueue(serialize(builder))
+        return { error: null, queued: true }
+      }
+      console.error(`Supabase write failed [${label}]:`, error.message || error)
+    }
     return { error }
   } catch (err) {
-    if (isOffline(err)) {
+    if (isOfflineError(err)) {
       enqueue(serialize(builder))
       return { error: null, queued: true }
     }
@@ -84,10 +97,11 @@ let flushing = false
 // Replay whatever is waiting, oldest first, stopping at the first network
 // failure so ordering is preserved.
 export async function flush() {
-  if (flushing || !navigator.onLine) return
+  if (flushing || !navigator.onLine) return 0
   const queue = read()
-  if (!queue.length) return
+  if (!queue.length) return 0
   flushing = true
+  let sent = 0
   try {
     const { data } = await supabase.auth.getSession()
     const token = data?.session?.access_token
@@ -98,8 +112,11 @@ export async function flush() {
       if (token) headers.Authorization = `Bearer ${token}`
       try {
         const res = await fetch(entry.url, { method: entry.method, headers, body: entry.body })
-        // 4xx/5xx means the server saw it and said no — dropping it is the only
-        // way forward, and holding the queue would block every later write.
+        // Not signed in (yet): the session may just need refreshing, so hold the
+        // whole queue rather than throwing the writes away.
+        if (res.status === 401 || res.status === 403) break
+        // Any other 4xx/5xx means the server saw it and said no. Dropping it is
+        // the only way forward — holding it would block every later write.
         if (!res.ok) console.error('Queued write rejected:', entry.method, res.status)
       } catch {
         break   // still offline — leave this one and everything after it
@@ -107,10 +124,15 @@ export async function flush() {
       queue.shift()
       write(queue)
       announce()
+      sent++
     }
   } finally {
     flushing = false
   }
+  // Local state was built from optimistic ids; the rows now on the server have
+  // real ones. Ask whoever's listening to reload so the two line up.
+  if (sent) window.dispatchEvent(new CustomEvent('scribble:outbox-flushed', { detail: { sent } }))
+  return sent
 }
 
 export function installOutbox() {

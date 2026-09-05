@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
 import { isRecurring, nextRecurrence } from '../components/ScheduleBits.jsx'
 import { readCache, writeCache } from '../localCache.js'
-import { send } from '../outbox.js'
+import { send, flush, pendingCount } from '../outbox.js'
 
 export const AppContext = createContext(null)
 
@@ -69,8 +69,20 @@ export function AppProvider({ children }) {
       setActiveNotes(cached.activeNotes || [])
       setLoading(false)
     })
-    loadAll()
-    return () => { cancelled = true }
+    // Anything written while offline goes up BEFORE the first read, or the read
+    // would come back without it and wipe it from local state.
+    const start = async () => {
+      if (pendingCount()) await flush()
+      if (!cancelled) loadAll()
+    }
+    start()
+    // A later flush (reconnect, tab focus) needs a re-read for the same reason
+    const onFlushed = () => loadAll()
+    window.addEventListener('scribble:outbox-flushed', onFlushed)
+    return () => {
+      cancelled = true
+      window.removeEventListener('scribble:outbox-flushed', onFlushed)
+    }
   }, [user?.id]) // eslint-disable-line
 
   // Re-save shortly after anything settles, so an edit made and then closed on

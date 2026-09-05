@@ -220,9 +220,9 @@ export function AppProvider({ children }) {
   const addActiveTodo = useCallback((text) => {
     const tempId = Date.now()
     setActiveTodos(prev => [...prev, { id: tempId, text, checked: false, activated: false, source: 'Active' }])
-    supabase.from('todos')
+    send(supabase.from('todos')
       .insert({ user_id: user.id, project_id: null, text, checked: false, activated: false, sort_order: 0 })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert todos').then(({ data }) => {
         if (data) setActiveTodos(prev => prev.map(t => t.id === tempId ? { ...t, id: data.id } : t))
       })
     return tempId
@@ -256,9 +256,9 @@ export function AppProvider({ children }) {
   const addActiveNote = useCallback((text, onCreated) => {
     const tempId = Date.now()
     setActiveNotes(prev => [...prev, { id: tempId, text, activated: false, editorHTML: null, source: 'Active', accent: false }])
-    supabase.from('notes')
+    send(supabase.from('notes')
       .insert({ user_id: user.id, project_id: null, text, activated: false, editor_html: null, sort_order: 0 })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert notes').then(({ data }) => {
         if (data) setActiveNotes(prev => prev.map(n => n.id === tempId ? { ...n, id: data.id } : n))
         if (data && onCreated) onCreated(data.id)
       })
@@ -304,9 +304,9 @@ export function AppProvider({ children }) {
       ...proj,
       todos: [...proj.todos, { id: tempId, text, checked: false, activated, scheduledDate, linkedNoteIds: [], linkedLinkIds: [] }]
     }))
-    supabase.from('todos')
+    send(supabase.from('todos')
       .insert({ user_id: user.id, project_id: projectId, text, checked: false, activated, scheduled_date: scheduledDate, sort_order: sortOrder })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert todos').then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
           todos: proj.todos.map(t => t.id === tempId ? { ...t, id: data.id } : t)
@@ -325,9 +325,9 @@ export function AppProvider({ children }) {
       ...proj,
       notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }]
     }))
-    supabase.from('notes')
+    send(supabase.from('notes')
       .insert({ user_id: user.id, project_id: projectId, text, activated, scheduled_date: scheduledDate, editor_html: null, sort_order: sortOrder })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert notes').then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
           notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n)
@@ -347,9 +347,9 @@ export function AppProvider({ children }) {
       ...proj,
       links: [...proj.links, { id: tempId, url, title: finalTitle, activated, scheduledDate }]
     }))
-    supabase.from('links')
+    send(supabase.from('links')
       .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, scheduled_date: scheduledDate, sort_order: sortOrder })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert links').then(({ data }) => {
         if (data) updateProject(categoryId, projectId, proj => ({
           ...proj,
           links: proj.links.map(l => l.id === tempId ? { ...l, id: data.id } : l)
@@ -493,9 +493,9 @@ export function AppProvider({ children }) {
       notes: [...proj.notes, { id: tempId, text, activated, editorHTML: null }],
       todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: [...current, tempId] })
     }))
-    supabase.from('notes')
+    send(supabase.from('notes')
       .insert({ user_id: user.id, project_id: projectId, text, activated, editor_html: null, sort_order: sortOrder })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert notes').then(({ data }) => {
         if (!data) return
         const realIds = [...current, data.id]
         updateProject(categoryId, projectId, proj => ({
@@ -521,9 +521,9 @@ export function AppProvider({ children }) {
       links: [...proj.links, { id: tempId, url, title: finalTitle, activated }],
       todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: [...current, tempId] })
     }))
-    supabase.from('links')
+    send(supabase.from('links')
       .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, sort_order: sortOrder })
-      .select().single().then(({ data }) => {
+      .select().single(), 'insert links').then(({ data }) => {
         if (!data) return
         const realIds = [...current, data.id]
         updateProject(categoryId, projectId, proj => ({

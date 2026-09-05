@@ -71,24 +71,27 @@ const isOfflineError = (err) => {
 }
 
 // Send a builder, queueing it if the network is what failed.
+// Resolves to the builder's own { data, error }, so an insert can still read
+// back the row it created. A queued write resolves with no data — the caller's
+// optimistic id stands until the next load.
 export async function send(builder, label = 'write') {
   try {
-    const { error } = await builder
+    const { data, error } = await builder
     if (error) {
       if (isOfflineError(error)) {
         enqueue(serialize(builder))
-        return { error: null, queued: true }
+        return { data: null, error: null, queued: true }
       }
       console.error(`Supabase write failed [${label}]:`, error.message || error)
     }
-    return { error }
+    return { data, error }
   } catch (err) {
     if (isOfflineError(err)) {
       enqueue(serialize(builder))
-      return { error: null, queued: true }
+      return { data: null, error: null, queued: true }
     }
     console.error(`Supabase write failed [${label}]:`, err?.message || err)
-    return { error: err }
+    return { data: null, error: err }
   }
 }
 

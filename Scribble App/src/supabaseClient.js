@@ -5,6 +5,11 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
+// supabase-js attaches `apikey` (and the bearer token) in its own fetch wrapper
+// rather than on the request the query builder exposes, so a replayed request
+// has to add it back. See outbox.js.
+export const restApiKey = supabaseKey
+
 // Base URL for edge functions (invoke() can't carry GET query params).
 export const functionsUrl = `${supabaseUrl}/functions/v1`
 

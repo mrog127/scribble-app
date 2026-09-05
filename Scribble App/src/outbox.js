@@ -8,7 +8,7 @@
 // request it would make (url / method / headers / body) — so a failed one can be
 // replayed later as a plain fetch, with a fresh access token swapped in.
 
-import { supabase } from './supabaseClient'
+import { supabase, restApiKey } from './supabaseClient'
 
 const KEY = 'scribble_outbox'
 const MAX = 500
@@ -54,6 +54,7 @@ function enqueue(entry) {
   queue.push(entry)
   write(queue)
   announce()
+  console.info(`[outbox] queued ${entry.method} ${entry.url} (${queue.length} waiting)`)
 }
 
 // postgrest-js turns a failed fetch into a RESOLVED { error } rather than a
@@ -108,19 +109,30 @@ export async function flush() {
   try {
     const { data } = await supabase.auth.getSession()
     const token = data?.session?.access_token
+    console.info(`[outbox] flushing ${queue.length}; session token: ${token ? 'yes' : 'NO'}`)
     while (queue.length) {
       const entry = queue[0]
-      const headers = { ...entry.headers }
-      // The token the request was built with is likely stale by now
-      if (token) headers.Authorization = `Bearer ${token}`
+      // A Headers object, not a plain one: the stored keys are lowercase, so
+      // assigning `Authorization` to a plain object leaves BOTH keys and fetch
+      // sends them joined ("Bearer old, Bearer new") — which is a 401. set() is
+      // case-insensitive and replaces.
+      const headers = new Headers(entry.headers)
+      // supabase-js adds these two in its fetch wrapper, so they were never on
+      // the builder we serialized — the replay has to supply them itself.
+      headers.set('apikey', restApiKey)
+      headers.set('Authorization', `Bearer ${token || restApiKey}`)
       try {
         const res = await fetch(entry.url, { method: entry.method, headers, body: entry.body })
         // Not signed in (yet): the session may just need refreshing, so hold the
         // whole queue rather than throwing the writes away.
-        if (res.status === 401 || res.status === 403) break
-        // Any other 4xx/5xx means the server saw it and said no. Dropping it is
-        // the only way forward — holding it would block every later write.
-        if (!res.ok) console.error('Queued write rejected:', entry.method, res.status)
+        if (!res.ok) {
+          const detail = await res.text().catch(() => '')
+          console.error(`[outbox] ${entry.method} ${entry.url} -> ${res.status}`, detail)
+          // Not signed in (yet): hold the queue rather than binning the writes.
+          if (res.status === 401 || res.status === 403) break
+          // Anything else means the server saw it and said no. Dropping it is
+          // the only way forward — holding it would block every later write.
+        }
       } catch {
         break   // still offline — leave this one and everything after it
       }
@@ -134,7 +146,10 @@ export async function flush() {
   }
   // Local state was built from optimistic ids; the rows now on the server have
   // real ones. Ask whoever's listening to reload so the two line up.
-  if (sent) window.dispatchEvent(new CustomEvent('scribble:outbox-flushed', { detail: { sent } }))
+  if (sent) {
+    console.info(`[outbox] sent ${sent} queued write(s); ${read().length} left`)
+    window.dispatchEvent(new CustomEvent('scribble:outbox-flushed', { detail: { sent } }))
+  }
   return sent
 }
 
@@ -142,6 +157,13 @@ export function installOutbox() {
   window.addEventListener('online', flush)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) flush() })
   flush()
+  // Handle for checking on the queue from the console:
+  //   __outbox.pending()   how many writes are waiting
+  //   __outbox.list()      what they are
+  //   await __outbox.flush()   send them now
+  window.__outbox = { pending: pendingCount, list: read, flush }
+  const n = read().length
+  if (n) console.info(`[outbox] ${n} write(s) waiting from a previous session`)
 }
 
 export const pendingCount = () => read().length

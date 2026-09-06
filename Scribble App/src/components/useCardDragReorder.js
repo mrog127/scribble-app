@@ -4,7 +4,12 @@ import { flushSync } from 'react-dom'
 // Cards listen for this to show their content-type tabs for the duration of a
 // drag, even when a canvas only holds one content type.
 export const CARD_DRAG_EVENT = 'scribble:card-drag'
+let cardDragging = false
+// True while a canvas card is being dragged — the page-swipe gesture checks
+// this so a sideways drag can't switch project pages mid-rearrange.
+export function isCardDragging() { return cardDragging }
 const announceDrag = (active) => {
+  cardDragging = active
   // Synchronous, so the ghost is cloned from a header that already has its tabs
   flushSync(() => {
     window.dispatchEvent(new CustomEvent(CARD_DRAG_EVENT, { detail: { active } }))

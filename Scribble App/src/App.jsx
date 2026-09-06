@@ -44,6 +44,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { useScrollable } from './useScrollable.js'
 import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
 import { isTileDragging } from './components/ProjectCard.jsx'
+import { isCardDragging } from './components/useCardDragReorder.js'
 
 // Pull-to-refresh: pull down at the top of the active page to re-fetch data.
 // Touch-only; drives a spinner via direct DOM for smoothness.
@@ -1045,6 +1046,8 @@ function AppInner() {
       // Rows used to own the horizontal gesture (swipe-to-reveal), so they were
       // excluded here. That's gone — a horizontal drag on a row now switches tabs.
       if (t.closest('.note-detail-page')) return
+      // A canvas card is being rearranged — it owns the gesture
+      if (isCardDragging()) return
       // Allow drags that start anywhere on a page (incl. project-card text boxes)
       // or on the footer's text-box row (the add-row), but not the tab bar.
       if (!t.closest('.page') && !t.closest('.add-row')) return
@@ -1068,7 +1071,7 @@ function AppInner() {
       const dy = e.clientY - s.startY
       if (!s.engaged) {
         // A link tile has been lifted for a grid reorder — it owns the gesture
-        if (isTileDragging()) { dragRef.current = null; return }
+        if (isTileDragging() || isCardDragging()) { dragRef.current = null; return }
         // Starting on a tile: hold off long enough for the lift to claim it
         if (s.fromTile && Math.abs(dx) < 12) return
         // Hand off to vertical scrolling only when the gesture is clearly vertical:
@@ -1131,6 +1134,8 @@ function AppInner() {
       // The touch row-swipe owns horizontal drags over a card row
       if (t.closest('.swipe-row')) return
       if (t.closest('.note-detail-page')) return
+      // A canvas card is being rearranged — it owns the gesture
+      if (isCardDragging()) return
       if (!t.closest('.page') && !t.closest('.add-row')) return
       e.preventDefault()
 

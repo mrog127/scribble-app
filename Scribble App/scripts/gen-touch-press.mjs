@@ -49,7 +49,32 @@ function hoverBlocks(css) {
   return out
 }
 
+// Inside a hover block, a rule whose selector has no :hover isn't a hover state
+// at all — it's desktop-only setup (e.g. hiding an icon until hover). Mirroring
+// it onto touch would apply desktop behaviour to phones, so drop it.
+function hoverRulesOnly(block) {
+  const out = []
+  let i = 0
+  while (i < block.length) {
+    const open = block.indexOf('{', i)
+    if (open === -1) break
+    let j = open + 1
+    let depth = 1
+    while (j < block.length && depth > 0) {
+      if (block[j] === '{') depth++
+      else if (block[j] === '}') depth--
+      j++
+    }
+    const rule = block.slice(i, j)
+    const selector = block.slice(i, open)
+    if (selector.includes(':hover')) out.push(rule.trim())
+    i = j
+  }
+  return out.join('\n')
+}
+
 const body = SOURCES.flatMap(f => hoverBlocks(readFileSync(f, 'utf8')))
+  .map(hoverRulesOnly)
   .join('\n')
   .replace(/:hover/g, '.is-pressed')
 

@@ -34,6 +34,13 @@
   }
 }
 
+/* Hovering a canvas header washes the whole card in 1% black — the header acts on the card, so the card shows the highlight. */
+@media (hover: hover) {
+  .card:has(> .card-header:hover) {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.01));
+  }
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -407,14 +414,14 @@
   pointer-events: none;
 }
 
-/* Active (category-coloured) checkboxes + send/complete buttons → 6% base colour */
-.checkbox.activated-checkbox::after { background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.06); }
+/* Active (category-coloured) checkboxes → 24% base colour; the buttons stay at 6% */
+.checkbox.activated-checkbox::after { background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.24); }
 .send-btn::after,
 .project-send-btn::after,
 .mark-complete-btn::after { background: rgba(var(--accent-base-rgb), 0.06); }
 
-/* Inactive checkboxes → 2% black */
-.checkbox:not(.activated-checkbox)::after { background: rgba(0, 0, 0, 0.02); }
+/* Inactive checkboxes → 4% black */
+.checkbox:not(.activated-checkbox)::after { background: rgba(0, 0, 0, 0.04); }
 
 @media (hover: hover) {
   .checkbox:hover::after,
@@ -707,12 +714,18 @@
    list item's label (#595959 at 50% opacity); the icon is faded; the primary
    label (title) also gets a strikethrough. */
 .note-row.archived .note-text,
-.note-row.archived /* Comment marker: sits inline right after the item's last word, so a wrapped
+.note-row.archived .note-preview-text { color: #595959; opacity: 0.5; }
+
+/* Comment marker: sits inline right after the item's last word, so a wrapped
    label puts it at the end of the last line. */
 .item-comment-icon {
   display: inline-block;
-  margin-left: 0;   /* the gap is built into the icon itself */
-  vertical-align: middle;   /* centred on the word, not sat on its baseline */
+  margin-left: -2px;   /* the gap is built into the icon; trim 2px of it */
+  /* Sit the bubble's flat bottom edge on the text baseline: the box bottom
+     aligns to the baseline, and the bubble bottom is 3.5px above it. */
+  vertical-align: baseline;
+  position: relative;
+  top: 1.5px;
   flex-shrink: 0;
 }
 .checked-text .item-comment-icon { opacity: 0.5; }
@@ -858,6 +871,11 @@
     border-radius: 0;
     z-index: -1;
     pointer-events: none;
+  }
+  /* The checkbox owns the highlight while it's under the cursor — the row lets go */
+  .swipe-row:has(.checkbox-wrap:hover) .swipe-content::before,
+  .todo-swipe-row:has(.checkbox-wrap:hover) .todo-swipe-content::before {
+    background: transparent;
   }
 }
 
@@ -1777,13 +1795,24 @@
   margin: 10px 0 0 0;   /* space below the title row; starts at the title's x */
 }
 
-/* Collapsed: no plus or menu; the tabs take that spot at the right end. */
-.project-card > .card-header.collapsed .project-header-actions { display: none; }
+/* While a card is being dragged, every header runs its tabs to the right edge
+   (the plus and menu stay put), matching the dragged card's ghost. */
+.cards-dragging .project-card > .card-header .project-tab-bar {
+  order: 2;
+  flex-basis: auto;
+  margin: 0 0 0 auto;
+}
+/* …and the plus / menu drop out entirely while the drag is live */
+.cards-dragging .project-card > .card-header .project-header-actions { display: none; }
+
+/* Collapsed: the tabs move up beside the title, with the plus and menu still
+   at the right end (they only disappear while cards are being rearranged). */
 .project-card > .card-header.collapsed .project-tab-bar {
   order: 2;
   flex-basis: auto;
   margin: 0 0 0 auto;
 }
+.project-card > .card-header.collapsed .project-header-actions { order: 3; }
 
 /* Single sliding selector box that animates between the icon tabs */
 .project-tab-indicator {

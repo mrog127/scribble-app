@@ -61,6 +61,9 @@
   }
 .search-result-row.is-pressed { background: rgba(0, 0, 0, 0.02); }
 .add-toast.is-pressed::after { opacity: 1; }
+.card:has(> .card-header.is-pressed) {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.01));
+  }
 .card-context-item.is-pressed { background: rgba(0, 0, 0, 0.02); }
 .card-context-item.danger.is-pressed { background: rgba(178, 74, 74, 0.04); }
 .checkbox.is-pressed::after,
@@ -89,6 +92,11 @@
     border-radius: 0;
     z-index: -1;
     pointer-events: none;
+  }
+/* The checkbox owns the highlight while it's under the cursor — the row lets go */
+  .swipe-row:has(.checkbox-wrap.is-pressed) .swipe-content::before,
+  .todo-swipe-row:has(.checkbox-wrap.is-pressed) .todo-swipe-content::before {
+    background: transparent;
   }
 .note-detail-done.is-pressed::after,
   .save-to-cancel.is-pressed::after,

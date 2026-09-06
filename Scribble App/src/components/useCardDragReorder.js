@@ -1,4 +1,15 @@
 import { useRef, useCallback, useLayoutEffect } from 'react'
+import { flushSync } from 'react-dom'
+
+// Cards listen for this to show their content-type tabs for the duration of a
+// drag, even when a canvas only holds one content type.
+export const CARD_DRAG_EVENT = 'scribble:card-drag'
+const announceDrag = (active) => {
+  // Synchronous, so the ghost is cloned from a header that already has its tabs
+  flushSync(() => {
+    window.dispatchEvent(new CustomEvent(CARD_DRAG_EVENT, { detail: { active } }))
+  })
+}
 
 // ---- Card drag-to-reorder hook ----
 // Shared by the category pages and the Gallery's pinned canvases.
@@ -11,6 +22,9 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
 
   // Expand all cards back to their natural height
   const expandAllCards = useCallback((container) => {
+    // Headers go back to their two-row layout (tabs under the title)
+    container.classList.remove('cards-dragging')
+    announceDrag(false)
     const wrappers = [...container.querySelectorAll('[data-project-id]')]
     wrappers.forEach(wrapper => {
       const cardEl = wrapper.querySelector(':scope > .card')
@@ -101,6 +115,7 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
       const appEl = document.getElementById('app')
       const portal = document.getElementById('animation-portal')
       if (!appEl || !portal) return false
+      announceDrag(true)
       const appRect = appEl.getBoundingClientRect()
 
       // Compute collapsed height for dragged card: header with equal top/bottom padding
@@ -117,8 +132,11 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
       const headerClone = headerEl.cloneNode(true)
       headerClone.style.paddingBottom = padTop + 'px'
       headerClone.style.pointerEvents = 'none'
+      // The dragged card shows no plus / menu either, like the cards it moves past
+      const actionsEl = headerClone.querySelector('.project-header-actions')
+      if (actionsEl) actionsEl.style.display = 'none'
       const dotsEl = headerClone.querySelector('.dots-menu-wrap')
-      if (dotsEl) dotsEl.style.opacity = '0.35'
+      if (dotsEl) dotsEl.style.display = 'none'
 
       const ghostCard = document.createElement('div')
       ghostCard.style.cssText = [
@@ -141,6 +159,10 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
       ].join(';')
       ghost.appendChild(ghostCard)
       portal.appendChild(ghost)
+
+      // While a drag is live every header runs its tabs to the right edge, the
+      // way the dragged card's ghost does.
+      containerRef.current?.classList.add('cards-dragging')
 
       // Collapse ALL cards simultaneously
       // First pass: lock in current heights (no transition)

@@ -8,6 +8,7 @@ import { CalendarIcon, RecurringCalendarIcon, isRecurring, isScheduleLocked, for
 import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon, PinMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
+import { CARD_DRAG_EVENT } from './useCardDragReorder.js'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 import MoveToCard from './MoveToCard.jsx'
@@ -1157,6 +1158,14 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
   }, [hideCompleted, project.todos])
 
   // ---- Which tabs have content ----
+  // True for as long as a canvas card is being dragged anywhere on the page
+  const [cardsDragging, setCardsDragging] = useState(false)
+  useEffect(() => {
+    const onDrag = (e) => setCardsDragging(!!e.detail?.active)
+    window.addEventListener(CARD_DRAG_EVENT, onDrag)
+    return () => window.removeEventListener(CARD_DRAG_EVENT, onDrag)
+  }, [])
+
   const typesWithItems = ['list', 'note', 'link'].filter(t =>
     (t === 'list' && project.todos.length > 0) ||
     (t === 'note' && project.notes.length > 0) ||
@@ -1164,8 +1173,9 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
   )
   // Tabs normally appear only when there's more than one content type — but a
   // collapsed single-type canvas shows its one icon so you can still tell what
-  // it holds.
-  const showTabs = typesWithItems.length > 1 || (collapsed && typesWithItems.length === 1)
+  // it holds, and so does every canvas while cards are being rearranged.
+  const showTabs = typesWithItems.length > 1 ||
+    ((collapsed || cardsDragging) && typesWithItems.length === 1)
   const displayType = typesWithItems.length > 1 ? activeTab : (typesWithItems[0] || 'list')
   // Nothing reads as selected while the canvas is collapsed.
   const selectedTab = collapsed ? null : displayType

@@ -2000,12 +2000,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     border-radius: 16px;
     top: auto;
     bottom: calc(100% + 8px);   /* 8px above the control bar */
-    left: 0;
+    left: -8px;
     right: auto;
     transform: translateY(8px);
-    /* Span the full control bar: viewport minus the bar's inset on both sides.
-       The menu is anchored to the leading circle, which sits on that inset. */
-    width: calc(100vw - 2 * var(--mbar-side));
+    /* Spans the control bar and runs 8px past each end. The menu is
+       anchored to the leading circle, which sits on the bar's inset. */
+    width: calc(100vw - 2 * var(--mbar-side) + 16px);
     min-width: 0;
     max-height: calc(
       var(--ivh, 100dvh)
@@ -2109,6 +2109,13 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     pointer-events: auto;
   }
   .phone.page-menu-open .mbar-gallery-wrap { z-index: 6; }
+  /* The rest of the control bar recedes while the menu is up */
+  .phone.page-menu-open .add-row .link-input-stack,
+  .phone.page-menu-open .add-row .mbar-search { opacity: 0.3; }
+  /* The gallery/easel circle holds its hover tint for as long as the menu is up */
+  .phone.page-menu-open .mbar-circle.mbar-gallery {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  }
 }
 
 /* =============================================

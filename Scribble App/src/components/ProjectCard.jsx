@@ -680,10 +680,11 @@ function CommentDotIcon() {
   return (
     /* The 4px gap is part of the artwork (bars start at x=4 in a 16-wide box),
        so no margin is needed and nothing in the cascade can close it up. */
-    <svg className="item-comment-icon" width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
-      <line x1="6" y1="2.5" x2="17" y2="2.5" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-      <line x1="6" y1="6" x2="17" y2="6" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-      <line x1="6" y1="9.5" x2="13" y2="9.5" stroke="#7A7A7A" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+    <svg className="item-comment-icon" width="20" height="15" viewBox="0 0 20 15" fill="none" aria-hidden="true">
+      <path
+        d="M10.5 3.5 H17.5 A2 2 0 0 1 19.5 5.5 V9.5 A2 2 0 0 1 17.5 11.5 H13 L10.5 14.5 V11.5 A2 2 0 0 1 8.5 9.5 V5.5 A2 2 0 0 1 10.5 3.5 Z"
+        stroke="#7A7A7A" strokeWidth="1" strokeLinejoin="round" vectorEffect="non-scaling-stroke"
+      />
     </svg>
   )
 }

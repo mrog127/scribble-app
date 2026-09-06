@@ -1,10 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { ACCENT_COLORS, getCategoryAccent } from './theme.js'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
 import TabBar from './components/TabBar.jsx'
 import AuthScreen from './components/AuthScreen.jsx'
-import MenuPage from './components/MenuPage.jsx'
+import MenuPage, { useCategoryDragReorder } from './components/MenuPage.jsx'
 import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
@@ -173,7 +174,7 @@ function AppInner() {
     addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
     addProjectTodo, addProjectNote, addProjectLink,
     setOpenDetail, setAutoEditNoteId, refresh,
-    registerComposeHandler,
+    registerComposeHandler, addCategory, reorderCategories,
   } = useAppContext()
   const pullSpinnerRef = usePullToRefresh(refresh)
   const categoryIds = categories.map(c => c.id)
@@ -318,6 +319,24 @@ function AppInner() {
 
   // Long-press page menu hanging off the gallery/easel circle
   const [pageMenuOpen, setPageMenuOpen] = useState(false)
+  // "Add new easel" row at the foot of the page menu
+  const [addEaselOpen, setAddEaselOpen] = useState(false)
+  const [addEaselName, setAddEaselName] = useState('')
+  const addEaselRef = useRef(null)
+  // Press-and-hold an easel to drag it — the same reorder the Easels page uses
+  const easelListRef = useRef(null)
+  const { onDragPointerDown: onEaselDrag } = useCategoryDragReorder(easelListRef, categories, reorderCategories)
+  // A drag shouldn't also navigate: only a quick, still press counts as a tap
+  const easelTap = useRef({})
+  const closeAddEasel = useCallback(() => { setAddEaselOpen(false); setAddEaselName('') }, [])
+  const submitAddEasel = useCallback(() => {
+    const name = addEaselName.trim()
+    if (!name) return
+    const id = addCategory(name)
+    closeAddEasel()
+    setPageMenuOpen(false)
+    if (id) handleTabChangeRef.current?.(id)
+  }, [addEaselName, addCategory, closeAddEasel])
   const pageMenuTimerRef = useRef(null)
   const pageMenuFiredRef = useRef(false)
   const pageMenuWrapRef = useRef(null)
@@ -785,9 +804,13 @@ function AppInner() {
       const scope = document.querySelector(`[data-project-id="${r.projectId}"]`)
         || document.querySelector(`[data-archived-id="${r.projectId}"]`)
       // Canvas results flash the whole card; item results flash their row.
+      // A page sorted by content type has no canvas wrappers at all, so fall
+      // back to finding the row anywhere on the page (links sit in a grid cell).
+      const page = document.querySelector('.page.active:not(.page-exiting)')
       const row = isCanvas
         ? scope?.querySelector('.card')
-        : scope?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"]`)
+        : (scope?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"]`)
+          || page?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"], .link-grid-cell[data-swipe-id="${r.itemId}"]`))
       if (!row) {
         if (++tries > 40) clearInterval(hunt)
         return
@@ -1565,6 +1588,17 @@ function AppInner() {
     }, 60)
   }, [activeTab])
 
+  // Will the new row actually be on screen where you are? On a project page,
+  // only if it lands on that page's easel. On the Gallery, only if it's
+  // Displayed AND its easel is set to show there.
+  const landsOnThisScreen = (categoryId) => {
+    if (activeTab === 'star') {
+      if (!addAsActiveFlag) return false
+      return categories.find(c => c.id === categoryId)?.sendToHomescreen !== false
+    }
+    return activeTab === categoryId
+  }
+
   const addItem = useCallback(() => {
     // Link mode: requires a URL and a destination project
     if (toolbarType === 'link') {
@@ -1577,7 +1611,7 @@ function AppInner() {
         lastAddedRef.current = { categoryId, projectId }
         pageAddedRef.current = { tab: activeTab, categoryId, projectId }
         const title = inputValue.trim() || url
-        if (activeTab === 'star' ? addAsActiveFlag : activeTab === categoryId) {
+        if (landsOnThisScreen(categoryId)) {
           flashNewRow(holder, { categoryId, projectId, type: 'link' })
         } else {
           showAddToast(holder, { categoryId, projectId, type: 'link', title })
@@ -1629,7 +1663,7 @@ function AppInner() {
         if (animRect && appRect && newId != null) {
           pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
         }
-        if (activeTab === 'star' ? true : activeTab === categoryId) {
+        if (landsOnThisScreen(categoryId)) {
           flashNewRow(holder, { categoryId, projectId, type: toolbarType })
         } else {
           showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
@@ -1645,7 +1679,7 @@ function AppInner() {
         }
         // An inactive item never shows on the gallery, so only flash it when
         // you're on its own canvas's page — otherwise the toast points at it.
-        if (activeTab === categoryId) {
+        if (landsOnThisScreen(categoryId)) {
           flashNewRow(holder, { categoryId, projectId, type: toolbarType })
         } else {
           showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
@@ -1689,7 +1723,7 @@ function AppInner() {
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
-  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {
@@ -2187,7 +2221,7 @@ function AppInner() {
             {pageMenuOpen && (
               <div
                 className="mbar-menu-scrim"
-                onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setPageMenuOpen(false) }}
+                onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setPageMenuOpen(false); closeAddEasel() }}
                 onClick={e => { e.preventDefault(); e.stopPropagation() }}
               />
             )}
@@ -2210,7 +2244,7 @@ function AppInner() {
                   // the press just opened.
                   if (pageMenuFiredRef.current) { pageMenuFiredRef.current = false; return }
                   // The button sits above the scrim, so a later tap dismisses too
-                  if (pageMenuOpen) { setPageMenuOpen(false); return }
+                  if (pageMenuOpen) { setPageMenuOpen(false); closeAddEasel(); return }
                   // On the gallery page a tap opens the project list; on a project
                   // page it returns to the gallery (long-press opens the list).
                   if (activeTab === 'star') setPageMenuOpen(true)
@@ -2240,32 +2274,129 @@ function AppInner() {
 
               {/* Long-press page list — Gallery on top, then every project page */}
               <div className={`card-context-menu mbar-page-menu${pageMenuOpen ? ' open' : ''}`}>
-                {categories.map((cat, idx) => {
-                  const acc = getCategoryAccent(idx)
-                  const gradId = `easel-canvas-${cat.id}`
-                  return (
+                <div className="mbar-page-menu-header">
+                  <p className="mbar-page-menu-title">Easels</p>
+                  <button
+                    className="save-to-cancel mbar-page-menu-close"
+                    onMouseDown={e => { e.preventDefault(); setPageMenuOpen(false); closeAddEasel() }}
+                  >Close</button>
+                </div>
+
+                <div className="mbar-page-menu-list" ref={easelListRef}>
+                  {categories.map((cat, idx) => {
+                    const acc = getCategoryAccent(idx)
+                    const gradId = `easel-page-menu-${cat.id}`
+                    return (
+                      <div key={cat.id}>
+                        <button
+                          className="card-context-item"
+                          data-cat-id={cat.id}
+                          onMouseDown={e => e.preventDefault()}
+                          onPointerDown={e => {
+                            onEaselDrag(e, cat.id)
+                            easelTap.current = { x: e.clientX, y: e.clientY, at: Date.now(), moved: false }
+                            const onMove = (e2) => {
+                              const t = easelTap.current
+                              if (Math.abs(e2.clientX - t.x) > 8 || Math.abs(e2.clientY - t.y) > 8) t.moved = true
+                            }
+                            const onUp = () => {
+                              document.removeEventListener('pointermove', onMove)
+                              document.removeEventListener('pointerup', onUp)
+                              const t = easelTap.current
+                              if (!t.moved && Date.now() - t.at < 250) {
+                                setPageMenuOpen(false)
+                                closeAddEasel()
+                                handleTabChange(cat.id)
+                              }
+                            }
+                            document.addEventListener('pointermove', onMove)
+                            document.addEventListener('pointerup', onUp)
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark, marginRight: 2 }}>
+                            <defs>
+                              <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor={acc.base} />
+                                <stop offset="100%" stopColor={acc.light} />
+                              </linearGradient>
+                            </defs>
+                            <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.6" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                            <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                            <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                            <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                          </svg>
+                          <span className="mbar-page-menu-label" style={{ color: acc.dark }}>{cat.name}</span>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Always last: name a new easel in place, then go to it */}
+                {addEaselOpen ? (
+                  <div
+                    className="card-context-item mbar-page-menu-new"
+                    /* The confirm button's stroke + glow key off --cb-* / --accent-*;
+                       use the colour this new easel is about to be given. */
+                    style={(() => {
+                      const a = getCategoryAccent(categories.length)
+                      return {
+                        '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb,
+                        '--accent-base': a.base, '--accent-dark': a.dark, '--accent-light': a.light, '--accent-base-rgb': a.baseRgb,
+                      }
+                    })()}
+                  >
+                    <input
+                      ref={addEaselRef}
+                      className="save-to-new-input"
+                      placeholder="Name easel"
+                      value={addEaselName}
+                      onChange={e => setAddEaselName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') { e.preventDefault(); submitAddEasel() }
+                        if (e.key === 'Escape') { e.preventDefault(); closeAddEasel() }
+                      }}
+                    />
                     <button
-                      key={cat.id}
-                      className="card-context-item"
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={() => { setPageMenuOpen(false); handleTabChange(cat.id) }}
+                      className="save-to-new-btn"
+                      aria-label="Cancel"
+                      onMouseDown={e => { e.preventDefault(); closeAddEasel() }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark }}>
-                        <defs>
-                          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stopColor={acc.base} />
-                            <stop offset="100%" stopColor={acc.light} />
-                          </linearGradient>
-                        </defs>
-                        <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                        <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                        <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                        <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
                       </svg>
-                      <span className="mbar-page-menu-label">{cat.name}</span>
                     </button>
-                  )
-                })}
+                    {!!addEaselName.trim() && (
+                      <button
+                        className="save-to-new-send"
+                        aria-label="Create easel"
+                        onMouseDown={e => { e.preventDefault(); submitAddEasel() }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                          <path d="M4 10.5 L8.5 15 L16 5.5" style={{ stroke: 'var(--cb-dark, #43535E)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    className="card-context-item"
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      // Commit the state before this handler returns, so the
+                      // focus still counts as part of the tap — iOS only raises
+                      // the keyboard for a focus inside a gesture.
+                      flushSync(() => { setAddEaselOpen(true); setAddEaselName('') })
+                      addEaselRef.current?.focus()
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                      <line x1="10" y1="3.5" x2="10" y2="16.5" stroke={getCategoryAccent(categories.length).dark} strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+                      <line x1="3.5" y1="10" x2="16.5" y2="10" stroke={getCategoryAccent(categories.length).dark} strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+                    </svg>
+                    <span className="mbar-page-menu-label" style={{ color: getCategoryAccent(categories.length).dark }}>Add new easel</span>
+                  </button>
+                )}
               </div>
             </div>
 

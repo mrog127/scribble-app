@@ -2023,6 +2023,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .card-context-menu.mbar-page-menu .card-context-item {
     font-weight: 500;
     padding-right: 16px;   /* base rule reserves 40px for a trailing glyph */
+    height: 52px;          /* 48px base + 4 */
+  }
+  /* Icons sit 2px below centre in this menu */
+  .card-context-menu.mbar-page-menu .card-context-item > svg {
+    position: relative;
+    top: 2px;
   }
 
   /* Long page names truncate rather than running to the menu edge. The label
@@ -2035,6 +2041,55 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: left;
+  }
+
+  /* Each row is wrapped in a div for the drag hook, which breaks the base
+     .card-context-item + .card-context-item divider — restore it. Between
+     easels it starts at the label (16px padding + 18px icon + 2px + 8px gap);
+     above the add row it runs the full width. */
+  .mbar-page-menu-list > div + div { position: relative; }
+  .mbar-page-menu-list > div + div::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 44px;
+    right: 0;
+    height: 1px;
+    background: #DBDAD8;
+  }
+  .mbar-page-menu-list + .card-context-item {
+    border-top: 1px solid #DBDAD8;
+  }
+
+  /* Header, styled like the "Save to..." card's — but the close reads black
+     rather than in an accent, since this menu isn't tied to one easel. */
+  .mbar-page-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 8px;
+  }
+  .mbar-page-menu-title {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: #242424;
+    margin: 0;
+    padding: 0;
+  }
+  .save-to-cancel.mbar-page-menu-close { color: #242424; }
+
+  /* The in-place "name your easel" row: same height and inset as the rows above
+     it, but it holds an input plus its cancel / confirm buttons. */
+  .card-context-menu.mbar-page-menu .mbar-page-menu-new {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+    /* .card-context-item is width:100% with side padding and no border-box, so
+       without this the row runs wider than the menu and the buttons fall off
+       the right edge. */
+    box-sizing: border-box;
   }
 
   .card-context-menu.mbar-page-menu::-webkit-scrollbar { display: none; }

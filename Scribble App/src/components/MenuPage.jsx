@@ -10,7 +10,8 @@ import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
 //   containerRef  →  the div whose .children are the per-category wrapper divs
 //   wrapper div   →  direct child of container; keyed by cat.id; used for FLIP + shift transforms
 //   [data-cat-id] →  the visible 52px row inside each wrapper; cloned for the floating ghost
-function useCategoryDragReorder(containerRef, categories, onReorder) {
+// Exported so the mobile page menu can reorder the same list the same way.
+export function useCategoryDragReorder(containerRef, categories, onReorder) {
   const dragRef = useRef(null)
   const flipRef = useRef(null)
   const catsRef = useRef(categories)

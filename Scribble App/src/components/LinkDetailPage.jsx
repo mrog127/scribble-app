@@ -66,6 +66,8 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
   const [copied, setCopied] = useState(false)
+  // The preview card's own copy button: swaps to a check for 1s
+  const [cardCopied, setCardCopied] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
   const titleRef = useRef(null)
   const scrollRef = useRef(null)
@@ -266,20 +268,45 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
                 <span className="link-preview-title">{link.siteName || siteLabel(link.url)}</span>
                 <span className="link-preview-url">{displayUrl(link.url)}</span>
               </div>
-              <button
-                className="link-edit-btn"
-                aria-label="Edit link"
-                onClick={e => {
-                  e.stopPropagation()
-                  setEditTitle(link.title || '')
-                  setEditUrl(link.url || '')
-                  setEditOpen(true)
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 20h4l10-10a2.83 2.83 0 10-4-4L4 16v4z" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+              <div className="link-preview-actions">
+                <button
+                  className="link-edit-btn"
+                  aria-label="Edit link"
+                  onClick={e => {
+                    e.stopPropagation()
+                    setEditTitle(link.title || '')
+                    setEditUrl(link.url || '')
+                    setEditOpen(true)
+                  }}
+                >
+                  {/* Same pencil-in-square as the link tiles */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  className={'link-edit-btn' + (cardCopied ? ' is-copied' : '')}
+                  aria-label="Copy link"
+                  onClick={e => {
+                    e.stopPropagation()
+                    navigator.clipboard?.writeText(link.url || '').catch(() => {})
+                    setCardCopied(true)
+                    setTimeout(() => setCardCopied(false), 1000)
+                  }}
+                >
+                  {cardCopied ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12.5 L10 17.5 L19 6.5" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <rect x="9" y="9" width="11" height="11" rx="2" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M5 15V5a2 2 0 012-2h8" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>

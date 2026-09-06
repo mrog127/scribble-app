@@ -2571,11 +2571,21 @@
   cursor: pointer;
 }
 .link-edit-btn:active { background: rgba(0, 0, 0, 0.04); }
+/* Holds the selector box for as long as the copy confirmation is showing */
+.link-edit-btn.is-copied { background: rgba(0, 0, 0, 0.04); }
 /* Sits above the preview card's hover wash, and takes the same 4% selector box
    as every other icon button. */
 .link-preview-card .link-edit-btn { position: relative; z-index: 2; border-radius: 4px; }
 @media (hover: hover) {
   .link-edit-btn:hover { background: rgba(0, 0, 0, 0.04); }
+}
+
+/* Edit + copy sit together at the right end of the preview card */
+.link-preview-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .link-edit { background: hsl(from #F7F6F3 h s calc(l * 1.01)); }

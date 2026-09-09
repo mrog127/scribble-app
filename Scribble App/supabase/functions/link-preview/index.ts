@@ -138,24 +138,31 @@ function faviconService(pageUrl: URL): string {
 // Fetch and decode an image once; both samplers below read the result.
 type Sampler = { w: number; h: number; px: (x: number, y: number) => number[] };
 
+// Set by loadImage so a silent miss can be read off the response.
+let loadNote = '';
+
 async function loadImage(url: string): Promise<Sampler | null> {
   try {
-    const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(6000) });
-    if (!res.ok) { await res.body?.cancel(); return null; }
+    const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) { await res.body?.cancel(); loadNote = `http ${res.status}`; return null; }
     const type = res.headers.get('content-type') || '';
     // ImageScript reads PNG and JPEG; .ico and .svg are skipped.
     if (!/png|jpe?g/i.test(type) && !/\.(png|jpe?g)(\?|$)/i.test(url)) {
       await res.body?.cancel();
+      loadNote = `type ${type || 'unknown'}`;
       return null;
     }
     const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > 4_000_000) return null;
+    // og:images are often full-resolution screenshots — several MB of PNG is
+    // normal, and the old 4MB cap was quietly rejecting them.
+    if (buf.byteLength > 25_000_000) { loadNote = `too big ${buf.byteLength}`; return null; }
     const { decode } = await import('https://deno.land/x/imagescript@1.2.17/mod.ts');
     const img = await decode(buf);
-    if (!('getPixelAt' in img)) return null;
+    if (!('getPixelAt' in img)) { loadNote = 'no getPixelAt'; return null; }
     const w = (img as { width: number }).width;
     const h = (img as { height: number }).height;
-    if (!w || !h) return null;
+    if (!w || !h) { loadNote = 'zero size'; return null; }
+    loadNote = `ok ${w}x${h} ${buf.byteLength}b`;
     const px = (x: number, y: number) => {
       const cx = Math.min(Math.max(1, Math.round(x)), w);
       const cy = Math.min(Math.max(1, Math.round(y)), h);
@@ -163,7 +170,8 @@ async function loadImage(url: string): Promise<Sampler | null> {
       return [(v >> 24) & 255, (v >> 16) & 255, (v >> 8) & 255, v & 255];
     };
     return { w, h, px };
-  } catch {
+  } catch (err) {
+    loadNote = `error ${String(err).slice(0, 120)}`;
     return null;
   }
 }
@@ -205,6 +213,8 @@ async function iconBackground(iconUrl: string): Promise<string | null> {
 // actually shows first, then sample the badge's corner of THAT.
 const TILE_ASPECT = 16 / 15;
 
+let cornerNote = '';
+
 function cornerIsDark(img: Sampler): boolean {
   const aspect = img.w / img.h;
   let x0 = 0, y0 = 0, vw = img.w, vh = img.h;
@@ -228,10 +238,12 @@ function cornerIsDark(img: Sampler): boolean {
       n++;
     }
   }
-  if (!n) return false;
+  if (!n) { cornerNote = 'all transparent'; return false; }
+  const avg = total / n;
+  cornerNote = `luma ${Math.round(avg)}`;
   // 150 rather than mid-grey: the icon is near-black, so it needs a genuinely
   // light backdrop to read, and erring toward the light icon is the safer miss.
-  return total / n < 150;
+  return avg < 150;
 }
 
 const pageTitle = (h: string): string | null => {
@@ -382,7 +394,7 @@ Deno.serve(async (req: Request) => {
     // Temporary: lets us see what the parser actually found if this still misses.
     const debugMetaKeys = Object.keys(meta).slice(0, 60);
 
-    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys });
+    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}` });
   } catch (err) {
     return json({ image: null, isIcon: false, imageBg: null, cornerDark: false, title: null, siteName: null, error: String(err) });
   }

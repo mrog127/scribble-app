@@ -640,7 +640,23 @@ export function LinkGridCard({ link, categoryId, projectId, archived, onPointerD
       onContextMenu={onContextMenu}
     >
       {/* Image opens the site; the label block opens the link's own page. */}
-      <div className="link-tile-image" onClick={() => openUrl(link.url)}>
+      <div
+        className={`link-tile-image${showImg && link.imageIsIcon ? ' is-logo' : ''}`}
+        onClick={() => openUrl(link.url)}
+        /* A logo sits on the colour the site puts behind it; a page photo just
+           covers the tile and this does nothing. */
+        style={showImg && link.imageIsIcon && link.imageBg ? { background: link.imageBg } : undefined}
+      >
+        {/* Type badge, top-left. Activated links wear the canvas accent. */}
+        <span
+          className={`link-tile-badge${link.activated ? ' activated' : ''}${showImg && link.imageCornerDark ? ' on-dark' : ''}`}
+          aria-hidden="true"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
         {showImg ? (
           <img src={link.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
         ) : (

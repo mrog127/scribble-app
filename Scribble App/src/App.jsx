@@ -467,13 +467,33 @@ function AppInner() {
   const getCollapsed = useCallback((catId) => (
     catId in collapsedMap ? collapsedMap[catId] : readCollapsedLS(catId)
   ), [collapsedMap])
+
+  // Both writers read the current state through this ref rather than from inside
+  // a setState updater. The updater has to be PURE: StrictMode runs it twice,
+  // and the old version wrote localStorage inside it, so on the first toggle of
+  // a category (before the map had a key for it) the second run read back the
+  // value the first run had just written and flipped it straight back — the tap
+  // re-rendered but the state never changed, and it took a second tap to work.
+  const collapsedMapRef = useRef(collapsedMap)
+  collapsedMapRef.current = collapsedMap
+  const currentCollapsed = (catId) => (
+    catId in collapsedMapRef.current ? collapsedMapRef.current[catId] : readCollapsedLS(catId)
+  )
+  const writeCollapsed = (catId, next) => {
+    try { localStorage.setItem(`cat-collapsed-${catId}`, next ? 'true' : 'false') } catch {}
+    setCollapsedMap(prev => ({ ...prev, [catId]: next }))
+  }
+
+  // Jumping to an item (search result, or a canvas sublabel in the collapsed
+  // view) has to put the Easel back in its Expanded state first — the canvas
+  // and its rows don't exist in the collapsed one.
+  const expandCategory = useCallback((catId) => {
+    if (!currentCollapsed(catId)) return
+    writeCollapsed(catId, false)
+  }, [])
+
   const toggleCollapsed = useCallback((catId) => {
-    setCollapsedMap(prev => {
-      const cur = catId in prev ? prev[catId] : readCollapsedLS(catId)
-      const next = !cur
-      try { localStorage.setItem(`cat-collapsed-${catId}`, next ? 'true' : 'false') } catch {}
-      return { ...prev, [catId]: next }
-    })
+    writeCollapsed(catId, !currentCollapsed(catId))
   }, [])
 
   const activeCategoryCollapsed = categoryIds.includes(activeTab) && getCollapsed(activeTab)
@@ -796,6 +816,7 @@ function AppInner() {
     // mounted yet can't hear the first one.
     requestProjectFocus(focusReq)
     closeSearch()
+    expandCategory(r.categoryId)
     handleTabChange(r.categoryId)
     // Wait for the destination canvas + its content tab to render, scroll the row
     // itself into view, then flash it once the smooth scroll has actually settled.
@@ -854,7 +875,7 @@ function AppInner() {
       // Give the reveal (expand + re-render) a beat before measuring anything.
       setTimeout(settleAndScroll, 360)
     }, 60)
-  }, [closeSearch, handleTabChange])
+  }, [closeSearch, handleTabChange, expandCategory])
 
   /* Three-dot menus open below their button; if the menu would hang off the
      bottom of the window, flip it above instead. They're rendered inline all
@@ -1542,6 +1563,60 @@ function AppInner() {
   }, [])
   useEffect(() => () => { clearTimeout(addToastTimer.current); clearTimeout(addToastDelay.current) }, [])
 
+  // Drag the toast down to send it away early. Tracked here rather than through
+  // the swipe-row helper: this is one element, and a downward drag has to be
+  // told apart from the tap that opens the item.
+  const toastDragRef = useRef(null)
+  const TOAST_DISMISS_PX = 48
+  const onToastPointerDown = useCallback((e) => {
+    if (addToastLeaving) return
+    const el = e.currentTarget
+    toastDragRef.current = { id: e.pointerId, y0: e.clientY, x0: e.clientX, dy: 0, dragging: false, el }
+  }, [addToastLeaving])
+
+  const onToastPointerMove = useCallback((e) => {
+    const d = toastDragRef.current
+    if (!d || d.id !== e.pointerId) return
+    const dy = e.clientY - d.y0
+    const dx = e.clientX - d.x0
+    // Only a downward drag counts; a sideways one is left alone.
+    if (!d.dragging) {
+      if (dy > 6 && dy > Math.abs(dx)) {
+        d.dragging = true
+        d.el.style.animation = 'none'   // the entry animation would fight the drag
+        d.el.style.transition = 'none'
+      } else return
+    }
+    d.dy = Math.max(0, dy)
+    // Resist a little past the dismiss point so the throw still feels physical.
+    const shown = d.dy > TOAST_DISMISS_PX ? TOAST_DISMISS_PX + (d.dy - TOAST_DISMISS_PX) * 0.4 : d.dy
+    d.el.style.transform = `translateY(${shown}px)`
+    d.el.style.opacity = String(Math.max(0.25, 1 - d.dy / 220))
+  }, [])
+
+  const endToastDrag = useCallback((e) => {
+    const d = toastDragRef.current
+    if (!d || d.id !== e.pointerId) return null
+    toastDragRef.current = null
+    if (!d.dragging) return d          // a tap — the caller opens the item
+    const el = d.el
+    if (d.dy >= TOAST_DISMISS_PX) {
+      clearTimeout(addToastTimer.current)
+      el.style.transition = 'transform 180ms ease, opacity 180ms ease'
+      el.style.transform = 'translateY(140px)'
+      el.style.opacity = '0'
+      addToastPending.current = false
+      addToastTimer.current = setTimeout(() => { setAddToastLeaving(false); setAddToast(null) }, 180)
+    } else {
+      // Not far enough — spring back and carry on with the normal timeout.
+      el.style.transition = 'transform 180ms cubic-bezier(0.2,0.8,0.2,1), opacity 180ms ease'
+      el.style.transform = ''
+      el.style.opacity = ''
+      setTimeout(() => { el.style.transition = '' }, 200)
+    }
+    return null
+  }, [])
+
   const showAddToast = useCallback((holder, { categoryId, projectId, type, title }) => {
     const catIdx = categories.findIndex(c => c.id === categoryId)
     const accent = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
@@ -1879,7 +1954,7 @@ function AppInner() {
   return (
     <div className="app-wrap">
       <div
-        className={`phone${inputFocused && footerInputMode ? ' save-panel-open' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}`}
+        className={`phone${inputFocused && footerInputMode ? ' save-panel-open' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}${addToast && !addToastLeaving ? ' toast-open' : ''}`}
         id="app"
         style={{
           '--accent-base': activeAccent.base,
@@ -2150,7 +2225,7 @@ function AppInner() {
 
         {/* Footer */}
         <div
-          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${searchOpen ? ' search-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
+          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${searchOpen ? ' search-open' : ''}${pageMenuOpen ? ' easel-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
           style={{
             '--accent-base': activeAccent.base,
             '--accent-dark': activeAccent.dark,
@@ -2168,6 +2243,8 @@ function AppInner() {
                 addToastHover.current = false
                 if (addToastPending.current) beginToastExit()
               }}
+              onPointerMove={onToastPointerMove}
+              onPointerCancel={endToastDrag}
               style={{
                 '--accent-base': addToast.accent.base,
                 '--accent-dark': addToast.accent.dark,
@@ -2175,10 +2252,12 @@ function AppInner() {
                 '--accent-base-rgb': addToast.accent.baseRgb,
               }}
               /* Press to arm, release to go — so sliding off cancels it */
-              onPointerDown={e => { e.preventDefault(); e.stopPropagation() }}
+              onPointerDown={e => { e.preventDefault(); e.stopPropagation(); onToastPointerDown(e) }}
               onPointerUp={e => {
                 e.preventDefault()
                 e.stopPropagation()
+                // A downward drag dismisses instead of opening.
+                if (!endToastDrag(e)) return
                 const t = addToast
                 if (!t) return
                 clearTimeout(addToastTimer.current)
@@ -2277,7 +2356,120 @@ function AppInner() {
                 )}
               </button>
 
-              {/* Long-press page list — Gallery on top, then every project page */}
+            </div>
+
+            {/* Add-new-easel field. While the Easels menu is open it takes over
+                the control bar the way search does — the leading circle folds
+                away and this expands in its place. Always mounted (parked when
+                closed) so the tap that opens it can focus the input
+                synchronously; iOS only raises the keyboard for a focus inside a
+                gesture. The Easels menu hangs off this wrapper, which sits where
+                the circle used to, so its offsets are unchanged. */}
+            <div className={`mbar-easel-wrap${pageMenuOpen ? ' open' : ''}`}>
+              <div
+                className={`link-input-stack easel-stack${pageMenuOpen ? ' open' : ''}${addEaselOpen ? ' active' : ''}`}
+                /* The confirm button's stroke + glow key off --cb-* / --accent-*;
+                   use the colour this new easel is about to be given. */
+                style={(() => {
+                  const a = getCategoryAccent(categories.length)
+                  return {
+                    '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb,
+                    '--accent-base': a.base, '--accent-dark': a.dark, '--accent-light': a.light, '--accent-base-rgb': a.baseRgb,
+                  }
+                })()}
+                onMouseDown={e => {
+                  if (!pageMenuOpen || addEaselOpen) return
+                  if (e.target.closest('button')) return
+                  e.preventDefault()
+                  flushSync(() => { setAddEaselOpen(true); setAddEaselName('') })
+                  addEaselRef.current?.focus()
+                }}
+              >
+                {!addEaselOpen && (
+                  <span className="mbar-placeholder" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                      <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                      <line x1="3.5" y1="10" x2="16.5" y2="10" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    <span className="mbar-placeholder-label">Add new easel</span>
+                  </span>
+                )}
+                <input
+                  ref={addEaselRef}
+                  className="add-input easel-input"
+                  placeholder={addEaselOpen ? 'Name easel' : ''}
+                  value={addEaselName}
+                  onChange={e => setAddEaselName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); submitAddEasel() }
+                    if (e.key === 'Escape') { e.preventDefault(); closeAddEasel() }
+                  }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="words"
+                  spellCheck="false"
+                  enterKeyHint="done"
+                />
+                {!addEaselOpen && (
+                  <button
+                    className="save-to-new-btn easel-close-btn"
+                    aria-label="Close easels"
+                    /* Resting, the X dismisses the whole Easels menu — the field
+                       has nothing of its own to cancel yet. */
+                    onPointerDown={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setPageMenuOpen(false)
+                      closeAddEasel()
+                    }}
+                    onClick={e => { e.preventDefault(); e.stopPropagation() }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
+                {addEaselOpen && (
+                  <button
+                    className="save-to-new-btn easel-cancel-btn"
+                    aria-label="Cancel"
+                    /* pointerdown, not mousedown: on touch the synthesized mouse
+                       event arrives after the button has already unmounted, and
+                       the tap then lands on whatever is underneath. Cancelling
+                       only puts the field back to rest — the Easels menu stays
+                       open. */
+                    onPointerDown={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      addEaselRef.current?.blur()
+                      closeAddEasel()
+                    }}
+                    onClick={e => { e.preventDefault(); e.stopPropagation() }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
+                {addEaselOpen && !!addEaselName.trim() && (
+                  <button
+                    className="save-to-new-send easel-send-btn"
+                    aria-label="Create easel"
+                    onPointerDown={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      addEaselRef.current?.blur()
+                      submitAddEasel()
+                    }}
+                    onClick={e => { e.preventDefault(); e.stopPropagation() }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M4 10.5 L8.5 15 L16 5.5" style={{ stroke: 'var(--cb-dark, #43535E)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
+
               <div className={`card-context-menu mbar-page-menu${pageMenuOpen ? ' open' : ''}`}>
                 <div className="mbar-page-menu-header">
                   <p className="mbar-page-menu-title">Easels</p>
@@ -2336,72 +2528,6 @@ function AppInner() {
                     )
                   })}
                 </div>
-
-                {/* Always last: name a new easel in place, then go to it */}
-                {addEaselOpen ? (
-                  <div
-                    className="card-context-item mbar-page-menu-new"
-                    /* The confirm button's stroke + glow key off --cb-* / --accent-*;
-                       use the colour this new easel is about to be given. */
-                    style={(() => {
-                      const a = getCategoryAccent(categories.length)
-                      return {
-                        '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb,
-                        '--accent-base': a.base, '--accent-dark': a.dark, '--accent-light': a.light, '--accent-base-rgb': a.baseRgb,
-                      }
-                    })()}
-                  >
-                    <input
-                      ref={addEaselRef}
-                      className="save-to-new-input"
-                      placeholder="Name easel"
-                      value={addEaselName}
-                      onChange={e => setAddEaselName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') { e.preventDefault(); submitAddEasel() }
-                        if (e.key === 'Escape') { e.preventDefault(); closeAddEasel() }
-                      }}
-                    />
-                    <button
-                      className="save-to-new-btn"
-                      aria-label="Cancel"
-                      onMouseDown={e => { e.preventDefault(); closeAddEasel() }}
-                    >
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
-                      </svg>
-                    </button>
-                    {!!addEaselName.trim() && (
-                      <button
-                        className="save-to-new-send"
-                        aria-label="Create easel"
-                        onMouseDown={e => { e.preventDefault(); submitAddEasel() }}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <path d="M4 10.5 L8.5 15 L16 5.5" style={{ stroke: 'var(--cb-dark, #43535E)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    className="card-context-item"
-                    onMouseDown={e => {
-                      e.preventDefault()
-                      // Commit the state before this handler returns, so the
-                      // focus still counts as part of the tap — iOS only raises
-                      // the keyboard for a focus inside a gesture.
-                      flushSync(() => { setAddEaselOpen(true); setAddEaselName('') })
-                      addEaselRef.current?.focus()
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                      <line x1="10" y1="3.5" x2="10" y2="16.5" stroke={getCategoryAccent(categories.length).dark} strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-                      <line x1="3.5" y1="10" x2="16.5" y2="10" stroke={getCategoryAccent(categories.length).dark} strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-                    </svg>
-                    <span className="mbar-page-menu-label" style={{ color: getCategoryAccent(categories.length).dark }}>Add new easel</span>
-                  </button>
-                )}
               </div>
             </div>
 

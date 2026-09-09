@@ -121,6 +121,9 @@ export function AppProvider({ children }) {
       id: cat.id,
       name: cat.name,
       sendToHomescreen: cat.send_to_homescreen !== false,
+      // Only meaningful when sendToHomescreen is false: whether the Easel shows
+      // its own active items in a pinned Gallery canvas.
+      showGalleryCanvas: cat.show_gallery_canvas !== false,
       archived: cat.archived === true,
       projects: (projs || [])
         .filter(p => p.category_id === cat.id)
@@ -141,7 +144,9 @@ export function AppProvider({ children }) {
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
             id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true,
-            imageUrl: l.image_url ?? null, imageFetchedAt: l.image_fetched_at ?? null, siteName: l.site_name ?? null
+            imageUrl: l.image_url ?? null, imageFetchedAt: l.image_fetched_at ?? null, siteName: l.site_name ?? null,
+            imageIsIcon: l.image_is_icon === true, imageBg: l.image_bg ?? null,
+            imageCornerDark: l.image_corner_dark === true
           })),
         }))
     }))
@@ -967,7 +972,7 @@ export function AppProvider({ children }) {
   const addCategory = useCallback((name) => {
     const id = `cat-${Date.now()}`
     const sortOrder = categoriesRef.current.length
-    setCategories(prev => [...prev, { id, name, sendToHomescreen: true, projects: [] }])
+    setCategories(prev => [...prev, { id, name, sendToHomescreen: true, showGalleryCanvas: true, projects: [] }])
     db(supabase.from('categories').insert({ id, user_id: user.id, name, sort_order: sortOrder }))
     return id
   }, [user])
@@ -983,6 +988,16 @@ export function AppProvider({ children }) {
     const newVal = !(cat.sendToHomescreen !== false)
     setCategories(prev => prev.map(c => c.id !== id ? c : { ...c, sendToHomescreen: newVal }))
     dbw(supabase.from('categories').update({ send_to_homescreen: newVal }).eq('id', id), 'toggleHomescreen')
+  }, [])
+
+  // Show / hide the Easel's own Gallery canvas (only reachable while the Easel
+  // is hidden from the Gallery).
+  const toggleCategoryGalleryCanvas = useCallback((id) => {
+    const cat = categoriesRef.current.find(c => c.id === id)
+    if (!cat) return
+    const newVal = !(cat.showGalleryCanvas !== false)
+    setCategories(prev => prev.map(c => c.id !== id ? c : { ...c, showGalleryCanvas: newVal }))
+    dbw(supabase.from('categories').update({ show_gallery_canvas: newVal }).eq('id', id), 'toggleGalleryCanvas')
   }, [])
 
   const deleteCategory = useCallback(async (id) => {
@@ -1019,6 +1034,9 @@ export function AppProvider({ children }) {
     linkImageInFlight.current.add(link.id)
     let image = null
     let siteName = null
+    let isIcon = false            // the image is the site's logo, not a page photo
+    let imageBg = null            // colour to sit behind that logo
+    let cornerDark = false        // is the badge's patch of the image dark?
     let answered = false          // did the function actually respond?
     try {
       const res = await fetch(
@@ -1030,6 +1048,9 @@ export function AppProvider({ children }) {
         answered = true
         if (data && typeof data.image === 'string') image = data.image
         if (data && typeof data.siteName === 'string') siteName = data.siteName
+        if (data && data.isIcon === true) isIcon = true
+        if (data && typeof data.imageBg === 'string') imageBg = data.imageBg
+        if (data && data.cornerDark === true) cornerDark = true
       } else {
         console.warn('[link-preview] HTTP', res.status)
       }
@@ -1047,9 +1068,12 @@ export function AppProvider({ children }) {
     const stamp = new Date().toISOString()
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      links: proj.links.map(l => l.id !== link.id ? l : { ...l, imageUrl: image, siteName, imageFetchedAt: stamp }),
+      links: proj.links.map(l => l.id !== link.id ? l : { ...l, imageUrl: image, siteName, imageFetchedAt: stamp, imageIsIcon: isIcon, imageBg, imageCornerDark: cornerDark }),
     }))
-    db(supabase.from('links').update({ image_url: image, site_name: siteName, image_fetched_at: stamp }).eq('id', link.id))
+    db(supabase.from('links').update({
+      image_url: image, site_name: siteName, image_fetched_at: stamp,
+      image_is_icon: isIcon, image_bg: imageBg, image_corner_dark: cornerDark,
+    }).eq('id', link.id))
   }, [])
 
   const reorderCategories = useCallback((newOrder) => {
@@ -1151,6 +1175,7 @@ export function AppProvider({ children }) {
       deleteCategory,
       reorderCategories,
       toggleCategoryHomescreen,
+      toggleCategoryGalleryCanvas,
       addProject,
       addActiveTodo,
       addActiveNote,

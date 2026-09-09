@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
+import { openInCanvas } from '../searchFocus.js'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
@@ -323,8 +324,23 @@ function distribute(category, newOrder, type, reorderFn) {
   })
 }
 
+// Aggregate cards render either as their own card (the collapsed Easel view) or
+// bare — just their rows and portals — when hosted inside another card's body,
+// which is how the Gallery canvas reuses them.
+function CardShell({ bare, cardRef, header, children }) {
+  if (bare) return <>{children}</>
+  return (
+    <div className="card card-intro" ref={cardRef}>
+      <div className="card-header">
+{header}
+      </div>
+{children}
+    </div>
+  )
+}
+
 // ============ Lists (todos) ============
-function CollapsedTodosCard({ category }) {
+export function CollapsedTodosCard({ category, bare = false, onlyActivated = false }) {
   const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderCategoryTodos, setProjectTodoScheduled, promptArchiveAttachments, promptDelete } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
@@ -354,7 +370,7 @@ function CollapsedTodosCard({ category }) {
   const todoTapState = useRef({})
 
   const allTodos = category.projects.filter(p => !p.archived).flatMap(p =>
-    p.todos.map(t => ({ ...t, projectId: p.id, projectName: p.name }))
+    p.todos.filter(t => !onlyActivated || t.activated).map(t => ({ ...t, projectId: p.id, projectName: p.name }))
   ).sort(byCatOrder)
 
   const uncheckedOrdered = groupByActivation(allTodos.filter(t => !t.checked))
@@ -570,8 +586,7 @@ function CollapsedTodosCard({ category }) {
   }
 
   return (
-    <div className="card card-intro" ref={cardRef}>
-      <div className="card-header">
+    <CardShell bare={bare} cardRef={cardRef} header={<>
         <span className="card-title">Lists</span>
         {hasChecked && (
           <div className="dots-menu-wrap" ref={menuRef}>
@@ -592,7 +607,7 @@ function CollapsedTodosCard({ category }) {
               </div>
           </div>
         )}
-      </div>
+    </>}>
       <div ref={containerRef}>
         {sorted.map((t, i) => (
           <div key={t.id}>
@@ -626,7 +641,14 @@ function CollapsedTodosCard({ category }) {
                   <div className="item-content">
                     <span className={`item-text${t.checked ? ' checked-text' : ''}`}>{t.text}{t.comment ? <CommentDotIcon/> : null}</span>
                     <div className="source-label">
-                      <span className="source-label-text">{t.projectName}</span>
+                      <span
+                        className="source-label-text canvas-link"
+                        onPointerDown={e => { e.stopPropagation() }}
+                        onClick={e => {
+                          e.stopPropagation()
+                          openInCanvas({ type: 'list', itemId: t.id, projectId: t.projectId, categoryId: category.id })
+                        }}
+                      >{t.projectName}</span>
                     </div>
                   </div>
                   {(t.scheduledDate && !t.activated) ? (
@@ -673,12 +695,12 @@ function CollapsedTodosCard({ category }) {
           onClose={() => setCalFor(null)}
         />
       )}
-    </div>
+    </CardShell>
   )
 }
 
 // ============ Notes ============
-function CollapsedNotesCard({ category }) {
+export function CollapsedNotesCard({ category, bare = false, onlyActivated = false }) {
   const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderCategoryNotes, setProjectNoteScheduled, archiveProjectNote, unarchiveProjectNote, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
@@ -706,13 +728,13 @@ function CollapsedNotesCard({ category }) {
   // Active notes across non-archived projects; archived ones are collected
   // separately and shown only when "Show Archived" is toggled on.
   const allNotes = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
-    p.notes.filter(n => !n.archived).map(n => ({ ...n, projectId: p.id, projectName: p.name }))
+    p.notes.filter(n => !n.archived && (!onlyActivated || n.activated)).map(n => ({ ...n, projectId: p.id, projectName: p.name }))
   ).sort(byCatOrder))
   const archivedNotes = category.projects.filter(p => !p.archived).flatMap(p =>
     p.notes.filter(n => n.archived).map(n => ({ ...n, projectId: p.id, projectName: p.name }))
   ).sort(byCatOrder)
   const archivedNoteCount = archivedNotes.length
-  const sortedNotes = showArchived ? [...allNotes, ...archivedNotes] : allNotes
+  const sortedNotes = (showArchived && !bare) ? [...allNotes, ...archivedNotes] : allNotes
 
   const rowMenu = useRowMenu()
   function buildRowItems(n) {
@@ -835,8 +857,7 @@ function CollapsedNotesCard({ category }) {
   }
 
   return (
-    <div className="card card-intro" ref={cardRef}>
-      <div className="card-header">
+    <CardShell bare={bare} cardRef={cardRef} header={<>
         <span className="card-title">Notes</span>
         {archivedNoteCount > 0 && (
           <div className="dots-menu-wrap" ref={menuRef}>
@@ -851,7 +872,7 @@ function CollapsedNotesCard({ category }) {
             </div>
           </div>
         )}
-      </div>
+    </>}>
       <div ref={containerRef}>
         {sortedNotes.map((n, i) => (
           <div key={n.id}>
@@ -875,7 +896,14 @@ function CollapsedNotesCard({ category }) {
                   <div className="item-content">
                     <NoteRowContent note={n} />
                     <div className="source-label">
-                      <span className="source-label-text">{n.projectName}</span>
+                      <span
+                        className="source-label-text canvas-link"
+                        onPointerDown={e => { e.stopPropagation() }}
+                        onClick={e => {
+                          e.stopPropagation()
+                          openInCanvas({ type: 'note', itemId: n.id, projectId: n.projectId, categoryId: category.id })
+                        }}
+                      >{n.projectName}</span>
                     </div>
                   </div>
                   {(n.scheduledDate && !n.activated) && (
@@ -913,12 +941,12 @@ function CollapsedNotesCard({ category }) {
           onClose={() => setCalFor(null)}
         />
       )}
-    </div>
+    </CardShell>
   )
 }
 
 // ============ Links ============
-function CollapsedLinksCard({ category }) {
+export function CollapsedLinksCard({ category, bare = false, onlyActivated = false }) {
   const { categories, deleteProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, archiveProjectLink, unarchiveProjectLink, reorderCategoryLinks, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const openLinkId = openDetail?.type === 'link' ? openDetail.id : null
   const setOpenLinkId = (id) => setOpenDetail(id == null ? null : { type: 'link', id })
@@ -945,13 +973,13 @@ function CollapsedLinksCard({ category }) {
 
   // Active links across non-archived projects; archived shown only when toggled on.
   const allLinks = groupByActivation(category.projects.filter(p => !p.archived).flatMap(p =>
-    p.links.filter(l => !l.archived).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
+    p.links.filter(l => !l.archived && (!onlyActivated || l.activated)).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
   ).sort(byCatOrder))
   const archivedLinks = category.projects.filter(p => !p.archived).flatMap(p =>
     p.links.filter(l => l.archived).map(l => ({ ...l, projectId: p.id, projectName: p.name }))
   ).sort(byCatOrder)
   const archivedLinkCount = archivedLinks.length
-  const sortedLinks = showArchived ? [...allLinks, ...archivedLinks] : allLinks
+  const sortedLinks = (showArchived && !bare) ? [...allLinks, ...archivedLinks] : allLinks
 
   const handleReorder = useCallback((newOrder) => {
     reorderCategoryLinks(category.id, newOrder)
@@ -1080,8 +1108,7 @@ function CollapsedLinksCard({ category }) {
   }
 
   return (
-    <div className="card card-intro" ref={cardRef}>
-      <div className="card-header">
+    <CardShell bare={bare} cardRef={cardRef} header={<>
         <span className="card-title">Links</span>
         {archivedLinkCount > 0 && (
           <div className="dots-menu-wrap" ref={menuRef}>
@@ -1096,7 +1123,7 @@ function CollapsedLinksCard({ category }) {
             </div>
           </div>
         )}
-      </div>
+    </>}>
       <div ref={containerRef}>
         {sortedLinks.map((l, i) => (
           <div key={l.id}>
@@ -1118,7 +1145,14 @@ function CollapsedLinksCard({ category }) {
                   <div className="item-content">
                     <span className="note-text">{l.title || displayUrl(l.url)}</span>
                     <div className="source-label">
-                      <span className="source-label-text">{l.projectName}</span>
+                      <span
+                        className="source-label-text canvas-link"
+                        onPointerDown={e => { e.stopPropagation() }}
+                        onClick={e => {
+                          e.stopPropagation()
+                          openInCanvas({ type: 'link', itemId: l.id, projectId: l.projectId, categoryId: category.id })
+                        }}
+                      >{l.projectName}</span>
                     </div>
                   </div>
                   {(l.scheduledDate && !l.activated) && (
@@ -1153,7 +1187,7 @@ function CollapsedLinksCard({ category }) {
           onClose={() => setCalFor(null)}
         />
       )}
-    </div>
+    </CardShell>
   )
 }
 

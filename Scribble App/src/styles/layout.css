@@ -1708,28 +1708,41 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .page {
     margin-bottom: calc(-1 * (var(--mbar-h) + var(--mbar-bottom)));
     /* Bottom fade only — no top fade (the pre-existing 480px block used to
-       cancel the base mask outright, so the top edge must stay opaque). */
+       cancel the base mask outright, so the top edge must stay opaque).
+       --fade-lift raises the whole gradient while the add toast is up, so it
+       centres on the toast instead of the bar (see .phone.toast-open below). */
     -webkit-mask-image: linear-gradient(to bottom,
       black 0px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
     mask-image: linear-gradient(to bottom,
       black 0px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
   }
   /* Scrolled: the same fade at the top as at the bottom, mirrored. */
   .page.scrolled {
     -webkit-mask-image: linear-gradient(to bottom,
       transparent 0px,
       black 32px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
     mask-image: linear-gradient(to bottom,
       transparent 0px,
       black 32px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
+  }
+
+  /* Toast up: lift the fade from the bar's midline to the toast's. The toast
+     sits 16px above the bar and is --add-toast-h tall, so its midline is
+     (mbar-h / 2 + 16 + toast-h / 2) higher than the bar's. */
+  .phone.toast-open .page {
+    --fade-lift: calc(var(--mbar-h) / 2 + 16px + var(--add-toast-h) / 2);
+  }
+  /* The tap guard covers the faded strip, so it has to grow with it. */
+  .phone.toast-open::after {
+    height: calc(var(--mbar-h) + var(--mbar-bottom) + 8px + var(--mbar-h) / 2 + 16px + var(--add-toast-h) / 2);
   }
 
   .phone.save-panel-open .page { margin-bottom: 0; }
@@ -1958,7 +1971,9 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   .footer.keyboard-open .mbar-circle,
   .footer.keyboard-open .mbar-gallery-wrap,
   .footer.search-open .mbar-circle,
-  .footer.search-open .mbar-gallery-wrap {
+  .footer.search-open .mbar-gallery-wrap,
+  .footer.easel-open .mbar-circle,
+  .footer.easel-open .mbar-gallery-wrap {
     opacity: 0;
     flex-basis: 0;
     width: 0;
@@ -2110,8 +2125,12 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   }
   .phone.page-menu-open .mbar-gallery-wrap { z-index: 6; }
   /* The rest of the control bar recedes while the menu is up */
-  .phone.page-menu-open .add-row .link-input-stack,
-  .phone.page-menu-open .add-row .mbar-search { opacity: 0.3; }
+  /* The easel field takes the whole bar, so nothing else in it is shown —
+     the same swap search makes, rather than a dimmed leftover. */
+  .phone.page-menu-open .add-row .link-input-stack:not(.easel-stack),
+  .phone.page-menu-open .add-row .mbar-search { display: none !important; }
+  /* Above the tap-swallowing scrim, like the menu's own wrapper */
+  .phone.page-menu-open .mbar-easel-wrap { z-index: 6; }
   /* The gallery/easel circle holds its hover tint for as long as the menu is up */
   .phone.page-menu-open .mbar-circle.mbar-gallery {
     background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
@@ -3185,6 +3204,8 @@ body.resizing-detail .phone { transition: none !important; }
 /* ---- "Added over there" toast ----
    Sits 16px above the footer, inset 16px from both screen edges. Reads like a
    gallery row — type icon, title, canvas name — in the canvas's own colours. */
+:root { --add-toast-h: 60px; }
+
 .add-toast {
   position: absolute;
   bottom: calc(100% + 16px);
@@ -3193,7 +3214,7 @@ body.resizing-detail .phone { transition: none !important; }
   z-index: 60;
   display: flex;
   align-items: center;
-  min-height: 60px;
+  min-height: var(--add-toast-h);
   box-sizing: border-box;
   padding: 8px 20px 8px 8px;
   text-align: left;
@@ -3282,4 +3303,128 @@ body.resizing-detail .phone { transition: none !important; }
 @keyframes add-toast-out {
   from { opacity: 1; transform: translateY(0); }
   to   { opacity: 0; transform: translateY(12px); }
+}
+
+/* ---- Add toast on desktop ----
+   The footer is the fixed sidebar here, so the toast can't hang off it. It goes
+   in the cards column instead: 24px up from the bottom of the window, 16px in
+   from each side of the content. The column's own width is the cards-area cap,
+   or whatever the window leaves once the sidebar and any detail panel have
+   taken their share — whichever is smaller. */
+@media (min-width: 1000px) {
+  .phone {
+    --cards-max: 796px;
+    --col-avail: calc(100vw - 340px - var(--gutter));
+  }
+  .phone:has(.note-detail-page.open) {
+    --cards-max: 880px;
+    --col-avail: calc(100vw - 340px - var(--gutter) - var(--detail-w));
+  }
+
+  .add-toast {
+    position: fixed;
+    bottom: 24px;
+    /* cards-area's own 28px left padding, then 16px in from the content */
+    left: calc(340px + var(--gutter) + 28px + 16px);
+    right: auto;
+    /* content width (column minus the area's 28/48 padding) less 16px each side */
+    width: calc(min(var(--cards-max), var(--col-avail)) - 28px - 48px - 32px);
+  }
+
+  /* The same content fade as on mobile, reaching transparent at the toast's
+     midline. Desktop pages are unmasked otherwise, so this only exists while a
+     toast is up. */
+  .phone.toast-open .page {
+    -webkit-mask-image: linear-gradient(to bottom,
+      black 0px,
+      black calc(100% - 24px - var(--add-toast-h) - 8px),
+      transparent calc(100% - 24px - var(--add-toast-h) / 2));
+    mask-image: linear-gradient(to bottom,
+      black 0px,
+      black calc(100% - 24px - var(--add-toast-h) - 8px),
+      transparent calc(100% - 24px - var(--add-toast-h) / 2));
+  }
+}
+
+/* =============================================
+   Add-new-easel field (mobile control bar)
+   Mirrors the search field: parked when the Easels menu is closed, and taking
+   the whole bar when it's open. The menu itself hangs off this wrapper, which
+   stands exactly where the leading circle stood.
+   ============================================= */
+@media (max-width: 999.98px) {
+  /* Parked: still mounted and focusable (so the opening tap can focus it
+     synchronously), but taking no space and untouchable. */
+  .footer .add-row .mbar-easel-wrap {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
+    min-width: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .footer .add-row .mbar-easel-wrap.open {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    height: var(--mbar-h);
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .footer .add-row .easel-stack {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+  .footer .add-row .mbar-easel-wrap.open .easel-stack {
+    opacity: 1;
+    pointer-events: auto;
+    /* The same box the add pill and the search field wear */
+    background: #FAF9F7;
+    border: 1px solid var(--mbar-stroke);
+    box-shadow: var(--mbar-shadow);
+    cursor: text;
+  }
+
+  /* Resting, the field reads as a button: the centred "+ Add new easel" overlay
+     sits over an empty input, exactly as the add pill does. */
+  .footer .add-row .easel-stack > .easel-input {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .footer .add-row .easel-stack.active > .easel-input { padding-right: 76px; }
+
+  /* Confirm / cancel ride the right edge of the bar rather than the menu row
+     they came from. */
+  .footer .add-row .easel-stack .easel-cancel-btn,
+  .footer .add-row .easel-stack .easel-close-btn,
+  .footer .add-row .easel-stack .easel-send-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+  }
+  /* Cancel sits on the right edge on its own; once there's a name to confirm,
+     it steps aside and the check takes that spot. */
+  .footer .add-row .easel-stack .easel-cancel-btn,
+  .footer .add-row .easel-stack .easel-close-btn { right: 8px; }
+  .footer .add-row .easel-stack:has(.easel-send-btn) .easel-cancel-btn { right: 44px; }
+  .footer .add-row .easel-stack .easel-send-btn { right: 8px; }
+}
+
+/* Desktop reaches easels from the sidebar, so neither the menu nor its field
+   belongs in the layout there. */
+@media (min-width: 1000px) {
+  .footer .add-row .mbar-easel-wrap { display: none; }
 }

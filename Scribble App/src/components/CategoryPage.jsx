@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import ProjectCard from './ProjectCard.jsx'
 import CategoryCollapsedView from './CategoryCollapsedView.jsx'
+import GalleryCanvas from './GalleryCanvas.jsx'
 import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, EditIcon, GalleryMenuIcon, GalleryOffMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent } from '../theme.js'
@@ -65,7 +66,7 @@ function CancelIcon() {
 }
 
 export default function CategoryPage({ categoryId, collapsed = false, onToggleCollapsed, onScroll, headerOpacity, headerTranslate, pageAnimClass = '', isExiting = false }) {
-  const { categories, addProject, reorderProjects, archiveCategory, renameCategory, toggleCategoryHomescreen } = useAppContext()
+  const { categories, addProject, reorderProjects, archiveCategory, renameCategory, toggleCategoryHomescreen, toggleCategoryGalleryCanvas } = useAppContext()
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -203,6 +204,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   if (!category) return null
 
   const inGallery = category.sendToHomescreen !== false
+  const showGalleryCanvas = category.showGalleryCanvas !== false
   const activeProjects = category.projects.filter(p => !p.archived)
   const archivedProjects = category.projects.filter(p => p.archived)
   const archivedCanvasCount = archivedProjects.length
@@ -290,6 +292,15 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                   {inGallery ? <GalleryOffMenuIcon/> : <GalleryMenuIcon/>}
                   {inGallery ? 'Hide from Gallery' : 'Send to Gallery'}
                 </button>
+                {!inGallery && (
+                  <button
+                    className="card-context-item"
+                    onMouseDown={e => { e.preventDefault(); setMenuOpen(false); toggleCategoryGalleryCanvas(categoryId) }}
+                  >
+                    {showGalleryCanvas ? <GalleryOffMenuIcon/> : <GalleryMenuIcon/>}
+                    {showGalleryCanvas ? 'Hide easel Gallery' : 'Display easel Gallery'}
+                  </button>
+                )}
                 <button
                   className="card-context-item"
                   onMouseDown={e => {
@@ -354,6 +365,11 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
           <CategoryCollapsedView category={category} />
         ) : (
         <>
+        {/* Easels that keep their active items off the home screen show them here
+            instead, in a pinned Gallery canvas. No drag handle (no
+            data-project-id), no rename, no add or menu buttons. */}
+        {!inGallery && showGalleryCanvas && <GalleryCanvas category={category} />}
+
         {category.projects.length === 0 && !creating && (
           <div className="empty-state">
             <p>No projects yet</p>

@@ -39,6 +39,12 @@
   .card:has(> .card-header:hover) {
     background-image: linear-gradient(rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.01));
   }
+  /* The plus and three-dot buttons act on themselves, not on the card, and wear
+     their own hover state — so the card lets go while the cursor is on one. */
+  .card:has(> .card-header .project-add-btn:hover),
+  .card:has(> .card-header .dots-menu-btn:hover) {
+    background-image: none;
+  }
 }
 
 .card-header {
@@ -1073,15 +1079,16 @@
 .note-style-bar {
   background: #F7F6F3;
   border: 1px solid #DBDAD8;
-  border-radius: 8px;
+  /* Fully rounded ends; 16px clear of each screen edge. */
+  border-radius: 999px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
   justify-content: space-evenly;
   position: absolute;
   bottom: calc(20px + var(--kbh, 0px));
-  left: 12px;
-  right: 20px;
+  left: 16px;
+  right: 16px;
   height: 56px;
   overflow: visible;
   padding: 0;
@@ -2529,7 +2536,7 @@
    it, so it isn't selectable. The selected day is the dark colour. */
 .cal-cell.today {
   pointer-events: none;
-  background: var(--accent-light);
+  background: rgba(var(--accent-base-rgb), 0.5);
   color: var(--accent-dark);
   border-radius: 8px;
   font-weight: 500;
@@ -3113,3 +3120,178 @@
 
 /* The attach button reads as pressed while its menu is open */
 .todo-section-card.empty-card .todo-attach-btn.active { color: #242424; }
+
+/* ---- Gallery canvas ----
+   The pinned canvas at the top of an Easel that isn't sending its active items
+   to the home screen. Same card shell as a regular canvas, plus the orbiting
+   stroke + inner glow the gallery controls wear — here in the Easel's own
+   accent rather than the rainbow cycle. Both layers are pseudo-siblings, so
+   neither competes with the card's own background or the collapse animation. */
+.gallery-canvas {
+  position: relative;
+  /* The animated ring has to land ON the card's 1px gray border, not inside it,
+     or the two stack up and the edge reads 2px wide. An absolutely positioned
+     child is laid out against the padding box, so it needs inset:-1px — which
+     the card's own overflow:hidden would clip away. Let the card overflow and
+     move the corner clipping onto the body instead (the header has no
+     background of its own, and the card's background still paints inside its
+     own radius either way). */
+  overflow: visible;
+}
+
+.gallery-canvas > .project-items {
+  overflow: hidden;
+  border-radius: 0 0 15px 15px;
+}
+
+/* Rotating colour stroke. Ring shape via the standard mask-exclude trick; the
+   card clips its overflow, so the ring sits just inside the 1px border rather
+   than on top of it. */
+.gallery-canvas > .gallery-canvas-stroke {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle),
+    hsl(from var(--accent-dark) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-dark) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Inner glow, on its own layer so the animated offsets can ride the registered
+   --glow-x / --glow-y properties while box-shadow itself stays un-animated. */
+.gallery-canvas > .gallery-canvas-glow {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  opacity: 0.5;
+  box-shadow: inset var(--glow-x) var(--glow-y) 22px
+    hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98));
+  animation: gallery-canvas-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes gallery-canvas-orbit {
+  0%   { --glow-x: 10px;  --glow-y: 0px; }
+  25%  { --glow-x: 0px;   --glow-y: 12px; }
+  50%  { --glow-x: -10px; --glow-y: 0px; }
+  75%  { --glow-x: 0px;   --glow-y: -12px; }
+  100% { --glow-x: 10px;  --glow-y: 0px; }
+}
+
+/* Keep the card's own content above both layers */
+.gallery-canvas > .card-header,
+.gallery-canvas > .project-items { position: relative; z-index: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-canvas > .gallery-canvas-stroke,
+  .gallery-canvas > .gallery-canvas-glow { animation: none; }
+}
+
+/* Title icon sits 6px to the left of "Gallery"; both wear the Easel's dark
+   accent rather than the usual near-black card title. */
+/* Line the header up with the rows beneath it: the 18px icon centres on the
+   20px checkbox column (left edge 20px, centre 30px) and "Gallery" starts at
+   56px, where the row labels start. */
+.gallery-canvas > .card-header { padding-left: 21px; }
+.gallery-canvas > .card-header .gallery-title-icon {
+  flex-shrink: 0;
+  margin-right: 17px;
+  color: var(--accent-dark);
+}
+.gallery-canvas > .card-header .card-title { color: var(--accent-dark); }
+
+/* Expanded, the title sits in a 32px row — the height the add / three-dot
+   buttons give a regular canvas header — so the space above and below it
+   matches, even though this card has no buttons of its own. */
+.gallery-canvas > .card-header .card-title-wrap {
+  min-height: 32px;
+  justify-content: center;
+}
+
+/* Rows read like the Gallery page, not like a canvas: the canvas each item came
+   from goes on its own subline under the item text. Undoes the .project-card
+   single-line row rules for this card only. */
+.gallery-canvas .item-content,
+.gallery-canvas .link-row .item-content {
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.gallery-canvas .item-text,
+.gallery-canvas .note-text {
+  width: 100%;
+  display: block;
+}
+.gallery-canvas .todo-row,
+.gallery-canvas .note-row {
+  min-height: unset;
+  align-items: flex-start;
+}
+
+/* ---- Link tile type badge ----
+   32x32 rounded square in the top-left of the thumbnail, 8px in from both
+   edges, holding an 18x18 link glyph. Neutral by default; an activated link
+   swaps to the canvas accent. */
+.link-tile-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.08);
+  color: #242424;
+  pointer-events: none;
+  z-index: 2;
+}
+/* Active: a near-solid accent chip. It carries its own contrast, so it reads
+   much the same over a light photo as a dark one. */
+.link-tile-badge.activated {
+  background: rgba(var(--accent-base-rgb), 0.8);
+  color: var(--accent-dark);
+}
+
+/* The patch of the thumbnail under the badge is dark (measured by the
+   link-preview function), so the near-black glyph would disappear into it —
+   light it up instead. The active badge keeps its accent, at the base tone,
+   which reads on a dark photo where the dark tone doesn't. */
+/* A white glyph needs a light scrim behind it, not the dark one — 12% white
+   over a dark photo reads the way 8% black does over a light one. */
+.link-tile-badge.on-dark {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.12);
+}
+/* The active chip is near-opaque, so what's behind it barely matters. */
+.link-tile-badge.on-dark.activated {
+  color: var(--accent-dark);
+  background: rgba(var(--accent-base-rgb), 0.8);
+}
+
+/* A link tile showing the site's logo rather than a page image: the artwork is
+   square, so it's centred and contained (never cropped) at a size that reads as
+   a mark rather than a photo. The fill comes from the icon itself (inline) and
+   falls back to the tile's usual neutral. */
+.link-tile-image.is-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.link-tile-image.is-logo img {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+}

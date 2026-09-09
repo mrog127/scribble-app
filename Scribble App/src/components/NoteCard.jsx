@@ -369,6 +369,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       ind.style.transition = 'left 100ms ease, width 100ms ease'
       ind.style.left = (textLeft - 12) + 'px'
       ind.style.width = (span.offsetWidth + 24) + 'px'
+      ind.style.opacity = ''
+    } else if (ind) {
+      // No button for this style — the note title, which has no toolbar entry.
+      ind.style.opacity = '0'
     }
   }, [])
 
@@ -445,12 +449,33 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     return () => content.removeEventListener('input', scrollCursorIntoView)
   }, [editing])
 
+  // The note's first line IS its title: it always carries style-title, and no
+  // other line ever may. Editing (typing, Enter, backspace-merge, paste) can all
+  // shuffle paragraphs around, so this runs as a catch-all after every change
+  // rather than being guarded at each individual entry point.
+  const enforceTitlePara = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+    const paras = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para'))
+    paras.forEach((p, i) => {
+      const isTitle = /style-title/.test(p.className)
+      if (i === 0 && !isTitle) {
+        p.className = 'note-para style-title'
+      } else if (i > 0 && isTitle) {
+        p.className = p.className.replace(/style-title/, 'style-body')
+      }
+    })
+  }, [])
+
   const selectStyle = useCallback((style) => {
-    setCurrentStyle(style)
-    updateStyleIndicator(style)
     const content = contentRef.current
     if (!content || !editingRef.current) return
     const target = getCursorPara() || lastCursorParaRef.current || content.querySelector('.note-para:last-of-type')
+    // The title line's style is fixed — the tap does nothing at all.
+    const first = content.querySelector('.note-para')
+    if (target && target === first) return
+    setCurrentStyle(style)
+    updateStyleIndicator(style)
     if (target && content.contains(target)) target.className = 'note-para style-' + style
   }, [getCursorPara, updateStyleIndicator])
 
@@ -784,7 +809,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     // and, for a bullet, the same indent depth as the line it came from.
     const newPara = document.createElement('div')
     const indent = (currentPara.className.match(/indent-\d/) || [])[0]
-    newPara.className = 'note-para style-' + paraStyle + (paraStyle === 'bullet' && indent ? ' ' + indent : '')
+    // Splitting the title line gives a Body line — there's only ever one title.
+    const nextStyle = paraStyle === 'title' ? 'body' : paraStyle
+    newPara.className = 'note-para style-' + nextStyle + (nextStyle === 'bullet' && indent ? ' ' + indent : '')
     const afterRange = document.createRange()
     afterRange.setStart(range.startContainer, range.startOffset)
     afterRange.setEnd(currentPara, currentPara.childNodes.length)
@@ -847,13 +874,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
   // Keep the bottom fade in sync while typing (clear it when the last line is the end)
   const handleEditorInput = useCallback(() => {
+    enforceTitlePara()
     handleInput()
     if (editorRef.current) checkBottomOverflow(editorRef.current)
-  }, [handleInput, checkBottomOverflow])
+  }, [enforceTitlePara, handleInput, checkBottomOverflow])
 
 
   // ---- Paste: everything lands in the note's own type styles ----
-  // Pasted markup is read for structure only (h1 → Title, h2 → Heading, h3-h6 and
+  // Pasted markup is read for structure only (h1/h2 → H1, h3-h6 and
   // all-bold lines → H3, list items → Bullet, everything else → Body); no foreign
   // fonts, colours or spacing survive.
   const blocksFromHtml = useCallback((html) => {
@@ -890,8 +918,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         if (tag === 'style' || tag === 'script' || tag === 'meta') continue
         if (!BLOCK.test(tag)) { buffer += child.textContent; continue }
         flush()
-        if (tag === 'h1') { push('title', child.textContent); continue }
-        if (tag === 'h2') { push('heading', child.textContent); continue }
+        // h1 maps to the toolbar's H1 (the 'heading' style) — the note's own
+        // 'title' style is reserved and can't be applied to body text.
+        if (tag === 'h1' || tag === 'h2') { push('heading', child.textContent); continue }
         if (/^h[3-6]$/.test(tag)) { push('bold', child.textContent); continue }
         if (tag === 'li') {
           // Nested lists inside the item become their own bullets
@@ -1125,7 +1154,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
       <div className="note-style-bar" ref={styleBarRef} id="noteStyleBar">
         <div className="note-style-indicator" ref={indicatorRef} id="noteStyleIndicator"/>
-        {['title','heading','bold','body','italic','bullet'].map(s => (
+        {/* 'title' is the note's own heading style — it isn't offered here, so it
+            can't be applied to body text (or taken off the title). What used to
+            be H2 / H3 are now labelled H1 / H2. */}
+        {['heading','bold','body','italic','bullet'].map(s => (
           <button
             key={s}
             className={`note-style-btn${currentStyle === s ? ' active' : ''}`}
@@ -1133,7 +1165,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
             onTouchStart={e => { e.preventDefault(); selectStyle(s) }}
             onMouseDown={e => { e.preventDefault(); selectStyle(s) }}
           >
-            <span>{s === 'title' ? 'H1' : s === 'heading' ? 'H2' : s === 'bold' ? 'H3' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
+            <span>{s === 'heading' ? 'H1' : s === 'bold' ? 'H2' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
           </button>
         ))}
       </div>

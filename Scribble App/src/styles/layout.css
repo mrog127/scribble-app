@@ -4244,3 +4244,26 @@ body.resizing-detail .phone { transition: none !important; }
   padding: 0;
 }
 :root[data-theme="dark-dots"] .detail-footer .dots-menu span { background: #E6E6E6; }
+
+
+/* --- Note header title ---
+   Reading: only the big title above the card. Editing the body: the big title
+   gives way to the small one in the header, and the card rises to 16px below
+   it. The scroll-driven fade is overridden — in this theme the small title is
+   simply on or off. */
+:root[data-theme="dark-dots"] .note-scroll-title {
+  opacity: 0 !important;
+  transform: none !important;
+}
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-scroll-title {
+  opacity: 1 !important;
+}
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-detail-title { display: none; }
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor { margin-top: 16px; }
+
+/* Footer keeps 16px to the page edges on either side */
+:root[data-theme="dark-dots"] .note-detail-page.has-footer .detail-footer,
+:root[data-theme="dark-dots"] .detail-footer {
+  padding-left: 16px;
+  padding-right: 16px;
+}

@@ -332,7 +332,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   useEffect(() => {
     if (!darkDots || !titleFieldRef.current) return
     const first = contentRef.current?.querySelector('.note-para')
-    titleFieldRef.current.textContent = (first?.textContent || '').trim()
+    const text = (first?.textContent || '').trim()
+    titleFieldRef.current.textContent = text
+    if (scrollTitleRef.current) scrollTitleRef.current.textContent = text
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id, darkDots])
 
@@ -898,6 +900,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const first = contentRef.current?.querySelector('.note-para')
     if (!first) return
     first.textContent = text
+    if (scrollTitleRef.current) scrollTitleRef.current.textContent = text
     handleEditorInput()
   }, [handleEditorInput])
 

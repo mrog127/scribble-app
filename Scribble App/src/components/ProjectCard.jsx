@@ -15,6 +15,8 @@ import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { subscribeOrderHold } from '../galleryPulse.js'
+import { useTheme } from '../useTheme.js'
+import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon, PlusIcon as FeatherPlusIcon } from './FeatherIcons.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -1876,6 +1878,64 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     }
   }
 
+
+  // Dark Dots puts the type tabs and the add button in a row at the foot of the
+  // card instead of in its header (Figma: Active Page, node 384:7897).
+  const tabsAtBottom = useTheme() === 'dark-dots'
+  const tabRow = (
+              <div className="project-tab-bar" ref={tabBarRef}>
+                <div className="project-tab-indicator" ref={tabIndicatorRef}/>
+                {typesWithItems.includes('list') && (
+                  <button
+                    className={`project-tab-btn${selectedTab === 'list' ? ' selected' : ''}${tabCount('list') === 0 ? ' all-hidden' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('list') }}
+                  >
+                    {tabsAtBottom
+                      ? <FeatherListIcon size={selectedTab === 'list' ? 24 : 20} color={selectedTab === 'list' ? 'var(--tab-icon-on)' : 'var(--tab-icon-off)'}/>
+                      : <ListIcon size={20} color={selectedTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>}
+                    {tabCount('list') > 0 && <span className="project-tab-count">{tabCount('list')}</span>}
+                  </button>
+                )}
+                {typesWithItems.includes('note') && (
+                  <button
+                    className={`project-tab-btn${selectedTab === 'note' ? ' selected' : ''}${tabCount('note') === 0 ? ' all-hidden' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('note') }}
+                  >
+                    {tabsAtBottom
+                      ? <FeatherFileIcon size={selectedTab === 'note' ? 24 : 20} color={selectedTab === 'note' ? 'var(--tab-icon-on)' : 'var(--tab-icon-off)'}/>
+                      : <NoteIcon size={20} color={selectedTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>}
+                    {tabCount('note') > 0 && <span className="project-tab-count">{tabCount('note')}</span>}
+                  </button>
+                )}
+                {typesWithItems.includes('link') && (
+                  <button
+                    className={`project-tab-btn${selectedTab === 'link' ? ' selected' : ''}${tabCount('link') === 0 ? ' all-hidden' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('link') }}
+                  >
+                    {tabsAtBottom
+                      ? <FeatherLinkIcon size={selectedTab === 'link' ? 24 : 20} color={selectedTab === 'link' ? 'var(--tab-icon-on)' : 'var(--tab-icon-off)'}/>
+                      : <LinkIcon size={20} color={selectedTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>}
+                    {tabCount('link') > 0 && <span className="project-tab-count">{tabCount('link')}</span>}
+                  </button>
+                )}
+              </div>
+  )
+  const addBtn = (
+          <button
+            type="button"
+            className="project-add-btn"
+            onClick={() => requestCompose({ categoryId, projectId: project.id, type: displayType })}
+          >
+            {tabsAtBottom ? (
+              <FeatherPlusIcon size={22} color="var(--accent-base)"/>
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M16 8 L16 24 M8 16 L24 16" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+              </svg>
+            )}
+          </button>
+  )
+
   return (
     <>
       {/* NOTE: don't add render-dependent classes to this element — the intro
@@ -1964,52 +2024,11 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
                   >{sourceLabel.name}</span>
                 )}
               </div>
-              {showTabs && (
-                <div className="project-tab-bar" ref={tabBarRef}>
-                  <div className="project-tab-indicator" ref={tabIndicatorRef}/>
-                  {typesWithItems.includes('list') && (
-                    <button
-                      className={`project-tab-btn${selectedTab === 'list' ? ' selected' : ''}${tabCount('list') === 0 ? ' all-hidden' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('list') }}
-                    >
-                      <ListIcon size={20} color={selectedTab === 'list' ? 'var(--accent-dark)' : '#242424'}/>
-                      {tabCount('list') > 0 && <span className="project-tab-count">{tabCount('list')}</span>}
-                    </button>
-                  )}
-                  {typesWithItems.includes('note') && (
-                    <button
-                      className={`project-tab-btn${selectedTab === 'note' ? ' selected' : ''}${tabCount('note') === 0 ? ' all-hidden' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('note') }}
-                    >
-                      <NoteIcon size={20} color={selectedTab === 'note' ? 'var(--accent-dark)' : '#242424'}/>
-                      {tabCount('note') > 0 && <span className="project-tab-count">{tabCount('note')}</span>}
-                    </button>
-                  )}
-                  {typesWithItems.includes('link') && (
-                    <button
-                      className={`project-tab-btn${selectedTab === 'link' ? ' selected' : ''}${tabCount('link') === 0 ? ' all-hidden' : ''}`}
-                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab('link') }}
-                    >
-                      <LinkIcon size={20} color={selectedTab === 'link' ? 'var(--accent-dark)' : '#242424'}/>
-                      {tabCount('link') > 0 && <span className="project-tab-count">{tabCount('link')}</span>}
-                    </button>
-                  )}
-                </div>
-              )}
+              {showTabs && (!tabsAtBottom || collapsed) && tabRow}
             </>
           )}
           <div className="project-header-actions">
-          {!archived && (
-            <button
-              type="button"
-              className="project-add-btn"
-              onClick={() => requestCompose({ categoryId, projectId: project.id, type: displayType })}
-            >
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M16 8 L16 24 M8 16 L24 16" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-              </svg>
-            </button>
-          )}
+          {!archived && (!tabsAtBottom || collapsed) && addBtn}
           <div className="dots-menu-wrap" ref={menuRef}>
             <div
               className="dots-menu dots-menu-btn"
@@ -2208,6 +2227,9 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
                         onContextMenu={e => rowMenu.context(e, buildRowItems('note', n))}
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
+                          {tabsAtBottom ? (
+                            <FeatherFileIcon size={20} strokeWidth={n.activated ? 2 : 1} color={n.activated ? 'var(--accent-base)' : '#7A7A7A'}/>
+                          ) : (
                           <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
                             {n.activated && (
                               <defs>
@@ -2227,6 +2249,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
                             <line x1="5" y1="13" x2="15" y2="13" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
                             <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
                           </svg>
+                          )}
                         </div>
                         <div className="item-content">
                           <NoteRowContent note={n} />
@@ -2292,6 +2315,14 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
             </button>
           )}
         </div>
+
+        {/* Dark Dots: type tabs + add button below the items */}
+        {tabsAtBottom && !collapsed && (showTabs || !archived) && (
+          <div className={`project-bottom-bar${showTabs ? '' : ' no-tabs'}`}>
+            {showTabs && tabRow}
+            {!archived && addBtn}
+          </div>
+        )}
 
         {/* Input — removed; items are added from the footer text box. Set
             SHOW_PROJECT_INPUT (top of file) to true to restore. Hidden on

@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useAppContext } from '../context/AppContext.jsx'
-import { ACCENT_COLORS, getCategoryAccent } from '../theme.js'
+import { ACCENT_COLORS, getCategoryAccent, getHomeAccent } from '../theme.js'
 
 export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScroll, pulse = '', pulseVars }) {
   const { categories } = useAppContext()
@@ -12,7 +12,7 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
       <div className="tab-scroll">
         <button
           className={`icon-tab tab-home${activeTab === 'star' ? ' selected' : ''}${pulse ? ` pulse-active pulse-${pulse}` : ''}`}
-          style={{ '--tab-light': ACCENT_COLORS[0].light, ...(pulseVars || {}) }}
+          style={{ '--tab-light': getHomeAccent().light, ...(pulseVars || {}) }}
           onClick={() => {
             // Always send the category list back to the top, whatever was selected
             tabsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
@@ -70,7 +70,7 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
 
       <button
         className={`icon-tab tab-pages${activeTab === 'menu' ? ' selected' : ''}`}
-        style={{ '--tab-light': ACCENT_COLORS[0].light }}
+        style={{ '--tab-light': getHomeAccent().light }}
         onClick={() => {
           tabsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
           onSelectTab('menu')

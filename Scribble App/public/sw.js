@@ -82,3 +82,31 @@ self.addEventListener('fetch', (event) => {
 
   // Everything else (Supabase) falls through to the network untouched.
 })
+
+// ---- Morning summary push ----
+// Sent by the morning-summary edge function. iOS requires every push to show a
+// notification, so this always shows one.
+self.addEventListener('push', (event) => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { data = { body: event.data?.text() } }
+  event.waitUntil(self.registration.showNotification(data.title || 'Easels', {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: data.tag || 'morning-summary',
+    data: { url: data.url || '/' },
+  }))
+})
+
+// Tapping the notification brings Scribble forward (or opens it) on the Gallery.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = new URL(event.notification.data?.url || '/', self.location.origin).href
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const w of wins) {
+      if (w.url.startsWith(self.location.origin)) return w.focus()
+    }
+    return self.clients.openWindow(url)
+  })())
+})

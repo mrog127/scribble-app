@@ -3428,3 +3428,819 @@ body.resizing-detail .phone { transition: none !important; }
 @media (min-width: 1000px) {
   .footer .add-row .mbar-easel-wrap { display: none; }
 }
+
+/* ---- Themes ----
+   The theme id sits on <html data-theme="…"> (see src/themes.js). Paintbrush is
+   the default styling above, so it needs no rules here.
+
+   Dark Dots (Figma: Gallery 384:6648, Active Page 384:7897) is being built page
+   by page: so far the Gallery, the Easel pages and the floating control bar.
+   Every rule is scoped to the theme, and the card rules to those two pages, so
+   Paintbrush and Settings are untouched. */
+
+:root[data-theme="dark-dots"] { color-scheme: dark; }
+
+:root[data-theme="dark-dots"],
+:root[data-theme="dark-dots"] body,
+:root[data-theme="dark-dots"] #root,
+:root[data-theme="dark-dots"] .phone {
+  background: #212121;
+}
+
+/* The cream paper decorations belong to Paintbrush */
+:root[data-theme="dark-dots"] .home-page .header-decoration,
+:root[data-theme="dark-dots"] .home-page .active-date-decoration,
+:root[data-theme="dark-dots"] .category-page .underline-img { display: none; }
+
+/* --- Gallery date --- */
+:root[data-theme="dark-dots"] .home-page .active-day-name,
+:root[data-theme="dark-dots"] .home-page .active-month-date {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 50px;
+  letter-spacing: -1.92px;
+  color: #E6E6E6;
+  margin-left: 4px;
+}
+:root[data-theme="dark-dots"] .home-page .active-day-name { margin-top: 0; }
+:root[data-theme="dark-dots"] .home-page .active-month-date { margin-bottom: 0; }
+
+/* --- Easel title, with the easel's colour as a dot beside it --- */
+:root[data-theme="dark-dots"] .category-page .active-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: -0.64px;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .category-page .active-title::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--accent-base);
+}
+
+/* --- Round dark header buttons (settings, collapse, add canvas, card menus) ---
+   Icon strokes are presentation attributes, which any CSS rule outranks. */
+:root[data-theme="dark-dots"] .home-page .home-settings-btn,
+:root[data-theme="dark-dots"] .category-page .category-header-btn,
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .dots-menu {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #333333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+:root[data-theme="dark-dots"] .category-page .category-header-actions { gap: 8px; }
+
+/* Design puts 24px between the title row and the first canvas card */
+:root[data-theme="dark-dots"] .category-page .page-header { padding-bottom: 24px; }
+:root[data-theme="dark-dots"] .category-page .cards-area { padding-top: 0; }
+/* The Easel header buttons render the Feather icons themselves (see
+   FeatherIcons.jsx); the Gallery's gear is still the app's own, so it takes the
+   design's colour and 2px weight here. */
+:root[data-theme="dark-dots"] .home-page .home-settings-btn svg * {
+  stroke: #E6E6E6;
+  stroke-width: 2;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .dots-menu span { background: #E6E6E6; }
+
+/* --- Gallery dots: one per easel with unchecked active list items, most first --- */
+.active-dots { display: none; }
+:root[data-theme="dark-dots"] .home-page .active-dots {
+  display: flex;
+  gap: 4px;
+  margin: 24px 0 24px 6px;
+  position: relative;
+  z-index: 1;
+}
+.active-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* --- Cards --- */
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .card {
+  background: #292929;
+  border: none;
+  border-radius: 32px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  box-shadow: none;
+}
+/* Canvas cards sit a shade lighter than the Gallery's aggregate cards */
+:root[data-theme="dark-dots"] .category-page .project-card { background: #2B2B2B; }
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .card .card-header { padding: 16px 16px 8px 20px; }
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .card .card-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.44px;
+  color: #E6E6E6;
+}
+
+/* --- Rows --- */
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .divider { display: none; }
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) :is(.todo-row, .note-row, .link-row) {
+  padding: 4px 24px 8px;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .item-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 25px;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .item-text.checked-text { color: #7A7A7A; }
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .row-attach-count,
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .source-label-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #7A7A7A;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .source-label-text { font-size: 12px; }
+
+/* Active item: ring in the easel's colour, filled at 24%.
+   Inactive item: hollow grey circle on the card. */
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .checkbox.activated-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 13px;
+  border: 2px solid var(--cb-base, var(--accent-base));
+  background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.24);
+  box-shadow: none;
+  animation: none;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .checkbox.activated-checkbox::after { background: none; }
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .checkbox.activated-checkbox.checked {
+  background: var(--cb-base, var(--accent-base));
+  border-color: var(--cb-base, var(--accent-base));
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .checkbox:not(.activated-checkbox) {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #7A7A7A;
+  background: #262626;
+  box-shadow: none;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .checkbox:not(.activated-checkbox)::after { background: rgba(255, 255, 255, 0.06); }
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .checkbox:not(.activated-checkbox).checked {
+  background: var(--accent-base);
+  border-color: var(--accent-base);
+}
+
+/* --- Canvas card bottom bar: type tabs + add button (Dark Dots layout) --- */
+.project-bottom-bar { display: none; }
+:root[data-theme="dark-dots"] .project-bottom-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 8px 16px;
+}
+/* A canvas with only one content type has no tabs: the add button rides up onto
+   the last row's line at the right edge, instead of taking a row of its own.
+   The bar's own 16px is then the whole gap under the button. */
+:root[data-theme="dark-dots"] .project-bottom-bar.no-tabs {
+  justify-content: flex-end;
+  margin-top: -40px;
+  padding: 0 16px 16px;
+  pointer-events: none;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar.no-tabs .project-add-btn { pointer-events: auto; }
+:root[data-theme="dark-dots"] .project-card:has(.project-bottom-bar.no-tabs) { padding-bottom: 0; }
+/* The last row shares its line with the button: its text stops 16px short of it
+   (40px button + 16px card inset + 16px), wrapping to a second line instead. */
+:root[data-theme="dark-dots"] .project-card:has(.project-bottom-bar.no-tabs) .project-items > div > div:last-child :is(.todo-row, .note-row, .link-row) {
+  padding-right: 72px;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-tab-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 40px;
+  padding: 4px;
+  gap: 0;
+  box-sizing: border-box;
+  background: #333333;
+  border-radius: 32px;
+  justify-content: space-between;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-tab-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
+  border-radius: 32px;
+}
+/* The icons paint themselves from these two variables (inline styles, so CSS
+   can't reach them directly): selected in the easel's colour, the rest grey. */
+:root[data-theme="dark-dots"] .project-bottom-bar {
+  --tab-icon-on: var(--accent-base);
+  --tab-icon-off: #7A7A7A;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-tab-count {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 500;
+  color: #7A7A7A;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-tab-btn.selected .project-tab-count { color: var(--accent-base); }
+:root[data-theme="dark-dots"] .project-bottom-bar .project-tab-indicator {
+  top: 4px;
+  height: 32px;
+  border-radius: 32px;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-add-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(var(--accent-base-rgb), 0.24);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  /* The ring sits at inset -1px, so the button must not clip it */
+  overflow: visible;
+}
+/* Same glass as the control bar, tinted with the easel's colour */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .project-bottom-bar .project-add-btn {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+/* Ring and glow borrowed from the pinned Gallery canvas, but held still: the
+   stroke's bright end points up-left, toward the Easel title, and the glow sits
+   on the opposite arc (bottom-right) at 60% of its former reach. */
+:root[data-theme="dark-dots"] .project-bottom-bar .project-add-btn::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-add-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.1;
+  box-shadow: inset -6px -6px 4px
+    hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98));
+  pointer-events: none;
+  z-index: 1;
+}
+:root[data-theme="dark-dots"] .project-bottom-bar .project-add-btn svg { position: relative; z-index: 3; }
+
+
+/* --- Control bar: liquid glass ---
+   A blurred, saturated pull-through of whatever scrolls under the bar, a white
+   8% fill over it, and a hairline top edge for the lit rim. Safari (iOS
+   included) needs the -webkit- prefix. Where backdrop-filter is unsupported the
+   fill alone still reads, so nothing is lost. */
+:root[data-theme="dark-dots"] .phone {
+  --mbar-chrome: rgba(255, 255, 255, 0.08);
+  --mbar-stroke: rgba(255, 255, 255, 0.14);
+  --mbar-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .mbar-circle,
+  :root[data-theme="dark-dots"] .footer .add-row .link-input-stack {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* The lit top rim, painted over the blur and under the content */
+:root[data-theme="dark-dots"] .mbar-circle::before,
+:root[data-theme="dark-dots"] .footer .add-row .link-input-stack::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%);
+  pointer-events: none;
+}
+
+:root[data-theme="dark-dots"] .mbar-circle svg * { stroke: #E6E6E6; }
+:root[data-theme="dark-dots"] .mbar-placeholder svg * { stroke: #7A7A7A; }
+:root[data-theme="dark-dots"] .mbar-placeholder-label {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+}
+:root[data-theme="dark-dots"] .add-input {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #E6E6E6;
+}
+
+
+/* --- Menus (card three-dot, long-press row menu, page menu) ---
+   Glass panel, no dividers, Helvetica Neue in the same off-white as the app. */
+:root[data-theme="dark-dots"] .card-context-menu {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  padding: 4px 0;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .card-context-menu {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] .card-context-item {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 400;
+  color: #E6E6E6;
+}
+/* Row height already carries the spacing the dividers used to mark */
+:root[data-theme="dark-dots"] .card-context-item + .card-context-item { border-top: none; }
+:root[data-theme="dark-dots"] .card-context-item svg * { stroke: #E6E6E6; }
+/* The pressed / hovered band sits 4px in from each edge with 16px corners,
+   painted behind the label rather than as the row's own background. */
+:root[data-theme="dark-dots"] .card-context-item { position: relative; background: none; }
+:root[data-theme="dark-dots"] .card-context-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  border-radius: 16px;
+  background: transparent;
+  z-index: -1;
+  pointer-events: none;
+}
+:root[data-theme="dark-dots"] .card-context-item:active::before { background: rgba(255, 255, 255, 0.06); }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .card-context-item:hover::before { background: rgba(255, 255, 255, 0.06); }
+  :root[data-theme="dark-dots"] .card-context-item.danger:hover::before { background: rgba(178, 74, 74, 0.12); }
+}
+/* Delete stays red — it is the one item whose colour carries meaning */
+:root[data-theme="dark-dots"] .card-context-item.danger,
+:root[data-theme="dark-dots"] .card-context-item.danger svg * { color: #FF7070; stroke: #FF7070; }
+
+/* The trigger highlights as a circle over its own dark circle, not a square */
+:root[data-theme="dark-dots"] .dots-menu-btn::before {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+:root[data-theme="dark-dots"] .dots-menu-wrap:has(.card-context-menu.open) .dots-menu-btn::before {
+  background: rgba(255, 255, 255, 0.04);
+}
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .dots-menu-btn:hover::before { background: rgba(255, 255, 255, 0.04); }
+}
+
+
+/* --- Hover states ---
+   Paintbrush tints hovers with black; on a dark page that reads as a hole, so
+   every one of them becomes the same 4% white wash the three-dot button uses. */
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .project-tab-btn:hover:not(.selected)::before,
+  :root[data-theme="dark-dots"] .home-settings-btn:hover::before,
+  :root[data-theme="dark-dots"] .category-header-btn:hover::before,
+  :root[data-theme="dark-dots"] .note-detail-done:hover::after,
+  :root[data-theme="dark-dots"] .save-to-cancel:hover::after,
+  :root[data-theme="dark-dots"] .todo-attach-btn:hover::after,
+  :root[data-theme="dark-dots"] .detail-footer-cell:hover::after,
+  :root[data-theme="dark-dots"] .detail-footer-cell:has(button:hover)::after,
+  :root[data-theme="dark-dots"] .detail-footer-copy-btn:hover::after,
+  :root[data-theme="dark-dots"] .project-toolbar-left:hover::after,
+  :root[data-theme="dark-dots"] .project-toolbar-left:has(button:hover)::after,
+  :root[data-theme="dark-dots"] .toolbar-left:hover::after,
+  :root[data-theme="dark-dots"] .toolbar-left:has(button:hover)::after {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  :root[data-theme="dark-dots"] .project-add-btn:hover,
+  :root[data-theme="dark-dots"] .link-outlink-btn:hover,
+  :root[data-theme="dark-dots"] .toolbar-icon-btn:hover:not(.selected),
+  :root[data-theme="dark-dots"] .save-to-new-btn:hover,
+  :root[data-theme="dark-dots"] .save-to-option:hover:not(.selected),
+  :root[data-theme="dark-dots"] .search-result-row:hover,
+  :root[data-theme="dark-dots"] .tab-bar .icon-tab:hover:not(.selected),
+  :root[data-theme="dark-dots"] .tab-bar .text-tab:hover:not(.selected),
+  :root[data-theme="dark-dots"] .tabs-scroll .text-tab:hover:not(.selected) {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  /* Checkboxes and send buttons carry their wash on an ::after layer */
+  :root[data-theme="dark-dots"] .checkbox:not(.activated-checkbox)::after,
+  :root[data-theme="dark-dots"] .send-btn::after,
+  :root[data-theme="dark-dots"] .project-send-btn::after,
+  :root[data-theme="dark-dots"] .mark-complete-btn::after {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  /* Text boxes take the wash as a flat overlay over their own fill */
+  :root[data-theme="dark-dots"] .project-input-wrap:not(.focused):hover,
+  :root[data-theme="dark-dots"] .add-input:hover {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  }
+}
+
+/* Menu rows and the card menus keep the same 4% */
+:root[data-theme="dark-dots"] .card-context-item:active::before { background: rgba(255, 255, 255, 0.04); }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .card-context-item:hover::before { background: rgba(255, 255, 255, 0.04); }
+}
+
+
+/* --- Note rows (Figma: Easel 384:6522, the Kids canvas) ---
+   Title in the same 16/25 as a list item, preview a 12px grey subline. */
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .note-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 25px;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .note-preview-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: normal;
+  color: #7A7A7A;
+  opacity: 1;
+  margin-top: 1px;
+}
+/* Archived notes still read as set aside */
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .note-row.archived .note-text,
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .note-row.archived .note-preview-text {
+  color: #7A7A7A;
+  opacity: 0.6;
+}
+
+/* --- Page gutters: 16px down both edges of every page --- */
+:root[data-theme="dark-dots"] .cards-area { padding-left: 16px; padding-right: 16px; }
+:root[data-theme="dark-dots"] .home-page > .page-header { padding-left: 16px; padding-right: 16px; }
+:root[data-theme="dark-dots"] .category-page .page-header { padding-left: 16px; padding-right: 16px; }
+
+
+/* --- Canvas labels (Gallery rows, collapsed Easel rows) ---
+   Hovering the canvas name lights it in that canvas's colour, with the pill
+   behind it tinted to match instead of Paintbrush's pale wash. */
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .source-label-text.canvas-link:hover { color: var(--accent-base); }
+  :root[data-theme="dark-dots"] .source-label-text.canvas-link:hover::before {
+    background: rgba(var(--accent-base-rgb), 0.16);
+  }
+}
+
+
+/* --- Pinned Gallery canvas ---
+   Its ring, glow and clipped body carry Paintbrush's 16px corners in their own
+   rules; match them to this theme's 32px canvas cards. */
+:root[data-theme="dark-dots"] .gallery-canvas > .project-items { border-radius: 0 0 31px 31px; }
+:root[data-theme="dark-dots"] .gallery-canvas > .gallery-canvas-stroke { border-radius: 32px; }
+:root[data-theme="dark-dots"] .gallery-canvas > .gallery-canvas-glow { border-radius: 31px; }
+
+
+/* --- Collapsed canvas card ---
+   The bottom bar only exists while the card is open, so a collapsed card puts
+   its tabs and add button back beside the title, the way Paintbrush does, and
+   they keep this theme's pill shape and colours. */
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed {
+  --tab-icon-on: var(--accent-base);
+  --tab-icon-off: #7A7A7A;
+}
+/* Collapsed, the tabs sit beside the title rather than filling a bar, so they
+   drop the #333 track and only the selected one carries a pill — the title
+   keeps its room. */
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-tab-bar {
+  height: 32px;
+  padding: 0;
+  gap: 2px;
+  background: none;
+}
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-tab-btn {
+  height: 32px;
+  min-width: 32px;
+  border-radius: 32px;
+  padding: 0 8px;
+}
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-tab-count {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 500;
+  color: #7A7A7A;
+}
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-tab-btn.selected .project-tab-count { color: var(--accent-base); }
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-tab-indicator {
+  top: 0;
+  height: 32px;
+  border-radius: 32px;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-add-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-add-btn svg * { stroke: var(--accent-base); }
+
+
+/* Tab hover highlights are pills, matching the selected tab's shape */
+:root[data-theme="dark-dots"] .project-tab-btn::before,
+:root[data-theme="dark-dots"] .todo-attach-btn:hover::after,
+:root[data-theme="dark-dots"] .toolbar-icon-btn { border-radius: 32px; }
+
+
+/* --- Note page (Figma: Note Page 401:11836) --- */
+:root[data-theme="dark-dots"] .note-detail-page,
+:root[data-theme="dark-dots"] .note-detail-page.editing {
+  background: #212121;
+  background-color: #212121;
+}
+@media (min-width: 1000px) {
+  :root[data-theme="dark-dots"] .note-detail-page {
+    background: #212121;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Header: the note's own icon in its canvas colour, Done as a dark pill */
+:root[data-theme="dark-dots"] .note-detail-header > svg * {
+  stroke: var(--accent-base);
+  stroke-width: 2;
+}
+:root[data-theme="dark-dots"] .note-scroll-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 700;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .note-detail-done {
+  min-width: 72px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 32px;
+  background: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 25px;
+  color: #E6E6E6;
+}
+
+/* The note body sits on a canvas card */
+:root[data-theme="dark-dots"] .note-editor,
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor,
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor.has-overflow-below {
+  background: #292929;
+  border-radius: 32px;
+  margin: 24px 16px 16px;
+  /* The wide-screen rule sets width:100%, which with side margins pushed the
+     card's right edge off the page — the card sizes to what's left instead. */
+  width: auto;
+  /* Paintbrush fades the top edge as content scrolls under it; on a card with
+     its own fill that reads as the card dissolving, so it is dropped. */
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+/* Paintbrush hangs a squiggle under the title; Dark Dots doesn't */
+:root[data-theme="dark-dots"] .note-para.style-title::after { display: none; }
+
+/* Text styles */
+/* The title lives above the card in its own field; the paragraph it mirrors
+   stays in the body (hidden) so the editor's own logic is untouched. */
+:root[data-theme="dark-dots"] #noteEditorContent > .note-para.style-title:first-child { display: none; }
+/* The first visible paragraph starts at the card's own 16px padding — no style
+   margin stacked on top of it. */
+:root[data-theme="dark-dots"] #noteEditorContent > .note-para.style-title:first-child + .note-para { margin-top: 0; }
+:root[data-theme="dark-dots"] .note-detail-title {
+  padding: 0 20px;
+  margin: 20px 0 0;
+  outline: none;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.56px;
+  color: #E6E6E6;
+  overflow-wrap: break-word;
+}
+
+:root[data-theme="dark-dots"] .note-para.style-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.56px;
+  color: #E6E6E6;
+  margin-top: 24px;
+  margin-bottom: 20px;
+}
+:root[data-theme="dark-dots"] .note-para.style-heading {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: normal;
+  color: #E6E6E6;
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+:root[data-theme="dark-dots"] .note-para.style-bold {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 25px;
+  color: #E6E6E6;
+  margin-top: 12px;
+}
+:root[data-theme="dark-dots"] .note-para.style-body,
+:root[data-theme="dark-dots"] .note-para.style-italic,
+:root[data-theme="dark-dots"] .note-para.style-bullet {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 25px;
+  color: #B8B8B8;
+}
+:root[data-theme="dark-dots"] .note-para.style-italic { font-style: italic; }
+/* 12px above a paragraph; bullets in a run stay tight to each other */
+:root[data-theme="dark-dots"] .note-para.style-body,
+:root[data-theme="dark-dots"] .note-para.style-italic,
+:root[data-theme="dark-dots"] .note-para.style-bullet { margin-top: 12px; }
+:root[data-theme="dark-dots"] .note-para.style-bullet + .note-para.style-bullet { margin-top: 0; }
+
+/* Style toolbar: the same glass as the control bar, with the active style
+   carried in a pill of the note's canvas colour */
+:root[data-theme="dark-dots"] .note-style-bar {
+  height: 48px;
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 32px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .note-style-bar {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] .note-style-btn,
+:root[data-theme="dark-dots"] .note-style-btn[data-style="title"],
+:root[data-theme="dark-dots"] .note-style-btn[data-style="heading"] {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  color: #969696;
+  padding: 0 8px;
+}
+:root[data-theme="dark-dots"] .note-style-btn[data-style="title"],
+:root[data-theme="dark-dots"] .note-style-btn[data-style="heading"] { font-weight: 700; }
+:root[data-theme="dark-dots"] .note-style-btn[data-style="bold"] { font-weight: 500; }
+:root[data-theme="dark-dots"] .note-style-btn.active {
+  color: color-mix(in srgb, var(--accent-base) 70%, #FFFFFF);
+}
+:root[data-theme="dark-dots"] .note-style-indicator {
+  height: 40px;
+  border-radius: 32px;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+
+
+/* --- Note / list detail footer ---
+   No rules between the cells: Display is a glass pill that fills with the
+   canvas colour when the item is displayed and is clear when it isn't, the
+   canvas button is a dark pill the size of Done, and the three-dot button is
+   the same circle the canvas cards use. */
+:root[data-theme="dark-dots"] .detail-footer { border-top: none; }
+:root[data-theme="dark-dots"] .detail-footer-divider,
+:root[data-theme="dark-dots"] .detail-footer-hdivider { display: none; }
+:root[data-theme="dark-dots"] .detail-footer-cell.right.active::before { display: none; }
+/* One row, all three controls on the same centre line: Display and the canvas
+   pill from the left, the three-dot at the right edge. */
+:root[data-theme="dark-dots"] .detail-footer-controls {
+  align-items: center;
+  gap: 8px;
+}
+:root[data-theme="dark-dots"] .detail-footer-cell,
+:root[data-theme="dark-dots"] .detail-footer-cell.right {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: center;
+}
+:root[data-theme="dark-dots"] .detail-footer-dots { margin: 0; flex: 0 0 auto; }
+
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  align-self: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 32px;
+  /* Clear glass: it pulls through what's behind it rather than carrying a fill */
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #E6E6E6;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .detail-footer .project-active-btn {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn svg * { stroke: #E6E6E6; }
+/* Displayed: the canvas colour, with the control bar's glass under it */
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  color: color-mix(in srgb, var(--accent-base) 70%, #FFFFFF);
+}
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on svg * {
+  stroke: color-mix(in srgb, var(--accent-base) 70%, #FFFFFF);
+}
+/* Displayed carries the canvas card's add-button treatment: the stroke's bright
+   end up-left, the glow on the opposite arc. */
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 32px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  opacity: 0.1;
+  box-shadow: inset -6px -6px 4px
+    hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98));
+  pointer-events: none;
+  z-index: 1;
+}
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on { border-color: transparent; overflow: visible; }
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on > * { position: relative; z-index: 3; }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .detail-footer .project-active-btn.on {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* Canvas (folder) button: the Done pill's size and fill */
+:root[data-theme="dark-dots"] .detail-footer-project-btn {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  gap: 4px;
+  border-radius: 32px;
+  background: #333333;
+}
+:root[data-theme="dark-dots"] .detail-footer-project-btn svg * { stroke: #E6E6E6; }
+:root[data-theme="dark-dots"] .detail-footer-project {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #E6E6E6;
+}
+
+/* Three-dot: the canvas card's circle */
+:root[data-theme="dark-dots"] .detail-footer .dots-menu {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #333333;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+:root[data-theme="dark-dots"] .detail-footer .dots-menu span { background: #E6E6E6; }

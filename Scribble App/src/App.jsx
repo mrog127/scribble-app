@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { flushSync } from 'react-dom'
-import { ACCENT_COLORS, getCategoryAccent } from './theme.js'
+import { ACCENT_COLORS, getCategoryAccent, getHomeAccent } from './theme.js'
+import { useTheme } from './useTheme.js'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
 import TabBar from './components/TabBar.jsx'
@@ -198,6 +199,10 @@ function AppInner() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef(null)
+
+  // Re-render the whole app when the theme changes, so accent colours (which are
+  // read at render time) refresh with it.
+  useTheme()
 
   // Settings sheet — mobile only; desktop still reaches Settings via the nav tab
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -1619,7 +1624,7 @@ function AppInner() {
 
   const showAddToast = useCallback((holder, { categoryId, projectId, type, title }) => {
     const catIdx = categories.findIndex(c => c.id === categoryId)
-    const accent = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    const accent = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
     const canvasName = categories.find(c => c.id === categoryId)
       ?.projects.find(p => p.id === projectId)?.name || ''
     clearTimeout(addToastTimer.current)
@@ -1702,6 +1707,9 @@ function AppInner() {
       setToolbarType('list')
       linkUrlRef.current?.blur()
       inputRef.current?.blur()
+      // Sending ends the compose session — close Save to and the add item
+      // active state even if blur alone doesn't dismiss them
+      setInputFocused(false)
       return
     }
 
@@ -1771,12 +1779,13 @@ function AppInner() {
       // focus can transfer to the editor when it does.
       if (toolbarType === 'note') keepKeyboardAlive()
       inputRef.current?.blur()
+      setInputFocused(false)
       return
     }
 
     // Fallback applies only on the homescreen (collapsed category with no
     // projects has nowhere to save, so do nothing there)
-    if (activeTab !== 'star') { setInputValue(''); inputRef.current?.blur(); return }
+    if (activeTab !== 'star') { setInputValue(''); inputRef.current?.blur(); setInputFocused(false); return }
 
     // Fallback: add to local Active-page lists (no project selected)
     const inputEl = inputRef.current
@@ -1803,6 +1812,7 @@ function AppInner() {
     setInputValue('')
     setToolbarType('list')
     inputRef.current?.blur()
+    setInputFocused(false)
   }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
@@ -1856,13 +1866,13 @@ function AppInner() {
     let domId = null, domMax = 0
     for (const cid in counts) { if (counts[cid] > domMax) { domMax = counts[cid]; domId = cid } }
     const idx = domId ? categories.findIndex(c => c.id === domId) : -1
-    return idx >= 0 ? getCategoryAccent(idx).base : ACCENT_COLORS[0].base
+    return idx >= 0 ? getCategoryAccent(idx).base : getHomeAccent().base
   }, [categories, activeTab])
 
   const activeAccent = useMemo(() => {
-    if (activeTab === 'star' || activeTab === 'menu') return ACCENT_COLORS[0]
+    if (activeTab === 'star' || activeTab === 'menu') return getHomeAccent()
     const idx = categories.findIndex(c => c.id === activeTab)
-    if (idx === -1) return ACCENT_COLORS[0]
+    if (idx === -1) return getHomeAccent()
     return getCategoryAccent(idx)
   }, [activeTab, categories])
 

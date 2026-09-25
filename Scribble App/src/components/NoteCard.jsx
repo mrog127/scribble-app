@@ -7,6 +7,8 @@ import DetailFooter from './DetailFooter.jsx'
 import { useScrollable } from '../useScrollable.js'
 import MoveToCard from './MoveToCard.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
+import { useTheme } from '../useTheme.js'
+import { FileIcon as FeatherFileIcon } from './FeatherIcons.jsx'
 import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 
 function escapeHtml(str) {
@@ -214,6 +216,7 @@ function StarIcon() {
 }
 
 function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
+  const darkDots = useTheme() === 'dark-dots'
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
   const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId,
@@ -238,6 +241,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const pageRef = useRef(null)
   const editorRef = useRef(null)
   const scrollTitleRef = useRef(null)
+  // Dark Dots shows the note's title above the body card, in its own field
+  const titleFieldRef = useRef(null)
   const lastCursorParaRef = useRef(null)
 
   // Check whether the last paragraph is below the style bar.
@@ -321,6 +326,15 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id])
+
+  // The title field mirrors the first paragraph: it shows that text, and typing
+  // in it writes straight back, so saving and the row label are unchanged.
+  useEffect(() => {
+    if (!darkDots || !titleFieldRef.current) return
+    const first = contentRef.current?.querySelector('.note-para')
+    titleFieldRef.current.textContent = (first?.textContent || '').trim()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id, darkDots])
 
   // Scroll title visibility + underline fade
   useEffect(() => {
@@ -879,6 +893,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (editorRef.current) checkBottomOverflow(editorRef.current)
   }, [enforceTitlePara, handleInput, checkBottomOverflow])
 
+  const handleTitleFieldInput = useCallback(() => {
+    const text = titleFieldRef.current?.textContent ?? ''
+    const first = contentRef.current?.querySelector('.note-para')
+    if (!first) return
+    first.textContent = text
+    handleEditorInput()
+  }, [handleEditorInput])
+
 
   // ---- Paste: everything lands in the note's own type styles ----
   // Pasted markup is read for structure only (h1/h2 → H1, h3-h6 and
@@ -1121,12 +1143,16 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       }}
     >
       <div className="note-detail-header">
-        <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-          <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="1" strokeLinejoin="round" fill="none"/>
-          <path d="M12 3v5h5" stroke="#595959" strokeWidth="1" strokeLinejoin="round"/>
-          <line x1="5" y1="13" x2="15" y2="13" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
-          <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
-        </svg>
+        {darkDots ? (
+          <FeatherFileIcon size={24} color="var(--accent-base)"/>
+        ) : (
+          <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+            <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#595959" strokeWidth="1" strokeLinejoin="round" fill="none"/>
+            <path d="M12 3v5h5" stroke="#595959" strokeWidth="1" strokeLinejoin="round"/>
+            <line x1="5" y1="13" x2="15" y2="13" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
+            <line x1="5" y1="16.5" x2="12" y2="16.5" stroke="#595959" strokeWidth="1" strokeLinecap="round"/>
+          </svg>
+        )}
         {archived && <span className="detail-archived-label">Archived</span>}
         <span ref={scrollTitleRef} className="note-scroll-title" />
         <button className="note-detail-done" onClick={handleButtonClick}>
@@ -1134,11 +1160,23 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         </button>
       </div>
 
+      {darkDots && (
+        <div
+          ref={titleFieldRef}
+          className="note-detail-title"
+          contentEditable={editing}
+          suppressContentEditableWarning
+          spellCheck="false"
+          onInput={handleTitleFieldInput}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); contentRef.current?.focus() } }}
+        />
+      )}
+
       <div className="note-editor" id="noteEditor" ref={editorRef}>
         <div
           ref={contentRef}
           id="noteEditorContent"
-          style={{ padding: '0 32px 40px', outline: 'none', minHeight: '100px', cursor: 'text', overflow: 'hidden' }}
+          style={{ padding: darkDots ? '16px 24px 40px' : '0 32px 40px', outline: 'none', minHeight: '100px', cursor: 'text', overflow: 'hidden' }}
           autoCapitalize="sentences"
           contentEditable={false}
           onKeyDown={handleKeyDown}

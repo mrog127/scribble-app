@@ -8,10 +8,16 @@ import './styles/cards.css'
 import './styles/touch-press.css'
 import { installPressState } from './pressState.js'
 import { installOutbox } from './outbox.js'
+import { installPushSync } from './push.js'
+import { installTheme } from './themes.js'
 
+// Paint in the saved theme before the first render
+installTheme()
 installPressState()
 // Replay any writes that were made while offline
 installOutbox()
+// Keep the morning summary's time zone in step with the phone's clock
+installPushSync()
 
 // The app shell is cached by a service worker, so it opens (and starts) with no
 // network. Registration is deliberately after load — it must never delay paint.

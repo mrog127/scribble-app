@@ -9,6 +9,8 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent } from '../theme.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { useCardDragReorder } from './useCardDragReorder.js'
+import { useTheme } from '../useTheme.js'
+import { MinimizeIcon, MaximizeIcon, PlusSquareIcon } from './FeatherIcons.jsx'
 
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
 // outward to the corners (Collapsed → expand). The two glyphs crossfade.
@@ -67,6 +69,7 @@ function CancelIcon() {
 
 export default function CategoryPage({ categoryId, collapsed = false, onToggleCollapsed, onScroll, headerOpacity, headerTranslate, pageAnimClass = '', isExiting = false }) {
   const { categories, addProject, reorderProjects, archiveCategory, renameCategory, toggleCategoryHomescreen, toggleCategoryGalleryCanvas } = useAppContext()
+  const darkDots = useTheme() === 'dark-dots'
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -253,7 +256,11 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               className="category-header-btn"
               onMouseDown={e => { e.preventDefault(); toggleCollapsed() }}
             >
-              <CollapseToggleIcon collapsed={collapsed}/>
+              {darkDots
+                ? (collapsed
+                    ? <MaximizeIcon size={20} color="#E6E6E6"/>
+                    : <MinimizeIcon size={20} color="#E6E6E6"/>)
+                : <CollapseToggleIcon collapsed={collapsed}/>}
             </button>
             <button
               className="category-header-btn"
@@ -266,7 +273,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                 inputRef.current?.focus()
               }}
             >
-              <AddIcon/>
+              {darkDots ? <PlusSquareIcon size={20} color="#E6E6E6"/> : <AddIcon/>}
             </button>
             <div className="dots-menu-wrap" ref={menuRef}>
               <div

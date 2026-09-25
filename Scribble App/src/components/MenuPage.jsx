@@ -2,7 +2,9 @@ import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react
 import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
-import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
+import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
+import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary } from '../push.js'
+import { THEMES, getTheme, setTheme, themeName } from '../themes.js'
 
 // Same FLIP drag-reorder animation as TodoCard/NoteCard, adapted for category rows.
 // Trigger: immediate pointerdown on the drag handle (no long-press needed).
@@ -225,6 +227,185 @@ export function useCategoryDragReorder(containerRef, categories, onReorder) {
   return { onDragPointerDown }
 }
 
+// Theme picker. Saved per device; the id lands on <html data-theme="…">.
+function ThemesCard() {
+  const [theme, setThemeState] = useState(getTheme)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => {
+      if (!e.target.closest('.theme-menu-btn') && !e.target.closest('.cat-menu-dropdown')) setOpen(false)
+    }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [open])
+
+  const pick = (id) => { setTheme(id); setThemeState(id); setOpen(false) }
+
+  return (
+    <div
+      style={{
+        marginTop: 16,
+        background: '#F7F6F3',
+        border: '1px solid #C2C1BF',
+        borderRadius: 16,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+      }}
+    >
+      <div className="card-header">
+        <span className="card-title">Themes</span>
+      </div>
+      <div style={{ position: 'relative', padding: '4px 16px 14px' }}>
+        <button
+          className="theme-menu-btn"
+          onClick={() => setOpen(o => !o)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: '100%', height: 48, padding: '0 14px', cursor: 'pointer',
+            background: 'none', border: '1.5px solid #C2C1BF', borderRadius: 8,
+            fontFamily: "'Open Sans', sans-serif", fontSize: 16, fontWeight: 400, color: '#242424',
+          }}
+        >
+          {themeName(theme)}
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 200ms ease' }}>
+            <path d="M5 8 L10 13 L15 8" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {open && (
+          <div
+            className="cat-menu-dropdown"
+            style={{
+              position: 'absolute', left: 16, right: 16, top: 'calc(100% - 10px)', zIndex: 200,
+              background: '#F7F6F3', border: '1px solid #C2C1BF', borderRadius: 8,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)', overflow: 'hidden',
+            }}
+          >
+            {THEMES.map((t, i) => (
+              <button
+                key={t.id}
+                onClick={() => pick(t.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '12px 16px', background: 'none', border: 'none',
+                  borderBottom: i < THEMES.length - 1 ? '1px solid #DBDAD8' : 'none',
+                  textAlign: 'left', cursor: 'pointer',
+                  fontFamily: "'Open Sans', sans-serif", fontSize: 16,
+                  fontWeight: t.id === theme ? 600 : 400, color: '#242424',
+                }}
+              >
+                {t.name}
+                {t.id === theme && (
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10.5 L8 14.5 L16 6" stroke="var(--accent-dark)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Settings card for the 9:30am push summarizing the Gallery's active list items.
+function NotificationsCard() {
+  const [state, setState] = useState(null)   // null while loading
+  const [busy, setBusy] = useState(false)
+  const [testNote, setTestNote] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    getMorningSummaryState().then(s => { if (alive) setState(s) }).catch(() => { if (alive) setState('unsupported') })
+    return () => { alive = false }
+  }, [])
+
+  const on = state === 'on'
+  const canToggle = state === 'on' || state === 'off'
+
+  const toggle = async () => {
+    if (!canToggle || busy) return
+    setBusy(true)
+    try { setState(on ? await disableMorningSummary() : await enableMorningSummary()) }
+    catch (e) { console.warn('[push]', e) }
+    setBusy(false)
+  }
+
+  const test = async () => {
+    setTestNote('Sending…')
+    const ok = await sendTestSummary().catch(() => false)
+    setTestNote(ok ? 'Sent' : 'Couldn\u2019t send')
+    setTimeout(() => setTestNote(''), 3000)
+  }
+
+  const sublabel = {
+    'needs-install': 'Add Scribble to your Home Screen to turn this on',
+    denied: 'Notifications are turned off for Scribble in iPhone Settings',
+    unsupported: 'Not available in this browser',
+  }[state] || '9:30am \u00b7 your active list items'
+
+  return (
+    <div
+      style={{
+        marginTop: 16,
+        background: '#F7F6F3',
+        border: '1px solid #C2C1BF',
+        borderRadius: 16,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+      }}
+    >
+      <div className="card-header">
+        <span className="card-title">Notifications</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 16px 14px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontFamily: "'Open Sans', sans-serif", fontSize: 16, fontWeight: 400, color: '#242424' }}>
+            Morning summary
+          </p>
+          <p style={{ margin: '2px 0 0', fontFamily: "'Open Sans', sans-serif", fontSize: 14, fontWeight: 400, color: '#959493' }}>
+            {sublabel}
+          </p>
+          {on && (
+            <button
+              onClick={test}
+              style={{
+                marginTop: 8, padding: 0, background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: "'Open Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--accent-dark)',
+              }}
+            >
+              {testNote || 'Send a test'}
+            </button>
+          )}
+        </div>
+        <button
+          role="switch"
+          aria-checked={on}
+          aria-label="Morning summary"
+          disabled={!canToggle || busy}
+          onClick={toggle}
+          style={{
+            position: 'relative', flexShrink: 0, width: 48, height: 28, padding: 0,
+            borderRadius: 14, border: 'none', cursor: canToggle ? 'pointer' : 'default',
+            background: on ? 'var(--accent-base)' : '#DBDAD8',
+            opacity: canToggle ? 1 : 0.5,
+            transition: 'background 200ms ease',
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute', top: 3, left: 3, width: 22, height: 22, borderRadius: '50%',
+              background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              transform: on ? 'translateX(20px)' : 'translateX(0)',
+              transition: 'transform 200ms ease',
+            }}
+          />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function MenuPage({ pageAnimClass = '', isExiting = false, onSelectTab, onClose }) {
   const {
     categories, archivedCategories, archiveCategory, unarchiveCategory,
@@ -295,7 +476,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
     <div
       className={`page active${pageAnimClass ? ` ${pageAnimClass}` : ''}`}
       id={isExiting ? undefined : 'page-menu'}
-      style={{ '--accent-base': ACCENT_COLORS[0].base, '--accent-dark': ACCENT_COLORS[0].dark, '--accent-light': ACCENT_COLORS[0].light, '--accent-base-rgb': ACCENT_COLORS[0].baseRgb }}
+      style={{ '--accent-base': getHomeAccent().base, '--accent-dark': getHomeAccent().dark, '--accent-light': getHomeAccent().light, '--accent-base-rgb': getHomeAccent().baseRgb }}
     >
       <div className="page-header">
         <div className="settings-header-row">
@@ -629,6 +810,10 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
             </div>
           )}
         </div>
+
+        <ThemesCard />
+
+        <NotificationsCard />
 
         {/* Account section */}
         <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>

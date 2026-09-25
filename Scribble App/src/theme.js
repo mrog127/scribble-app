@@ -1,3 +1,6 @@
+import { getTheme } from './themes.js'
+
+// Paintbrush palette (the original cream theme).
 export const ACCENT_COLORS = [
   { base: '#78A4C2', dark: '#43535E', light: '#E4EEF4', baseRgb: '120,164,194' }, // Blue   – homepage
   { base: '#78A4C2', dark: '#43535E', light: '#E4EEF4', baseRgb: '120,164,194' }, // Blue   – cat 1
@@ -13,8 +16,7 @@ export const HOME_ACCENT = ACCENT_COLORS[0]
 
 // The seven hand-picked easel colours, in ring order:
 // blue → red → green → orange → purple → yellow → pink → (back to blue).
-const PALETTE = ACCENT_COLORS.slice(1)
-const N = PALETTE.length
+const N = ACCENT_COLORS.length - 1
 
 const hexToRgb = (hex) => [
   parseInt(hex.slice(1, 3), 16),
@@ -26,6 +28,35 @@ const rgbToHex = ([r, g, b]) =>
 const mixHex = (a, b, f) => {
   const A = hexToRgb(a), B = hexToRgb(b)
   return rgbToHex([0, 1, 2].map(i => A[i] + (B[i] - A[i]) * f))
+}
+
+// Dark Dots palette. The bases are the theme's own hexes; `dark` stays the same
+// bright colour (it reads as the accent on a dark background, where Paintbrush
+// used a deeper shade), and `light` is that colour sunk into the page.
+const DARK_DOTS_BASES = [
+  '#5B8FFF', // Blue   – homepage
+  '#5B8FFF', // Blue   – cat 1
+  '#FF7070', // Red    – cat 2
+  '#54D66E', // Green  – cat 3
+  '#F2874D', // Orange – cat 4
+  '#B570FF', // Purple – cat 5
+  '#E5D950', // Yellow – cat 6
+  '#F870FF', // Pink   – cat 7
+]
+
+export const DARK_DOTS_COLORS = DARK_DOTS_BASES.map(base => ({
+  base,
+  dark: base,
+  light: mixHex(base, '#212121', 0.72),
+  baseRgb: hexToRgb(base).join(','),
+}))
+
+const PALETTES = { paintbrush: ACCENT_COLORS, 'dark-dots': DARK_DOTS_COLORS }
+const themeColors = () => PALETTES[getTheme()] || ACCENT_COLORS
+
+// The accent the Gallery and the app chrome wear.
+export function getHomeAccent() {
+  return themeColors()[0]
 }
 
 // Where to sit between two neighbouring colours, for successive passes around
@@ -45,6 +76,7 @@ function bisectionFraction(pass) {
 // the 8th, the 16th between red and the 9th, and so on — each pass subdividing
 // the gaps created by the last.
 export function getCategoryAccent(categoryIndex) {
+  const PALETTE = themeColors().slice(1)
   const i = Math.max(0, categoryIndex | 0)
   if (i < N) return PALETTE[i]
 

@@ -13,7 +13,7 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import { openInCanvas } from '../searchFocus.js'
 import homepageDecoration from '../assets/Homepage decoration.png'
-import { getCategoryAccent, ACCENT_COLORS } from '../theme.js'
+import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
 import { useActivatePress, toAnchorRect, CalendarIcon, RecurringCalendarIcon, isRecurring } from './ScheduleBits.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import { TrashMenuIcon } from './MenuIcons.jsx'
@@ -306,7 +306,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
     const wrapper = swipeRow?.parentElement
     if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
     const catIdx = categories.findIndex(c => c.id === item.categoryId)
-    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
     // First close the row (snap back to center)
     closeSwipeRow(swipeRow)
     setTimeout(() => {
@@ -518,7 +518,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
       <div ref={containerRef}>
         {sorted.map((t, i) => {
           const catIdx = categories.findIndex(c => c.id === t.categoryId)
-          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
           return (
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
@@ -655,7 +655,7 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
     const wrapper = swipeRow?.parentElement
     if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
     const catIdx = categories.findIndex(c => c.id === item.categoryId)
-    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
     // First close the row (snap back to center)
     closeSwipeRow(swipeRow)
     setTimeout(() => {
@@ -739,7 +739,7 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
         <div ref={containerRef}>
           {activatedNotes.map((n, i) => {
             const catIdx = categories.findIndex(c => c.id === n.categoryId)
-            const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+            const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
             return (
             <div key={n.id}>
               {i > 0 && <div className="divider"/>}
@@ -861,7 +861,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
     const wrapper = swipeRow?.parentElement
     if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
     const catIdx = categories.findIndex(c => c.id === item.categoryId)
-    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+    const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
     closeSwipeRow(swipeRow)
     setTimeout(() => {
       wrapper.animate([{ background: `rgba(${a.baseRgb},0)` }, { background: `rgba(${a.baseRgb},0.25)`, offset: 0.4 }, { background: `rgba(${a.baseRgb},0)` }], { duration: 280, fill: 'none' })
@@ -925,7 +925,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
       <div ref={containerRef}>
         {items.map((l, i) => {
           const catIdx = categories.findIndex(c => c.id === l.categoryId)
-          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : ACCENT_COLORS[0]
+          const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
           return (
           <div key={l.id}>
             {i > 0 && <div className="divider"/>}
@@ -1104,8 +1104,17 @@ export default function ActivePage({
   for (const cid in listCatCounts) {
     if (listCatCounts[cid] > domCatMax) { domCatMax = listCatCounts[cid]; domCatId = cid }
   }
+  // Dark Dots header: one dot per easel with unchecked active list items, in the
+  // easel's colour, most items first. listCatCounts is already that count.
+  const activeDots = Object.entries(listCatCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cid]) => {
+      const idx = categories.findIndex(c => c.id === cid)
+      return { id: cid, color: (idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()).base }
+    })
+
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
-  const decorationColor = domCatIdx >= 0 ? getCategoryAccent(domCatIdx).base : ACCENT_COLORS[0].base
+  const decorationColor = domCatIdx >= 0 ? getCategoryAccent(domCatIdx).base : getHomeAccent().base
 
   const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
 
@@ -1115,7 +1124,7 @@ export default function ActivePage({
       id={isExiting ? undefined : 'page-star'}
       ref={pageRef}
       onScroll={handleScroll}
-      style={{ '--accent-base': ACCENT_COLORS[0].base, '--accent-dark': ACCENT_COLORS[0].dark, '--accent-light': ACCENT_COLORS[0].light, '--accent-base-rgb': ACCENT_COLORS[0].baseRgb }}
+      style={{ '--accent-base': getHomeAccent().base, '--accent-dark': getHomeAccent().dark, '--accent-light': getHomeAccent().light, '--accent-base-rgb': getHomeAccent().baseRgb }}
     >
       <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
         {/* Settings gear — right edge, in the same place it has always sat.
@@ -1132,6 +1141,13 @@ export default function ActivePage({
         <p className="active-day-name">{dayName},</p>
         <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
         <p className="active-month-date">{monthDate}</p>
+        {activeDots.length > 0 && (
+          <div className="active-dots">
+            {activeDots.map(d => (
+              <span key={d.id} className="active-dot" style={{ background: d.color }} />
+            ))}
+          </div>
+        )}
       </div>
 
       {!hasContent && (

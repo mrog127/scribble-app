@@ -4228,7 +4228,8 @@ body.resizing-detail .phone { transition: none !important; }
   opacity: 1 !important;
 }
 :root[data-theme="dark-dots"] .note-detail-page.editing .note-detail-title { display: none; }
-:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor {
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor,
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor.has-overflow-below {
   margin-top: 12px;
   /* End 16px above the style bar, which floats 20px off the bottom (plus the
      keyboard) and is 48px tall. */
@@ -4241,8 +4242,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="dark-dots"] .detail-footer {
   padding-left: 20px;
   padding-right: 20px;
-  /* 8px higher off the bottom edge than Paintbrush sits */
-  padding-bottom: 24px;
+  /* 12px more beneath the controls than before (24 → 36), above the safe area */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 36px);
   padding-top: 0;
 }
 
@@ -4251,7 +4252,9 @@ body.resizing-detail .phone { transition: none !important; }
    A row with no canvas sublabel is a single line: drop the 8px that sat under
    the text, and let trailing markers (a scheduled date, the recurring icon,
    an attachment count) finish 16px from the card's edge. */
-:root[data-theme="dark-dots"] .project-card :is(.todo-row, .note-row, .link-row):not(:has(.source-label)) {
+/* Single-line rows only — note rows carry a preview line and set their own
+   padding below. */
+:root[data-theme="dark-dots"] .project-card :is(.todo-row, .link-row):not(:has(.source-label)) {
   padding-top: 1px;
   padding-bottom: 1px;
 }
@@ -4549,3 +4552,11 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="dark-dots"] .todo-section-card.empty-card .todo-attach-btn svg * { stroke: #E6E6E6; }
 :root[data-theme="dark-dots"] .todo-section-card.empty-card .project-add-btn svg *,
 :root[data-theme="dark-dots"] .todo-section-card.empty-card:hover .project-add-btn svg * { stroke: var(--accent-base); }
+
+
+/* Note rows in a canvas card use the same padding as the Notes rows on a list
+   item page (4px above, 8px below). */
+:root[data-theme="dark-dots"] .project-card .note-row {
+  padding-top: 4px;
+  padding-bottom: 8px;
+}

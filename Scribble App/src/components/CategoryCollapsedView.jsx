@@ -5,6 +5,8 @@ import { openInCanvas } from '../searchFocus.js'
 import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
+import { useTheme } from '../useTheme.js'
+import { FileIcon as FeatherFileIcon } from './FeatherIcons.jsx'
 import { CalendarIcon, RecurringCalendarIcon, isRecurring, isScheduleLocked, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
 import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon } from './MenuIcons.jsx'
@@ -701,6 +703,7 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
 
 // ============ Notes ============
 export function CollapsedNotesCard({ category, bare = false, onlyActivated = false }) {
+  const darkDots = useTheme() === 'dark-dots'
   const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderCategoryNotes, setProjectNoteScheduled, archiveProjectNote, unarchiveProjectNote, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
@@ -886,12 +889,16 @@ export function CollapsedNotesCard({ category, bare = false, onlyActivated = fal
                         onContextMenu={e => rowMenu.context(e, buildRowItems(n))}
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
-                    <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-                      <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill={n.activated ? 'var(--accent-light)' : 'none'}/>
-                      <path d="M12 3v5h5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill="none"/>
-                      <line x1="5" y1="13" x2="15" y2="13" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
-                      <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
-                    </svg>
+{darkDots ? (
+                      <FeatherFileIcon size={20} strokeWidth={n.activated ? 2 : 1} color={n.activated ? 'var(--accent-base)' : '#7A7A7A'}/>
+                    ) : (
+                                        <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+                        <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill={n.activated ? 'var(--accent-light)' : 'none'}/>
+                        <path d="M12 3v5h5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill="none"/>
+                        <line x1="5" y1="13" x2="15" y2="13" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
+                        <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round"/>
+                      </svg>
+                    )}
                   </div>
                   <div className="item-content">
                     <NoteRowContent note={n} />

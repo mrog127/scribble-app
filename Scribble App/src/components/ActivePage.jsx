@@ -14,6 +14,8 @@ import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
 import { openInCanvas } from '../searchFocus.js'
 import homepageDecoration from '../assets/Homepage decoration.png'
 import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
+import { useTheme } from '../useTheme.js'
+import { FileIcon as FeatherFileIcon } from './FeatherIcons.jsx'
 import { useActivatePress, toAnchorRect, CalendarIcon, RecurringCalendarIcon, isRecurring } from './ScheduleBits.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import { TrashMenuIcon } from './MenuIcons.jsx'
@@ -612,6 +614,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
 
 // Activated notes — aggregated from all projects into one "Notes" card
 function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
+  const darkDots = useTheme() === 'dark-dots'
   const { reorderHomeNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {
@@ -749,23 +752,27 @@ function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
                 <div className="swipe-content">
                   <div className="note-row" data-note-id={n.id}>
                     <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
-                      <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
-                        <defs>
-                          <filter id={`ni-${n.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                            <feOffset dx="4" dy="8"/>
-                            <feGaussianBlur stdDeviation="4" result="ob"/>
-                            <feComposite operator="out" in="SourceGraphic" in2="ob" result="inv"/>
-                            <feFlood floodColor={a.light} floodOpacity="1" result="col"/>
-                            <feComposite operator="in" in="col" in2="inv" result="sh"/>
-                            <feComposite operator="over" in="sh" in2="SourceGraphic"/>
-                          </filter>
-                        </defs>
-                        <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#F7F6F3" filter={`url(#ni-${n.id})`}/>
-                        <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={a.dark} strokeWidth="1" fill="none"/>
-                        <path d="M12 3v5h5" stroke={a.dark} strokeWidth="1" fill="none"/>
-                        <line x1="5" y1="13" x2="15" y2="13" stroke={a.dark} strokeWidth="1" strokeLinecap="round"/>
-                        <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={a.dark} strokeWidth="1" strokeLinecap="round"/>
-                      </svg>
+{darkDots ? (
+                        <FeatherFileIcon size={20} strokeWidth={2} color={a.base}/>
+                      ) : (
+                                            <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
+                          <defs>
+                            <filter id={`ni-${n.id}`} x="-50%" y="-50%" width="200%" height="200%">
+                              <feOffset dx="4" dy="8"/>
+                              <feGaussianBlur stdDeviation="4" result="ob"/>
+                              <feComposite operator="out" in="SourceGraphic" in2="ob" result="inv"/>
+                              <feFlood floodColor={a.light} floodOpacity="1" result="col"/>
+                              <feComposite operator="in" in="col" in2="inv" result="sh"/>
+                              <feComposite operator="over" in="sh" in2="SourceGraphic"/>
+                            </filter>
+                          </defs>
+                          <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#F7F6F3" filter={`url(#ni-${n.id})`}/>
+                          <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={a.dark} strokeWidth="1" fill="none"/>
+                          <path d="M12 3v5h5" stroke={a.dark} strokeWidth="1" fill="none"/>
+                          <line x1="5" y1="13" x2="15" y2="13" stroke={a.dark} strokeWidth="1" strokeLinecap="round"/>
+                          <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={a.dark} strokeWidth="1" strokeLinecap="round"/>
+                        </svg>
+                      )}
                     </div>
                     <div className="item-content">
                       <span className="note-text">{n.text}</span>

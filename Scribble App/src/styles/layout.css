@@ -3480,7 +3480,7 @@ body.resizing-detail .phone { transition: none !important; }
   display: inline-block;
   width: 12px;
   height: 12px;
-  margin-left: 8px;
+  margin-left: 6px;
   border-radius: 50%;
   background: var(--accent-base);
 }
@@ -4135,6 +4135,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="dark-dots"] .detail-footer-controls {
   align-items: center;
   gap: 8px;
+  /* The row is exactly its 40px controls, so the card above can sit 16px off it */
+  height: auto;
 }
 :root[data-theme="dark-dots"] .detail-footer-cell,
 :root[data-theme="dark-dots"] .detail-footer-cell.right {
@@ -4169,52 +4171,19 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="dark-dots"] .detail-footer .project-active-btn svg * { stroke: #E6E6E6; }
 /* Displayed: the canvas colour, with the control bar's glass under it */
+/* Displayed reads like a selected tab on a canvas card: a flat 24% fill of the
+   canvas colour, icon and label in that colour at full strength. */
 :root[data-theme="dark-dots"] .detail-footer .project-active-btn.on {
   background: rgba(var(--accent-base-rgb), 0.24);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
-  color: color-mix(in srgb, var(--accent-base) 70%, #FFFFFF);
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--accent-base);
 }
-:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on svg * {
-  stroke: color-mix(in srgb, var(--accent-base) 70%, #FFFFFF);
-}
-/* Displayed carries the canvas card's add-button treatment: the stroke's bright
-   end up-left, the glow on the opposite arc. */
-:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 32px;
-  padding: 1px;
-  opacity: 0.7;
-  background: linear-gradient(135deg,
-    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
-    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 2;
-}
-:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 32px;
-  opacity: 0.1;
-  box-shadow: inset -6px -6px 4px
-    hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98));
-  pointer-events: none;
-  z-index: 1;
-}
-:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on { border-color: transparent; overflow: visible; }
-:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on > * { position: relative; z-index: 3; }
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root[data-theme="dark-dots"] .detail-footer .project-active-btn.on {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-  }
-}
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on svg * { stroke: var(--accent-base); }
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on::before,
+:root[data-theme="dark-dots"] .detail-footer .project-active-btn.on::after { display: none; }
 
 /* Canvas (folder) button: the Done pill's size and fill */
 :root[data-theme="dark-dots"] .detail-footer-project-btn {
@@ -4259,11 +4228,324 @@ body.resizing-detail .phone { transition: none !important; }
   opacity: 1 !important;
 }
 :root[data-theme="dark-dots"] .note-detail-page.editing .note-detail-title { display: none; }
-:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor { margin-top: 16px; }
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-editor {
+  margin-top: 12px;
+  /* End 16px above the style bar, which floats 20px off the bottom (plus the
+     keyboard) and is 48px tall. */
+  margin-bottom: calc(var(--kbh, 0px) + 84px);
+  padding-bottom: 24px;
+}
 
 /* Footer keeps 16px to the page edges on either side */
 :root[data-theme="dark-dots"] .note-detail-page.has-footer .detail-footer,
 :root[data-theme="dark-dots"] .detail-footer {
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: 20px;
+  padding-right: 20px;
+  /* 8px higher off the bottom edge than Paintbrush sits */
+  padding-bottom: 24px;
+  padding-top: 0;
 }
+
+
+/* --- Canvas card rows ---
+   A row with no canvas sublabel is a single line: drop the 8px that sat under
+   the text, and let trailing markers (a scheduled date, the recurring icon,
+   an attachment count) finish 16px from the card's edge. */
+:root[data-theme="dark-dots"] .project-card :is(.todo-row, .note-row, .link-row):not(:has(.source-label)) {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+:root[data-theme="dark-dots"] .project-card .row-schedule-indicator,
+:root[data-theme="dark-dots"] .project-card .todo-attach-indicator {
+  margin-right: -6px;
+}
+
+
+/* The footer's hover wash fills the whole button, in its pill shape, rather
+   than the inset 32px box Paintbrush draws. */
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .detail-footer-cell:hover::after,
+  :root[data-theme="dark-dots"] .detail-footer-cell:has(button:hover)::after {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    transform: none;
+    border-radius: 32px;
+  }
+}
+
+
+/* --- Save (a note being edited) ---
+   The canvas card's add-button treatment: 24% fill of the canvas colour, the
+   stroke's bright end up-left, and the inner glow on the opposite arc. */
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-detail-done {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  color: var(--accent-base);
+  box-shadow: inset -6px -6px 4px rgba(var(--accent-base-rgb), 0.12);
+  overflow: visible;
+}
+:root[data-theme="dark-dots"] .note-detail-page.editing .note-detail-done::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 32px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+
+/* Done / Save: the hover wash fills the pill rather than the inset 32px box */
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .note-detail-done:hover::after {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    transform: none;
+    border-radius: 32px;
+  }
+}
+
+
+/* --- List item page (Figma: List Item Page 384:6835) ---
+   Anything the frame doesn't show follows the note page. */
+:root[data-theme="dark-dots"] .todo-detail-underline { display: none; }
+:root[data-theme="dark-dots"] .todo-detail-scroll {
+  padding: 0 16px 24px;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root[data-theme="dark-dots"] .todo-detail-title {
+  padding: 0 4px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.56px;
+  color: #E6E6E6;
+  caret-color: var(--accent-base);
+}
+
+/* Notes / Links section cards */
+/* 32px from the title (or its comment) down to the first attachments card.
+   The comment zone's own padding/negative margin nets to nothing, so the gap
+   is this margin alone. */
+:root[data-theme="dark-dots"] .todo-section { margin-top: 32px; }
+:root[data-theme="dark-dots"] .todo-comment-zone { padding-bottom: 32px; margin-bottom: -32px; }
+:root[data-theme="dark-dots"] .todo-detail-comment.hidden { display: none; }
+/* Paintbrush widens these past the scroll padding to reach the screen edge;
+   here the page's own 16px gutter is the edge. */
+:root[data-theme="dark-dots"] .todo-section-card,
+:root[data-theme="dark-dots"] .todo-section-card.empty-card {
+  margin-left: 0;
+  margin-right: 0;
+}
+:root[data-theme="dark-dots"] .todo-section-card {
+  background: #292929;
+  border: none;
+  border-radius: 32px;
+  padding: 16px 0;
+  box-shadow: none;
+}
+:root[data-theme="dark-dots"] .todo-section-card + .todo-section-card { margin-top: 16px; }
+/* Paintbrush joins two empty section cards with a hairline and no gap; here
+   they are separate cards 16px apart like any other pair. */
+:root[data-theme="dark-dots"] .todo-section-card.empty-card + .todo-section-card.empty-card { margin-top: 16px; }
+:root[data-theme="dark-dots"] .todo-section-card.empty-card + .todo-section-card.empty-card::before { display: none; }
+:root[data-theme="dark-dots"] .todo-section-card > .card-header {
+  padding: 0 16px 0 20px;
+  gap: 8px;
+}
+:root[data-theme="dark-dots"] .todo-section-card .card-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.44px;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .todo-section-card .project-header-actions { gap: 8px; }
+
+/* Attach (paperclip): the dark circle. Add (plus): the canvas colour at 24%. */
+:root[data-theme="dark-dots"] .todo-attach-btn.section-attach-btn {
+  min-width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #333333;
+  gap: 2px;
+}
+:root[data-theme="dark-dots"] .todo-attach-btn.section-attach-btn svg * { stroke: #E6E6E6; }
+/* With nothing attached the count keeps no slot, so the paperclip centres */
+:root[data-theme="dark-dots"] .todo-attach-btn.section-attach-btn .project-tab-count.empty { display: none; }
+:root[data-theme="dark-dots"] .todo-attach-btn.section-attach-btn .project-tab-count {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 500;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .todo-section-card .project-add-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+:root[data-theme="dark-dots"] .todo-section-card .project-add-btn svg * {
+  stroke: var(--accent-base);
+  stroke-width: 2;
+}
+
+/* Attached rows read like the note rows on a canvas */
+:root[data-theme="dark-dots"] .todo-section-card .divider { display: none; }
+:root[data-theme="dark-dots"] .todo-section-card :is(.note-row, .link-row, .todo-row) { padding: 4px 24px 8px; }
+:root[data-theme="dark-dots"] .note-detail-page .note-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 25px;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .note-detail-page .note-preview-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: normal;
+  color: #7A7A7A;
+  opacity: 1;
+  margin-top: 1px;
+}
+
+/* Mark as Complete: the canvas colour at 24%, full width, label in that colour */
+/* 16px between Mark as Complete and the controls below it */
+:root[data-theme="dark-dots"] .detail-footer-complete { padding: 0 0 16px; }
+
+:root[data-theme="dark-dots"] .mark-complete-btn {
+  height: 48px;
+  border-radius: 32px;
+  border: none;
+  /* The pinned Gallery canvas's fill, with the glow and stroke still in colour */
+  background: #2B2B2B;
+  color: var(--accent-base);
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  overflow: visible;
+  /* The canvas add button's glow, orbiting rather than parked */
+  animation: dd-mc-glow 8s linear infinite;
+}
+@keyframes dd-mc-glow {
+  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
+  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 12px 8px rgba(var(--accent-base-rgb), 0.24); }
+  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
+  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -12px 8px rgba(var(--accent-base-rgb), 0.24); }
+  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
+}
+/* Stroke, with its bright end orbiting the pill */
+:root[data-theme="dark-dots"] .mark-complete-btn::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 32px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle),
+    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dark-dots"] .mark-complete-btn,
+  :root[data-theme="dark-dots"] .mark-complete-btn::before { animation: none; }
+}
+:root[data-theme="dark-dots"] .mark-complete-btn::after { border-radius: 32px; }
+:root[data-theme="dark-dots"] .mark-complete-btn svg * { stroke: var(--accent-base); }
+:root[data-theme="dark-dots"] .mark-complete-btn.done {
+  background: var(--accent-base);
+  color: #212121;
+  animation: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+:root[data-theme="dark-dots"] .mark-complete-btn.done::before { display: none; }
+:root[data-theme="dark-dots"] .mark-complete-btn.done svg * { stroke: #212121; }
+
+
+/* --- Attachments menu (paperclip panel) ---
+   Same glass, type and hover band as the card and row menus. */
+:root[data-theme="dark-dots"] .todo-attach-panel {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  padding: 4px 0;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .todo-attach-panel {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] .todo-attach-item + .todo-attach-item { border-top: none; }
+:root[data-theme="dark-dots"] .todo-attach-item {
+  position: relative;
+  background: none;
+}
+:root[data-theme="dark-dots"] .todo-attach-item .note-text,
+:root[data-theme="dark-dots"] .todo-attach-empty {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 400;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .todo-attach-empty { color: #7A7A7A; }
+:root[data-theme="dark-dots"] .todo-attach-item svg * { stroke: #E6E6E6; }
+/* The wash sits 4px in from each edge with 16px corners, like the menus */
+:root[data-theme="dark-dots"] .todo-attach-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  border-radius: 16px;
+  background: transparent;
+  z-index: -1;
+  pointer-events: none;
+}
+:root[data-theme="dark-dots"] .todo-attach-item:active::before { background: rgba(255, 255, 255, 0.04); }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .todo-attach-item:hover::before { background: rgba(255, 255, 255, 0.04); }
+  :root[data-theme="dark-dots"] .todo-attach-item:hover { background: none; }
+}
+
+
+/* Hovering a Notes / Links header lifts the card by 4% white, not Paintbrush's
+   near-white fill. */
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .todo-section-card.empty-card:hover,
+  :root[data-theme="dark-dots"] .todo-section-card:has(> .card-header:hover) {
+    background-color: #292929;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+    box-shadow: none;
+  }
+}
+
+
+/* An empty Notes / Links card keeps the theme's colours rather than Paintbrush's
+   greyed-out empty state — white label, canvas-coloured plus, on hover too. */
+:root[data-theme="dark-dots"] .todo-section-card.empty-card .card-title,
+:root[data-theme="dark-dots"] .todo-section-card.empty-card:hover .card-title,
+:root[data-theme="dark-dots"] .todo-section-card.empty-card .todo-attach-btn,
+:root[data-theme="dark-dots"] .todo-section-card.empty-card .project-tab-count { color: #E6E6E6; }
+:root[data-theme="dark-dots"] .todo-section-card.empty-card .todo-attach-btn svg * { stroke: #E6E6E6; }
+:root[data-theme="dark-dots"] .todo-section-card.empty-card .project-add-btn svg *,
+:root[data-theme="dark-dots"] .todo-section-card.empty-card:hover .project-add-btn svg * { stroke: var(--accent-base); }

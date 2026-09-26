@@ -7,6 +7,9 @@ import { NoteDetailPage } from './NoteCard.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import { LinkGridCard, NoteRowContent, useGridDragReorder } from './ProjectCard.jsx'
 import DetailFooter from './DetailFooter.jsx'
+import { useTheme } from '../useTheme.js'
+import { getTheme } from '../themes.js'
+import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon } from './FeatherIcons.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { pasteInto } from '../clipboard.js'
@@ -44,6 +47,8 @@ function extractNotePreview(editorHTML) {
 }
 
 function NoteListIcon() {
+  // Dark Dots uses the Feather list icon in the canvas colour (Figma 384:6835)
+  if (getTheme() === 'dark-dots') return <FeatherListIcon size={24} color="var(--accent-base)"/>
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <circle cx="5" cy="7" r="1.6" fill="#595959"/>
@@ -107,6 +112,9 @@ function SendIcon() {
 // Row icons matching the project card note/link rows
 function NoteRowIcon({ activated }) {
   const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
+  if (getTheme() === 'dark-dots') {
+    return <FeatherFileIcon size={20} strokeWidth={activated ? 2 : 1} color={activated ? 'var(--accent-base)' : '#7A7A7A'}/>
+  }
   return (
     <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
       <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={stroke} strokeWidth="1" fill={activated ? 'var(--accent-light)' : 'none'}/>
@@ -461,6 +469,7 @@ function useAttachDrag(containerRef, items, onReorder) {
 }
 
 export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose, archived = false }) {
+  useTheme()
   const {
     categories,
     toggleProjectTodo,

@@ -4242,8 +4242,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="dark-dots"] .detail-footer {
   padding-left: 20px;
   padding-right: 20px;
-  /* 12px more beneath the controls than before (24 → 36), above the safe area */
-  padding-bottom: calc(env(safe-area-inset-bottom) + 36px);
+  /* Beneath the controls, above the safe area */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
   padding-top: 0;
 }
 

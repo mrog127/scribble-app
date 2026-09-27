@@ -1713,25 +1713,25 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
        centres on the toast instead of the bar (see .phone.toast-open below). */
     -webkit-mask-image: linear-gradient(to bottom,
       black 0px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) + 4px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 28px - var(--fade-lift, 0px)));
     mask-image: linear-gradient(to bottom,
       black 0px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) + 4px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 28px - var(--fade-lift, 0px)));
   }
   /* Scrolled: the same fade at the top as at the bottom, mirrored. */
   .page.scrolled {
     -webkit-mask-image: linear-gradient(to bottom,
       transparent 0px,
       black 32px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) + 4px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 28px - var(--fade-lift, 0px)));
     mask-image: linear-gradient(to bottom,
       transparent 0px,
       black 32px,
-      black calc(100% - var(--mbar-h) - var(--mbar-bottom) - 8px - var(--fade-lift, 0px)),
-      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 16px - var(--fade-lift, 0px)));
+      black calc(100% - var(--mbar-h) - var(--mbar-bottom) + 4px - var(--fade-lift, 0px)),
+      transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 28px - var(--fade-lift, 0px)));
   }
 
   /* Toast up: lift the fade from the bar's midline to the toast's. The toast
@@ -3734,18 +3734,33 @@ body.resizing-detail .phone { transition: none !important; }
   }
 }
 
-/* The lit top rim, painted over the blur and under the content */
+/* The canvas add button's treatment in white: a stroke whose bright end points
+   up-left, and an inner glow on the opposite arc. */
+:root[data-theme="dark-dots"] .mbar-circle,
+:root[data-theme="dark-dots"] .footer .add-row .link-input-stack {
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.2),
+    inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+}
 :root[data-theme="dark-dots"] .mbar-circle::before,
 :root[data-theme="dark-dots"] .footer .add-row .link-input-stack::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%);
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
   pointer-events: none;
+  z-index: 2;
 }
 
-:root[data-theme="dark-dots"] .mbar-circle svg * { stroke: #E6E6E6; }
+:root[data-theme="dark-dots"] .mbar-circle svg * { stroke: #E6E6E6; stroke-width: 2; }
 :root[data-theme="dark-dots"] .mbar-placeholder svg * { stroke: #7A7A7A; }
 :root[data-theme="dark-dots"] .mbar-placeholder-label {
   font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
@@ -3814,6 +3829,420 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (hover: hover) {
   :root[data-theme="dark-dots"] .dots-menu-btn:hover::before { background: rgba(255, 255, 255, 0.04); }
+}
+
+
+/* --- Save to / Move to menus ---
+   Canvas-card fill, Helvetica Neue throughout in the app off-white.
+   The selected canvas and easel take their own colour, on a 24% pill of it. */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) {
+  background: #2B2B2B;   /* same as a canvas card */
+  border: none;
+  border-radius: 32px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) :is(.save-to-header, .card-tabs) {
+  background: transparent;
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) *,
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) input::placeholder {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) :is(.save-to-cancel, .save-to-empty, .save-to-option, .save-to-option.save-to-add, .save-to-add-icon, .save-to-new-input, .cc-option-name, .cc-option-page) {
+  color: #E6E6E6;
+}
+/* Title matches a canvas card title */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.44px;
+  color: #E6E6E6;
+}
+/* Canvas rows: medium, 8px more room left of the radio */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) :is(.save-to-option, .save-to-option.save-to-add, .save-to-new-input) {
+  font-weight: 500;
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-option { padding-left: 28px; padding-right: 24px; }
+/* Save to: 16px clear of every screen edge (phone layout; desktop positions it itself) */
+@media (max-width: 999.98px) {
+  :root[data-theme="dark-dots"] .save-to-panel.visible:not(.search-panel) { padding: 16px; }
+  /* The add-item box below it matches: 16px from the sides and the keyboard */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open) { margin: 0 16px 16px; }
+
+  /* --- Add item area (focused) ---
+     No box of its own: a one-row pill field (the resting "Add item" pill) with
+     the send button 8px to its right, and beneath them the Display button and
+     the content-type tabs, styled like a list item page and a canvas card. */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  /* Text field: the resting pill's chrome, one row */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) {
+    height: var(--mbar-h);
+    border-radius: calc(var(--mbar-h) / 2);
+    background: var(--mbar-chrome);
+    margin-right: 48px;   /* 8px gap + the 40px send button */
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input {
+    padding-right: 16px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input::placeholder { color: #7A7A7A; }
+
+  /* Link: two stacked pill fields, title over URL, 8px apart. The title keeps
+     the stack's own pill; the URL row hangs below it as a second pill, and the
+     stack's bottom margin makes room for it so the whole area grows. */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack):has(> .add-link-url-wrap.open) {
+    flex-direction: row;
+    align-items: center;
+    height: var(--mbar-h);
+    border-radius: calc(var(--mbar-h) / 2);
+    margin-bottom: calc(var(--mbar-h) + 8px);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack):has(> .add-link-url-wrap.open) > .add-input {
+    width: auto;
+    flex: 1 1 0%;
+    height: var(--mbar-h);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    height: var(--mbar-h);
+    max-height: none;
+    overflow: visible;
+    border-radius: calc(var(--mbar-h) / 2);
+    background: var(--mbar-chrome);
+    box-shadow:
+      0 6px 24px rgba(0, 0, 0, 0.2),
+      inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .add-input-divider { display: none; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+    width: 100%;
+    height: var(--mbar-h);
+    padding: 0 48px 0 16px;
+    background: transparent;
+    border: none;
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input::placeholder { color: #7A7A7A; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) { top: 0; z-index: 3; }
+  /* Paste: shown on every device here (the base rule hides it on desktop), as a
+     small version of the Display button in its on state. */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .paste-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 8px;
+    bottom: auto;
+    right: 8px;
+    height: calc(var(--mbar-h) - 16px);
+    padding: 0 12px;
+    border-radius: 32px;
+    background: rgba(var(--accent-base-rgb), 0.24);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent-base);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input { padding-right: 88px; }
+
+  /* Send: the canvas card plus button, with its ring and glow orbiting */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+    top: 4px;
+    right: -48px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(var(--accent-base-rgb), 0.24);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    animation: none;
+    overflow: visible;
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(var(--cb-stroke-angle),
+      hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+      hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cb-stroke-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::after {
+    inset: 0;
+    border-radius: 50%;
+    opacity: 0.1;
+    background: none;
+    animation: dd-send-glow 8s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible svg { position: relative; z-index: 3; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible svg * { stroke: var(--accent-base) !important; }
+
+  /* The glow layer doubles as the hover wash elsewhere — keep it at 10% */
+  @media (hover: hover) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible:hover::after { opacity: 0.1; }
+  }
+
+  /* Row beneath: Display, then the content-type tabs */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .tab-area {
+    height: var(--mbar-h);   /* same height as the text field */
+    margin-top: 8px;
+    border-top: none;
+    overflow: visible;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .input-toolbar {
+    height: var(--mbar-h);
+    padding: 0;
+    gap: 8px;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-divider { display: none; }
+
+  /* Display: the list item page's Display pill */
+  /* Fixed width, so Display / Displayed doesn't resize it: the width it gets on
+     a list item page (half the footer row after the 40px three-dot and two 8px
+     gaps; that footer sits 20px in from each side). */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left {
+    flex: 0 0 auto;
+    width: calc((100vw - 40px - 40px - 16px) / 2);
+    height: var(--mbar-h);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
+    width: 100%;
+    height: var(--mbar-h);
+    padding: 0 16px;
+    border-radius: 32px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-label {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent-base);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-label.inactive { color: #E6E6E6; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn.inactive svg { stroke: #E6E6E6 !important; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn:not(.inactive) {
+    background: rgba(var(--accent-base-rgb), 0.24);
+    border-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  @media (hover: hover) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:hover::after,
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:has(button:hover)::after {
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      transform: none;
+      border-radius: 32px;
+    }
+  }
+
+  /* Content type: a canvas card's tab pill */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-right {
+    flex: 1 1 0;
+    min-width: 0;
+    height: var(--mbar-h);
+    padding: 4px;
+    gap: 0;
+    box-sizing: border-box;
+    background: #333333;
+    border-radius: 32px;
+    justify-content: space-between;
+    margin-right: 48px;   /* ends under the text field, not the send button */
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: calc(var(--mbar-h) - 8px);
+    border-radius: 32px;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-indicator {
+    height: calc(var(--mbar-h) - 8px);
+    border-radius: 32px;
+    background: rgba(var(--accent-base-rgb), 0.24);
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn svg :is(line, path, polygon) { stroke: #7A7A7A; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn svg circle { fill: #7A7A7A; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn.selected svg :is(line, path, polygon) { stroke: var(--accent-base); }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn.selected svg circle { fill: var(--accent-base); }
+}
+/* --- Easels menu (long-press on the gallery circle) ---
+   Title and Close as in the Save to menu, no dividers, easel names medium in
+   the app off-white, and "Add new easel" wearing the resting Add item pill. */
+@media (max-width: 999.98px) {
+  :root[data-theme="dark-dots"] .mbar-page-menu-title {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.44px;
+    color: #E6E6E6;
+  }
+  :root[data-theme="dark-dots"] .save-to-cancel.mbar-page-menu-close {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    color: #E6E6E6;
+  }
+  :root[data-theme="dark-dots"] .mbar-page-menu-list > div + div::before { display: none; }
+  :root[data-theme="dark-dots"] .mbar-page-menu-list + .card-context-item { border-top: none; }
+  :root[data-theme="dark-dots"] .card-context-menu.mbar-page-menu .mbar-page-menu-label {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-weight: 500;
+    color: #E6E6E6 !important;   /* beats the inline easel colour */
+  }
+  /* Icons keep their easel's colour (set inline on the svg), at 2px */
+  :root[data-theme="dark-dots"] .card-context-menu.mbar-page-menu .card-context-item > svg * {
+    stroke: inherit;
+    stroke-width: 2;
+  }
+  :root[data-theme="dark-dots"] .footer .add-row .mbar-easel-wrap.open .easel-stack {
+    background: var(--mbar-chrome);
+    border: none;
+    border-radius: calc(var(--mbar-h) / 2);
+  }
+}
+
+/* The floating copy of an Easels-menu row while it's dragged. It's portalled
+   out of the menu, so repeat the menu's row type and icon here. */
+:root[data-theme="dark-dots"] #animation-portal .easel-drag-ghost .card-context-item {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 500;
+  padding-right: 16px;
+  height: 52px;
+  background: none;
+}
+:root[data-theme="dark-dots"] #animation-portal .easel-drag-ghost .card-context-item > svg { position: relative; top: 2px; }
+:root[data-theme="dark-dots"] #animation-portal .easel-drag-ghost .card-context-item > svg * { stroke: inherit; stroke-width: 2; }
+:root[data-theme="dark-dots"] #animation-portal .easel-drag-ghost .mbar-page-menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 500;
+  color: #E6E6E6 !important;
+}
+:root[data-theme="dark-dots"] #animation-portal .easel-drag-ghost .card-context-item::before { display: none; }
+
+@keyframes dd-send-glow {
+  0%   { box-shadow: inset 8px 0 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
+  25%  { box-shadow: inset 0 8px 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
+  50%  { box-shadow: inset -8px 0 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
+  75%  { box-shadow: inset 0 -8px 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
+  100% { box-shadow: inset 8px 0 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dark-dots"] .footer .send-btn::before,
+  :root[data-theme="dark-dots"] .footer .send-btn::after { animation: none; }
+}
+/* Header lines up with the rows */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-header { padding-left: 24px; padding-right: 24px; padding-bottom: 24px; }
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-option.selected,
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-option.selected :is(.cc-option-name, .cc-option-page) {
+  color: rgb(var(--cb-base-rgb));
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-option.selected::before {
+  inset: 0 16px 0 12px;
+  background: rgba(var(--cb-base-rgb), 0.24);
+  border-radius: 999px;
+}
+/* "Add new canvas" in the easel's colour */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) :is(.save-to-option.save-to-add, .save-to-add-icon) {
+  color: rgb(var(--cb-base-rgb));
+}
+/* No dividers anywhere in the menu */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-divider { display: none; }
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tabs { border-top: none; padding: 8px 16px 16px; }
+/* Unselected radios look like unselected checkboxes */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-radio:not(.filled) {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #7A7A7A;
+  background: #262626;
+  box-shadow: none;
+}
+/* Easel tabs sit in a grey pill, like a canvas card's content-type tabs */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tabs-scroll {
+  height: 48px;   /* same as the add-item text field */
+  padding: 4px;
+  gap: 0;
+  box-sizing: border-box;
+  background: #212121;   /* the page background */
+  border-radius: 32px;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tab {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 32px;
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tab-indicator {
+  top: 4px;
+  height: 40px;
+}
+/* Easel tabs: bold */
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tab {
+  font-weight: 700;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tab.selected {
+  color: rgb(var(--accent-base-rgb));
+}
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tab-indicator {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  border-radius: 999px;
 }
 
 

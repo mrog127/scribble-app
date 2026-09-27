@@ -331,7 +331,7 @@ function AppInner() {
   const addEaselRef = useRef(null)
   // Press-and-hold an easel to drag it — the same reorder the Easels page uses
   const easelListRef = useRef(null)
-  const { onDragPointerDown: onEaselDrag } = useCategoryDragReorder(easelListRef, categories, reorderCategories)
+  const { onDragPointerDown: onEaselDrag } = useCategoryDragReorder(easelListRef, categories, reorderCategories, { ghostClass: 'easel-drag-ghost' })
   // A drag shouldn't also navigate: only a quick, still press counts as a tap
   const easelTap = useRef({})
   const closeAddEasel = useCallback(() => { setAddEaselOpen(false); setAddEaselName('') }, [])
@@ -1308,6 +1308,8 @@ function AppInner() {
       if (initBtn && ind && right) {
         const rightRect = right.getBoundingClientRect()
         const btnRect = initBtn.getBoundingClientRect()
+        // Match the selected button's width (tabs can stretch to fill the row)
+        ind.style.width = btnRect.width + 'px'
         if (!toolbarIndicatorMounted.current) {
           ind.style.transition = 'none'
           ind.style.left = (btnRect.left - rightRect.left) + 'px'

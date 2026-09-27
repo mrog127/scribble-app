@@ -5,6 +5,7 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
 import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary } from '../push.js'
 import { THEMES, getTheme, setTheme, themeName } from '../themes.js'
+import { dragLiftShadow } from '../dragClone.js'
 
 // Same FLIP drag-reorder animation as TodoCard/NoteCard, adapted for category rows.
 // Trigger: immediate pointerdown on the drag handle (no long-press needed).
@@ -13,7 +14,10 @@ import { THEMES, getTheme, setTheme, themeName } from '../themes.js'
 //   wrapper div   →  direct child of container; keyed by cat.id; used for FLIP + shift transforms
 //   [data-cat-id] →  the visible 52px row inside each wrapper; cloned for the floating ghost
 // Exported so the mobile page menu can reorder the same list the same way.
-export function useCategoryDragReorder(containerRef, categories, onReorder) {
+// opts.ghostClass: in Dark Dots, the floating copy takes this class and the
+// same clear-glass skin as a row dragged out of a canvas card.
+export function useCategoryDragReorder(containerRef, categories, onReorder, opts = {}) {
+  const ghostClass = opts.ghostClass
   const dragRef = useRef(null)
   const flipRef = useRef(null)
   const catsRef = useRef(categories)
@@ -81,10 +85,18 @@ export function useCategoryDragReorder(containerRef, categories, onReorder) {
       const cloneTop = dragged.rect.top - appRect.top - 4
 
       // Build floating ghost clone
+      const darkGhost = !!ghostClass && document.documentElement.dataset.theme === 'dark-dots'
       const cloneInner = dragged.el.cloneNode(true)
       cloneInner.style.pointerEvents = 'none'
-      cloneInner.style.background = '#F7F6F3'
+      cloneInner.style.background = darkGhost ? 'transparent' : '#F7F6F3'
       const clone = document.createElement('div')
+      if (darkGhost) clone.className = ghostClass
+      const skin = darkGhost
+        ? ['background:rgba(255,255,255,0.08)', 'border:1px solid rgba(255,255,255,0.14)',
+           'box-shadow:0 6px 24px rgba(0,0,0,0.2)', 'border-radius:16px',
+           '-webkit-backdrop-filter:blur(24px) saturate(180%)', 'backdrop-filter:blur(24px) saturate(180%)']
+        : ['box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px',
+           'border:1px solid #C2C1BF', 'background:#F7F6F3']
       clone.style.cssText = [
         'position:absolute',
         `left:${dragged.rect.left - appRect.left - 4}px`,
@@ -92,10 +104,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder) {
         `width:${dragged.rect.width + 8}px`,
         'padding:4px 0',
         'pointer-events:none',
-        'box-shadow:0 4px 20px rgba(0,0,0,0.10)',
-        'border-radius:8px',
-        'border:1px solid #C2C1BF',
-        'background:#F7F6F3',
+        ...skin,
         'overflow:hidden',
         'z-index:999',
       ].join(';')
@@ -124,7 +133,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder) {
       const s = dragRef.current
       if (s) {
         s.clone.style.transition = 'box-shadow 120ms ease'
-        s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'
+        s.clone.style.boxShadow = s.clone.className ? dragLiftShadow() : '0 8px 24px rgba(0,0,0,0.18)'
         setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120)
       }
     }
@@ -222,7 +231,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder) {
     document.addEventListener('pointermove', onMove, { passive: false })
     document.addEventListener('pointerup', onUp)
     document.addEventListener('pointercancel', onCancel)
-  }, [containerRef, onReorder])
+  }, [containerRef, onReorder, ghostClass])
 
   return { onDragPointerDown }
 }

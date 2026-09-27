@@ -135,14 +135,15 @@ export function isScheduleLocked(item) {
 // ones most-frequent first, then by date). Active and unscheduled items keep
 // their incoming order, e.g. sort_order.
 export function groupByActivation(items) {
-  const scheduled = items.filter(i => !i.activated && i.scheduledDate)
   const byDate = (a, b) => String(a.scheduledDate).localeCompare(String(b.scheduledDate))
+  // Order: active, then scheduled, then inactive, with recurring items last.
+  const recurring = items.filter(i => !i.activated && isRecurring(i.recurrence))
+  const rest = items.filter(i => !(!i.activated && isRecurring(i.recurrence)))
   return [
-    ...items.filter(i => i.activated),
-    ...scheduled.filter(i => !isRecurring(i.recurrence)).sort(byDate),
-    ...scheduled.filter(i => isRecurring(i.recurrence))
-      .sort((a, b) => (recurrenceRank(a.recurrence) - recurrenceRank(b.recurrence)) || byDate(a, b)),
-    ...items.filter(i => !i.activated && !i.scheduledDate),
+    ...rest.filter(i => i.activated),
+    ...rest.filter(i => !i.activated && i.scheduledDate).sort(byDate),
+    ...rest.filter(i => !i.activated && !i.scheduledDate),
+    ...recurring.sort((a, b) => (recurrenceRank(a.recurrence) - recurrenceRank(b.recurrence)) || byDate(a, b)),
   ]
 }
 

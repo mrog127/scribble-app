@@ -13,6 +13,7 @@ import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, 
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
+import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -199,20 +200,10 @@ function useDragReorder(containerRef, items, onReorder, groupKeysProp) {
         bottomBound = (lastInGroup.rect.top + lastInGroup.rect.height) - appRect.top - draggedH - 4
       }
       const cloneInner = dragged.el.cloneNode(true)
-      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
-      // The clone lives in #animation-portal, outside the card, so card-scoped
-      // rules (`.project-card .todo-row { min-height, align-items }` and friends)
-      // stop reaching it — the row would render short and top-aligned. Wrap it in
-      // a bare element carrying the source card's classes to restore that scope,
-      // with the card's own box styling neutralised.
-      const srcCard = dragged.el.closest('.card')
-      const scope = document.createElement('div')
-      if (srcCard) scope.className = srcCard.className
-      scope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;overflow:visible;opacity:1;transform:none;'
-      scope.appendChild(cloneInner)
+      const { content: cloneShell, skin: cloneSkin } = buildDragCloneShell(dragged.el, cloneInner)
       const clone = document.createElement('div')
-      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 4}px`, `top:${cloneTop}px`, `width:${dragged.rect.width + 8}px`, 'padding:4px 0', 'pointer-events:none', 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px', 'border:1px solid #C2C1BF', 'background:#F7F6F3', 'overflow:hidden', 'z-index:999'].join(';')
-      clone.appendChild(scope)
+      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 4}px`, `top:${cloneTop}px`, `width:${dragged.rect.width + 8}px`, 'padding:4px 0', 'pointer-events:none', ...cloneSkin, 'overflow:hidden', 'z-index:999'].join(';')
+      clone.appendChild(cloneShell)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
       dragRef.current = { clone, snapshots, dragIdx, currentIdx: dragIdx, cloneTop, startY: clientY, draggedH, groupStart, groupEnd, topBound, bottomBound }
@@ -224,7 +215,7 @@ function useDragReorder(containerRef, items, onReorder, groupKeysProp) {
       started = start(clientY)
       if (!started || !longPress) return
       const s = dragRef.current
-      if (s) { s.clone.style.transition = 'box-shadow 120ms ease'; s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'; setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120) }
+      if (s) { s.clone.style.transition = 'box-shadow 120ms ease'; s.clone.style.boxShadow = dragLiftShadow(); setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120) }
     }
 
     longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY, true) }, 250)

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react
 import { EyeIcon, EyeOffIcon, TrashMenuIcon } from './MenuIcons.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import { useRowMenu, RowActionMenu } from './RowMenu.jsx'
+import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 
 function useDragReorder(containerRef, items, onReorder) {
   const dragRef = useRef(null)
@@ -69,17 +70,7 @@ function useDragReorder(containerRef, items, onReorder) {
       const cloneTop = origTop - 4
 
       const cloneInner = dragged.el.cloneNode(true)
-      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
-      // The clone lives in #animation-portal, outside the card, so card-scoped
-      // rules (`.project-card .todo-row { min-height, align-items }` and friends)
-      // stop reaching it — the row would render short and top-aligned. Wrap it in
-      // a bare element carrying the source card's classes to restore that scope,
-      // with the card's own box styling neutralised.
-      const srcCard = dragged.el.closest('.card')
-      const scope = document.createElement('div')
-      if (srcCard) scope.className = srcCard.className
-      scope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;overflow:visible;opacity:1;transform:none;'
-      scope.appendChild(cloneInner)
+      const { content: cloneShell, skin: cloneSkin } = buildDragCloneShell(dragged.el, cloneInner)
       const clone = document.createElement('div')
       clone.style.cssText = [
         'position:absolute',
@@ -88,14 +79,11 @@ function useDragReorder(containerRef, items, onReorder) {
         `width:${dragged.rect.width + 8}px`,
         'padding:4px 0',
         'pointer-events:none',
-        'box-shadow:0 4px 20px rgba(0,0,0,0.10)',
-        'border-radius:8px',
-        'border:1px solid #C2C1BF',
-        'background:#F7F6F3',
+        ...cloneSkin,
         'overflow:hidden',
         'z-index:999',
       ].join(';')
-      clone.appendChild(scope)
+      clone.appendChild(cloneShell)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
       // Boundary positions for clamping clone movement (app-relative)
@@ -120,7 +108,7 @@ function useDragReorder(containerRef, items, onReorder) {
         const s = dragRef.current
         if (s) {
           s.clone.style.transition = 'box-shadow 120ms ease'
-          s.clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)'
+          s.clone.style.boxShadow = dragLiftShadow()
           setTimeout(() => { if (dragRef.current === s) s.clone.style.transition = '' }, 120)
         }
       }

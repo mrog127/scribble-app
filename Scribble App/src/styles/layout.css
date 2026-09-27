@@ -3616,6 +3616,11 @@ body.resizing-detail .phone { transition: none !important; }
   padding: 0 16px 16px;
   pointer-events: none;
 }
+:root[data-theme="dark-dots"] .project-bottom-bar.no-tabs {
+  /* It overlaps the last row, so it has to sit above it to catch the tap */
+  position: relative;
+  z-index: 5;
+}
 :root[data-theme="dark-dots"] .project-bottom-bar.no-tabs .project-add-btn { pointer-events: auto; }
 :root[data-theme="dark-dots"] .project-card:has(.project-bottom-bar.no-tabs) { padding-bottom: 0; }
 /* The last row shares its line with the button: its text stops 16px short of it
@@ -3958,6 +3963,9 @@ body.resizing-detail .phone { transition: none !important; }
   background: rgba(var(--accent-base-rgb), 0.24);
 }
 :root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-add-btn svg * { stroke: var(--accent-base); }
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-header-actions { gap: 8px; }
+/* Collapsed shows which content types the canvas holds, not how many of each */
+:root[data-theme="dark-dots"] .project-card > .card-header.collapsed .project-tab-count { display: none; }
 
 
 /* Tab hover highlights are pills, matching the selected tab's shape */
@@ -4435,8 +4443,11 @@ body.resizing-detail .phone { transition: none !important; }
   height: 48px;
   border-radius: 32px;
   border: none;
-  /* The pinned Gallery canvas's fill, with the glow and stroke still in colour */
-  background: #2B2B2B;
+  /* The pinned Gallery canvas's fill, washed with 12% of the canvas colour; the
+     glow animates over the top of it. */
+  background:
+    linear-gradient(rgba(var(--accent-base-rgb), 0.12), rgba(var(--accent-base-rgb), 0.12)),
+    #2B2B2B;
   color: var(--accent-base);
   font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
   font-size: 16px;
@@ -4559,4 +4570,62 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="dark-dots"] .project-card .note-row {
   padding-top: 4px;
   padding-bottom: 8px;
+}
+
+
+/* --- Lifted row (long-press menu) and the floating drag copy ---
+   Clear glass like the menus, with the row's own type and colours. */
+:root[data-theme="dark-dots"] .swipe-row.row-lifted,
+:root[data-theme="dark-dots"] .todo-swipe-row.row-lifted,
+:root[data-theme="dark-dots"] .link-tile.row-lifted {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .swipe-row.row-lifted,
+  :root[data-theme="dark-dots"] .todo-swipe-row.row-lifted,
+  :root[data-theme="dark-dots"] .link-tile.row-lifted {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* The drag copy is portalled out of the page, so the page-scoped row rules
+   above don't reach it — repeat them for the portal. */
+:root[data-theme="dark-dots"] #animation-portal .item-text,
+:root[data-theme="dark-dots"] #animation-portal .note-text {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 25px;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] #animation-portal .source-label-text,
+:root[data-theme="dark-dots"] #animation-portal .note-preview-text,
+:root[data-theme="dark-dots"] #animation-portal .row-attach-count,
+:root[data-theme="dark-dots"] #animation-portal .row-schedule-date {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #7A7A7A;
+  opacity: 1;
+}
+:root[data-theme="dark-dots"] #animation-portal .note-preview-text { font-size: 12px; }
+:root[data-theme="dark-dots"] #animation-portal .divider { display: none; }
+:root[data-theme="dark-dots"] #animation-portal .checkbox.activated-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 13px;
+  border: 2px solid var(--cb-base, var(--accent-base));
+  background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.24);
+  box-shadow: none;
+  animation: none;
+}
+:root[data-theme="dark-dots"] #animation-portal .checkbox:not(.activated-checkbox) {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #7A7A7A;
+  background: #262626;
+  box-shadow: none;
 }

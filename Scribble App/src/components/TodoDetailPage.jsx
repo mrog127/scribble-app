@@ -17,6 +17,7 @@ import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
 import { isRecurring } from './ScheduleBits.jsx'
 import { useScrollable } from '../useScrollable.js'
+import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
@@ -389,10 +390,10 @@ function useAttachDrag(containerRef, items, onReorder) {
       const appRect = appEl.getBoundingClientRect()
       const cloneTop = dragged.rect.top - appRect.top
       const cloneInner = dragged.el.cloneNode(true)
-      cloneInner.style.cssText = 'pointer-events:none;background:#F7F6F3;'
+      const { content: cloneShell, skin: cloneSkin } = buildDragCloneShell(dragged.el, cloneInner)
       const clone = document.createElement('div')
-      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 17}px`, `top:${cloneTop}px`, `width:${dragged.rect.width}px`, 'padding:0 16px', 'pointer-events:none', 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px', 'border:1px solid #C2C1BF', 'background:#F7F6F3', 'overflow:hidden', 'z-index:999'].join(';')
-      clone.appendChild(cloneInner)
+      clone.style.cssText = ['position:absolute', `left:${dragged.rect.left - appRect.left - 17}px`, `top:${cloneTop}px`, `width:${dragged.rect.width}px`, 'padding:0 16px', 'pointer-events:none', ...cloneSkin, 'overflow:hidden', 'z-index:999'].join(';')
+      clone.appendChild(cloneShell)
       portal.appendChild(clone)
       dragged.el.style.opacity = '0'
       // The clone can't travel above the first row or below the last one

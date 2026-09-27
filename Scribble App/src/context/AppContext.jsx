@@ -288,11 +288,13 @@ export function AppProvider({ children }) {
   // ---- Projects ----
   const addProject = useCallback((categoryId, name) => {
     const id = `proj-${Date.now()}`
-    const sortOrder = categoriesRef.current.find(c => c.id === categoryId)?.projects.length || 0
+    // New canvases go to the top. Existing canvases carry 0..n, so a negative
+    // sort order sits above all of them, and each new one above the last.
+    const sortOrder = -Math.floor(Date.now() / 1000)
     setCategories(prev => prev.map(cat =>
       cat.id !== categoryId ? cat : {
         ...cat,
-        projects: [...cat.projects, { id, name, todos: [], notes: [], links: [] }]
+        projects: [{ id, name, todos: [], notes: [], links: [] }, ...cat.projects]
       }
     ))
     db(supabase.from('projects').insert({ id, user_id: user.id, category_id: categoryId, name, sort_order: sortOrder }))

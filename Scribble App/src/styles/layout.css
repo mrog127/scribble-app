@@ -4099,7 +4099,6 @@ body.resizing-detail .phone { transition: none !important; }
     background: #333333;
     border-radius: 32px;
     justify-content: space-between;
-    margin-right: 48px;   /* ends under the text field, not the send button */
   }
   :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn {
     flex: 1 1 0;
@@ -4175,6 +4174,212 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="dark-dots"] #animation-portal .easel-drag-ghost .card-context-item::before { display: none; }
 
+/* Canvas tag ("@name") highlight in the add field: a pill */
+:root[data-theme="dark-dots"] .cc-overlay-text { border-radius: 999px; }
+
+/* --- Add item area as ONE object ---
+   The whole focused area is a single glass box (the text box's fill, stroke
+   and glow, 32px corners) with the stroke's bright end and the inner glow
+   orbiting it. Row 1: the text field (no chrome of its own) with send at the
+   right; row 2: Display and the content-type tabs. 8px inside the edges, so
+   the 48px pills inside sit concentric with the 32px corners. */
+@media (max-width: 999.98px) {
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    position: relative;
+    padding: 16px 16px 14px;
+    background: var(--mbar-chrome);
+    border: none;
+    border-radius: 32px;
+    overflow: visible;
+    animation: dd-box-glow 8s linear infinite;
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) {
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cb-stroke-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* The field and the link's URL row give up their own pill chrome */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack),
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack)::before,
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before { display: none; }
+
+  /* Hover wash on the fields follows a pill, not the input's square box */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) :is(.add-input, .link-url-input) { border-radius: calc(var(--mbar-h) / 2); }
+  /* Typed text is medium; the canvas-tag mirror matches it so the highlight
+     stays on the real glyphs */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) :is(.add-input, .link-url-input) { font-weight: 500; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .cc-overlay-text {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-weight: 500;
+  }
+
+  /* Display: the tabs' height, no drop shadow */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
+    align-self: center;
+    height: calc(var(--mbar-h) - 8px);
+    box-shadow: none;
+  }
+  /* Content-type row: the text field's hover wash as its fill */
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-right { background: rgba(255, 255, 255, 0.04); }
+  /* Its hover wash matches the button's own box */
+  @media (hover: hover) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:hover::after,
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:has(button:hover)::after {
+      top: 4px;
+      height: calc(var(--mbar-h) - 8px);
+    }
+  }
+}
+@keyframes dd-box-glow {
+  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 4px rgba(255, 255, 255, 0.06); }
+  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 8px 4px rgba(255, 255, 255, 0.06); }
+  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -8px 0 4px rgba(255, 255, 255, 0.06); }
+  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -8px 4px rgba(255, 255, 255, 0.06); }
+  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 4px rgba(255, 255, 255, 0.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open),
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before { animation: none; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+}
+
+/* Paste renders as a label by default; the icon is for the round variant */
+.paste-btn-icon { display: none; }
+
+/* --- Link mode: Paste / Clear as a round settings-style button under send ---
+   The URL row ends at the text field's edge (the same 48px short as the title
+   row), and the button hangs in that gap, directly beneath send. */
+@media (max-width: 999.98px) {
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input { padding-right: 16px; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 4px;
+    bottom: auto;
+    right: -48px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: #333333;
+    z-index: 3;
+  }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .paste-btn-label { display: none; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .paste-btn-icon { display: block; }
+  :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) svg * {
+    stroke: #E6E6E6;
+    stroke-width: 2;
+  }
+  @media (hover: hover) {
+    :root[data-theme="dark-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear):hover {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+    }
+  }
+}
+
+/* --- "Added to …" toast ---
+   A pill in the canvas card plus button's treatment — 24% fill of the canvas
+   colour over glass, gradient stroke and inner glow — with the stroke's bright
+   end and the glow orbiting. Helvetica Neue in the app off-white. */
+:root[data-theme="dark-dots"] .add-toast {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 24px 8px 20px;
+  background: rgba(var(--accent-base-rgb), 0.24);
+  overflow: visible;
+  animation: add-toast-in 200ms ease, dd-mc-glow 8s linear infinite;
+}
+:root[data-theme="dark-dots"] .add-toast.leaving { animation: add-toast-out 200ms ease forwards; }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .add-toast {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] .add-toast::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle),
+    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="dark-dots"] .add-toast::after { background: rgba(255, 255, 255, 0.04); }
+:root[data-theme="dark-dots"] :is(.add-toast-title, .add-toast-canvas) {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 500;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .add-toast-canvas { opacity: 0.6; }   /* "Added to …" eyebrow */
+:root[data-theme="dark-dots"] .add-toast-icon { color: var(--accent-base); }
+:root[data-theme="dark-dots"] .add-toast-arrow path { stroke: var(--accent-base); }
+/* Icons 2px larger each way, 2px strokes, and 4px more room before the labels */
+:root[data-theme="dark-dots"] .add-toast-icon { width: 18px; height: 18px; margin-right: 12px; }
+:root[data-theme="dark-dots"] .add-toast-icon svg { width: 18px; height: 18px; }
+:root[data-theme="dark-dots"] svg.add-toast-arrow { width: 22px; height: 22px; }
+:root[data-theme="dark-dots"] :is(.add-toast-icon, .add-toast-arrow) :is(path, line, circle, rect, polyline) {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dark-dots"] .add-toast { animation: add-toast-in 200ms ease; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
+  :root[data-theme="dark-dots"] .add-toast::before { animation: none; }
+}
+
+/* Row hover (and its touch-press mirror) on canvas cards and the Gallery's
+   content-type cards: a 4% white wash. The checkbox still takes the highlight
+   while it's the thing under the pointer. */
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] :is(.home-page, .category-page) .swipe-row:hover:not(:has(.checkbox-wrap:hover)) .swipe-content::before {
+    background: rgba(255, 255, 255, 0.04);
+    left: 8px;
+    right: 8px;
+    border-radius: 999px;
+  }
+}
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .swipe-row.is-pressed:not(:has(.checkbox-wrap.is-pressed)) .swipe-content::before {
+  background: rgba(255, 255, 255, 0.04);
+  left: 8px;
+  right: 8px;
+  border-radius: 999px;
+}
+
 @keyframes dd-send-glow {
   0%   { box-shadow: inset 8px 0 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
   25%  { box-shadow: inset 0 8px 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); }
@@ -4187,7 +4392,7 @@ body.resizing-detail .phone { transition: none !important; }
   :root[data-theme="dark-dots"] .footer .send-btn::after { animation: none; }
 }
 /* Header lines up with the rows */
-:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-header { padding-left: 24px; padding-right: 24px; padding-bottom: 24px; }
+:root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-header { padding-left: 24px; padding-right: 24px; padding-bottom: 12px; }
 :root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-option.selected,
 :root[data-theme="dark-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-option.selected :is(.cc-option-name, .cc-option-page) {
   color: rgb(var(--cb-base-rgb));
@@ -5057,4 +5262,116 @@ body.resizing-detail .phone { transition: none !important; }
   border: 1px solid #7A7A7A;
   background: #262626;
   box-shadow: none;
+}
+
+
+/* --- Row rhythm on canvas cards and the Gallery / Easel content-type cards ---
+   16px from the bottom of one row's text to the top of the next row's text,
+   however many lines it runs to: 8px above and below each row's text (the 25px
+   label line, plus any canvas sub-label or note preview), with no fixed row
+   height. A two-line label simply makes its row taller, so its checkbox sits a
+   little further from its neighbours. For a note that's 16px from the bottom of
+   its preview line to the next title. Kept last in the file so it outranks the
+   earlier per-card row paddings. */
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .card :is(.todo-row, .note-row, .link-row),
+:root[data-theme="dark-dots"] :is(.home-page, .category-page) .card :is(.todo-row, .note-row, .link-row):not(:has(.source-label)) {
+  min-height: 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+
+/* --- Delete (and archive) confirmation modal ---
+   The add-item controls box: glass fill, 32px corners, the stroke's bright end
+   and the inner glow orbiting. Cancel is a page's Done pill; the destructive
+   button is an editing note's Save pill in red. Helvetica Neue throughout. */
+:root[data-theme="dark-dots"] .archive-modal {
+  --dd-red: #FF7070;
+  --dd-red-rgb: 255, 112, 112;
+  position: relative;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 32px;
+  padding: 16px;
+  overflow: visible;
+  animation: dd-box-glow 8s linear infinite;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] .archive-modal {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] .archive-modal::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="dark-dots"] .archive-modal-title {
+  padding: 0 8px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 700;
+  color: #E6E6E6;
+}
+:root[data-theme="dark-dots"] .archive-modal-body {
+  padding: 0 8px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #B8B8B8;
+}
+:root[data-theme="dark-dots"] .archive-modal-actions { gap: 8px; }
+/* Cancel: the Done pill */
+:root[data-theme="dark-dots"] .archive-modal-btn {
+  position: relative;
+  height: 40px;
+  border: none;
+  border-radius: 32px;
+  background: #333333;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #E6E6E6;
+}
+/* Delete: the Save pill, in red */
+:root[data-theme="dark-dots"] .archive-modal-btn.danger {
+  background: rgba(var(--dd-red-rgb), 0.24);
+  color: var(--dd-red);
+  box-shadow: inset -6px -6px 4px rgba(var(--dd-red-rgb), 0.12);
+  overflow: visible;
+}
+:root[data-theme="dark-dots"] .archive-modal-btn.danger::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 32px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+    hsl(from var(--dd-red) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--dd-red) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .archive-modal-btn:hover {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dark-dots"] .archive-modal,
+  :root[data-theme="dark-dots"] .archive-modal::before { animation: none; }
+  :root[data-theme="dark-dots"] .archive-modal { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
 }

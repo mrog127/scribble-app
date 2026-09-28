@@ -5,7 +5,7 @@
 // wrapped in the page's and the card's classes to bring those back, and takes
 // the card's own fill — or, in Dark Dots, the clear glass the menus use.
 
-const isDarkDots = () => document.documentElement.dataset.theme === 'dark-dots'
+const isDarkDots = () => ['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)
 
 // Wraps `cloneInner` for the portal and returns what to mount and how to skin it.
 export function buildDragCloneShell(srcRowEl, cloneInner, fallbackBg = '#F7F6F3') {

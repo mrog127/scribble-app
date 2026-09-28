@@ -49,7 +49,7 @@ function extractNotePreview(editorHTML) {
 
 function NoteListIcon() {
   // Dark Dots uses the Feather list icon in the canvas colour (Figma 384:6835)
-  if (getTheme() === 'dark-dots') return <FeatherListIcon size={24} color="var(--accent-base)"/>
+  if (['dark-dots', 'light-dots'].includes(getTheme())) return <FeatherListIcon size={24} color="var(--accent-base)"/>
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <circle cx="5" cy="7" r="1.6" fill="#595959"/>
@@ -113,7 +113,7 @@ function SendIcon() {
 // Row icons matching the project card note/link rows
 function NoteRowIcon({ activated }) {
   const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
-  if (getTheme() === 'dark-dots') {
+  if (['dark-dots', 'light-dots'].includes(getTheme())) {
     return <FeatherFileIcon size={20} strokeWidth={activated ? 2 : 1} color={activated ? 'var(--accent-base)' : '#7A7A7A'}/>
   }
   return (
@@ -311,10 +311,13 @@ function AttachedNoteRow({ note, divider, onOpen, onPointerDown, onDragPointerDo
 
 // Collapse / expand a section card from its header, exactly as a canvas card does:
 // the body animates its height over 250ms and the state persists per section.
-function useSectionCollapse(storageKey) {
-  const [collapsed, setCollapsed] = useState(() => {
+// An empty section never collapses (`disabled`): its attach menu and add-item box
+// open inside the body, so they must always have room to show.
+function useSectionCollapse(storageKey, disabled = false) {
+  const [storedCollapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(storageKey) === 'true' } catch { return false }
   })
+  const collapsed = storedCollapsed && !disabled
   const bodyRef = useRef(null)
   const mountedRef = useRef(false)
 
@@ -344,13 +347,14 @@ function useSectionCollapse(storageKey) {
   }, [collapsed])
 
   const onHeaderClick = useCallback((e) => {
+    if (disabled) return
     if (e.target.closest('button, input, .card-context-menu')) return
     setCollapsed(prev => {
       const next = !prev
       try { localStorage.setItem(storageKey, next ? 'true' : 'false') } catch {}
       return next
     })
-  }, [storageKey])
+  }, [storageKey, disabled])
 
   return { collapsed, bodyRef, onHeaderClick }
 }
@@ -509,8 +513,6 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [noteAttachOpen, setNoteAttachOpen] = useState(false)
   const [noteComposerOpen, setNoteComposerOpen] = useState(false)
   const [linkComposerOpen, setLinkComposerOpen] = useState(false)
-  const noteSection = useSectionCollapse(`collapsed-todo-${todo.id}-notes`)
-  const linkSection = useSectionCollapse(`collapsed-todo-${todo.id}-links`)
   const [linkAttachOpen, setLinkAttachOpen] = useState(false)
   const [openNoteId, setOpenNoteId] = useState(null)
   const [openAttachLinkId, setOpenAttachLinkId] = useState(null)
@@ -662,6 +664,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     () => linkedLinkIds.map(id => projectLinks.find(l => String(l.id) === id)).filter(Boolean),
     [linkedLinkIds.join(','), projectLinks] // eslint-disable-line react-hooks/exhaustive-deps
   )
+  const noteSection = useSectionCollapse(`collapsed-todo-${todo.id}-notes`, attachedNotes.length === 0)
+  const linkSection = useSectionCollapse(`collapsed-todo-${todo.id}-links`, attachedLinks.length === 0)
   // Archived notes/links aren't offered — only live ones can be attached
   const attachableNotes = projectNotes.filter(n => !n.archived && !linkedNoteIds.includes(String(n.id)))
   const attachableLinks = projectLinks.filter(l => !l.archived && !linkedLinkIds.includes(String(l.id)))
@@ -847,7 +851,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           <div className={`card-header${noteSection.collapsed ? ' collapsed' : ''}`} onClick={noteSection.onHeaderClick}>
             <span className="card-title">Notes</span>
             <div className="project-header-actions">
-              {!archived && (
+              {!archived && !noteComposerOpen && (
                 <button
                   className={`todo-attach-btn section-attach-btn${noteAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a note"
@@ -857,7 +861,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                   <PaperclipIcon/>
                 </button>
               )}
-              {!archived && (
+              {!archived && !noteComposerOpen && (
                 <button
                   type="button"
                   className="project-add-btn"
@@ -924,7 +928,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           <div className={`card-header${linkSection.collapsed ? ' collapsed' : ''}`} onClick={linkSection.onHeaderClick}>
             <span className="card-title">Links</span>
             <div className="project-header-actions">
-              {!archived && (
+              {!archived && !linkComposerOpen && (
                 <button
                   className={`todo-attach-btn section-attach-btn${linkAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a link"
@@ -934,7 +938,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                   <PaperclipIcon/>
                 </button>
               )}
-              {!archived && (
+              {!archived && !linkComposerOpen && (
                 <button
                   type="button"
                   className="project-add-btn"
@@ -1011,7 +1015,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <NoteListIcon/>
         {archived && <span className="detail-archived-label">Archived</span>}
         <span className="note-scroll-title" ref={scrollTitleRef} />
-        <button className="note-detail-done" onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : 'Done'}</button>
+        <button className={`note-detail-done${(editingTitle || editingComment) ? ' is-saving' : ''}`} onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : 'Done'}</button>
       </div>
 
       <div className="todo-detail-scroll" ref={scrollRef}>

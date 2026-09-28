@@ -605,7 +605,7 @@ function ActivatedTodosCard({ items, onToggle, onDelete, onDeactivate }) {
 
 // Activated notes — aggregated from all projects into one "Notes" card
 function ActivatedNotesCard({ items, onDelete, onDeactivate }) {
-  const darkDots = useTheme() === 'dark-dots'
+  const darkDots = ['dark-dots', 'light-dots'].includes(useTheme())
   const { reorderHomeNotes, updateProjectNote, toggleProjectNoteActivated, categories, setProjectNoteScheduled, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const [calFor, setCalFor] = useState(null)
   const openSchedule = useCallback((id, el) => {

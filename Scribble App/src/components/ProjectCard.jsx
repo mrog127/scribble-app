@@ -291,7 +291,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       if (!longPress) return
       const s = dragRef.current
       if (s) {
-        const liftShadow = document.documentElement.dataset.theme === 'dark-dots'
+        const liftShadow = ['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)
           ? '0 10px 32px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.18)'
         s.clone.style.transition = 'box-shadow 120ms ease'
         s.clone.style.boxShadow = liftShadow
@@ -1878,7 +1878,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
 
   // Dark Dots puts the type tabs and the add button in a row at the foot of the
   // card instead of in its header (Figma: Active Page, node 384:7897).
-  const tabsAtBottom = useTheme() === 'dark-dots'
+  const tabsAtBottom = ['dark-dots', 'light-dots'].includes(useTheme())
   const tabRow = (
               <div className="project-tab-bar" ref={tabBarRef}>
                 <div className="project-tab-indicator" ref={tabIndicatorRef}/>

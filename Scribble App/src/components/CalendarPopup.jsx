@@ -52,6 +52,9 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent, 
     const date = new Date(view.y, view.m, d)
     date.setHours(0, 0, 0, 0)
     if (date < today) return
+    // Today isn't a date you schedule for — tapping it takes the pick away,
+    // back to "not scheduled" (so an unscheduled item reads Cancel again)
+    if (date.getTime() === today.getTime()) { setPending(null); return }
     const str = toStr(view.y, view.m, d)
     // Pressing the selected date deselects it
     setPending(prev => (prev === str ? null : str))
@@ -59,11 +62,17 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent, 
 
   const changed = (pending || null) !== (initialDate || null) ||
     (allowRecurring && recur !== (initialRecurrence || 'never'))
-  // "Save" once there's a date to save — or once an existing date has been
-  // deselected, which saves as clearing the schedule.
-  const canSave = changed && (!!pending || !!initialDate)
+  // Any change — a different date, or a different Recurring setting — turns
+  // Cancel into Save. With no date picked, today is the selection: a
+  // recurrence set then starts today; with no recurrence, saving clears the
+  // schedule.
+  const canSave = changed
   const onHeaderBtn = () => {
-    if (canSave) onSelect(pending, allowRecurring ? recur : undefined)
+    if (canSave) {
+      const recurs = allowRecurring && recur !== 'never'
+      const date = pending || (recurs ? toStr(today.getFullYear(), today.getMonth(), today.getDate()) : null)
+      onSelect(date, allowRecurring ? recur : undefined)
+    }
     close()
   }
 
@@ -86,7 +95,7 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent, 
       >
         <div className="save-to-header">
           <p className="save-to-title">Schedule for...</p>
-          <button className="save-to-cancel" onPointerDown={e => { e.preventDefault(); onHeaderBtn() }}>
+          <button className={`save-to-cancel${canSave ? ' is-save' : ''}`} onPointerDown={e => { e.preventDefault(); onHeaderBtn() }}>
             {canSave ? 'Save' : 'Cancel'}
           </button>
         </div>
@@ -113,12 +122,15 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent, 
               date.setHours(0, 0, 0, 0)
               const isPast = date < today
               const isToday = date.getTime() === today.getTime()
-              const isSelected = selected && date.getTime() === new Date(selected.getFullYear(), selected.getMonth(), selected.getDate()).getTime()
+              // Nothing picked means today — it shows filled like any picked day
+              const isSelected = selected
+                ? date.getTime() === new Date(selected.getFullYear(), selected.getMonth(), selected.getDate()).getTime()
+                : isToday
               return (
                 <button
                   key={i}
                   className={`cal-cell${isPast ? ' past' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}`}
-                  disabled={isPast || isToday}
+                  disabled={isPast}
                   onPointerDown={e => { e.preventDefault(); pick(d) }}
                 >
                   {d}
@@ -134,7 +146,7 @@ export default function CalendarPopup({ initialDate, onSelect, onClose, accent, 
                 <span className="cal-recur-label">Recurring</span>
                 <div className="cal-recur-wrap">
                   <button
-                    className="save-to-cancel cal-recur-btn"
+                    className={`save-to-cancel cal-recur-btn${recur !== 'never' ? ' on' : ''}`}
                     onPointerDown={e => { e.preventDefault(); setRecurMenu(v => !v) }}
                   >{recurrenceLabel(recur)}</button>
                   <div className={`card-context-menu cal-recur-menu${recurMenu ? ' open' : ''}`}>

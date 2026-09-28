@@ -25,7 +25,7 @@ const hexToRgb = (hex) => [
 ]
 const rgbToHex = ([r, g, b]) =>
   '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0').toUpperCase()).join('')
-const mixHex = (a, b, f) => {
+export const mixHex = (a, b, f) => {
   const A = hexToRgb(a), B = hexToRgb(b)
   return rgbToHex([0, 1, 2].map(i => A[i] + (B[i] - A[i]) * f))
 }
@@ -51,7 +51,7 @@ export const DARK_DOTS_COLORS = DARK_DOTS_BASES.map(base => ({
   baseRgb: hexToRgb(base).join(','),
 }))
 
-const PALETTES = { paintbrush: ACCENT_COLORS, 'dark-dots': DARK_DOTS_COLORS }
+const PALETTES = { paintbrush: ACCENT_COLORS, 'dark-dots': DARK_DOTS_COLORS, 'light-dots': DARK_DOTS_COLORS }
 const themeColors = () => PALETTES[getTheme()] || ACCENT_COLORS
 
 // The accent the Gallery and the app chrome wear.

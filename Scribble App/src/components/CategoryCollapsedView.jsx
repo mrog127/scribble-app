@@ -694,7 +694,7 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
 
 // ============ Notes ============
 export function CollapsedNotesCard({ category, bare = false, onlyActivated = false }) {
-  const darkDots = useTheme() === 'dark-dots'
+  const darkDots = ['dark-dots', 'light-dots'].includes(useTheme())
   const { categories, deleteProjectNote, updateProjectNote, toggleProjectNoteActivated, reorderCategoryNotes, setProjectNoteScheduled, archiveProjectNote, unarchiveProjectNote, openDetail, setOpenDetail, promptDelete } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category

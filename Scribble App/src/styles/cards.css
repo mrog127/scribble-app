@@ -2535,7 +2535,8 @@
 /* Today wears the light highlight box; it marks the date rather than offering
    it, so it isn't selectable. The selected day is the dark colour. */
 .cal-cell.today {
-  pointer-events: none;
+  /* Tappable: it clears the pick (see CalendarPopup) */
+  cursor: pointer;
   background: rgba(var(--accent-base-rgb), 0.5);
   color: var(--accent-dark);
   border-radius: 8px;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { flushSync } from 'react-dom'
-import { ACCENT_COLORS, getCategoryAccent, getHomeAccent } from './theme.js'
+import { ACCENT_COLORS, getCategoryAccent, getHomeAccent, mixHex } from './theme.js'
 import { useTheme } from './useTheme.js'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
@@ -17,6 +17,7 @@ import AddCanvasRow from './components/AddCanvasRow.jsx'
 import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
 import { registerKeyboardKeeper, keepKeyboardAlive } from './keyboardKeeper.js'
 import { pasteInto } from './clipboard.js'
+import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon } from './components/FeatherIcons.jsx'
 
 // Wraps every case-insensitive occurrence of `q` in `text` so the matched span
 // can be tinted. Returns an array of strings and <mark> nodes.
@@ -60,6 +61,22 @@ function usePullToRefresh(onRefresh) {
     const THRESHOLD = 64, MAX = 96
     const s = { active: false, startY: 0, page: null, dist: 0, refreshing: false }
 
+    // The page the gesture is actually over. The Settings sheet sits on top of the
+    // homepage and scrolls its own .page, so its scroll position is what matters there.
+    const pageFor = (target) =>
+      target.closest('.settings-sheet')?.querySelector('.page') ||
+      document.querySelector('#app .page:not(.page-exiting)')
+
+    // True if anything the gesture is inside is scrolled down at all — not just
+    // the page. Settings (and other pages) can scroll an inner box rather than
+    // .page itself, which stays at scrollTop 0 and would read as "at the top".
+    const scrolledAbove = (target, page) => {
+      for (let el = target; el && el !== app; el = el.parentElement) {
+        if (el.scrollTop > 0) return true
+      }
+      return !!page && page.scrollTop > 0
+    }
+
     const setSpinner = (dist) => {
       const el = spinnerRef.current
       if (!el) return
@@ -80,14 +97,14 @@ function usePullToRefresh(onRefresh) {
     const onStart = (e) => {
       if (s.refreshing) return
       if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
-      const page = document.querySelector('#app .page:not(.page-exiting)')
-      if (!page || page.scrollTop > 0) return
-      s.page = page; s.startY = e.touches[0].clientY; s.active = true; s.dist = 0
+      const page = pageFor(e.target)
+      if (!page || scrolledAbove(e.target, page)) return
+      s.page = page; s.target = e.target; s.startY = e.touches[0].clientY; s.active = true; s.dist = 0
       const el = spinnerRef.current; if (el) el.style.transition = ''
     }
     const onMove = (e) => {
       if (!s.active || s.refreshing) return
-      if (!s.page || s.page.scrollTop > 0) { s.active = false; setSpinner(0); return }
+      if (!s.page || scrolledAbove(s.target, s.page)) { s.active = false; setSpinner(0); return }
       const dy = e.touches[0].clientY - s.startY
       if (dy <= 0) { s.dist = 0; setSpinner(0); return }
       s.dist = dy * 0.5
@@ -117,21 +134,22 @@ function usePullToRefresh(onRefresh) {
     // (no wheel activity for 300ms while at scrollTop 0), then a deliberate scroll-up.
     // Momentum from scrolling up into the top keeps resetting the idle timer, so it
     // never arms — preventing accidental refreshes just from reaching the top.
-    let wheelDist = 0, wheelTimer = null, idleTimer = null, topIdle = true
+    let wheelDist = 0, wheelTimer = null, idleTimer = null, topIdle = true, wheelPage = null, wheelTarget = null
     const scheduleIdle = () => {
       clearTimeout(idleTimer)
       idleTimer = setTimeout(() => {
         if (s.refreshing) return
-        const p = document.querySelector('#app .page:not(.page-exiting)')
-        if (p && p.scrollTop <= 0) topIdle = true
+        const p = wheelPage || document.querySelector('#app .page:not(.page-exiting)')
+        if (p && !scrolledAbove(wheelTarget || p, p)) topIdle = true
       }, 300)
     }
     const onWheel = (e) => {
       if (s.refreshing) return
       if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
-      const page = document.querySelector('#app .page:not(.page-exiting)')
+      const page = pageFor(e.target)
       if (!page) return
-      const atTop = page.scrollTop <= 0
+      wheelPage = page; wheelTarget = e.target
+      const atTop = !scrolledAbove(e.target, page)
       if (!atTop) topIdle = false
       const pulling = atTop && topIdle && e.deltaY < 0 && Math.abs(e.deltaY) >= Math.abs(e.deltaX)
       if (!pulling) {
@@ -202,7 +220,10 @@ function AppInner() {
 
   // Re-render the whole app when the theme changes, so accent colours (which are
   // read at render time) refresh with it.
-  useTheme()
+  const theme = useTheme()
+  // Dark Dots draws the add box's content-type tabs with the canvas card tabs'
+  // Feather icons (2px, selected one at 24px)
+  const featherTabs = ['dark-dots', 'light-dots'].includes(theme)
 
   // Settings sheet — mobile only; desktop still reaches Settings via the nav tab
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -251,6 +272,11 @@ function AppInner() {
     const from = row.getBoundingClientRect()
     const to = target.getBoundingClientRect()
     const targetRadius = getComputedStyle(target).borderRadius
+    // Dark Dots: the copy is the row's own card grey, with no outline — not
+    // Paintbrush's cream box
+    const darkDots = ['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)
+    const cardBg = darkDots ? getComputedStyle(row.closest('.card') || row).backgroundColor : null
+    const cloneBg = darkDots ? (cardBg && cardBg !== 'rgba(0, 0, 0, 0)' ? cardBg : '#2B2B2B') : '#F7F6F3'
 
     const clone = document.createElement('div')
     clone.style.cssText = [
@@ -261,9 +287,9 @@ function AppInner() {
       `height:${from.height}px`,
       'overflow:hidden',
       'pointer-events:none',
-      'background:#F7F6F3',
-      'border:1px solid #C2C1BF',
-      'border-radius:8px',
+      `background:${cloneBg}`,
+      darkDots ? 'border:none' : 'border:1px solid #C2C1BF',
+      darkDots ? 'border-radius:32px' : 'border-radius:8px',
       'box-sizing:border-box',
       'opacity:1',
       `transition:left ${FLOAT_MS}ms ease, top ${FLOAT_MS}ms ease, width ${FLOAT_MS}ms ease, height ${FLOAT_MS}ms ease, border-radius ${FLOAT_MS}ms ease, opacity ${FLOAT_MS}ms ease`,
@@ -2166,6 +2192,8 @@ function AppInner() {
                       {showDivider && <div className="save-to-divider"/>}
                       <button
                         className="search-result-row"
+                        /* The row's accent, for themes that colour the match text */
+                        style={{ '--hit-rgb': getCategoryAccent(r.accentIdx).baseRgb }}
                         onMouseDown={e => { e.preventDefault(); openSearchResult(r) }}
                       >
                         <span className="search-result-icon" style={{ color: getCategoryAccent(r.accentIdx).base }}>
@@ -2526,7 +2554,7 @@ function AppInner() {
                             <defs>
                               <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
                                 <stop offset="0%" stopColor={acc.base} />
-                                <stop offset="100%" stopColor={acc.light} />
+                                <stop offset="100%" stopColor={theme === 'light-dots' ? mixHex(acc.base, '#F0F0F0', 0.72) : acc.light} />
                               </linearGradient>
                             </defs>
                             <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.6" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
@@ -2755,6 +2783,7 @@ function AppInner() {
                   className={`toolbar-icon-btn${toolbarType === 'list' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setToolbarType('list') }}
                 >
+                  {featherTabs ? <FeatherListIcon size={toolbarType === 'list' ? 24 : 20} color={toolbarType === 'list' ? 'var(--accent-base)' : '#7A7A7A'}/> : (
                   <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
                     <circle cx="5" cy="7" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
                     <line x1="9" y1="7" x2="19" y2="7" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
@@ -2762,18 +2791,19 @@ function AppInner() {
                     <line x1="9" y1="12" x2="19" y2="12" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                     <circle cx="5" cy="17" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
                     <line x1="9" y1="17" x2="14" y2="17" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                  </svg>
+                  </svg>)}
                 </button>
                 <button
                   className={`toolbar-icon-btn${toolbarType === 'note' ? ' selected' : ''}`}
                   onMouseDown={e => { e.preventDefault(); setToolbarType('note') }}
                 >
+                  {featherTabs ? <FeatherFileIcon size={toolbarType === 'note' ? 24 : 20} color={toolbarType === 'note' ? 'var(--accent-base)' : '#7A7A7A'}/> : (
                   <svg width="20" height="20" viewBox="0 0 20 22" fill="none">
                     <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round" fill="none"/>
                     <path d="M12 3v5h5" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round"/>
                     <line x1="5" y1="13" x2="15" y2="13" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
                     <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                  </svg>
+                  </svg>)}
                 </button>
                 <button
                   className={`toolbar-icon-btn${toolbarType === 'link' ? ' selected' : ''}`}
@@ -2790,10 +2820,11 @@ function AppInner() {
                     setToolbarType('link')
                   }}
                 >
+                  {featherTabs ? <FeatherLinkIcon size={toolbarType === 'link' ? 24 : 20} color={toolbarType === 'link' ? 'var(--accent-base)' : '#7A7A7A'}/> : (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={toolbarType === 'link' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={toolbarType === 'link' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  </svg>)}
                 </button>
               </div>
             </div>

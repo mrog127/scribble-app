@@ -7,6 +7,7 @@
 
 export const THEMES = [
   { id: 'dark-dots', name: 'Dark Dots' },
+  { id: 'light-dots', name: 'Light Dots' },
   { id: 'paintbrush', name: 'Paintbrush' },
 ]
 
@@ -30,7 +31,7 @@ export function applyTheme(id) {
   document.documentElement.dataset.theme = id
   // Keeps the iOS status-bar strip the same colour as the app
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', id === 'dark-dots' ? '#212121' : '#F2F0EB')
+  if (meta) meta.setAttribute('content', id === 'light-dots' ? '#F0F0F0' : id === 'dark-dots' ? '#212121' : '#F2F0EB')
 }
 
 const listeners = new Set()

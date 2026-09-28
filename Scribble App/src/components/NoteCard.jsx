@@ -204,7 +204,7 @@ function StarIcon() {
 }
 
 function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
-  const darkDots = useTheme() === 'dark-dots'
+  const darkDots = ['dark-dots', 'light-dots'].includes(useTheme())
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
   const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId,
@@ -368,11 +368,17 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const span = btn?.querySelector('span')
     const ind = indicatorRef.current
     if (btn && span && ind) {
-      // Center indicator on the text label, extending 12px on each side
-      const textLeft = btn.offsetLeft + span.offsetLeft
       ind.style.transition = 'left 100ms ease, width 100ms ease'
-      ind.style.left = (textLeft - 12) + 'px'
-      ind.style.width = (span.offsetWidth + 24) + 'px'
+      if (['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)) {
+        // Dark Dots: the tabs split the bar evenly — the pill fills the tab
+        ind.style.left = btn.offsetLeft + 'px'
+        ind.style.width = btn.offsetWidth + 'px'
+      } else {
+        // Center indicator on the text label, extending 12px on each side
+        const textLeft = btn.offsetLeft + span.offsetLeft
+        ind.style.left = (textLeft - 12) + 'px'
+        ind.style.width = (span.offsetWidth + 24) + 'px'
+      }
       ind.style.opacity = ''
     } else if (ind) {
       // No button for this style — the note title, which has no toolbar entry.

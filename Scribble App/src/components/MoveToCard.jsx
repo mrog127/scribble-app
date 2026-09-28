@@ -23,7 +23,34 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
   const tabProjects = (categories.find(c => c.id === tab)?.projects || [])
     .filter(p => !p.archived || p.id === currentProjectId)
   const scrollRef = useRef(null)
+  const cardRef = useRef(null)
   const [open, setOpen] = useState(false)
+
+  // Dark Dots, phone layout, opened from a list item / note / link page: the
+  // card runs from 16px below the page title down to 16px above the footer's
+  // folder (canvas) button, and the page behind dims to 50% except that button.
+  useLayoutEffect(() => {
+    if (!['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)) return
+    if (window.innerWidth >= 1000) return
+    const app = document.getElementById('app')
+    const card = cardRef.current
+    const pages = [...document.querySelectorAll('.note-detail-page.open')]
+    const page = pages[pages.length - 1]
+    const folder = page?.querySelector('.detail-footer-project-btn')
+    if (!app || !card || !page || !folder) return
+    const appRect = app.getBoundingClientRect()
+    const fRect = folder.getBoundingClientRect()
+    // The title may have scrolled up under the header — then the header's edge
+    const title = page.querySelector('.todo-detail-title, .note-detail-title')
+    const header = page.querySelector('.note-detail-header')
+    const tRect = title?.getBoundingClientRect()
+    const hRect = header?.getBoundingClientRect()
+    const titleBottom = Math.max(tRect && tRect.height ? tRect.bottom : 0, hRect ? hRect.bottom : 0)
+    card.style.top = (titleBottom - appRect.top + 16) + 'px'
+    card.style.bottom = (appRect.bottom - fRect.top + 16) + 'px'
+    app.classList.add('move-from-detail')
+    return () => app.classList.remove('move-from-detail')
+  }, [])
 
   useEffect(() => { requestAnimationFrame(() => setOpen(true)) }, [])
   const finish = (fn) => { setOpen(false); setTimeout(fn, 180) }
@@ -51,6 +78,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
   return createPortal(
     <div className={`move-to-overlay${open ? ' open' : ''}`} onPointerDown={() => finish(onCancel)}>
     <div
+      ref={cardRef}
       className={`move-to-card${open ? ' open' : ''}`}
       onPointerDown={e => e.stopPropagation()}
       style={selAccent ? { '--accent-dark': selAccent.dark } : undefined}

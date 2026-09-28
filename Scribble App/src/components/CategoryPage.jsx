@@ -69,7 +69,7 @@ function CancelIcon() {
 
 export default function CategoryPage({ categoryId, collapsed = false, onToggleCollapsed, onScroll, headerOpacity, headerTranslate, pageAnimClass = '', isExiting = false }) {
   const { categories, addProject, reorderProjects, archiveCategory, renameCategory, toggleCategoryHomescreen, toggleCategoryGalleryCanvas } = useAppContext()
-  const darkDots = useTheme() === 'dark-dots'
+  const darkDots = ['dark-dots', 'light-dots'].includes(useTheme())
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)

@@ -85,7 +85,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
       const cloneTop = dragged.rect.top - appRect.top - 4
 
       // Build floating ghost clone
-      const darkGhost = !!ghostClass && document.documentElement.dataset.theme === 'dark-dots'
+      const darkGhost = !!ghostClass && ['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)
       const cloneInner = dragged.el.cloneNode(true)
       cloneInner.style.pointerEvents = 'none'
       cloneInner.style.background = darkGhost ? 'transparent' : '#F7F6F3'

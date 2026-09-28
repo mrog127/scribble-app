@@ -8896,3 +8896,65 @@ body.resizing-detail .phone { transition: none !important; }
     left: calc(340px + var(--gutter) + 36px);
   }
 }
+
+/* TRIAL (Dots themes) — Gallery page cards as clear liquid glass, like the easel
+   page's Gallery card but with no colour: the translucent fill over a blurred,
+   saturated pull-through, a 20% black drop shadow, and a white gradient outline
+   and white inner glow orbiting. Light Dots gets the stronger white highlights.
+   (The pinned easel card keeps its own treatment.) Delete this block to undo. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card:not(.gallery-canvas) {
+  position: relative;
+  background: var(--mbar-chrome);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card:not(.gallery-canvas) {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.06);
+  animation: gallery-canvas-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas)::before {
+  opacity: 1;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas)::after {
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::after { animation: none; }
+}
+/* END TRIAL */
+
+/* Dots themes: a list item's sublabel (its canvas / easel name) sits the same
+   distance under the item text as a note's preview line does under the note
+   title — 1px gap, 12px text on a normal line height (both titles occupy a 25px
+   line box) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) :is(.todo-row, .link-row) .source-label { margin-top: 1px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) :is(.todo-row, .link-row) .source-label-text { line-height: normal; }

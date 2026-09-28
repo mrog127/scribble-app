@@ -7515,3 +7515,10 @@ body.resizing-detail .phone { transition: none !important; }
 @media (max-width: 999.98px) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-context-menu.mbar-page-menu { border-radius: 32px; }
 }
+
+/* Light Dots is a light theme: without this it inherits Dark Dots' dark colour
+   scheme, which paints iOS's status-bar strip (and native controls) dark */
+:root[data-theme="light-dots"] { color-scheme: light; }
+
+/* Light Dots: canvas card plus button's drop shadow in the easel colour at 16% */
+:root[data-theme="light-dots"] .project-bottom-bar .project-add-btn { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16); }

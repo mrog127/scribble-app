@@ -40,6 +40,13 @@ export function setTheme(id) {
   try { localStorage.setItem(KEY, id) } catch { /* private mode */ }
   applyTheme(id)
   listeners.forEach(fn => fn(id))
+  // Home-screen app on iOS: the status-bar strip around the Dynamic Island takes
+  // its colour when the page loads and doesn't follow later changes, so reload
+  // once the switch is saved — the head script in index.html then sets the new
+  // theme's colour before iOS reads it. (Safari tabs update live; no reload.)
+  if (window.navigator.standalone === true) {
+    setTimeout(() => window.location.reload(), 150)
+  }
 }
 
 // Components that need to render differently per theme (rather than just look

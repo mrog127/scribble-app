@@ -6,6 +6,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#F2F0EB" />
+    <!-- Apply the saved theme before anything paints, so the page background and
+         the browser's status-bar tint are right from the first frame (the app
+         re-applies it on start; see src/themes.js). -->
+    <script>
+      (function () {
+        try {
+          var id = localStorage.getItem('scribble-theme') || 'dark-dots'
+          if (['dark-dots', 'light-dots', 'paintbrush'].indexOf(id) < 0) id = 'dark-dots'
+          document.documentElement.dataset.theme = id
+          var c = id === 'light-dots' ? '#F0F0F0' : id === 'dark-dots' ? '#212121' : '#F2F0EB'
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', c)
+        } catch (e) {}
+      })()
+    </script>
     <meta name="apple-mobile-web-app-title" content="Scribble" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/icon-192.png" />

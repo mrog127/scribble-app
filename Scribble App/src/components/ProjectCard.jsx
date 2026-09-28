@@ -1238,6 +1238,27 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     }
   }, [selectedTab, showTabs, collapsed, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep the selector box on its tab when the bar itself changes width (the
+  // cards column narrows or widens as a detail panel opens, closes or is
+  // resized). Tracks the resize directly, without the slide transition.
+  useEffect(() => {
+    const bar = tabBarRef.current
+    const ind = tabIndicatorRef.current
+    if (!bar || !ind || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const sel = bar.querySelector('.project-tab-btn.selected')
+      if (!sel) return
+      const prev = ind.style.transition
+      ind.style.transition = 'none'
+      ind.style.left = sel.offsetLeft + 'px'
+      ind.style.width = sel.offsetWidth + 'px'
+      ind.offsetWidth // commit before restoring the transition
+      ind.style.transition = prev
+    })
+    ro.observe(bar)
+    return () => ro.disconnect()
+  }, [showTabs, collapsed, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- Slide the composer type-selector box to the active add-type ----
   useLayoutEffect(() => {
     const bar = typeBarRef.current

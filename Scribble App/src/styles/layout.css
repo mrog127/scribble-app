@@ -7522,3 +7522,1377 @@ body.resizing-detail .phone { transition: none !important; }
 
 /* Light Dots: canvas card plus button's drop shadow in the easel colour at 16% */
 :root[data-theme="light-dots"] .project-bottom-bar .project-add-btn { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16); }
+
+/* =============================================
+   Dots themes — desktop (≥1000px)
+   ============================================= */
+@media (min-width: 1000px) {
+  /* Sidebar date: the Gallery's new date styling, and the easel dots under it in
+     place of the paintbrush decoration */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-date-decoration { display: none; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date :is(.active-day-name, .active-month-date) {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 50px;
+    letter-spacing: -1.92px;
+    color: #E6E6E6;
+    margin: 0 0 0 4px;
+  }
+  :root[data-theme="light-dots"] .sidebar-date :is(.active-day-name, .active-month-date) { color: #292929; }
+  /* 16px above the dots (not the Gallery's 24px) so they clear the add-item pill
+     below, which is fixed at 199px */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots {
+    display: flex;
+    gap: 4px;
+    margin: 16px 0 0 6px;
+  }
+
+  /* Nav labels: Helvetica Neue medium */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab::after,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tabs-scroll .text-tab,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tabs-scroll .text-tab .tab-label {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-weight: 500;
+  }
+
+  /* Settings gear at 2px */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .tab-pages svg * {
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+/* Dots themes, desktop: the open Add item box matches mobile — the rules below
+   are the mobile ones re-scoped to the sidebar. The box itself wraps just the
+   field and the Display / content-type row: it lifts off the full-height sidebar
+   column, 12px in from its edges and 16px above the pill (so the pill doesn't
+   move), and the nav area shrinks to that one row while the tabs are hidden. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    top: 183px;
+    bottom: auto;
+    left: calc(var(--gutter) + 12px);
+    width: 316px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .tab-area {
+    flex: 0 0 auto;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) {
+    height: var(--mbar-h);
+    border-radius: calc(var(--mbar-h) / 2);
+    background: var(--mbar-chrome);
+    margin-right: 48px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input {
+    padding-right: 16px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input::placeholder {
+    color: #7A7A7A;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack):has(> .add-link-url-wrap.open) {
+    flex-direction: row;
+    align-items: center;
+    height: var(--mbar-h);
+    border-radius: calc(var(--mbar-h) / 2);
+    margin-bottom: calc(var(--mbar-h) + 8px);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack):has(> .add-link-url-wrap.open) > .add-input {
+    width: auto;
+    flex: 1 1 0%;
+    height: var(--mbar-h);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    height: var(--mbar-h);
+    max-height: none;
+    overflow: visible;
+    border-radius: calc(var(--mbar-h) / 2);
+    background: var(--mbar-chrome);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .add-input-divider {
+    display: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+    width: 100%;
+    height: var(--mbar-h);
+    padding: 0 48px 0 16px;
+    background: transparent;
+    border: none;
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input::placeholder {
+    color: #7A7A7A;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) {
+    top: 0;
+    z-index: 3;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .paste-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 8px;
+    bottom: auto;
+    right: 8px;
+    height: calc(var(--mbar-h) - 16px);
+    padding: 0 12px;
+    border-radius: 32px;
+    background: rgba(var(--accent-base-rgb), 0.24);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent-base);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+    padding-right: 88px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+    top: 4px;
+    right: -48px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(var(--accent-base-rgb), 0.24);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    animation: none;
+    overflow: visible;
+  }
+}
+@media (min-width: 1000px) {
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(var(--cb-stroke-angle), hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6), hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cb-stroke-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::after {
+    inset: 0;
+    border-radius: 50%;
+    opacity: 0.1;
+    background: none;
+    animation: dd-send-glow 8s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible svg {
+    position: relative;
+    z-index: 3;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible svg * {
+    stroke: var(--accent-base) !important;
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible:hover::after {
+      opacity: 0.1;
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .tab-area {
+    height: var(--mbar-h);
+    margin-top: 8px;
+    border-top: none;
+    overflow: visible;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .input-toolbar {
+    height: var(--mbar-h);
+    padding: 0;
+    gap: 8px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-divider {
+    display: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left {
+    flex: 0 0 auto;
+    width: calc(50% - 4px);
+    height: var(--mbar-h);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
+    width: 100%;
+    height: var(--mbar-h);
+    padding: 0 16px;
+    border-radius: 32px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  }
+}
+@media (min-width: 1000px) {
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-label {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent-base);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-label.inactive {
+    color: #E6E6E6;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn.inactive svg {
+    stroke: #E6E6E6 !important;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn:not(.inactive) {
+    background: rgba(var(--accent-base-rgb), 0.24);
+    border-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:hover::after,
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:has(button:hover)::after {
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      transform: none;
+      border-radius: 32px;
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-right {
+    flex: 1 1 0;
+    min-width: 0;
+    height: var(--mbar-h);
+    padding: 4px;
+    gap: 0;
+    box-sizing: border-box;
+    background: #333333;
+    border-radius: 32px;
+    justify-content: space-between;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: calc(var(--mbar-h) - 8px);
+    border-radius: 32px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-indicator {
+    height: calc(var(--mbar-h) - 8px);
+    border-radius: 32px;
+    background: rgba(var(--accent-base-rgb), 0.24);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn svg :is(line, path, polygon) {
+    stroke: #7A7A7A;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn svg circle {
+    fill: #7A7A7A;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn.selected svg :is(line, path, polygon) {
+    stroke: var(--accent-base);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn.selected svg circle {
+    fill: var(--accent-base);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    padding: 16px 16px 14px;
+    background: var(--mbar-chrome);
+    border: none;
+    border-radius: 32px;
+    overflow: visible;
+    animation: dd-box-glow 8s linear infinite;
+  }
+}
+@media (min-width: 1000px) {
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cb-stroke-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack),
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack)::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
+    display: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) :is(.add-input, .link-url-input) {
+    border-radius: calc(var(--mbar-h) / 2);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) :is(.add-input, .link-url-input) {
+    font-weight: 500;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .cc-overlay-text {
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-weight: 500;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
+    align-self: center;
+    height: calc(var(--mbar-h) - 8px);
+    box-shadow: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-right {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:hover::after,
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-left:has(button:hover)::after {
+      top: 4px;
+      height: calc(var(--mbar-h) - 8px);
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+    padding-right: 16px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 4px;
+    bottom: auto;
+    right: -48px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: #333333;
+    z-index: 3;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .paste-btn-label {
+    display: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .paste-btn-icon {
+    display: block;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) svg * {
+    stroke: #E6E6E6;
+    stroke-width: 2;
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear):hover {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input::placeholder {
+    color: #969696;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input::placeholder {
+    color: #969696;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-label.inactive {
+    color: #292929;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn.inactive svg {
+    stroke: #292929 !important;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn svg :is(line, path, polygon) {
+    stroke: #969696;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-icon-btn svg circle {
+    fill: #969696;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) svg * {
+    stroke: #292929;
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear):hover {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before {
+    background: linear-gradient(var(--cb-stroke-angle), hsl(from var(--accent-base) h s l / 0.6), hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-input {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn.inactive {
+    border-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-right {
+    background: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+    border-radius: calc(var(--mbar-h) / 2);
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) {
+    background: #E3E3E3;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    animation-name: ld-box-glow;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
+    opacity: 1;
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    padding-bottom: 8px;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+    opacity: 1;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    animation-name: ld-box-glow;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+    opacity: 1;
+  }
+}
+
+/* Dots themes, desktop: unselected nav tabs #7A7A7A in Dark Dots and #969696 in
+   Light Dots, icons included; and the add-item row sits
+   32px below the easel dots (sidebar 40px top padding + two 50px date lines +
+   16px + the 12px dots = 168px, so the row starts at 200px) */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tabs-scroll .text-tab:not(.selected),
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab:not(.selected)::after { color: #7A7A7A; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab:not(.selected) svg :is(path, line, polyline, circle, polygon, rect) { stroke: #7A7A7A !important; }
+  :root[data-theme="light-dots"] .tabs-scroll .text-tab:not(.selected),
+  :root[data-theme="light-dots"] .tab-bar .icon-tab:not(.selected)::after { color: #969696; }
+  :root[data-theme="light-dots"] .tab-bar .icon-tab:not(.selected) svg :is(path, line, polyline, circle, polygon, rect) { stroke: #969696 !important; }
+
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer { top: 200px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) { top: 184px; }
+}
+
+/* Dots themes, desktop: the date lines never wrap. "September 28" is wider than
+   the sidebar's 276px text column and was breaking onto a third line, pushing
+   the dots under the control bar. On one line it runs into the sidebar's right
+   padding instead, and the header keeps the fixed height the bar is placed by. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date :is(.active-day-name, .active-month-date) { white-space: nowrap; }
+}
+
+/* Dots themes, desktop: the open Add item box and the Save to menu below it share
+   one width — halfway between the two (box was 316px at 12px in, the menu card
+   284px at 28px in → both 300px, 20px in from the sidebar's edges) — with 16px
+   between them. The box is ~126px tall from its 184px top, so the menu starts at
+   326px; in link mode the URL row adds 52px. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
+    left: calc(var(--gutter) + 20px);
+    width: 300px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel.visible:not(.search-panel) {
+    top: 326px;
+    padding: 0 20px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app:has(.add-link-url-wrap.open) .save-to-panel.visible:not(.search-panel) { top: 378px; }
+}
+
+/* Dots themes, desktop: Gallery's selection pill is a card fill (#292929 dark,
+   #FAFAFA light) with the label and 2px icon in the theme's text colour; and
+   64px between the sidebar and the content (the sidebar's 28px right padding +
+   a 36px page gutter). */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar.star-active .tab-home.selected {
+    background: #292929;
+    border-color: transparent;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .tab-home {
+    --pulse-mid-bg: #292929;
+    --pulse-mid-border: transparent;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar.star-active .tab-home.selected::after { color: #E6E6E6; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .tab-home svg .museum { stroke-width: 2; vector-effect: non-scaling-stroke; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar.star-active .tab-home.selected svg .museum { stroke: #E6E6E6; }
+
+  :root[data-theme="light-dots"] .tab-bar.star-active .tab-home.selected { background: #FAFAFA; }
+  :root[data-theme="light-dots"] .tab-bar .tab-home { --pulse-mid-bg: #FAFAFA; }
+  :root[data-theme="light-dots"] .tab-bar.star-active .tab-home.selected::after { color: #292929; }
+  :root[data-theme="light-dots"] .tab-bar.star-active .tab-home.selected svg .museum { stroke: #292929; }
+
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-area { padding-left: 36px; max-width: 900px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .cards-area { max-width: 816px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .page-header { padding-left: 36px; max-width: 900px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .category-page .page-header { max-width: 816px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .cal-overlay {
+    left: 376px;
+    width: min(848px, calc(100% - 392px));
+  }
+}
+
+/* Dots themes, desktop: search. The open bar and its results menu share the
+   Add item box / Save to width — 300px, 20px in from the sidebar's edges (the
+   bar reaches 8px past the add row on both sides) — and the field takes the
+   mobile styling (rules below are the mobile ones re-scoped to desktop). The
+   results start 8px under the bar, which now sits at 200px. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open {
+    right: -8px;
+    width: calc(100% + 16px);
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel.search-panel.visible {
+    top: 252px;
+    padding: 0 20px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open {
+    height: var(--mbar-h);
+    border: none;
+    border-radius: calc(var(--mbar-h) / 2);
+    background: rgba(255, 255, 255, 0.08);
+    animation: dd-box-glow 8s linear infinite;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    opacity: 0.7;
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cb-stroke-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .search-stack-icon {
+    padding-left: 16px;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .search-stack-icon svg * {
+    stroke: #E6E6E6;
+    stroke-width: 2;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack > .search-input {
+    padding-left: 8px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    font-weight: 500;
+    color: #E6E6E6;
+    background: transparent;
+    background-image: none;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack > .search-input::placeholder {
+    color: #7A7A7A;
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .search-close-btn {
+    width: 40px;
+    height: 40px;
+    margin-right: 4px;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .search-close-btn:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .search-close-btn:hover {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .search-close-btn svg * {
+    stroke: #E6E6E6;
+    stroke-width: 2;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .search-stack-icon svg * {
+    stroke: #292929;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer .add-row .search-stack > .search-input {
+    color: #292929;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer .add-row .search-stack > .search-input::placeholder {
+    color: #969696;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .search-close-btn svg * {
+    stroke: #292929;
+  }
+}
+@media (min-width: 1000px) {
+  @media (hover: hover) {
+    :root[data-theme="light-dots"] .search-close-btn:hover {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+    }
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer .add-row .search-stack.open {
+    animation-name: ld-box-glow;
+  }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .footer .add-row .search-stack.open::before {
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+    opacity: 1;
+  }
+}
+
+/* Dots themes, desktop:
+   - The three columns' titles share one baseline: the sidebar's "September 28"
+     (40px top padding + the 50px day line + the date's baseline ≈ 133px down).
+     Easel title: 36px line, baseline ~30px in → header padding-top 103px.
+     Detail title (list item / link / note): under the 56px header (16px + the 40px
+     Done pill), 32px line with its baseline ~26px in → 50px above the title.
+   - An open list item / note / link panel has no divider line or shadow, and sits
+     64px from the cards column: the cards (and Easel header) keep 48px on their
+     right, plus the panel's own 16px inset. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .page-header { padding-top: 103px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .todo-detail-title,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-title { margin-top: 50px; }
+
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page {
+    border-left: none;
+    box-shadow: none;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) .cards-area,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) .category-page .page-header { padding-right: 48px; }
+}
+
+/* Dots themes, desktop: the row whose detail panel is open gets the hover pill's
+   shape — 8px in from the card, fully rounded — in a 4% wash (white in Dark
+   Dots, black in Light Dots) */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .swipe-row.row-open .swipe-content::before {
+    left: 8px;
+    right: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  :root[data-theme="light-dots"] .swipe-row.row-open .swipe-content::before { background: rgba(0, 0, 0, 0.04); }
+}
+
+/* Dots themes, desktop: a detail panel's icon and Done/Save sit 24px above the
+   title — the header drops 26px and the title's gap above shrinks from 50px to
+   24px, so the title's baseline (shared with the sidebar and Easel titles)
+   doesn't move */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-header { padding-top: 42px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .todo-detail-title,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-title { margin-top: 24px; }
+}
+
+/* Dots themes (mobile and desktop): inside the open Add item box the link URL
+   field is a plain field like the title — the box's resting wash only, no glass
+   of its own (no fill, shadow, blur or gradient stroke). Later glass tweaks had
+   put the shadow and stroke back. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
+  display: none;
+}
+
+/* Dots themes, desktop: Gallery's label and icon are always the theme's text
+   colour (white in Dark Dots, #292929 in Light Dots), selected or not */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab.tab-home::after { color: #E6E6E6; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab.tab-home svg :is(path, line, polyline, circle, polygon, rect) { stroke: #E6E6E6 !important; }
+  :root[data-theme="light-dots"] .tab-bar .icon-tab.tab-home::after { color: #292929; }
+  :root[data-theme="light-dots"] .tab-bar .icon-tab.tab-home svg :is(path, line, polyline, circle, polygon, rect) { stroke: #292929 !important; }
+}
+
+/* Dots themes, desktop: the resize handle fills the gutter between the cards and
+   an open detail panel, 8px in from each (the gutter is the cards' 48px right
+   padding + the panel's 16px inset, so the handle is 48px wide, centred 16px
+   left of the panel's edge). Hovering it — or dragging — shows a 2px divider
+   down its centre, 40px from the top and bottom of the screen. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) .detail-resize-handle {
+    right: calc(var(--detail-w) - 8px);
+    width: 48px;
+    margin-right: 0;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 40px;
+    bottom: 40px;
+    left: calc(50% - 1px);
+    width: 2px;
+    border-radius: 1px;
+    background: #4A4A4A;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    pointer-events: none;
+  }
+  :root[data-theme="light-dots"] .detail-resize-handle::after { background: #DBDBDB; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-resize-handle:hover::after,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) body.resizing-detail .detail-resize-handle::after { opacity: 1; }
+}
+
+/* Dots themes, desktop: Settings' label and gear, like Gallery's, are always the
+   theme's text colour (white in Dark Dots, #292929 in Light Dots) */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab.tab-pages::after { color: #E6E6E6; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .tab-bar .icon-tab.tab-pages svg :is(path, line, polyline, circle, polygon, rect) { stroke: #E6E6E6 !important; }
+  :root[data-theme="light-dots"] .tab-bar .icon-tab.tab-pages::after { color: #292929; }
+  :root[data-theme="light-dots"] .tab-bar .icon-tab.tab-pages svg :is(path, line, polyline, circle, polygon, rect) { stroke: #292929 !important; }
+}
+
+
+/* Dots themes: the pinned Gallery canvas casts the glass drop shadow — 20% black
+   (#app outranks the Light Dots "no card shadows" rule) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card.gallery-canvas { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
+
+/* Light Dots: the pinned Gallery canvas is clear liquid glass, like the control
+   bar — the 8% white fill over a blurred, saturated pull-through, the white
+   gradient outline (full white → 30%) orbiting, and a white inner glow (90%)
+   orbiting on the opposite side. No easel colour in the chrome. */
+:root[data-theme="light-dots"] #app .card.gallery-canvas { background: var(--mbar-chrome); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="light-dots"] #app .card.gallery-canvas {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke {
+  opacity: 1;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow {
+  opacity: 1;
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9);
+}
+
+/* Light Dots: the pinned Gallery canvas's easel-coloured outline (full strength,
+   pure white at its bright end) and inner glow (10%), layered over the clear glass ones. Each is a pseudo-element of the white
+   layer (the outline one is clipped to the ring by its parent's mask) running its
+   own copy of the orbit, since the orbit properties don't inherit. */
+:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 1;
+  background: linear-gradient(var(--cb-stroke-angle),
+    rgba(255, 255, 255, 1),
+    hsl(from var(--accent-dark) h s calc(l * 0.576 - 4) / 0.6));
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+}
+:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.1;
+  box-shadow: inset var(--glow-x) var(--glow-y) 22px var(--accent-base);
+  animation: gallery-canvas-orbit 8s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="light-dots"] .gallery-canvas > :is(.gallery-canvas-stroke, .gallery-canvas-glow)::after { animation: none; }
+}
+
+/* Dots themes: pinned Gallery canvas header lines up with its rows. Dots rows are
+   padded 24px, so the 20px checkbox column is centred 34px in and labels start
+   at 60px (24 + 20 + 16). The 18px gallery icon starts at 25px (centred on 34px)
+   and its 17px gap puts "Gallery" at 60px. The icon is drawn at 2px. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card.gallery-canvas > .card-header { padding-left: 25px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .card-header .gallery-title-icon { margin-left: 0; margin-right: 17px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .card-header .gallery-title-icon * {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Dots themes, desktop: 80px of fixed space at the window's left and right edges
+   once the window is narrow enough that the centring gutter would otherwise
+   drop to nothing.
+   - Left: the gutter never falls below 52px, so the sidebar's content (28px in)
+     sits 80px from the edge. It still grows to centre the layout on wide
+     windows.
+   - Right, no panel: the cards keep 80px on their right (caps raised by the
+     64px added so the cards' own width is unchanged).
+   - With a list item / note / link panel open, the edges tighten to 48px: the
+     sidebar's content sits 48px in (gutter 20px) and the panel stands 32px off the
+     right edge, so with its own 16px inset its content ends 48px in; the cards,
+     overlays, resize handle and toast column make room for that.
+   - Narrow desktop with a panel open (sidebar hidden): the cards start 48px in. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) {
+    --gutter: max(52px, calc((100vw - 1300px) / 2));
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) {
+    --gutter: 20px;   /* panel open: sidebar content 48px from the edge */
+  }
+
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-area { padding-right: 80px; max-width: 964px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .cards-area { max-width: 880px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .page-header { padding-right: 80px; max-width: 964px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .category-page .page-header { max-width: 880px; }
+
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page { right: 32px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) .page { padding-right: calc(var(--detail-w) + 32px); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) :is(.cards-area, .category-page .page-header) {
+    padding-right: 48px;
+    max-width: calc(100vw - 340px - var(--gutter) - var(--detail-w) - 32px);
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) :is(.move-to-overlay, .cal-overlay) {
+    left: calc(100% - var(--detail-w) - 32px);
+    right: 32px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) .detail-resize-handle {
+    right: calc(var(--detail-w) + 24px);
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) {
+    --col-avail: calc(100vw - 340px - var(--gutter) - var(--detail-w) - 32px);
+  }
+}
+@media (min-width: 1000px) and (max-width: 1240px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) .page { padding-left: 0; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:has(.note-detail-page.open) :is(.cards-area, .category-page .page-header) {
+    padding-left: 48px;
+    max-width: 100%;
+  }
+}
+/* With the panel standing off the edge, a closed (faded, slid-right) panel
+   would still overlap that strip — keep it from catching clicks there */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page:not(.open) { pointer-events: none; }
+}
+
+/* Dots themes: the Gallery canvas's bottom tab row sits above its glass layers */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .project-bottom-bar { position: relative; z-index: 3; }
+
+/* Light Dots, desktop: the sidebar Gallery tab's activation pulse matches the
+   easel Gallery card — an orbiting outline from pure white to the item's deep
+   shade at full strength, and an orbiting inner glow of white plus the item's
+   colour at 10%. --pulse-light (the flash and glow tint) is the item's colour at
+   10% rather than the Dots "light" shade, which is mixed with the dark
+   background; !important because the pulse colours are set inline. */
+@media (min-width: 1000px) {
+  :root[data-theme="light-dots"] .tab-bar .tab-home {
+    --pulse-light: color-mix(in srgb, var(--pulse-base, #78A4C2) 10%, transparent) !important;
+  }
+  :root[data-theme="light-dots"] .tab-bar .tab-home.pulse-spin::before {
+    opacity: 1;
+    background: linear-gradient(var(--cb-stroke-angle),
+      rgba(255, 255, 255, 1),
+      hsl(from var(--pulse-base, #78A4C2) h s calc(l * 0.576 - 4) / 0.6));
+  }
+  :root[data-theme="light-dots"] .tab-bar .tab-home.pulse-spin .tab-glow {
+    box-shadow:
+      inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9),
+      inset var(--glow-x) var(--glow-y) 22px color-mix(in srgb, var(--pulse-base, #78A4C2) 10%, transparent);
+  }
+}
+
+/* Light Dots: the Gallery canvas's tab track is a 4% black wash on its glass */
+:root[data-theme="light-dots"] .gallery-canvas > .project-bottom-bar .project-tab-bar { background: rgba(0, 0, 0, 0.04); }
+
+/* Dots themes: on a list item page the attachment cards scroll on under the
+   (translucent) Mark as Complete button and fade out over its lower 16px — fully
+   gone at the button's bottom edge. The scroll area reaches 48px (the button's
+   height) into the footer, with the same 48px added to its bottom padding so the
+   last card can still scroll clear of the button. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page:has(> .todo-complete-flash) .todo-detail-scroll {
+  margin-bottom: -48px;
+  padding-bottom: 72px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 16px), transparent 100%);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page:has(> .todo-complete-flash) .detail-footer {
+  position: relative;
+  z-index: 3;
+}
+
+/* Light Dots, desktop: the easel icon on the selected sidebar tab fades from the
+   easel colour to that colour mixed into the light page (72% toward #F0F0F0, as
+   in the mobile Easels menu), not to the Dots "light" shade, which is mixed with
+   the dark background */
+:root[data-theme="light-dots"] #tab-indicator-easel-grad stop:last-child {
+  stop-color: color-mix(in srgb, var(--accent-base) 28%, #F0F0F0);
+}
+
+/* Dots themes: Mark as Complete is glass — it blurs the attachment cards that
+   now scroll under it */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* Dots themes, desktop: a detail panel's footer controls share a baseline with
+   the sidebar's Settings label. Settings is a 44px row 28px above the window's
+   bottom (centre 50px up, 15px text); the controls are a 40px row, so with 30px
+   under them their centre sits 50px up too (16px text, baselines within ~½px). */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page.has-footer .detail-footer,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer { padding-bottom: 30px; }
+}
+
+/* Dots themes: the link tile's edit (pencil) button. Dark Dots: a 6% white wash
+   on the tile with a white pencil, so it reads against the #333 tile body.
+   Light Dots: the light round-button grey (#E3E3E3) with a dark pencil. Hover
+   keeps the fill and adds the usual 4% wash. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-edit { background: rgba(255, 255, 255, 0.06); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-edit svg path { stroke: #E6E6E6; }
+:root[data-theme="light-dots"] .link-tile-edit { background: #E3E3E3; }
+:root[data-theme="light-dots"] .link-tile-edit svg path { stroke: #292929; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-edit:hover { background-color: rgba(255, 255, 255, 0.06); }
+  :root[data-theme="light-dots"] .link-tile-edit:hover { background-color: #E3E3E3; }
+}
+
+/* Dots themes: every detail page (list item, note, link) shares the top and
+   footer button styling.
+   - Light Dots: Done and the folder / three-dot buttons are the light #E3E3E3
+     round-button grey (they were only set for list item and note pages, so link
+     pages kept the dark #333).
+   - Both: Save (a list item's or link's title being edited) is the note page's
+     Save — 24% of the easel colour, easel-colour text, inner glow and gradient
+     outline (its bright end the lightened shade in Dark Dots, the easel colour
+     itself in Light Dots). */
+:root[data-theme="light-dots"] .note-detail-page:not(.editing) .note-detail-done:not(.is-saving),
+:root[data-theme="light-dots"] .note-detail-page :is(.detail-footer-project-btn, .detail-footer .dots-menu) { background: #E3E3E3; }
+
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-detail-done.is-saving {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  color: var(--accent-base);
+  box-shadow: inset -6px -6px 4px rgba(var(--accent-base-rgb), 0.12);
+  overflow: visible;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-detail-done.is-saving::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 32px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+    hsl(from var(--accent-base) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .note-detail-page .note-detail-done.is-saving::before {
+  background: linear-gradient(135deg,
+    hsl(from var(--accent-base) h s l / 0.6),
+    hsl(from var(--accent-base) h s calc(l * 0.576 - 4) / 0.6));
+}
+
+/* =============================================
+   Dots themes: the link card on a link page
+   A clear liquid glass card with 32px corners: the photo sits 16px in from the
+   card's top and sides with 16px corners of its own, and the site name / URL
+   row runs beneath it on the same glass, lined up with the photo's edges.
+   Edit and copy are 40px round buttons on a 4% wash (white in Dark Dots, black
+   in Light Dots).
+   ============================================= */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card {
+  position: relative;
+  padding: 16px 16px 0;
+  border: none;
+  border-radius: 32px;
+  background: var(--mbar-chrome);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+/* The glass's gradient outline */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .link-preview-card {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+}
+:root[data-theme="light-dots"] .link-preview-card::before {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-image { border-radius: 16px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-divider { display: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.link-preview-body, .link-edit) { background: transparent; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-body { padding: 12px 0 16px 4px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-edit-row { padding: 8px 0 16px 4px; }
+
+/* Text in the theme's colours */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.link-preview-title, .link-preview-url, .link-edit-input) {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.link-preview-title, .link-edit-input, .link-edit-input.link-edit-url) { color: #E6E6E6; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-url { color: #7A7A7A; }
+:root[data-theme="light-dots"] :is(.link-preview-title, .link-edit-input, .link-edit-input.link-edit-url) { color: #292929; }
+:root[data-theme="light-dots"] .link-preview-url { color: #969696; }
+
+/* Edit + copy */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-actions { gap: 8px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card .link-edit-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card .link-edit-btn svg * {
+  stroke: #E6E6E6;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+:root[data-theme="light-dots"] .link-preview-card .link-edit-btn { background: rgba(0, 0, 0, 0.04); }
+:root[data-theme="light-dots"] .link-preview-card .link-edit-btn svg * { stroke: #292929; }
+/* Hover / press / copied: the usual extra 4% on top */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card .link-edit-btn:is(:active, .is-copied) { background: rgba(255, 255, 255, 0.08); }
+:root[data-theme="light-dots"] .link-preview-card .link-edit-btn:is(:active, .is-copied) { background: rgba(0, 0, 0, 0.08); }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card .link-edit-btn:hover { background: rgba(255, 255, 255, 0.08); }
+  :root[data-theme="light-dots"] .link-preview-card .link-edit-btn:hover { background: rgba(0, 0, 0, 0.08); }
+}
+
+/* Dots themes, mobile: the link page's card sits 14px from each screen edge (the
+   page's 16px gutter less 2px either side) */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-detail-scroll .link-preview-card { margin-left: -2px; margin-right: -2px; }
+}
+
+/* Dots themes: the link card sits in the page's scroll area, which clips
+   anything past its 16px side gutters (14px on mobile), so its 24px-blur drop
+   shadow was cut off at the sides. A tighter shadow — 12px blur, 4px down — fits
+   inside the gutter. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+}
+:root[data-theme="light-dots"] .link-preview-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+}
+
+/* Dots themes, desktop: the sidebar's dots line up with the top of an Easel's
+   first canvas card, which sits 8px lower than they did — so the dots (and the
+   control bar, the tabs, the open Add item box and the menus hung below it) all
+   move down 8px. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots { margin-top: 24px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer { top: 208px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) { top: 192px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel.visible:not(.search-panel) { top: 334px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app:has(.add-link-url-wrap.open) .save-to-panel.visible:not(.search-panel) { top: 386px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel.search-panel.visible { top: 260px; }
+}
+
+/* Light Dots: the X on a new canvas's (and a canvas rename's) name field is the
+   canvas card's light round-button grey, like its three-dot button, not #333 */
+:root[data-theme="light-dots"] :is(.new-project-card, .card-rename-wrap) .project-cancel-btn { background: #F0F0F0; }
+@media (hover: hover) {
+  :root[data-theme="light-dots"] :is(.new-project-card, .card-rename-wrap) .project-cancel-btn:hover { background-color: #F0F0F0; }
+}
+
+/* Light Dots: three-dot buttons on any card on an Easel page (the content type
+   cards as well as canvas cards) are #F0F0F0; the Easel header's own stay #E3E3E3 */
+:root[data-theme="light-dots"] .category-page .card .card-header .dots-menu { background: #F0F0F0; }
+
+/* Dots themes, desktop: at rest, the Gallery's top card title shares a baseline
+   with the sidebar date (~133px down). A card's header is 16px of padding over a
+   40px row with the 22px title centred in it, putting the title's baseline ~44px
+   below the card's top — so the cards start 89px down. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .cards-area { padding-top: 89px; }
+}
+
+/* Dots themes: a canvas card's (and the Gallery card's) content type tab pill is
+   never wider than 500px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-tab-bar { max-width: 500px; }
+/* …and the plus button keeps to the card's right edge when the pill stops short */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-add-btn { margin-left: auto; }
+
+/* Dots themes: more room above a canvas / Gallery card's bottom tab row
+   (8px → 20px); the plus button moves down with it. The tab-less variant, where
+   the plus rides up onto the last row, is unchanged. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar:not(.no-tabs) { padding-top: 20px; }
+
+/* Light Dots: the page-title dot keeps the easel's unadjusted colour (baseRgb),
+   so yellow stays yellow there while its solid uses deepen to #B0A314 */
+:root[data-theme="light-dots"] .category-page .active-title::after { background: rgb(var(--accent-base-rgb)); }
+
+/* Dots themes, desktop, no page open: cards top out at 680px wide (max-width
+   caps the column's content box, so it's 680 itself — the side padding sits
+   outside it), with the Easel header and the date picker capped to match */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .cards-area,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .category-page .page-header { max-width: 680px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .cal-overlay { width: min(680px, calc(100% - 392px)); }
+}
+
+/* Dots themes, desktop, no page open: centre the layout in the window. What you
+   see runs from the sidebar's content (28px into the sidebar) to the cards' right
+   edge (340 + 36 + 680 = 1056px in) — 1028px — so the gutter that centres it is
+   (100vw − 1028)/2 − 28, never less than 52px (80px of window edge). */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) {
+    --gutter: max(52px, calc((100vw - 1084px) / 2));
+  }
+}
+/* …the date picker follows the cards column wherever the centring puts it */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone:not(:has(.note-detail-page.open)) .cal-overlay {
+    left: calc(340px + var(--gutter) + 36px);
+  }
+}

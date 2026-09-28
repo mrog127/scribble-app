@@ -5,6 +5,8 @@ import {
   CollapsedLinksCard,
 } from './CategoryCollapsedView.jsx'
 import { CARD_DRAG_EVENT } from './useCardDragReorder.js'
+import { useTheme } from '../useTheme.js'
+import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon } from './FeatherIcons.jsx'
 
 // The Gallery canvas: a pinned, read-only-chrome canvas at the top of an Easel
 // that isn't sending its active items to the home screen. It shows only that
@@ -150,6 +152,27 @@ export default function GalleryCanvas({ category }) {
     }
   }, [selectedTab, showTabs, collapsed, cardsDragging, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep the selector box on its tab when the bar itself changes width (the
+  // cards column narrows or widens as a detail panel opens, closes or is
+  // resized). Tracks the resize directly, without the slide transition.
+  useEffect(() => {
+    const bar = tabBarRef.current
+    const ind = tabIndicatorRef.current
+    if (!bar || !ind || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const sel = bar.querySelector('.project-tab-btn.selected')
+      if (!sel) return
+      const prev = ind.style.transition
+      ind.style.transition = 'none'
+      ind.style.left = sel.offsetLeft + 'px'
+      ind.style.width = sel.offsetWidth + 'px'
+      ind.offsetWidth // commit before restoring the transition
+      ind.style.transition = prev
+    })
+    ro.observe(bar)
+    return () => ro.disconnect()
+  }, [showTabs, collapsed, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Signature of what the body is currently showing. Checking an item off (or
   // deactivating one) drops a row, and the height effect below has to animate to
   // the new size rather than leave the card at its old one.
@@ -251,6 +274,10 @@ export default function GalleryCanvas({ category }) {
     requestAnimationFrame(() => { card.classList.add('visible') })
   }, [])
 
+  // Dots themes put the type tabs in a row at the foot of the card, as a canvas
+  // card does, instead of in the header.
+  const tabsAtBottom = ['dark-dots', 'light-dots'].includes(useTheme())
+
   // Nothing active in this Easel — no Gallery canvas at all. (After the hooks,
   // so the hook order stays stable across renders.)
   if (typesWithItems.length === 0) return null
@@ -260,9 +287,23 @@ export default function GalleryCanvas({ category }) {
       className={`project-tab-btn${selectedTab === type ? ' selected' : ''}${tabCount(type) === 0 ? ' all-hidden' : ''}`}
       onMouseDown={e => { e.preventDefault(); e.stopPropagation(); switchTab(type) }}
     >
-      <Icon size={20} color={selectedTab === type ? 'var(--accent-dark)' : '#242424'}/>
+      {tabsAtBottom
+        ? (() => {
+            const F = type === 'list' ? FeatherListIcon : type === 'note' ? FeatherFileIcon : FeatherLinkIcon
+            return <F size={selectedTab === type ? 24 : 20} color={selectedTab === type ? 'var(--tab-icon-on)' : 'var(--tab-icon-off)'}/>
+          })()
+        : <Icon size={20} color={selectedTab === type ? 'var(--accent-dark)' : '#242424'}/>}
       {tabCount(type) > 0 && <span className="project-tab-count">{tabCount(type)}</span>}
     </button>
+  )
+
+  const tabRow = (
+    <div className="project-tab-bar" ref={tabBarRef}>
+      <div className="project-tab-indicator" ref={tabIndicatorRef}/>
+      {typesWithItems.includes('list') && tabButton('list', ListIcon)}
+      {typesWithItems.includes('note') && tabButton('note', NoteIcon)}
+      {typesWithItems.includes('link') && tabButton('link', LinkIcon)}
+    </div>
   )
 
   return (
@@ -277,14 +318,7 @@ export default function GalleryCanvas({ category }) {
             <span className="card-title">Gallery</span>
           </div>
         </div>
-        {showTabs && (
-          <div className="project-tab-bar" ref={tabBarRef}>
-            <div className="project-tab-indicator" ref={tabIndicatorRef}/>
-            {typesWithItems.includes('list') && tabButton('list', ListIcon)}
-            {typesWithItems.includes('note') && tabButton('note', NoteIcon)}
-            {typesWithItems.includes('link') && tabButton('link', LinkIcon)}
-          </div>
-        )}
+        {showTabs && !tabsAtBottom && tabRow}
       </div>
 
       <div className="project-items" ref={itemsRef}>
@@ -298,6 +332,11 @@ export default function GalleryCanvas({ category }) {
           <CollapsedLinksCard category={category} bare onlyActivated />
         )}
       </div>
+
+      {/* Dots themes: the type tabs sit at the foot of the card */}
+      {tabsAtBottom && showTabs && !collapsed && (
+        <div className="project-bottom-bar">{tabRow}</div>
+      )}
     </div>
   )
 }

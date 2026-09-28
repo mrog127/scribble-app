@@ -1897,6 +1897,25 @@ function AppInner() {
     return idx >= 0 ? getCategoryAccent(idx).base : getHomeAccent().base
   }, [categories, activeTab])
 
+  // Desktop sidebar (Dots themes): one dot per easel with unchecked active list
+  // items, in the easel's colour, most items first — the Gallery header's dots.
+  const sidebarDots = useMemo(() => {
+    const counts = {}
+    categories.filter(cat => cat.sendToHomescreen !== false).forEach(cat => {
+      cat.projects.filter(proj => !proj.archived).forEach(proj => {
+        proj.todos.forEach(t => { if (t.activated && !t.checked) counts[cat.id] = (counts[cat.id] || 0) + 1 })
+      })
+    })
+    ;(activeTodos || []).forEach(t => { if (t.categoryId) counts[t.categoryId] = (counts[t.categoryId] || 0) + 1 })
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cid]) => {
+        const idx = categories.findIndex(c => c.id === cid)
+        const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
+        return { id: cid, color: acc.dot ?? acc.base }
+      })
+  }, [categories, activeTodos])
+
   const activeAccent = useMemo(() => {
     if (activeTab === 'star' || activeTab === 'menu') return getHomeAccent()
     const idx = categories.findIndex(c => c.id === activeTab)
@@ -2015,6 +2034,13 @@ function AppInner() {
           <p className="active-day-name">{dayName},</p>
           <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
           <p className="active-month-date">{monthDate}</p>
+          {sidebarDots.length > 0 && (
+            <div className="active-dots">
+              {sidebarDots.map(d => (
+                <span key={d.id} className="active-dot" style={{ background: d.color }} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Current page (flex flow) + the incoming carousel column during a drag,

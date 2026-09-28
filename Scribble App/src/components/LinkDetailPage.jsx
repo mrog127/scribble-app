@@ -179,7 +179,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
       <div className="note-detail-header">
         <LinkPageIcon/>
         <span className="note-scroll-title" ref={scrollTitleRef} />
-        <button className="note-detail-done" onMouseDown={handleTopButton}>{editingTitle ? 'Save' : 'Done'}</button>
+        <button className={`note-detail-done${editingTitle ? ' is-saving' : ''}`} onMouseDown={handleTopButton}>{editingTitle ? 'Save' : 'Done'}</button>
       </div>
 
       <div className="todo-detail-scroll link-detail-scroll" ref={scrollRef}>

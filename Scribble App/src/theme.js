@@ -51,7 +51,19 @@ export const DARK_DOTS_COLORS = DARK_DOTS_BASES.map(base => ({
   baseRgb: hexToRgb(base).join(','),
 }))
 
-const PALETTES = { paintbrush: ACCENT_COLORS, 'dark-dots': DARK_DOTS_COLORS, 'light-dots': DARK_DOTS_COLORS }
+// Light Dots: Dark Dots' palette, except yellow, which is too pale to read at
+// full strength on the light page. Wherever the easel colour is used solid
+// (base / dark) it's the deeper #B0A314; everything drawn at a percentage uses
+// baseRgb, which keeps the original yellow — as does `dot`, the colour of the
+// easel dots (Gallery header, desktop sidebar) and the page-title dot.
+const LIGHT_DOTS_YELLOW = '#B0A314'
+export const LIGHT_DOTS_COLORS = DARK_DOTS_COLORS.map(c => (
+  c.base === '#E5D950'
+    ? { ...c, base: LIGHT_DOTS_YELLOW, dark: LIGHT_DOTS_YELLOW, dot: c.base }
+    : c
+))
+
+const PALETTES = { paintbrush: ACCENT_COLORS, 'dark-dots': DARK_DOTS_COLORS, 'light-dots': LIGHT_DOTS_COLORS }
 const themeColors = () => PALETTES[getTheme()] || ACCENT_COLORS
 
 // The accent the Gallery and the app chrome wear.
@@ -90,10 +102,14 @@ export function getCategoryAccent(categoryIndex) {
   // Blend base, dark and light together so the generated set keeps the same
   // relationship between the three that the hand-picked ones have.
   const base = mixHex(from.base, to.base, f)
+  // `dot` (and the translucent baseRgb) blend the unadjusted colours, so a
+  // theme's solid-only tweak (Light Dots' yellow) stays out of them.
+  const dot = mixHex(from.dot ?? from.base, to.dot ?? to.base, f)
   return {
     base,
     dark: mixHex(from.dark, to.dark, f),
     light: mixHex(from.light, to.light, f),
-    baseRgb: hexToRgb(base).map(Math.round).join(','),
+    baseRgb: hexToRgb(dot).map(Math.round).join(','),
+    dot,
   }
 }

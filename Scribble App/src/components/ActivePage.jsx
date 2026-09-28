@@ -1108,7 +1108,8 @@ export default function ActivePage({
     .sort((a, b) => b[1] - a[1])
     .map(([cid]) => {
       const idx = categories.findIndex(c => c.id === cid)
-      return { id: cid, color: (idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()).base }
+      const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
+      return { id: cid, color: acc.dot ?? acc.base }
     })
 
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1

@@ -605,7 +605,7 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
         {sorted.map((t, i) => (
           <div key={t.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={t.id}>
+            <div className={`swipe-row${t.id === openTodoId ? ' row-open' : ''}`} data-swipe-id={t.id}>
               <div className="swipe-content">
                 <div
                   className={`todo-row${t.checked ? ' checked' : ''}`}
@@ -871,7 +871,7 @@ export function CollapsedNotesCard({ category, bare = false, onlyActivated = fal
         {sortedNotes.map((n, i) => (
           <div key={n.id}>
             {i > 0 && <div className="divider"/>}
-            <div className="swipe-row" data-swipe-id={n.id}>
+            <div className={`swipe-row${n.id === openNoteId ? ' row-open' : ''}`} data-swipe-id={n.id}>
               <div className="swipe-content">
                 <div
                   className={`note-row${n.archived ? ' archived' : ''}`}

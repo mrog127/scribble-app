@@ -144,13 +144,33 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
       if (dotsEl) dotsEl.style.display = 'none'
 
       const ghostCard = document.createElement('div')
-      ghostCard.style.cssText = [
-        'background:#F7F6F3',
-        'border:1px solid #C2C1BF',
-        'border-radius:8px',
-        'overflow:hidden',
-        'box-shadow:0 8px 28px rgba(0,0,0,0.20)',
-      ].join(';')
+      // Dots themes: the ghost is the card's own collapsed header on clear glass
+      // (styled in layout.css under .drag-ghost-card). It carries the card's
+      // classes, its easel colours and — around it — the page's class plus
+      // cards-dragging, so the theme's header rules reach it in the portal.
+      const dotsTheme = ['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)
+      let ghostContent = ghostCard
+      if (dotsTheme) {
+        ghostCard.className = cardEl.className + ' drag-ghost-card'
+        const ccs = getComputedStyle(cardEl)
+        ;['--accent-base', '--accent-dark', '--accent-light', '--accent-base-rgb'].forEach(v => {
+          const val = ccs.getPropertyValue(v)
+          if (val) ghostCard.style.setProperty(v, val.trim())
+        })
+        const pageScope = document.createElement('div')
+        pageScope.className = (pageEl ? [...pageEl.classList].filter(c => c === 'home-page' || c === 'category-page').join(' ') : '') + ' cards-dragging'
+        pageScope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;position:static;inset:auto;width:auto;height:auto;transform:none;opacity:1;overflow:visible;-webkit-mask-image:none;mask-image:none;display:block;'
+        pageScope.appendChild(ghostCard)
+        ghostContent = pageScope
+      } else {
+        ghostCard.style.cssText = [
+          'background:#F7F6F3',
+          'border:1px solid #C2C1BF',
+          'border-radius:8px',
+          'overflow:hidden',
+          'box-shadow:0 8px 28px rgba(0,0,0,0.20)',
+        ].join(';')
+      }
       ghostCard.appendChild(headerClone)
 
       const ghost = document.createElement('div')
@@ -162,7 +182,7 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
         'pointer-events:none',
         'z-index:9999',
       ].join(';')
-      ghost.appendChild(ghostCard)
+      ghost.appendChild(ghostContent)
       portal.appendChild(ghost)
 
       // While a drag is live every header runs its tabs to the right edge, the
@@ -195,11 +215,36 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
           if (i === dragIdx) {
             cEl.style.transition = 'max-height 220ms ease, opacity 180ms ease'
             cEl.style.opacity = '0'
+            // Dots themes: the floating copy takes exactly the height the other
+            // collapsed cards have, with its header centred in it, and the
+            // reorder maths uses that same height.
+            if (dotsTheme) {
+              ghostCard.style.height = cCollapsed + 'px'
+              ghostCard.style.display = 'flex'
+              ghostCard.style.flexDirection = 'column'
+              ghostCard.style.justifyContent = 'center'
+              headerClone.style.paddingTop = '0px'
+              headerClone.style.paddingBottom = '0px'
+              if (dragRef.current) dragRef.current.collapsedH = cCollapsed
+            }
           } else {
             cEl.style.transition = 'max-height 220ms ease'
           }
           cEl.style.maxHeight = cCollapsed + 'px'
         })
+        // Dots themes: once the others have finished collapsing, size the
+        // floating copy from one of them as rendered, so it's exactly as tall.
+        if (dotsTheme) {
+          setTimeout(() => {
+            const other = snapshots.find((_, i) => i !== dragIdx)
+            const oEl = other && other.el.querySelector(':scope > .card')
+            if (!oEl || !ghost.isConnected) return
+            const h = oEl.getBoundingClientRect().height
+            if (!h) return
+            ghostCard.style.height = h + 'px'
+            if (dragRef.current) dragRef.current.collapsedH = h
+          }, 240)
+        }
       })
 
       const cloneTop = dragged.rect.top - appRect.top

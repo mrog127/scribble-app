@@ -5,7 +5,7 @@ import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
 import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary } from '../push.js'
 import { THEMES, getTheme, setTheme, themeName } from '../themes.js'
-import { dragLiftShadow } from '../dragClone.js'
+import { dragLiftShadow, makeGlassStroke } from '../dragClone.js'
 
 // Same FLIP drag-reorder animation as TodoCard/NoteCard, adapted for category rows.
 // Trigger: immediate pointerdown on the drag handle (no long-press needed).
@@ -92,8 +92,8 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
       const clone = document.createElement('div')
       if (darkGhost) clone.className = ghostClass
       const skin = darkGhost
-        ? ['background:rgba(255,255,255,0.08)', 'border:1px solid rgba(255,255,255,0.14)',
-           'box-shadow:0 6px 24px rgba(0,0,0,0.2)', 'border-radius:16px',
+        ? ['background:rgba(255,255,255,0.08)', 'border:none',
+           `box-shadow:${dragLiftShadow().replace('0 10px 32px rgba(0,0,0,0.3)', '0 6px 24px rgba(0,0,0,0.2)')}`, 'border-radius:16px',
            '-webkit-backdrop-filter:blur(24px) saturate(180%)', 'backdrop-filter:blur(24px) saturate(180%)']
         : ['box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px',
            'border:1px solid #C2C1BF', 'background:#F7F6F3']
@@ -108,6 +108,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
         'overflow:hidden',
         'z-index:999',
       ].join(';')
+      if (darkGhost) clone.appendChild(makeGlassStroke())
       clone.appendChild(cloneInner)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'

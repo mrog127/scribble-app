@@ -1193,7 +1193,8 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     ((collapsed || cardsDragging) && typesWithItems.length === 1)
   const displayType = typesWithItems.length > 1 ? activeTab : (typesWithItems[0] || 'list')
   // Nothing reads as selected while the canvas is collapsed.
-  const selectedTab = collapsed ? null : displayType
+  // …nor while cards are being rearranged, when every card reads as collapsed.
+  const selectedTab = (collapsed || cardsDragging) ? null : displayType
 
   // How many items a tab would actually render right now, honouring the
   // hide-completed / show-archived toggles.
@@ -1236,7 +1237,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
       // enable transition after the initial position is set
       requestAnimationFrame(() => { ind.style.transition = ''; tabMountedRef.current = true })
     }
-  }, [selectedTab, showTabs, collapsed, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedTab, showTabs, collapsed, cardsDragging, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the selector box on its tab when the bar itself changes width (the
   // cards column narrows or widens as a detail panel opens, closes or is
@@ -1257,7 +1258,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     })
     ro.observe(bar)
     return () => ro.disconnect()
-  }, [showTabs, collapsed, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showTabs, collapsed, cardsDragging, typesWithItems.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Slide the composer type-selector box to the active add-type ----
   useLayoutEffect(() => {
@@ -2042,7 +2043,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
                   >{sourceLabel.name}</span>
                 )}
               </div>
-              {showTabs && (!tabsAtBottom || collapsed) && tabRow}
+              {showTabs && (!tabsAtBottom || collapsed || cardsDragging) && tabRow}
             </>
           )}
           <div className="project-header-actions">
@@ -2335,7 +2336,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
         </div>
 
         {/* Dark Dots: type tabs + add button below the items */}
-        {tabsAtBottom && !collapsed && (showTabs || !archived) && (
+        {tabsAtBottom && !collapsed && !cardsDragging && (showTabs || !archived) && (
           <div className={`project-bottom-bar${showTabs ? '' : ' no-tabs'}`}>
             {showTabs && tabRow}
             {!archived && addBtn}

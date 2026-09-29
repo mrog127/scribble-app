@@ -68,6 +68,22 @@ function findDragClone() {
   menu dismissed — and the drag carries on uninterrupted, so reordering still
   works without lifting off. Releasing without moving leaves the menu up.
 */
+// Offsets of the floating drag copy from the row's content layer, as CSS
+// variables the lifted-row pill reads (--lift-top/right/bottom/left).
+function setLiftBox(rowEl, clone) {
+  const sc = rowEl.querySelector('.swipe-content')
+  if (!sc) return
+  const cr = clone.getBoundingClientRect()
+  const sr = sc.getBoundingClientRect()
+  rowEl.style.setProperty('--lift-top', (cr.top - sr.top) + 'px')
+  rowEl.style.setProperty('--lift-bottom', (sr.bottom - cr.bottom) + 'px')
+  rowEl.style.setProperty('--lift-left', (cr.left - sr.left) + 'px')
+  rowEl.style.setProperty('--lift-right', (sr.right - cr.right) + 'px')
+}
+function clearLiftBox(rowEl) {
+  ;['--lift-top', '--lift-bottom', '--lift-left', '--lift-right'].forEach(v => rowEl.style.removeProperty(v))
+}
+
 export function useRowMenu() {
   const [state, setState] = useState(null)
   const timerRef = useRef(null)
@@ -77,14 +93,14 @@ export function useRowMenu() {
   const close = useCallback(() => {
     rowMenuOpen = false
     const s = stateRef.current
-    if (s?.rowEl) s.rowEl.classList.remove('row-lifted', 'row-context-held')
+    if (s?.rowEl) { s.rowEl.classList.remove('row-lifted', 'row-context-held'); clearLiftBox(s.rowEl) }
     setState(null)
   }, [])
 
   // Clear the lift if the component unmounts while a menu is open
   useEffect(() => () => {
     rowMenuOpen = false
-    if (stateRef.current?.rowEl) stateRef.current.rowEl.classList.remove('row-lifted', 'row-context-held')
+    if (stateRef.current?.rowEl) { stateRef.current.rowEl.classList.remove('row-lifted', 'row-context-held'); clearLiftBox(stateRef.current.rowEl) }
   }, [])
 
   /* Right-click (desktop): no floating row, no drag. The menu's top-left lands
@@ -145,6 +161,10 @@ export function useRowMenu() {
       const clone = findDragClone()
       const wrapper = rowEl.parentElement
       const wrapperWasHidden = wrapper && wrapper.style.opacity === '0'
+      // Hand the drag copy's exact box to the lifted row (the Dots themes draw
+      // it as a pill on the row's content layer), so the swap from the floating
+      // copy to the row under the menu keeps precisely the same size.
+      if (clone) setLiftBox(rowEl, clone)
       if (clone) clone.style.visibility = 'hidden'
       if (wrapperWasHidden) wrapper.style.opacity = ''
 

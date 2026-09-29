@@ -8901,19 +8901,19 @@ body.resizing-detail .phone { transition: none !important; }
    page's Gallery card but with no colour: the translucent fill over a blurred,
    saturated pull-through, a 20% black drop shadow, and a white gradient outline
    and white inner glow orbiting. Light Dots gets the stronger white highlights.
-   (The pinned easel card keeps its own treatment.) Delete this block to undo. */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card:not(.gallery-canvas) {
+   (Pinned canvases and the pinned easel card keep their own treatment.) Delete this block to undo.
+   The blur, fill and glow live on an ::after layer under the card's content,
+   clipped to the card's rounded shape: iOS Safari draws a backdrop blur as a
+   plain rectangle when an ancestor is masked (the page's fade), which showed as
+   grey squares at the card corners. The card itself keeps only the drop shadow
+   and the outline. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card:not(.gallery-canvas):not(.project-card) {
   position: relative;
-  background: var(--mbar-chrome);
+  isolation: isolate;
+  background: transparent;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
 }
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card:not(.gallery-canvas) {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-  }
-}
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::before {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -8929,26 +8929,34 @@ body.resizing-detail .phone { transition: none !important; }
   pointer-events: none;
   z-index: 2;
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::after {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  clip-path: inset(0 round 32px);
+  background: var(--mbar-chrome);
   box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.06);
   animation: gallery-canvas-orbit 8s linear infinite;
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
 }
-:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas)::before {
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::before {
   opacity: 1;
   background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
 }
-:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas)::after {
+:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::after {
   box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9);
 }
 @media (prefers-reduced-motion: reduce) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::before,
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas)::after { animation: none; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after { animation: none; }
 }
 /* END TRIAL */
 
@@ -8958,3 +8966,282 @@ body.resizing-detail .phone { transition: none !important; }
    line box) */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) :is(.todo-row, .link-row) .source-label { margin-top: 1px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) :is(.todo-row, .link-row) .source-label-text { line-height: normal; }
+
+/* Light Dots: the pinned easel Gallery card's glass blur moves onto an ::after
+   layer beneath its content, clipped to its 32px corners — iOS Safari was
+   drawing the card's own backdrop blur as a square, showing grey at the corners.
+   The card keeps its drop shadow; the blur and 8% fill come from the layer. */
+:root[data-theme="light-dots"] #app .card.gallery-canvas {
+  isolation: isolate;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-theme="light-dots"] .card.gallery-canvas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  clip-path: inset(0 round 32px);
+  background: var(--mbar-chrome);
+  pointer-events: none;
+  z-index: -1;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="light-dots"] .card.gallery-canvas::after {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* Dots themes: content type cards (Gallery page, an Easel's collapsed view) and
+   an easel's Gallery card with no tab row end with the same space under the last
+   row as a list-only canvas card — 16px below the row (8px more than before) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card:not(.project-card),
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card.gallery-canvas:not(:has(.project-bottom-bar)) {
+  padding-bottom: 16px;
+}
+
+/* Dots themes: in content type cards, a row's trailing markers (scheduled date,
+   recurring icon, attachment count) centre on the first line of the item text
+   rather than on the whole row. The text's first line is a 20px line 2.5px
+   down, so the 20px marker row sits 2.5px from the top. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card:not(.project-card) :is(.row-schedule-indicator, .todo-attach-indicator) {
+  align-self: flex-start;
+  height: 20px;
+  margin-top: 2.5px;
+}
+
+/* Dots themes: 4px more room at the bottom of a link tile (10px → 14px) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-body { padding-bottom: 14px; }
+
+/* Dots themes: on a canvas card whose plus button rides up onto the last row (no
+   tab row), that row's hover / pressed / open pill stops 8px short of the button
+   (16px inset + 40px button + 8px = 64px from the card's right edge) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .project-card:has(.project-bottom-bar.no-tabs) .project-items > div > div:last-child .swipe-content::before {
+  right: 64px;
+}
+
+/* =============================================
+   Dots themes: rearranging canvas cards
+   While a card is dragged, every canvas card reads as collapsed: just its
+   header, with its content type icons at the right end (the collapsed-card tab
+   styling, no counts, no selection) and nothing of its body peeking below. The
+   card being dragged follows the pointer as that same collapsed header on clear
+   liquid glass with a drop shadow.
+   ============================================= */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > :not(.card-header) { visibility: hidden; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > .card-header {
+  --tab-icon-on: var(--accent-base);
+  --tab-icon-off: #7A7A7A;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > .card-header .project-tab-bar {
+  height: 32px;
+  padding: 0;
+  gap: 2px;
+  background: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > .card-header .project-tab-btn {
+  height: 32px;
+  min-width: 32px;
+  border-radius: 32px;
+  padding: 0 8px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > .card-header :is(.project-tab-count, .project-tab-indicator) { display: none; }
+
+/* The dragged card */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#app .drag-ghost-card.card, .drag-ghost-card.card.card) {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 32px;
+  overflow: hidden;
+  opacity: 1;
+  transform: none;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .drag-ghost-card.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] :is(#app .drag-ghost-card.card, .drag-ghost-card.card.card) {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+}
+:root[data-theme="light-dots"] .drag-ghost-card.card::before {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+
+/* Dots themes: a pinned canvas's pin icon at 2px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-pin-icon,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-pin-icon * {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Dots themes: while rearranging, every canvas card (not just the dragged one) is
+   clear liquid glass — transparent card with the drop shadow and a white
+   gradient outline, and the blur + 8% white fill on an ::after layer beneath
+   the header, clipped to the 32px corners (iOS draws a masked page's backdrop
+   blur as a square otherwise). */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cards-dragging .project-card:not(.gallery-canvas) {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.gallery-canvas)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+  visibility: visible;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.gallery-canvas)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  clip-path: inset(0 round 32px);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  z-index: -1;
+  visibility: visible;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.gallery-canvas)::after {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root[data-theme="light-dots"] .cards-dragging .project-card:not(.gallery-canvas)::before {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+:root[data-theme="light-dots"] .cards-dragging .project-card:not(.gallery-canvas)::after {
+  box-shadow: inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+}
+
+/* Dots themes: a row being dragged to rearrange is clear liquid glass — its
+   gradient outline, laid over the floating copy (the fill, blur, shadow and
+   inner highlight are set on the copy itself; see dragClone.js) */
+.drag-glass-stroke {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .drag-glass-stroke {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+
+/* Dots themes: a card row under its long-press menu takes the drag copy's shape —
+   a clear-glass pill 8px in from each side and 4px beyond the row at top and
+   bottom, fully rounded — instead of the full-width 16px-cornered box. The row
+   itself goes clear; the pill is drawn on its content layer, whose ::before is
+   already the hover pill, with the outline on ::after. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted {
+  overflow: visible;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  top: var(--lift-top, -4px);
+  bottom: var(--lift-bottom, -4px);
+  left: var(--lift-left, 8px);
+  right: var(--lift-right, 8px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  opacity: 1;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::before {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::after {
+  content: '';
+  position: absolute;
+  top: var(--lift-top, -4px);
+  bottom: var(--lift-bottom, -4px);
+  left: var(--lift-left, 8px);
+  right: var(--lift-right, 8px);
+  border-radius: 999px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.06));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::before {
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+}
+:root[data-theme="light-dots"] :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::after {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
+}
+
+/* Dots themes: while rearranging, a canvas card is just its title with the same
+   16px below it as above. The icon row (32px, taller than the title's line)
+   gives up 4px top and bottom so it no longer sets the header's height, and
+   stays centred on the title; the header's bottom padding matches its top, so
+   the collapse adds nothing extra beneath. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > .card-header { padding-bottom: 16px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card > .card-header .project-tab-bar {
+  align-self: center;
+  margin-top: -4px;
+  margin-bottom: -4px;
+}
+/* …and the title's own line carries a few pixels more below the letters than
+   above them, so it gives up 4px underneath: the gap from the card's top to the
+   title matches the gap from the title to the card's bottom (the dragged copy
+   is already even, so it keeps its full line) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.drag-ghost-card) > .card-header .card-title-wrap { margin-bottom: -4px; }

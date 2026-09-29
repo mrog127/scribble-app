@@ -33,15 +33,54 @@ export function buildDragCloneShell(srcRowEl, cloneInner, fallbackBg = '#F7F6F3'
   pageScope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;position:static;inset:auto;width:auto;height:auto;transform:none;opacity:1;overflow:visible;-webkit-mask-image:none;mask-image:none;display:block;'
   pageScope.appendChild(scope)
 
+  // Dots themes: the clear liquid glass — no hairline border, the gradient
+  // outline drawn by a stroke layer instead (see .drag-glass-stroke in
+  // layout.css), and the white inner highlight folded into the shadow.
+  // Card rows in the Dots themes: the floating copy is a pill 8px in from the row
+  // on each side and 4px taller than it at top and bottom, fully rounded — the
+  // same shape the row takes under its long-press menu (layout.css), so lifting
+  // and the menu read as one state. The callers place the copy 4px out from the
+  // row on every side with 4px of padding top and bottom; these later
+  // declarations pull the sides in, and the row inside slides 8px left so its
+  // content stays put.
+  const pill = darkDots && srcRowEl && !srcRowEl.closest('.note-detail-page')
+  let pillGeom = []
+  if (pill) {
+    const r = srcRowEl.getBoundingClientRect()
+    pillGeom = ['padding:4px 0', 'margin:0 0 0 12px', `width:${r.width - 16}px`, 'border-radius:999px']
+    cloneInner.style.marginLeft = '-8px'
+    cloneInner.style.width = r.width + 'px'
+  }
+  if (darkDots) {
+    const stroke = makeGlassStroke()
+    if (pill) stroke.style.borderRadius = '999px'
+    pageScope.insertBefore(stroke, pageScope.firstChild)
+  }
   const skin = darkDots
-    ? ['background:rgba(255,255,255,0.08)', 'border:1px solid rgba(255,255,255,0.14)',
-       'box-shadow:0 6px 24px rgba(0,0,0,0.2)', 'border-radius:16px',
-       '-webkit-backdrop-filter:blur(24px) saturate(180%)', 'backdrop-filter:blur(24px) saturate(180%)']
+    ? ['background:rgba(255,255,255,0.08)', 'border:none',
+       `box-shadow:0 6px 24px rgba(0,0,0,0.2), ${glassInset()}`, 'border-radius:16px',
+       '-webkit-backdrop-filter:blur(24px) saturate(180%)', 'backdrop-filter:blur(24px) saturate(180%)',
+       ...pillGeom]
     : [`background:${bg}`, `border:${border}`, 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px']
 
   return { content: pageScope, skin, darkDots }
 }
 
-// Deeper shadow once a long-press drag actually starts.
+// The glass's inner highlight: faint in Dark Dots, strong white in Light Dots
+const glassInset = () =>
+  document.documentElement.dataset.theme === 'light-dots'
+    ? 'inset -6px -6px 6px rgba(255,255,255,0.9)'
+    : 'inset -6px -6px 4px rgba(255,255,255,0.06)'
+
+// The glass's gradient outline, as an element laid over the floating copy
+export function makeGlassStroke() {
+  const el = document.createElement('span')
+  el.className = 'drag-glass-stroke'
+  el.setAttribute('aria-hidden', 'true')
+  return el
+}
+
+// Deeper shadow once a long-press drag actually starts (keeps the glass's
+// inner highlight in the Dots themes).
 export const dragLiftShadow = () =>
-  isDarkDots() ? '0 10px 32px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.18)'
+  isDarkDots() ? `0 10px 32px rgba(0,0,0,0.3), ${glassInset()}` : '0 8px 24px rgba(0,0,0,0.18)'

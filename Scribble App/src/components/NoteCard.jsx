@@ -564,6 +564,34 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     enterEdit(savedRange)
   }, [editing, enterEdit, archived])
 
+  // Tap the title (Dots themes) — same as a list item page title: go straight
+  // into editing with the cursor where you tapped in the title
+  const handleTitleClick = useCallback((e) => {
+    if (editing || archived) return
+    let range = null
+    if (document.caretRangeFromPoint) {
+      range = document.caretRangeFromPoint(e.clientX, e.clientY)
+    } else if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(e.clientX, e.clientY)
+      if (pos) { range = document.createRange(); range.setStart(pos.offsetNode, pos.offset); range.collapse(true) }
+    }
+    enterEdit(null)
+    const t = titleFieldRef.current
+    if (!t) return
+    t.contentEditable = 'true'
+    t.focus()
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    if (range && t.contains(range.startContainer)) {
+      sel.addRange(range)
+    } else {
+      const end = document.createRange()
+      end.selectNodeContents(t)
+      end.collapse(false)
+      sel.addRange(end)
+    }
+  }, [editing, enterEdit, archived])
+
   // Click on empty area below text — place cursor at end
   const handleEmptyAreaClick = useCallback(() => {
     if (archived) return
@@ -1165,6 +1193,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           suppressContentEditableWarning
           spellCheck="false"
           onInput={handleTitleFieldInput}
+          onClick={handleTitleClick}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); contentRef.current?.focus() } }}
         />
       )}

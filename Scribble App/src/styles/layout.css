@@ -9965,3 +9965,16 @@ body.resizing-detail .phone { transition: none !important; }
     max-width: 680px;
   }
 }
+
+/* Dots themes: link tiles (a canvas's Links tab, a list item's Links card) keep
+   the same column breakpoints, but a row with fewer tiles than columns spreads
+   them evenly across the full width — a wrapping row of tiles with the same
+   150px minimum and 10px gap breaks at the same widths as the old grid, and every
+   row — the last one too — shares its width out equally. A lone tile's image keeps the height a half-width tile would
+   have, so it widens rather than growing tall. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-grid { display: flex; flex-wrap: wrap; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-grid > .link-grid-cell { flex: 1 1 150px; min-width: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-grid:has(> .link-grid-cell:only-child) .link-tile-image { aspect-ratio: 32 / 15; }
+
+/* Dots themes: a link tile's title is Helvetica Neue 16 medium */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-title { font-size: 16px; font-weight: 500; }

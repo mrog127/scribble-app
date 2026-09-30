@@ -373,9 +373,11 @@ function NotificationsCard() {
 
   const test = async () => {
     setTestNote('Sending…')
-    const ok = await sendTestSummary().catch(() => false)
-    setTestNote(ok ? 'Sent' : 'Couldn\u2019t send')
-    setTimeout(() => setTestNote(''), 3000)
+    const r = await sendTestSummary().catch(e => ({ ok: false, sent: 0, error: e?.message || '' }))
+    setTestNote(!r.ok
+      ? `Couldn\u2019t send${r.error ? ': ' + r.error : ''}`
+      : r.sent ? `Sent to ${r.sent} device${r.sent === 1 ? '' : 's'}` : 'Server ran, but no device accepted it')
+    setTimeout(() => setTestNote(''), 6000)
   }
 
   const sublabel = {

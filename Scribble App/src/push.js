@@ -101,7 +101,7 @@ export async function disableMorningSummary() {
 // Sends this account's summary right now, to check everything is wired up.
 export async function sendTestSummary() {
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return false
+  if (!session) return { ok: false, sent: 0, error: 'Not signed in' }
   const res = await fetch(`${functionsUrl}/morning-summary`, {
     method: 'POST',
     headers: {
@@ -111,7 +111,10 @@ export async function sendTestSummary() {
     },
     body: JSON.stringify({ test: true }),
   })
-  return res.ok
+  // { sent: how many of your devices the push service accepted it for }
+  let out = {}
+  try { out = await res.json() } catch { /* not JSON */ }
+  return { ok: res.ok, sent: out.sent ?? 0, error: out.error || (res.ok ? '' : `HTTP ${res.status}`) }
 }
 
 // Keep the saved time zone matching the phone's clock, so 9:30 follows you

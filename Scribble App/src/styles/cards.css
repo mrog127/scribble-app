@@ -3234,6 +3234,12 @@
   width: 100%;
   display: block;
 }
+/* The note's title/preview block has to span the row (the column above doesn't
+   stretch its children), or the preview never meets an edge to truncate at */
+.gallery-canvas .item-content > :not(.source-label) {
+  align-self: stretch;
+  max-width: 100%;
+}
 .gallery-canvas .todo-row,
 .gallery-canvas .note-row {
   min-height: unset;

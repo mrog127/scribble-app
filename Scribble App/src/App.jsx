@@ -48,8 +48,12 @@ import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
 import { isTileDragging } from './components/ProjectCard.jsx'
 import { isCardDragging } from './components/useCardDragReorder.js'
 
-// Pull-to-refresh: pull down at the top of the active page to re-fetch data.
-// Touch-only; drives a spinner via direct DOM for smoothness.
+// Pull-to-refresh, iOS style: pulling down at the top of the active page drags
+// the whole page down with rubber-band resistance, revealing the spinner in the
+// gap above it. Crossing the threshold starts the refresh (the spinner starts
+// spinning); letting go springs the page back up to a resting gap that holds the
+// spinner until the refresh finishes, then the page springs home.
+// Drives the page and spinner directly through the DOM for smoothness.
 function usePullToRefresh(onRefresh) {
   const spinnerRef = useRef(null)
   const onRefreshRef = useRef(onRefresh)
@@ -58,8 +62,15 @@ function usePullToRefresh(onRefresh) {
   useEffect(() => {
     const app = document.getElementById('app')
     if (!app) return
-    const THRESHOLD = 64, MAX = 96
-    const s = { active: false, startY: 0, page: null, dist: 0, refreshing: false }
+    const THRESHOLD = 56   // pulled distance (after resistance) that triggers a refresh
+    const HOLD = 56        // gap the page rests at while refreshing
+    const RANGE = 240      // rubber band: the page can never be pulled past this
+    const SPINNER = 28
+    const SPRING = 'transform 450ms cubic-bezier(0.2, 0.9, 0.3, 1.12)'
+    const s = { active: false, startY: 0, page: null, target: null, pull: 0, refreshing: false, holding: false, fingerDown: false, doneWaiting: false }
+
+    // iOS's rubber-band curve: close to 1:1 at first, stiffening the further you go
+    const band = (dy) => RANGE * (1 - 1 / (dy * 0.55 / RANGE + 1))
 
     // The page the gesture is actually over. The Settings sheet sits on top of the
     // homepage and scrolls its own .page, so its scroll position is what matters there.
@@ -77,64 +88,84 @@ function usePullToRefresh(onRefresh) {
       return !!page && page.scrollTop > 0
     }
 
-    const setSpinner = (dist) => {
+    // Place the page and the spinner for a pulled distance. The spinner rides in
+    // the middle of the gap opening above the page, fading and turning in as it comes.
+    const paint = (pull, animate) => {
+      s.pull = pull
+      const page = s.page
       const el = spinnerRef.current
-      if (!el) return
-      const t = Math.min(dist, MAX)
-      el.style.opacity = String(Math.min(1, dist / THRESHOLD))
-      el.style.transform = `translateX(-50%) translateY(${Math.min(t, 56) - 40}px) rotate(${dist * 2.5}deg)`
+      const t = animate ? SPRING : 'none'
+      if (page) {
+        page.style.transition = t
+        page.style.transform = pull > 0 ? `translateY(${pull}px)` : ''
+      }
+      if (el) {
+        const y = (Math.min(pull, RANGE) - SPINNER) / 2 - 8
+        el.style.transition = animate ? `${SPRING}, opacity 250ms ease` : 'none'
+        el.style.opacity = s.refreshing ? '1' : String(Math.min(1, pull / THRESHOLD))
+        el.style.transform = `translateX(-50%) translateY(${y}px)` + (s.refreshing ? '' : ` rotate(${pull * 4}deg)`)
+      }
     }
-    const reset = () => {
-      s.active = false; s.dist = 0
+    const settle = () => {
+      const page = s.page
+      paint(0, true)
       const el = spinnerRef.current
-      if (!el) return
-      el.style.transition = 'transform 250ms ease, opacity 250ms ease'
-      el.style.transform = 'translateX(-50%) translateY(-40px)'
-      el.style.opacity = '0'
-      el.classList.remove('spinning')
-      setTimeout(() => { if (el) el.style.transition = '' }, 250)
+      if (el) el.style.opacity = '0'
+      setTimeout(() => {
+        if (s.pull !== 0) return
+        if (page) { page.style.transition = ''; page.style.transform = '' }
+        if (el) { el.style.transition = ''; el.classList.remove('spinning') }
+        if (!s.refreshing && !s.active) s.page = null
+      }, 450)
     }
-    const onStart = (e) => {
+    const finish = () => {
+      s.refreshing = false; s.holding = false
+      if (s.fingerDown) { s.doneWaiting = true; return }   // let go first
+      settle()
+    }
+    const startRefresh = () => {
       if (s.refreshing) return
+      s.refreshing = true
+      const el = spinnerRef.current
+      if (el) { el.classList.add('spinning'); el.style.opacity = '1' }
+      if (navigator.vibrate) navigator.vibrate(8)
+      const done = () => setTimeout(finish, 500)
+      Promise.resolve(onRefreshRef.current && onRefreshRef.current()).then(done, done)
+    }
+    const release = () => {
+      s.active = false; s.fingerDown = false
+      if (s.doneWaiting) { s.doneWaiting = false; settle(); return }
+      if (s.refreshing) { s.holding = true; paint(HOLD, true) }
+      else settle()
+    }
+
+    const onStart = (e) => {
+      if (s.refreshing || s.pull > 0) return
       if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
       const page = pageFor(e.target)
       if (!page || scrolledAbove(e.target, page)) return
-      s.page = page; s.target = e.target; s.startY = e.touches[0].clientY; s.active = true; s.dist = 0
-      const el = spinnerRef.current; if (el) el.style.transition = ''
+      s.page = page; s.target = e.target; s.startY = e.touches[0].clientY; s.active = true; s.fingerDown = true
     }
     const onMove = (e) => {
-      if (!s.active || s.refreshing) return
-      if (!s.page || scrolledAbove(s.target, s.page)) { s.active = false; setSpinner(0); return }
+      if (!s.active) return
+      if (!s.page || (s.pull === 0 && scrolledAbove(s.target, s.page))) { s.active = false; s.fingerDown = false; return }
       const dy = e.touches[0].clientY - s.startY
-      if (dy <= 0) { s.dist = 0; setSpinner(0); return }
-      s.dist = dy * 0.5
+      if (dy <= 0) { if (s.pull) paint(0, false); return }
       e.preventDefault()
-      setSpinner(s.dist)
-    }
-    const startRefresh = () => {
-      s.refreshing = true; s.active = false; wheelDist = 0
-      const el = spinnerRef.current
-      if (el) {
-        el.style.transition = 'transform 200ms ease, opacity 200ms ease'
-        el.style.transform = 'translateX(-50%) translateY(16px)'
-        el.style.opacity = '1'
-        el.classList.add('spinning')
-        setTimeout(() => { if (el) el.style.transition = '' }, 200)
-      }
-      const done = () => setTimeout(() => { s.refreshing = false; reset() }, 500)
-      Promise.resolve(onRefreshRef.current && onRefreshRef.current()).then(done, done)
+      const pull = band(dy)
+      paint(pull, false)
+      if (pull >= THRESHOLD) startRefresh()
     }
     const onEnd = () => {
-      if (!s.active || s.refreshing) return
-      if (s.dist >= THRESHOLD) startRefresh()
-      else reset()
+      if (!s.active) return
+      release()
     }
 
     // Desktop trackpad: a pull only counts after the page has come to REST at the top
     // (no wheel activity for 300ms while at scrollTop 0), then a deliberate scroll-up.
     // Momentum from scrolling up into the top keeps resetting the idle timer, so it
     // never arms — preventing accidental refreshes just from reaching the top.
-    let wheelDist = 0, wheelTimer = null, idleTimer = null, topIdle = true, wheelPage = null, wheelTarget = null
+    let wheelDy = 0, wheelTimer = null, idleTimer = null, topIdle = true, wheelPage = null, wheelTarget = null
     const scheduleIdle = () => {
       clearTimeout(idleTimer)
       idleTimer = setTimeout(() => {
@@ -144,7 +175,7 @@ function usePullToRefresh(onRefresh) {
       }, 300)
     }
     const onWheel = (e) => {
-      if (s.refreshing) return
+      if (s.refreshing || s.active) return
       if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
       const page = pageFor(e.target)
       if (!page) return
@@ -153,17 +184,20 @@ function usePullToRefresh(onRefresh) {
       if (!atTop) topIdle = false
       const pulling = atTop && topIdle && e.deltaY < 0 && Math.abs(e.deltaY) >= Math.abs(e.deltaX)
       if (!pulling) {
-        if (wheelDist > 0) { wheelDist = 0; setSpinner(0) }
+        if (wheelDy > 0) { wheelDy = 0; settle() }
         scheduleIdle()
         return
       }
       e.preventDefault()
-      wheelDist += (-e.deltaY) * 0.5
-      setSpinner(wheelDist)
+      s.page = page; s.fingerDown = true
+      wheelDy += -e.deltaY
+      const pull = band(wheelDy)
+      paint(pull, false)
+      if (pull >= THRESHOLD) startRefresh()
       clearTimeout(wheelTimer)
       wheelTimer = setTimeout(() => {
-        if (wheelDist >= THRESHOLD) startRefresh()
-        else { wheelDist = 0; reset() }
+        wheelDy = 0
+        release()
         topIdle = false   // require settling at the top again before the next pull
         scheduleIdle()
       }, 150)

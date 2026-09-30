@@ -564,7 +564,8 @@ function AppInner() {
   const activeCategoryCollapsed = categoryIds.includes(activeTab) && getCollapsed(activeTab)
   // The footer text box is available on the homescreen and on every category page
   // (items are always added from the footer); only the Menu page has none.
-  const footerInputMode = activeTab === 'star' || categoryIds.includes(activeTab)
+  // Desktop keeps Add item and search on Settings too (mobile Settings is a sheet)
+  const footerInputMode = activeTab === 'star' || categoryIds.includes(activeTab) || (activeTab === 'menu' && !isMobileView)
 
   // The canvas last added to is remembered only for as long as we stay on the
   // same page; changing pages drops it so the top canvas takes over again.

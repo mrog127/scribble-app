@@ -9941,3 +9941,27 @@ body.resizing-detail .phone { transition: none !important; }
     linear-gradient(rgba(var(--accent-base-rgb), 0.2), rgba(var(--accent-base-rgb), 0.2)),
     var(--glass-fill);
 }
+
+/* Dots themes, desktop: the Settings title shares the sidebar date's baseline,
+   like an Easel title (see the 103px note above) */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .page-header { padding-top: 103px; }
+}
+
+/* Dots themes, desktop: Settings lines up with an Easel page — the title in the
+   same place (36px in, on the date's baseline; the header row has no close
+   button here) and the cards in the same 680px column with the same 36px / 80px
+   sides. The 24px from title to first card is the body's 8px clear space plus
+   its 16px fade zone. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .page-header {
+    box-sizing: content-box;
+    padding: 103px 80px 0 36px;
+    max-width: 680px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-body {
+    box-sizing: content-box;
+    padding: 16px 80px 56px 36px !important;
+    max-width: 680px;
+  }
+}

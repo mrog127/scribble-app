@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
-import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary } from '../push.js'
+import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary, isIOS } from '../push.js'
 import { THEMES, getTheme, setTheme, themeName } from '../themes.js'
 import { dragLiftShadow, makeGlassStroke } from '../dragClone.js'
 
@@ -340,14 +340,22 @@ function NotificationsCard() {
   const [busy, setBusy] = useState(false)
   const [testNote, setTestNote] = useState('')
 
+  // Re-read whenever the app comes back to the front — permission can be changed
+  // in the phone's / browser's settings while Scribble is in the background.
   useEffect(() => {
     let alive = true
-    getMorningSummaryState().then(s => { if (alive) setState(s) }).catch(() => { if (alive) setState('unsupported') })
-    return () => { alive = false }
+    const check = () => getMorningSummaryState().then(s => { if (alive) setState(s) }).catch(() => { if (alive) setState('unsupported') })
+    check()
+    const onVis = () => { if (document.visibilityState === 'visible') check() }
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', check)
+    return () => { alive = false; document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', check) }
   }, [])
 
   const on = state === 'on'
-  const canToggle = state === 'on' || state === 'off'
+  // 'denied' stays tappable: it asks again (and re-reads the permission), since
+  // the saved state can lag behind a change made in Settings.
+  const canToggle = state === 'on' || state === 'off' || state === 'denied'
 
   const toggle = async () => {
     if (!canToggle || busy) return
@@ -366,7 +374,9 @@ function NotificationsCard() {
 
   const sublabel = {
     'needs-install': 'Add Scribble to your Home Screen to turn this on',
-    denied: 'Notifications are turned off for Scribble in iPhone Settings',
+    denied: isIOS()
+      ? 'Notifications are turned off for Scribble in iPhone Settings'
+      : 'Notifications are blocked for this site in your browser settings',
     unsupported: 'Not available in this browser',
   }[state] || '9:30am \u00b7 your active list items'
 
@@ -441,7 +451,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
     reorderCategories, renameCategory, deleteCategory, addCategory,
     toggleCategoryHomescreen, promptDelete,
   } = useAppContext()
-  const [showArchivedCats, setShowArchivedCats] = useState(true)
+  const [showArchivedCats, setShowArchivedCats] = useState(false)
   const { user, signOut } = useAuth()
 
   const containerRef = useRef(null)

@@ -57,9 +57,9 @@ export function buildDragCloneShell(srcRowEl, cloneInner, fallbackBg = '#F7F6F3'
     pageScope.insertBefore(stroke, pageScope.firstChild)
   }
   const skin = darkDots
-    ? ['background:rgba(255,255,255,0.08)', 'border:none',
+    ? ['background:var(--glass-fill)', 'border:none',
        `box-shadow:0 6px 24px rgba(0,0,0,0.2), ${glassInset()}`, 'border-radius:16px',
-       '-webkit-backdrop-filter:blur(24px) saturate(180%)', 'backdrop-filter:blur(24px) saturate(180%)',
+       '-webkit-backdrop-filter:blur(10px) saturate(180%)', 'backdrop-filter:blur(10px) saturate(180%)',
        ...pillGeom]
     : [`background:${bg}`, `border:${border}`, 'box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px']
 
@@ -69,8 +69,8 @@ export function buildDragCloneShell(srcRowEl, cloneInner, fallbackBg = '#F7F6F3'
 // The glass's inner highlight: faint in Dark Dots, strong white in Light Dots
 const glassInset = () =>
   document.documentElement.dataset.theme === 'light-dots'
-    ? 'inset -6px -6px 6px rgba(255,255,255,0.9)'
-    : 'inset -6px -6px 4px rgba(255,255,255,0.06)'
+    ? 'inset -6px -6px 6px rgba(255,255,255,0.6)'
+    : 'inset -6px -6px 4px rgba(255,255,255,0.04)'
 
 // The glass's gradient outline, as an element laid over the floating copy
 export function makeGlassStroke() {

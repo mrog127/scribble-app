@@ -3036,6 +3036,8 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
 /* ---- Archived easels section in the Settings Tabs card ----
    Same treatment as the archived group in search results: light gray ground,
    small uppercase label, with a Show/Hide control on the same line. */
+.settings-email-icon { display: none; }
+
 .settings-archived-group {
   background: rgba(0, 0, 0, 0.02);
   border-top: 1px solid #DBDAD8;
@@ -3677,8 +3679,8 @@ body.resizing-detail .phone { transition: none !important; }
 /* Same glass as the control bar, tinted with the easel's colour */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-add-btn {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 /* Ring and glow borrowed from the pinned Gallery canvas, but held still: the
@@ -3721,7 +3723,7 @@ body.resizing-detail .phone { transition: none !important; }
    included) needs the -webkit- prefix. Where backdrop-filter is unsupported the
    fill alone still reads, so nothing is lost. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone {
-  --mbar-chrome: rgba(255, 255, 255, 0.08);
+  --mbar-chrome: var(--glass-fill);
   --mbar-stroke: rgba(255, 255, 255, 0.14);
   --mbar-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
 }
@@ -3729,8 +3731,8 @@ body.resizing-detail .phone { transition: none !important; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-circle,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .link-input-stack {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 
@@ -3740,7 +3742,7 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .link-input-stack {
   box-shadow:
     0 6px 24px rgba(0, 0, 0, 0.2),
-    inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+    inset -6px -6px 4px rgba(255, 255, 255, 0.04);
   border-color: transparent;
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-circle::before,
@@ -3777,7 +3779,7 @@ body.resizing-detail .phone { transition: none !important; }
 /* --- Menus (card three-dot, long-press row menu, page menu) ---
    Glass panel, no dividers, Helvetica Neue in the same off-white as the app. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-context-menu {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
@@ -3785,8 +3787,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-context-menu {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-context-item {
@@ -3921,7 +3923,7 @@ body.resizing-detail .phone { transition: none !important; }
     background: var(--mbar-chrome);
     box-shadow:
       0 6px 24px rgba(0, 0, 0, 0.2),
-      inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+      inset -6px -6px 4px rgba(255, 255, 255, 0.04);
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
     content: '';
@@ -3984,8 +3986,8 @@ body.resizing-detail .phone { transition: none !important; }
   }
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      backdrop-filter: blur(10px) saturate(180%);
     }
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before {
@@ -4057,8 +4059,8 @@ body.resizing-detail .phone { transition: none !important; }
   }
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      backdrop-filter: blur(10px) saturate(180%);
     }
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-label {
@@ -4195,8 +4197,8 @@ body.resizing-detail .phone { transition: none !important; }
   }
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      backdrop-filter: blur(10px) saturate(180%);
     }
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
@@ -4255,16 +4257,16 @@ body.resizing-detail .phone { transition: none !important; }
   }
 }
 @keyframes dd-box-glow {
-  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 4px rgba(255, 255, 255, 0.06); }
-  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 8px 4px rgba(255, 255, 255, 0.06); }
-  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -8px 0 4px rgba(255, 255, 255, 0.06); }
-  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -8px 4px rgba(255, 255, 255, 0.06); }
-  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 4px rgba(255, 255, 255, 0.06); }
+  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 4px rgba(255, 255, 255, 0.04); }
+  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 8px 4px rgba(255, 255, 255, 0.04); }
+  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -8px 0 4px rgba(255, 255, 255, 0.04); }
+  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -8px 4px rgba(255, 255, 255, 0.04); }
+  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 4px rgba(255, 255, 255, 0.04); }
 }
 @media (prefers-reduced-motion: reduce) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open),
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open)::before { animation: none; }
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 
 /* Paste renders as a label by default; the icon is for the round variant */
@@ -4323,8 +4325,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast.leaving { animation: add-toast-out 200ms ease forwards; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast::before {
@@ -4736,15 +4738,15 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-style-bar {
   height: 48px;
   padding: 0 24px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 32px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-style-bar {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-style-btn,
@@ -4812,8 +4814,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn svg * { stroke: #E6E6E6; }
@@ -5096,11 +5098,11 @@ body.resizing-detail .phone { transition: none !important; }
   animation: dd-mc-glow 8s linear infinite;
 }
 @keyframes dd-mc-glow {
-  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
-  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 12px 8px rgba(var(--accent-base-rgb), 0.24); }
-  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
-  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -12px 8px rgba(var(--accent-base-rgb), 0.24); }
-  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
+  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.12); }
+  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 12px 8px rgba(var(--accent-base-rgb), 0.12); }
+  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -12px 0 8px rgba(var(--accent-base-rgb), 0.12); }
+  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -12px 8px rgba(var(--accent-base-rgb), 0.12); }
+  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.12); }
 }
 /* Stroke, with its bright end orbiting the pill */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn::before {
@@ -5139,7 +5141,7 @@ body.resizing-detail .phone { transition: none !important; }
 /* --- Attachments menu (paperclip panel) ---
    Same glass, type and hover band as the card and row menus. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-attach-panel {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
@@ -5147,8 +5149,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-attach-panel {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-attach-item + .todo-attach-item { border-top: none; }
@@ -5217,7 +5219,7 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .swipe-row.row-lifted,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-swipe-row.row-lifted,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile.row-lifted {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
@@ -5226,8 +5228,8 @@ body.resizing-detail .phone { transition: none !important; }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .swipe-row.row-lifted,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-swipe-row.row-lifted,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile.row-lifted {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 
@@ -5294,7 +5296,7 @@ body.resizing-detail .phone { transition: none !important; }
   --dd-red: #FF7070;
   --dd-red-rgb: 255, 112, 112;
   position: relative;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: none;
   border-radius: 32px;
   padding: 16px;
@@ -5303,8 +5305,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal::before {
@@ -5378,7 +5380,7 @@ body.resizing-detail .phone { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal::before { animation: none; }
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 
 
@@ -5461,14 +5463,14 @@ body.resizing-detail .phone { transition: none !important; }
   padding: 16px 16px 14px;
   border: none;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   overflow: visible;
   animation: dd-box-glow 8s linear infinite;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap::before {
@@ -5624,7 +5626,7 @@ body.resizing-detail .phone { transition: none !important; }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap::before,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-send-btn.visible::before,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-send-btn.visible::after { animation: none; }
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 
 /* Attach button hover: the wash fills the button exactly, in its own shape */
@@ -5782,8 +5784,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-rename-wrap .project-send-btn.visible {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-rename-wrap .project-send-btn.visible::before {
@@ -5887,14 +5889,14 @@ body.resizing-detail .phone { transition: none !important; }
    card rule.) The card clips its scrolling list to its corners, so
    the stroke sits just inside the edge rather than 1px outside it. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: none;
   animation: dd-box-glow 8s linear infinite;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before {
@@ -5916,7 +5918,7 @@ body.resizing-detail .phone { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before { animation: none; }
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 /* On the glass: Cancel / Save and the easel tabs' track are a 6% white wash
    rather than solid greys, and the button sits 4px closer to the right edge */
@@ -5933,15 +5935,15 @@ body.resizing-detail .phone { transition: none !important; }
    in the Cancel pill's style. (#app outweighs cards.css, which loads later.) */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   border: none;
   border-radius: 32px;
   animation: dd-box-glow 8s linear infinite;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before {
@@ -6066,7 +6068,7 @@ body.resizing-detail .phone { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before { animation: none; }
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 
 /* Recurring menu: blurred glass over a blurred calendar. A backdrop-filter on
@@ -6087,22 +6089,22 @@ body.resizing-detail .phone { transition: none !important; }
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-fill);
   animation: dd-box-glow 8s linear infinite;
   pointer-events: none;
   z-index: -1;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::after { animation: none; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::after { animation: none; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::after {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .cal-recur-menu {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 
@@ -6153,7 +6155,7 @@ body.resizing-detail .phone { transition: none !important; }
     height: var(--mbar-h);
     border: none;
     border-radius: calc(var(--mbar-h) / 2);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--glass-fill);
     animation: dd-box-glow 8s linear infinite;
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open::before {
@@ -6209,8 +6211,8 @@ body.resizing-detail .phone { transition: none !important; }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 
@@ -6307,7 +6309,7 @@ body.resizing-detail .phone { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open,
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open::before { animation: none; }
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); }
 }
 
 
@@ -6348,8 +6350,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .new-project-card .project-send-btn.visible {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .new-project-card .project-send-btn.visible::before {
@@ -6970,7 +6972,7 @@ body.resizing-detail .phone { transition: none !important; }
 /* Light Dots: list item page */
 :root[data-theme="light-dots"] .note-detail-page:has(> .todo-complete-flash) :is(.note-detail-done, .detail-footer-project-btn, .detail-footer .dots-menu) { background: #E3E3E3; }
 :root[data-theme="light-dots"] .note-detail-page:has(> .todo-complete-flash) .todo-attach-btn.section-attach-btn { background: #F0F0F0; }
-:root[data-theme="light-dots"] .mark-complete-btn:not(.done) { background: rgba(var(--accent-base-rgb), 0.16); }
+:root[data-theme="light-dots"] .mark-complete-btn:not(.done) { background: rgba(var(--accent-base-rgb), 0.12); }
 
 /* Light Dots: "Add new canvas" keeps the easel's colour (the #292929 text swap
    above had overridden it) */
@@ -7003,11 +7005,11 @@ body.resizing-detail .phone { transition: none !important; }
 
 /* Light Dots: Mark as Complete drop shadow is the easel colour at 16% */
 @keyframes ld-mc-glow {
-  0%   { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
-  25%  { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 0 12px 8px rgba(var(--accent-base-rgb), 0.24); }
-  50%  { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset -12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
-  75%  { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 0 -12px 8px rgba(var(--accent-base-rgb), 0.24); }
-  100% { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.24); }
+  0%   { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.12); }
+  25%  { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 0 12px 8px rgba(var(--accent-base-rgb), 0.12); }
+  50%  { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset -12px 0 8px rgba(var(--accent-base-rgb), 0.12); }
+  75%  { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 0 -12px 8px rgba(var(--accent-base-rgb), 0.12); }
+  100% { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16), inset 12px 0 8px rgba(var(--accent-base-rgb), 0.12); }
 }
 :root[data-theme="light-dots"] .mark-complete-btn:not(.done) { animation-name: ld-mc-glow; }
 :root[data-theme="light-dots"] .mark-complete-btn.done { box-shadow: 0 6px 24px rgba(var(--accent-base-rgb), 0.16); }
@@ -7144,11 +7146,11 @@ body.resizing-detail .phone { transition: none !important; }
 /* Light Dots: open Add item box — the orbiting inner glow and stroke stay white
    but turned up so they read on the light page */
 @keyframes ld-box-glow {
-  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 6px rgba(255, 255, 255, 0.9); }
-  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 8px 6px rgba(255, 255, 255, 0.9); }
-  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -8px 0 6px rgba(255, 255, 255, 0.9); }
-  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -8px 6px rgba(255, 255, 255, 0.9); }
-  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 6px rgba(255, 255, 255, 0.9); }
+  0%   { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 6px rgba(255, 255, 255, 0.6); }
+  25%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 8px 6px rgba(255, 255, 255, 0.6); }
+  50%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -8px 0 6px rgba(255, 255, 255, 0.6); }
+  75%  { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 0 -8px 6px rgba(255, 255, 255, 0.6); }
+  100% { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset 8px 0 6px rgba(255, 255, 255, 0.6); }
 }
 @media (max-width: 999.98px) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) { animation-name: ld-box-glow; }
@@ -7320,7 +7322,7 @@ body.resizing-detail .phone { transition: none !important; }
    read on the light page, as on the open Add item box */
 :root[data-theme="light-dots"] .mbar-circle,
 :root[data-theme="light-dots"] .footer .add-row .link-input-stack {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
 }
 :root[data-theme="light-dots"] .mbar-circle::before,
 :root[data-theme="light-dots"] .footer .add-row .link-input-stack::before {
@@ -7329,7 +7331,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (max-width: 999.98px) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
     background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
@@ -7347,7 +7349,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 :root[data-theme="light-dots"] .archive-modal {
@@ -7359,7 +7361,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] .archive-modal {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 :root[data-theme="light-dots"] .todo-section-card .todo-composer .project-input-wrap {
@@ -7371,7 +7373,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] .todo-section-card .todo-composer .project-input-wrap {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 :root[data-theme="light-dots"] #app .move-to-card {
@@ -7383,7 +7385,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] #app .move-to-card {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 :root[data-theme="light-dots"] #app .cal-card {
@@ -7395,7 +7397,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] #app .cal-card {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 :root[data-theme="light-dots"] #app .cal-card::after {
@@ -7403,7 +7405,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] #app .cal-card::after {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 @media (max-width: 999.98px) {
@@ -7417,7 +7419,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] .footer .add-row .search-stack.open {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 
@@ -7634,7 +7636,7 @@ body.resizing-detail .phone { transition: none !important; }
     overflow: visible;
     border-radius: calc(var(--mbar-h) / 2);
     background: var(--mbar-chrome);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
   }
 }
 @media (min-width: 1000px) {
@@ -7720,8 +7722,8 @@ body.resizing-detail .phone { transition: none !important; }
 @media (min-width: 1000px) {
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      backdrop-filter: blur(10px) saturate(180%);
     }
   }
 }
@@ -7813,8 +7815,8 @@ body.resizing-detail .phone { transition: none !important; }
 @media (min-width: 1000px) {
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .toolbar-source-btn {
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      backdrop-filter: blur(10px) saturate(180%);
     }
   }
 }
@@ -7920,8 +7922,8 @@ body.resizing-detail .phone { transition: none !important; }
 @media (min-width: 1000px) {
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) {
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      backdrop-filter: blur(10px) saturate(180%);
     }
   }
 }
@@ -8144,7 +8146,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (min-width: 1000px) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
 }
 @media (min-width: 1000px) {
@@ -8258,7 +8260,7 @@ body.resizing-detail .phone { transition: none !important; }
     height: var(--mbar-h);
     border: none;
     border-radius: calc(var(--mbar-h) / 2);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--glass-fill);
     animation: dd-box-glow 8s linear infinite;
   }
 }
@@ -8489,8 +8491,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="light-dots"] #app .card.gallery-canvas { background: var(--mbar-chrome); }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root[data-theme="light-dots"] #app .card.gallery-canvas {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke {
@@ -8499,7 +8501,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow {
   opacity: 1;
-  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9);
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
 }
 
 /* Light Dots: the pinned Gallery canvas's easel-coloured outline (full strength,
@@ -8621,7 +8623,7 @@ body.resizing-detail .phone { transition: none !important; }
   }
   :root[data-theme="light-dots"] .tab-bar .tab-home.pulse-spin .tab-glow {
     box-shadow:
-      inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9),
+      inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6),
       inset var(--glow-x) var(--glow-y) 22px color-mix(in srgb, var(--pulse-base, #78A4C2) 10%, transparent);
   }
 }
@@ -8657,8 +8659,8 @@ body.resizing-detail .phone { transition: none !important; }
    now scroll under it */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 
@@ -8739,12 +8741,12 @@ body.resizing-detail .phone { transition: none !important; }
   border: none;
   border-radius: 32px;
   background: var(--mbar-chrome);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 /* The glass's gradient outline */
@@ -8764,7 +8766,7 @@ body.resizing-detail .phone { transition: none !important; }
   z-index: 2;
 }
 :root[data-theme="light-dots"] .link-preview-card {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
 }
 :root[data-theme="light-dots"] .link-preview-card::before {
   opacity: 1;
@@ -8819,10 +8821,10 @@ body.resizing-detail .phone { transition: none !important; }
    shadow was cut off at the sides. A tighter shadow — 12px blur, 4px down — fits
    inside the gutter. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
 }
 :root[data-theme="light-dots"] .link-preview-card {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
 }
 
 /* Dots themes, desktop: the sidebar's dots line up with the top of an Easel's
@@ -8936,15 +8938,15 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   clip-path: inset(0 round 32px);
   background: var(--mbar-chrome);
-  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.06);
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.04);
   animation: gallery-canvas-orbit 8s linear infinite;
   pointer-events: none;
   z-index: -1;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::before {
@@ -8952,7 +8954,7 @@ body.resizing-detail .phone { transition: none !important; }
   background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
 }
 :root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::after {
-  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.9);
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
 }
 @media (prefers-reduced-motion: reduce) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
@@ -8989,8 +8991,8 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root[data-theme="light-dots"] .card.gallery-canvas::after {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 
@@ -9059,10 +9061,10 @@ body.resizing-detail .phone { transition: none !important; }
   overflow: hidden;
   opacity: 1;
   transform: none;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
+  background: var(--glass-fill);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%);
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .drag-ghost-card.card::before {
   content: '';
@@ -9080,7 +9082,7 @@ body.resizing-detail .phone { transition: none !important; }
   z-index: 2;
 }
 :root[data-theme="light-dots"] :is(#app .drag-ghost-card.card, .drag-ghost-card.card.card) {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
 }
 :root[data-theme="light-dots"] .drag-ghost-card.card::before {
   opacity: 1;
@@ -9127,16 +9129,16 @@ body.resizing-detail .phone { transition: none !important; }
   inset: 0;
   border-radius: inherit;
   clip-path: inset(0 round 32px);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  background: var(--glass-fill);
+  box-shadow: inset -6px -6px 4px rgba(255, 255, 255, 0.04);
   pointer-events: none;
   z-index: -1;
   visibility: visible;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.gallery-canvas)::after {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root[data-theme="light-dots"] .cards-dragging .project-card:not(.gallery-canvas)::before {
@@ -9144,7 +9146,7 @@ body.resizing-detail .phone { transition: none !important; }
   background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3));
 }
 :root[data-theme="light-dots"] .cards-dragging .project-card:not(.gallery-canvas)::after {
-  box-shadow: inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  box-shadow: inset -6px -6px 6px rgba(255, 255, 255, 0.6);
 }
 
 /* Dots themes: a row being dragged to rearrange is clear liquid glass — its
@@ -9193,14 +9195,14 @@ body.resizing-detail .phone { transition: none !important; }
   left: var(--lift-left, 8px);
   right: var(--lift-right, 8px);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3), inset -6px -6px 4px rgba(255, 255, 255, 0.06);
+  background: var(--glass-fill);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
   opacity: 1;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::before {
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
   }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::after {
@@ -9222,7 +9224,7 @@ body.resizing-detail .phone { transition: none !important; }
   z-index: 2;
 }
 :root[data-theme="light-dots"] :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::before {
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3), inset -6px -6px 6px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
 }
 :root[data-theme="light-dots"] :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::after {
   opacity: 1;
@@ -9245,3 +9247,342 @@ body.resizing-detail .phone { transition: none !important; }
    title matches the gap from the title to the card's bottom (the dragged copy
    is already even, so it keeps its full line) */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.drag-ghost-card) > .card-header .card-title-wrap { margin-bottom: -4px; }
+
+/* Dots themes: the clear liquid glass holds still (except Mark as Complete, which keeps its orbit) — the stroke highlight sits
+   on the top-left corner and the inner glow on the bottom-right. The Dots-only glow animations are redefined as a single frame, and the
+   shared stroke/glow orbits are switched off on the glass layers. */
+@keyframes dd-box-glow { from, to { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04); } }
+@keyframes dd-send-glow { from, to { box-shadow: inset -6px -6px 4px hsl(from var(--accent-base) h calc(s * 1.08) calc(l * 0.98)); } }
+@keyframes dd-toast-glow-still { from, to { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -8px -8px 8px rgba(var(--accent-base-rgb), 0.24); } }
+:root[data-theme="dark-dots"] .add-toast:not(.leaving) { animation: add-toast-in 200ms ease, dd-toast-glow-still 8s linear infinite; }
+@keyframes ld-box-glow { from, to { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6); } }
+@keyframes ld-toast-glow { from, to { box-shadow: inset -8px -8px 8px rgba(var(--accent-base-rgb), 0.24); } }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-stroke,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-glow,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after,
+:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke::after,
+:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow::after {
+  animation: none !important;
+  --cb-stroke-angle: 135deg !important;
+  --glow-x: -8px !important;
+  --glow-y: -8px !important;
+}
+
+
+/* Dots themes: the clear liquid glass fill — clear in the top-left corner,
+   white in the bottom-right (40% in Light Dots, 8% in Dark Dots) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) {
+  --glass-fill: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.4));
+}
+:root[data-theme="dark-dots"] {
+  --glass-fill: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.08));
+}
+
+/* Dots themes: hovering an active (unchecked) checkbox deepens its easel-colour
+   fill from 24% to 40% */
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .checkbox-wrap:hover .checkbox.activated-checkbox:not(.checked):not(.animating-check) {
+    background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.4);
+  }
+}
+
+/* =============================================
+   Settings — Dark Dots / Light Dots
+   The page's own styles are inline (Paintbrush), so these take !important.
+   Same language as the Gallery: flat 32px cards with no border or shadow,
+   Helvetica Neue, no dividers, easel dots, glass menus.
+   ============================================= */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-sheet { background: #212121; }
+  :root[data-theme="light-dots"] .settings-sheet { background: #F0F0F0; }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .active-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: -0.64px;
+  color: #E6E6E6;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-header-row { margin-bottom: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #333333;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-close-btn svg * { stroke: #E6E6E6; stroke-width: 2; }
+
+/* Cards */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-card {
+  background: #292929 !important;
+  border: none !important;
+  border-radius: 32px !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-card > .card-header { padding: 16px 16px 8px 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-card .card-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.44px;
+  color: #E6E6E6;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-divider { display: none; }
+
+/* Add Tab: a content page's Done / Close pill */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-add-tab {
+  height: 40px !important;
+  padding: 0 18px 0 14px !important;
+  border-radius: 32px !important;
+  background: #333333 !important;
+  gap: 6px !important;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 25px !important;
+  color: #E6E6E6 !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-add-tab svg * { stroke: #E6E6E6; stroke-width: 2; }
+:root[data-theme="light-dots"] #page-menu .settings-add-tab { background: #E3E3E3 !important; color: #292929 !important; }
+:root[data-theme="light-dots"] #page-menu .settings-add-tab svg * { stroke: #292929; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-add-tab:hover { background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)) !important; }
+  :root[data-theme="light-dots"] #page-menu .settings-add-tab:hover { background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04)) !important; }
+}
+
+/* Tab rows: the easel's dot in place of the painted underline */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-tab-row { padding-left: 20px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .cat-row-decoration { width: 12px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .cat-row-decoration > svg { display: none !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .cat-row-decoration::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--row-dot, currentColor);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-tab-name {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-weight: 500 !important;
+  color: #E6E6E6 !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-tab-name::placeholder { color: #7A7A7A; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-nohome svg * { stroke: #7A7A7A; stroke-width: 2; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .cat-menu-btn svg circle { fill: #E6E6E6; }
+
+/* Archived group */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-group {
+  background: none;
+  border-top: none;
+  margin-top: 8px;
+  padding-bottom: 4px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-head { padding: 8px 20px 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-label {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-weight: 700;
+  color: #7A7A7A;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-toggle {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #E6E6E6;
+}
+:root[data-theme="light-dots"] #page-menu .settings-archived-toggle { color: #292929; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-row { padding-left: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-name {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #7A7A7A;
+  opacity: 1;
+}
+
+/* Theme picker: a 4% pill instead of an outlined box */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .theme-menu-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 0 16px !important;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-weight: 500 !important;
+  color: #E6E6E6 !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .theme-menu-btn svg * { stroke: #E6E6E6; stroke-width: 2; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .theme-menu-btn:hover { background: rgba(255, 255, 255, 0.06) !important; }
+}
+
+/* Drop-down menus: the same glass as the card menus */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .cat-menu-dropdown {
+  background: var(--glass-fill) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2) !important;
+  padding: 4px 0;
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-item {
+  position: relative;
+  border-bottom: none !important;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-weight: 400 !important;
+  color: #E6E6E6 !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-item.danger { color: #FF7070 !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  border-radius: 16px;
+  background: transparent;
+  pointer-events: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-item:active::before { background: rgba(255, 255, 255, 0.06); }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-item:hover::before { background: rgba(255, 255, 255, 0.06); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-item.danger:hover::before { background: rgba(178, 74, 74, 0.12); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-tick path { stroke: var(--accent-base); stroke-width: 2; }
+/* Send to homescreen: a round checkbox, like the ones on the cards */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-check {
+  border-radius: 50% !important;
+  border: 1px solid #7A7A7A !important;
+  background: #262626 !important;
+  box-shadow: none !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-check.on {
+  border-color: var(--accent-base) !important;
+  background: var(--accent-base) !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-dd-check path { stroke: #212121; stroke-width: 2; }
+
+/* Notifications */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-card > div:has(> .theme-menu-btn) { padding: 0 16px 16px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-card > div:has(.settings-switch) { padding: 0 16px 16px 20px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-notif-label {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-weight: 500 !important;
+  color: #E6E6E6 !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-notif-sub {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #7A7A7A !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-test-btn {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  color: var(--accent-base) !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-switch:not(.on) { background: #333333 !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-switch-knob { background: #E6E6E6 !important; box-shadow: none !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-switch.on .settings-switch-knob { background: #FFFFFF !important; }
+
+/* Account */
+/* Account: a card like Themes — the email where a title would be, Log out as
+   the 4% pill underneath */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-account {
+  margin-top: 16px !important;
+  gap: 8px !important;
+  background: #292929;
+  border-radius: 32px;
+  padding: 20px 16px 16px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-email {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-size: 16px !important;
+  color: #E6E6E6 !important;
+  padding-left: 4px;
+  min-height: 32px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-email-icon { display: block; flex-shrink: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-logout {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 0 16px !important;
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-weight: 500 !important;
+  color: #FF7070 !important;
+}
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-logout:hover { background: rgba(255, 255, 255, 0.06) !important; }
+}
+
+/* Light Dots: the usual colour swaps */
+:root[data-theme="light-dots"] #page-menu .active-title,
+:root[data-theme="light-dots"] #page-menu .settings-card .card-title { color: #292929; }
+:root[data-theme="light-dots"] #page-menu .settings-close-btn { background: #E3E3E3; }
+:root[data-theme="light-dots"] #page-menu .settings-close-btn svg * { stroke: #292929; }
+:root[data-theme="light-dots"] #page-menu .settings-card { background: #FAFAFA !important; }
+:root[data-theme="light-dots"] #page-menu .settings-account { background: #FAFAFA; }
+:root[data-theme="light-dots"] #page-menu .settings-logout { background: rgba(0, 0, 0, 0.04) !important; }
+:root[data-theme="light-dots"] :is(#page-menu .settings-tab-name, #page-menu .settings-notif-label, #page-menu .theme-menu-btn, #page-menu .settings-dd-item:not(.danger)) { color: #292929 !important; }
+:root[data-theme="light-dots"] #page-menu .settings-tab-name::placeholder { color: #969696; }
+:root[data-theme="light-dots"] #page-menu .settings-notif-sub { color: #969696 !important; }
+:root[data-theme="light-dots"] #page-menu .settings-email { color: #292929 !important; }
+:root[data-theme="light-dots"] :is(#page-menu .settings-archived-label, #page-menu .settings-archived-name) { color: #969696; }
+:root[data-theme="light-dots"] #page-menu .settings-nohome svg * { stroke: #969696; }
+:root[data-theme="light-dots"] #page-menu .cat-menu-btn svg circle { fill: #292929; }
+:root[data-theme="light-dots"] #page-menu .theme-menu-btn { background: rgba(0, 0, 0, 0.04) !important; }
+:root[data-theme="light-dots"] #page-menu .theme-menu-btn svg * { stroke: #292929; }
+@media (hover: hover) {
+  :root[data-theme="light-dots"] #page-menu .theme-menu-btn:hover { background: rgba(0, 0, 0, 0.06) !important; }
+  :root[data-theme="light-dots"] #page-menu .settings-dd-item:hover::before { background: rgba(0, 0, 0, 0.04); }
+  :root[data-theme="light-dots"] #page-menu .settings-logout:hover { background: rgba(0, 0, 0, 0.06) !important; }
+}
+:root[data-theme="light-dots"] #page-menu .settings-dd-item:active::before { background: rgba(0, 0, 0, 0.04); }
+:root[data-theme="light-dots"] #page-menu .settings-dd-check { border-color: #A3A3A3 !important; background: #F5F5F5 !important; }
+:root[data-theme="light-dots"] #page-menu .settings-dd-check.on { border-color: var(--accent-base) !important; background: var(--accent-base) !important; }
+:root[data-theme="light-dots"] #page-menu .settings-dd-check path { stroke: #F0F0F0; }
+:root[data-theme="light-dots"] #page-menu .settings-switch:not(.on) { background: #E3E3E3 !important; }
+:root[data-theme="light-dots"] #page-menu .settings-switch-knob { background: #FFFFFF !important; }
+/* END Settings — Dots */
+
+/* Settings — Dots: the floating copy of a tab row being dragged. It lives in
+   the animation portal, outside #page-menu, so it repeats the row's styling. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .settings-tab-row { padding-left: 20px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .cat-row-decoration { width: 12px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .cat-row-decoration > svg { display: none !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .cat-row-decoration::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--row-dot, currentColor);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .settings-tab-name {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif !important;
+  font-weight: 500 !important;
+  color: #E6E6E6 !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .settings-nohome svg * { stroke: #7A7A7A; stroke-width: 2; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .settings-drag-ghost .cat-menu-btn svg circle { fill: #E6E6E6; }
+:root[data-theme="light-dots"] .settings-drag-ghost .settings-tab-name { color: #292929 !important; }
+:root[data-theme="light-dots"] .settings-drag-ghost .settings-nohome svg * { stroke: #969696; }
+:root[data-theme="light-dots"] .settings-drag-ghost .cat-menu-btn svg circle { fill: #292929; }
+/* Settings — Dots: with the archived tabs hidden, 24px under the Archived line */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-archived-group:not(:has(.settings-archived-row)) { padding-bottom: 24px; }
+/* Settings — Dots: 8px of clear space under the header, then the scrolling
+   content fades out over 16px as it passes beneath */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #page-menu .settings-body {
+  margin-top: 8px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+}

@@ -18,6 +18,7 @@ import { dragLiftShadow, makeGlassStroke } from '../dragClone.js'
 // same clear-glass skin as a row dragged out of a canvas card.
 export function useCategoryDragReorder(containerRef, categories, onReorder, opts = {}) {
   const ghostClass = opts.ghostClass
+  const ghostPill = !!opts.pill
   const dragRef = useRef(null)
   const flipRef = useRef(null)
   const catsRef = useRef(categories)
@@ -89,26 +90,34 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
       const cloneInner = dragged.el.cloneNode(true)
       cloneInner.style.pointerEvents = 'none'
       cloneInner.style.background = darkGhost ? 'transparent' : '#F7F6F3'
+      // Settings in the Dots themes: a pill set 8px in from the card's edges,
+      // with the row's content held where it was
+      const pill = darkGhost && ghostPill
+      if (pill) { cloneInner.style.marginLeft = '-8px'; cloneInner.style.boxSizing = 'border-box'; cloneInner.style.width = dragged.rect.width + 'px' }
       const clone = document.createElement('div')
       if (darkGhost) clone.className = ghostClass
       const skin = darkGhost
-        ? ['background:rgba(255,255,255,0.08)', 'border:none',
-           `box-shadow:${dragLiftShadow().replace('0 10px 32px rgba(0,0,0,0.3)', '0 6px 24px rgba(0,0,0,0.2)')}`, 'border-radius:16px',
-           '-webkit-backdrop-filter:blur(24px) saturate(180%)', 'backdrop-filter:blur(24px) saturate(180%)']
+        ? ['background:var(--glass-fill)', 'border:none',
+           `box-shadow:${dragLiftShadow().replace('0 10px 32px rgba(0,0,0,0.3)', '0 6px 24px rgba(0,0,0,0.2)')}`, `border-radius:${pill ? '999px' : '16px'}`,
+           '-webkit-backdrop-filter:blur(10px) saturate(180%)', 'backdrop-filter:blur(10px) saturate(180%)']
         : ['box-shadow:0 4px 20px rgba(0,0,0,0.10)', 'border-radius:8px',
            'border:1px solid #C2C1BF', 'background:#F7F6F3']
       clone.style.cssText = [
         'position:absolute',
-        `left:${dragged.rect.left - appRect.left - 4}px`,
+        `left:${dragged.rect.left - appRect.left + (pill ? 8 : -4)}px`,
         `top:${cloneTop}px`,
-        `width:${dragged.rect.width + 8}px`,
+        `width:${dragged.rect.width + (pill ? -16 : 8)}px`,
         'padding:4px 0',
         'pointer-events:none',
         ...skin,
         'overflow:hidden',
         'z-index:999',
       ].join(';')
-      if (darkGhost) clone.appendChild(makeGlassStroke())
+      if (darkGhost) {
+        const stroke = makeGlassStroke()
+        if (pill) stroke.style.borderRadius = '999px'
+        clone.appendChild(stroke)
+      }
       clone.appendChild(cloneInner)
       portal.appendChild(clone)
       dragged.wrapper.style.opacity = '0'
@@ -179,7 +188,11 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
         applyShifts(newIdx)
         // Recolor the floating decoration to match the accent of its new position
         const dec = s.clone.querySelector('.cat-row-decoration')
-        if (dec) dec.style.color = getCategoryAccent(newIdx).base
+        if (dec) {
+          const acc = getCategoryAccent(newIdx)
+          dec.style.color = acc.base
+          dec.style.setProperty('--row-dot', acc.dot ?? acc.base)
+        }
       }
     }
 
@@ -255,6 +268,7 @@ function ThemesCard() {
 
   return (
     <div
+      className="settings-card"
       style={{
         marginTop: 16,
         background: '#F7F6F3',
@@ -294,6 +308,7 @@ function ThemesCard() {
             {THEMES.map((t, i) => (
               <button
                 key={t.id}
+                className="settings-dd-item"
                 onClick={() => pick(t.id)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -306,7 +321,7 @@ function ThemesCard() {
               >
                 {t.name}
                 {t.id === theme && (
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <svg className="settings-dd-tick" width="18" height="18" viewBox="0 0 20 20" fill="none">
                     <path d="M4 10.5 L8 14.5 L16 6" stroke="var(--accent-dark)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
@@ -357,6 +372,7 @@ function NotificationsCard() {
 
   return (
     <div
+      className="settings-card"
       style={{
         marginTop: 16,
         background: '#F7F6F3',
@@ -370,14 +386,15 @@ function NotificationsCard() {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 16px 14px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontFamily: "'Open Sans', sans-serif", fontSize: 16, fontWeight: 400, color: '#242424' }}>
+          <p className="settings-notif-label" style={{ margin: 0, fontFamily: "'Open Sans', sans-serif", fontSize: 16, fontWeight: 400, color: '#242424' }}>
             Morning summary
           </p>
-          <p style={{ margin: '2px 0 0', fontFamily: "'Open Sans', sans-serif", fontSize: 14, fontWeight: 400, color: '#959493' }}>
+          <p className="settings-notif-sub" style={{ margin: '2px 0 0', fontFamily: "'Open Sans', sans-serif", fontSize: 14, fontWeight: 400, color: '#959493' }}>
             {sublabel}
           </p>
           {on && (
             <button
+              className="settings-test-btn"
               onClick={test}
               style={{
                 marginTop: 8, padding: 0, background: 'none', border: 'none', cursor: 'pointer',
@@ -390,6 +407,7 @@ function NotificationsCard() {
         </div>
         <button
           role="switch"
+          className={`settings-switch${on ? ' on' : ''}`}
           aria-checked={on}
           aria-label="Morning summary"
           disabled={!canToggle || busy}
@@ -403,6 +421,7 @@ function NotificationsCard() {
           }}
         >
           <span
+            className="settings-switch-knob"
             style={{
               position: 'absolute', top: 3, left: 3, width: 22, height: 22, borderRadius: '50%',
               background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
@@ -426,7 +445,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
   const { user, signOut } = useAuth()
 
   const containerRef = useRef(null)
-  const { onDragPointerDown } = useCategoryDragReorder(containerRef, categories, reorderCategories)
+  const { onDragPointerDown } = useCategoryDragReorder(containerRef, categories, reorderCategories, { ghostClass: 'settings-drag-ghost', pill: true })
 
   // Quick tap (no movement, released before the 250ms long-press) navigates to that tab
   const rowTapState = useRef({})
@@ -503,10 +522,11 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
         </div>
       </div>
 
-      <div style={{ padding: '16px 12px', overflowY: 'auto' }}>
+      <div className="settings-body" style={{ padding: '16px 12px', overflowY: 'auto' }}>
 
         {/* Categories list card */}
         <div
+          className="settings-card"
           style={{
             background: '#F7F6F3',
             border: '1px solid #C2C1BF',
@@ -516,8 +536,9 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
         >
           {/* Header row — project-card header styling */}
           <div className="card-header">
-            <span className="card-title">Tabs</span>
+            <span className="card-title">Easels</span>
             <button
+              className="settings-add-tab"
               onClick={() => { setIsAdding(true); setOpenMenuId(null) }}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
@@ -540,11 +561,12 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
             // wrapper div: keyed by cat.id, used for FLIP transforms + opacity fade during drag
             <div key={cat.id}>
               {index > 0 && (
-                <div style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />
+                <div className="settings-divider" style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />
               )}
               {/* [data-cat-id] row: press-and-hold anywhere to reorder; also the clone source */}
               <div
                 data-cat-id={cat.id}
+                className="settings-tab-row"
                 onPointerDown={e => { onDragPointerDown(e, cat.id); onRowPointerDown(e, cat.id) }}
                 style={{ display: 'flex', alignItems: 'center', height: 52, paddingLeft: 16 }}
               >
@@ -555,6 +577,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                     flexShrink: 0, width: 14, height: 52, marginRight: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: getCategoryAccent(index).base,
+                    '--row-dot': getCategoryAccent(index).dot ?? getCategoryAccent(index).base,
                     transition: 'color 200ms ease',
                   }}
                 >
@@ -572,6 +595,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                       if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
                     }}
                     onBlur={() => handleRenameSubmit(cat.id)}
+                    className="settings-tab-name"
                     style={{
                       flex: 1, border: 'none', background: 'transparent', outline: 'none', padding: 0,
                       fontFamily: "'Open Sans', sans-serif",
@@ -579,7 +603,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                     }}
                   />
                 ) : (
-                  <span style={{
+                  <span className="settings-tab-name" style={{
                     flex: 1,
                     fontFamily: "'Open Sans', sans-serif",
                     fontSize: 16, fontWeight: 400, color: '#333333',
@@ -590,7 +614,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
 
                 {/* No-homescreen indicator — shows when this category is excluded from the homescreen */}
                 {cat.sendToHomescreen === false && (
-                  <div style={{ flexShrink: 0, marginRight: 16, display: 'flex', alignItems: 'center' }}>
+                  <div className="settings-nohome" style={{ flexShrink: 0, marginRight: 16, display: 'flex', alignItems: 'center' }}>
                     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                       <circle cx="11" cy="11" r="9" stroke="#959493" strokeWidth="1"/>
                       <line x1="4.64" y1="4.64" x2="17.36" y2="17.36" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
@@ -628,6 +652,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         const sendOn = cat.sendToHomescreen !== false
                         return (
                           <button
+                            className="settings-dd-item"
                             onClick={() => toggleCategoryHomescreen(cat.id)}
                             style={{
                               display: 'flex', alignItems: 'center', gap: 16,
@@ -639,7 +664,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                             }}
                           >
                             Send to homescreen
-                            <span style={{
+                            <span className={`settings-dd-check${sendOn ? ' on' : ''}`} style={{
                               width: 20, height: 20, flexShrink: 0,
                               borderRadius: 2, border: `1px solid ${sendOn ? '#000000' : '#B8B8B8'}`,
                               background: sendOn ? '#737373' : '#FAF9F7',
@@ -656,6 +681,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         )
                       })()}
                       <button
+                        className="settings-dd-item"
                         onClick={() => {
                           setRenamingId(cat.id)
                           setRenameValue(cat.name)
@@ -672,6 +698,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         Rename
                       </button>
                       <button
+                        className="settings-dd-item"
                         onClick={() => { setOpenMenuId(null); archiveCategory(cat.id) }}
                         style={{
                           display: 'block', width: '100%', padding: '12px 16px',
@@ -684,6 +711,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                         Archive
                       </button>
                       <button
+                        className="settings-dd-item danger"
                         onClick={() => {
                           setOpenMenuId(null)
                           promptDelete(() => {
@@ -730,7 +758,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
               </div>
               {showArchivedCats && archivedCategories.map((cat, i) => (
                 <div key={cat.id}>
-                  {i > 0 && <div style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />}
+                  {i > 0 && <div className="settings-divider" style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />}
                   <div className="settings-archived-row">
                     <span className="settings-archived-name">{cat.name}</span>
                     <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -759,6 +787,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                           }}
                         >
                           <button
+                            className="settings-dd-item"
                             onClick={() => { setOpenMenuId(null); unarchiveCategory(cat.id) }}
                             style={{
                               display: 'block', width: '100%', padding: '12px 16px',
@@ -771,6 +800,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                             Unarchive
                           </button>
                           <button
+                            className="settings-dd-item danger"
                             onClick={() => {
                               setOpenMenuId(null)
                               promptDelete(() => deleteCategory(cat.id))
@@ -797,11 +827,12 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
           {isAdding && (
             <div>
               {categories.length > 0 && (
-                <div style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />
+                <div className="settings-divider" style={{ height: 1, background: '#DBDAD8', marginLeft: 16, marginRight: 16 }} />
               )}
-              <div style={{ display: 'flex', alignItems: 'center', height: 52, paddingLeft: 16 }}>
+              <div className="settings-tab-row" style={{ display: 'flex', alignItems: 'center', height: 52, paddingLeft: 16 }}>
                 <input
                   autoFocus
+                  className="settings-tab-name"
                   placeholder="Category name..."
                   value={addValue}
                   onChange={e => setAddValue(e.target.value)}
@@ -826,14 +857,20 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
         <NotificationsCard />
 
         {/* Account section */}
-        <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={{
+        <div className="settings-account" style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p className="settings-email" style={{
             fontFamily: "'Open Sans', system-ui, sans-serif",
             fontSize: 14, fontWeight: 500, color: '#959493', margin: 0,
           }}>
+            {/* Account icon — shown in the Dots themes only (see layout.css) */}
+            <svg className="settings-email-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
             {user?.email}
           </p>
           <button
+            className="settings-logout"
             onClick={signOut}
             style={{
               height: 48, borderRadius: 8, background: 'none',

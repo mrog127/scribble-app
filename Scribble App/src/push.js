@@ -51,16 +51,33 @@ export async function getMorningSummaryState() {
   return data ? 'on' : 'off'
 }
 
+// Why the last attempt to turn it on failed, in plain words (shown in Settings)
+export let lastPushError = ''
+
+const withTimeout = (p, ms, what) => Promise.race([
+  p, new Promise((_, rej) => setTimeout(() => rej(new Error(what)), ms)),
+])
+
 // Must be called straight from a tap — iOS only shows the prompt in a gesture.
 export async function enableMorningSummary() {
+  lastPushError = ''
   const permission = await Notification.requestPermission()
-  if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'off'
-  const reg = await navigator.serviceWorker.ready
-  const sub = (await reg.pushManager.getSubscription()) ||
-    (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC_KEY) }))
+  if (permission !== 'granted') {
+    lastPushError = permission === 'denied' ? 'Permission denied' : 'Permission not granted'
+    return permission === 'denied' ? 'denied' : 'off'
+  }
+  let sub
+  try {
+    const reg = await withTimeout(navigator.serviceWorker.ready, 8000, 'Background worker not running — reopen Scribble and try again')
+    sub = (await reg.pushManager.getSubscription()) ||
+      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC_KEY) }))
+  } catch (e) {
+    lastPushError = e?.message || 'Couldn\u2019t subscribe this device'
+    return 'off'
+  }
   const json = sub.toJSON()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return 'off'
+  if (!session) { lastPushError = 'Not signed in'; return 'off' }
   const { error } = await supabase.from('push_subscriptions').upsert({
     user_id: session.user.id,
     endpoint: sub.endpoint,
@@ -69,7 +86,7 @@ export async function enableMorningSummary() {
     time_zone: currentTimeZone(),
     updated_at: new Date().toISOString(),
   }, { onConflict: 'endpoint' })
-  if (error) { console.warn('[push] save failed', error); return 'off' }
+  if (error) { console.warn('[push] save failed', error); lastPushError = 'Couldn\u2019t save: ' + (error.message || 'server error'); return 'off' }
   return 'on'
 }
 

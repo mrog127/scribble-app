@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { getCategoryAccent, ACCENT_COLORS, getHomeAccent } from '../theme.js'
-import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary, isIOS } from '../push.js'
+import { getMorningSummaryState, enableMorningSummary, disableMorningSummary, sendTestSummary, isIOS, lastPushError } from '../push.js'
 import { THEMES, getTheme, setTheme, themeName } from '../themes.js'
 import { dragLiftShadow, makeGlassStroke } from '../dragClone.js'
 
@@ -339,6 +339,7 @@ function NotificationsCard() {
   const [state, setState] = useState(null)   // null while loading
   const [busy, setBusy] = useState(false)
   const [testNote, setTestNote] = useState('')
+  const [failNote, setFailNote] = useState('')   // why turning it on just failed
 
   // Re-read whenever the app comes back to the front — permission can be changed
   // in the phone's / browser's settings while Scribble is in the background.
@@ -360,8 +361,13 @@ function NotificationsCard() {
   const toggle = async () => {
     if (!canToggle || busy) return
     setBusy(true)
-    try { setState(on ? await disableMorningSummary() : await enableMorningSummary()) }
-    catch (e) { console.warn('[push]', e) }
+    setFailNote('')
+    try {
+      const next = on ? await disableMorningSummary() : await enableMorningSummary()
+      setState(next)
+      if (!on && next !== 'on') setFailNote(lastPushError || 'Couldn\u2019t turn on')
+    }
+    catch (e) { console.warn('[push]', e); setFailNote(e?.message || 'Couldn\u2019t turn on') }
     setBusy(false)
   }
 
@@ -379,6 +385,7 @@ function NotificationsCard() {
       : 'Notifications are blocked for this site in your browser settings',
     unsupported: 'Not available in this browser',
   }[state] || '9:30am \u00b7 your active list items'
+  const shownSub = failNote || sublabel
 
   return (
     <div
@@ -400,7 +407,7 @@ function NotificationsCard() {
             Morning summary
           </p>
           <p className="settings-notif-sub" style={{ margin: '2px 0 0', fontFamily: "'Open Sans', sans-serif", fontSize: 14, fontWeight: 400, color: '#959493' }}>
-            {sublabel}
+            {shownSub}
           </p>
           {on && (
             <button

@@ -12,6 +12,9 @@
 --
 -- Run this whole file in the Supabase SQL editor.
 
+-- 0. The scheduler (pg_cron) — newer projects don't have it on by default.
+create extension if not exists pg_cron with schema pg_catalog;
+
 -- 1. Where each phone's push subscription lives.
 create table if not exists public.push_subscriptions (
   id           uuid primary key default gen_random_uuid(),
@@ -33,6 +36,13 @@ create policy "own push subscriptions" on public.push_subscriptions
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- 2b. Newer Supabase projects don't grant table access automatically: the app
+--     (signed-in users) and the edge function (service_role) both need it.
+grant select, insert, update, delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.push_subscriptions to service_role;
+-- The summary reads your lists to build the message
+grant select on public.categories, public.projects, public.todos to service_role;
 
 -- 3. pg_net lets the database call the edge function.
 create extension if not exists pg_net;

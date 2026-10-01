@@ -326,6 +326,11 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (swap) return
     if (contentRef.current) {
       contentRef.current.innerHTML = buildNoteContent(note)
+      // Heal notes saved with stray lines (see enforceTitlePara) as they open
+      if (enforceTitlePara()) {
+        const firstPara = contentRef.current.querySelector('.note-para')
+        onSave(note.id, contentRef.current.innerHTML, firstPara ? firstPara.textContent.trim() : note.text)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id])
@@ -482,15 +487,51 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const enforceTitlePara = useCallback(() => {
     const content = contentRef.current
     if (!content) return
+    let changed = false
+    // Stray content sitting directly in the editor (a plain div or loose text
+    // that iOS / paste left without the note-para class) is invisible to the
+    // rules below, which let a later line get stuck as the title. Fold every
+    // such node into a normal Body paragraph first.
+    const sel = window.getSelection()
+    const caret = sel && sel.rangeCount && content.contains(sel.anchorNode) ? { node: sel.anchorNode, offset: sel.anchorOffset } : null
+    let run = null
+    ;[...content.childNodes].forEach(n => {
+      const isPara = n.nodeType === 1 && n.classList.contains('note-para')
+      if (isPara) { run = null; return }
+      const isBlock = n.nodeType === 1 && /^(DIV|P|H[1-6]|BLOCKQUOTE|LI|UL|OL)$/.test(n.tagName)
+      if (isBlock && n.tagName === 'DIV') { n.className = 'note-para style-body'; run = null; changed = true; return }
+      if (n.nodeType === 3 && !n.textContent.trim() && !run) { n.remove(); return }
+      if (n.nodeType !== 1 && n.nodeType !== 3) return
+      if (isBlock) {
+        const d = document.createElement('div')
+        d.className = 'note-para style-body'
+        while (n.firstChild) d.appendChild(n.firstChild)
+        n.replaceWith(d)
+        run = null; changed = true; return
+      }
+      if (!run) {
+        run = document.createElement('div')
+        run.className = 'note-para style-body'
+        n.before(run)
+      }
+      run.appendChild(n)
+      changed = true
+    })
+    if (changed && caret && caret.node.isConnected && content.contains(caret.node)) {
+      try { const r = document.createRange(); r.setStart(caret.node, caret.offset); r.collapse(true); sel.removeAllRanges(); sel.addRange(r) } catch {}
+    }
     const paras = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para'))
     paras.forEach((p, i) => {
       const isTitle = /style-title/.test(p.className)
       if (i === 0 && !isTitle) {
         p.className = 'note-para style-title'
+        changed = true
       } else if (i > 0 && isTitle) {
         p.className = p.className.replace(/style-title/, 'style-body')
+        changed = true
       }
     })
+    return changed
   }, [])
 
   const selectStyle = useCallback((style) => {
@@ -667,6 +708,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     let activePointer = null
 
     const onPointerDown = (e) => {
+      // Touch is handled by the touch listeners below: iOS cancels a pointer
+      // sequence as soon as it treats a drag as a scroll or selection, so the
+      // swipe never reached the threshold there.
+      if (e.pointerType === 'touch') return
       // Read the caret before the browser's own pointerdown handling moves it
       const para = cursorBullet()
       if (!para) return
@@ -713,11 +758,48 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       timer = setTimeout(() => { acc = 0; accPara = null; fired = false }, 200)
     }
 
+    // Touch (phone): while the body is being edited, a sideways swipe anywhere on
+    // the note indents (right) or outdents (left) the bullet the cursor is on.
+    // Touch events keep flowing through a scroll, unlike pointer events; once the
+    // drag is clearly sideways its default (scroll / selection) is cancelled.
+    const surface = editorRef.current || content
+    let t = null   // { x, y, para, decided, horizontal, done }
+    const onTouchStart = (e) => {
+      if (!editingRef.current || e.touches.length !== 1) { t = null; return }
+      const para = cursorBullet()
+      if (!para) { t = null; return }
+      t = { x: e.touches[0].clientX, y: e.touches[0].clientY, para, decided: false, horizontal: false, done: false }
+    }
+    const onTouchMove = (e) => {
+      if (!t || t.done) return
+      const dx = e.touches[0].clientX - t.x, dy = e.touches[0].clientY - t.y
+      if (!t.decided) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
+        t.decided = true
+        t.horizontal = Math.abs(dx) > Math.abs(dy) * 1.5
+        if (!t.horizontal) { t = null; return }   // a scroll — leave it alone
+      }
+      e.preventDefault()   // sideways: no scrolling, no text selection
+      if (Math.abs(dx) >= THRESHOLD) {
+        t.done = true
+        tryShift(t.para, dx > 0 ? 1 : -1)
+      }
+    }
+    const onTouchEnd = () => { t = null }
+
     content.addEventListener('pointerdown', onPointerDown)
     content.addEventListener('wheel', onWheel, { passive: false })
+    surface.addEventListener('touchstart', onTouchStart, { passive: true })
+    surface.addEventListener('touchmove', onTouchMove, { passive: false })
+    surface.addEventListener('touchend', onTouchEnd)
+    surface.addEventListener('touchcancel', onTouchEnd)
     return () => {
       content.removeEventListener('pointerdown', onPointerDown)
       content.removeEventListener('wheel', onWheel)
+      surface.removeEventListener('touchstart', onTouchStart)
+      surface.removeEventListener('touchmove', onTouchMove)
+      surface.removeEventListener('touchend', onTouchEnd)
+      surface.removeEventListener('touchcancel', onTouchEnd)
       clearTimeout(timer)
     }
   }, [])

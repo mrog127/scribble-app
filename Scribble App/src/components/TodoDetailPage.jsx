@@ -114,7 +114,7 @@ function SendIcon() {
 function NoteRowIcon({ activated }) {
   const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
   if (['dark-dots', 'light-dots'].includes(getTheme())) {
-    return <FeatherFileIcon size={20} strokeWidth={activated ? 2 : 1} color={activated ? 'var(--accent-base)' : '#7A7A7A'}/>
+    return <FeatherFileIcon size={20} strokeWidth={2} color={activated ? 'var(--accent-base)' : '#7A7A7A'}/>
   }
   return (
     <svg width="24" height="24" viewBox="0 0 20 22" fill="none">

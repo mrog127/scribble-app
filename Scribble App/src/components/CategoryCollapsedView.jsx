@@ -881,7 +881,7 @@ export function CollapsedNotesCard({ category, bare = false, onlyActivated = fal
                 >
                   <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
 {darkDots ? (
-                      <FeatherFileIcon size={20} strokeWidth={n.activated ? 2 : 1} color={n.activated ? 'var(--accent-base)' : '#7A7A7A'}/>
+                      <FeatherFileIcon size={20} strokeWidth={2} color={n.activated ? 'var(--accent-base)' : '#7A7A7A'}/>
                     ) : (
                                         <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
                         <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={n.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" fill={n.activated ? 'var(--accent-light)' : 'none'}/>

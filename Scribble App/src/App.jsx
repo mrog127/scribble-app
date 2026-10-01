@@ -1871,7 +1871,9 @@ function AppInner() {
       return
     }
 
-    const text = inputValue.trim()
+    // A note can be sent empty: it's created as "Untitled note" and opens to be
+    // written. A list item still needs text (and a link its URL, above).
+    const text = inputValue.trim() || (toolbarType === 'note' ? 'Untitled note' : '')
     if (!text) return
 
     // After a new note flies into place, auto-open its editor. The holder tracks

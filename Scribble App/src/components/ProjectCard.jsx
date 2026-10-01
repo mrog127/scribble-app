@@ -2254,7 +2254,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
                       >
                         <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
                           {tabsAtBottom ? (
-                            <FeatherFileIcon size={20} strokeWidth={n.activated ? 2 : 1} color={n.activated ? 'var(--accent-base)' : '#7A7A7A'}/>
+                            <FeatherFileIcon size={20} strokeWidth={2} color={n.activated ? 'var(--accent-base)' : '#7A7A7A'}/>
                           ) : (
                           <svg width="24" height="24" viewBox="0 0 20 22" fill="none">
                             {n.activated && (

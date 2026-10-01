@@ -10790,3 +10790,8 @@ body.resizing-detail .phone { transition: none !important; }
 @media (min-width: 1000px) {
   .app-loading { left: calc(340px + var(--gutter, 0px) + (100% - 340px - var(--gutter, 0px)) / 2); }
 }
+
+/* Dark Dots: the Gallery page cards' glass fill fades to 5% white (not 8%) */
+:root[data-theme="dark-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::after {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.05));
+}

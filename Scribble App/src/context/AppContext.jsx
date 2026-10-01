@@ -4,7 +4,7 @@ import { supabase, functionsUrl, functionsKey } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
 import { isRecurring, nextRecurrence } from '../components/ScheduleBits.jsx'
-import { readCache, writeCache } from '../localCache.js'
+import { readCache, readCacheSync, writeCache } from '../localCache.js'
 import { send, flush, pendingCount } from '../outbox.js'
 
 export const AppContext = createContext(null)
@@ -37,10 +37,12 @@ const dbw = (builder, label) => { send(builder, label) }
 
 export function AppProvider({ children }) {
   const { user } = useAuth()
-  const [categories, setCategories] = useState([])
-  const [activeTodos, setActiveTodos] = useState([])
-  const [activeNotes, setActiveNotes] = useState([])
-  const [loading, setLoading] = useState(true)
+  // Paint from the last snapshot on the very first render (see localCache.js)
+  const [initialSnap] = useState(() => (user ? readCacheSync(`state-${user.id}`) : null))
+  const [categories, setCategories] = useState(() => initialSnap?.categories || [])
+  const [activeTodos, setActiveTodos] = useState(() => initialSnap?.activeTodos || [])
+  const [activeNotes, setActiveNotes] = useState(() => initialSnap?.activeNotes || [])
+  const [loading, setLoading] = useState(() => !initialSnap)
   // Single source of truth for which detail page is open, so only one row is
   // highlighted at a time across all cards. Shape: { type, id } | null
   const [openDetail, setOpenDetail] = useState(null)
@@ -70,7 +72,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    readCache(`state-${user.id}`).then(cached => {
+    if (!initialSnap) readCache(`state-${user.id}`).then(cached => {
       if (cancelled || freshLoadedRef.current || !cached) return
       setCategories(cached.categories || [])
       setActiveTodos(cached.activeTodos || [])
@@ -106,17 +108,9 @@ export function AppProvider({ children }) {
   async function loadAll() {
     setLoading(true)
 
-    let { data: cats } = await supabase.from('categories').select('*').order('sort_order')
-
-    if (!cats || cats.length === 0) {
-      await supabase.from('categories').insert(
-        DEFAULT_CATEGORIES.map(c => ({ ...c, user_id: user.id }))
-      )
-      await supabase.from('projects').insert({ ...DEFAULT_PROJECT, user_id: user.id })
-      cats = DEFAULT_CATEGORIES
-    }
-
-    const [{ data: projs }, { data: todos }, { data: notes }, { data: links }, { data: aTodos }, { data: aNotes }] = await Promise.all([
+    // Everything in one round trip (categories used to be fetched on its own first)
+    const results = await Promise.all([
+      supabase.from('categories').select('*').order('sort_order'),
       supabase.from('projects').select('*').order('sort_order'),
       supabase.from('todos').select('*').not('project_id', 'is', null).order('sort_order'),
       supabase.from('notes').select('*').not('project_id', 'is', null).order('sort_order'),
@@ -124,6 +118,19 @@ export function AppProvider({ children }) {
       supabase.from('todos').select('*').is('project_id', null).order('sort_order'),
       supabase.from('notes').select('*').is('project_id', null).order('sort_order'),
     ])
+    // Couldn't reach the server (offline, flaky), even partly: keep what's on
+    // screen (the cached snapshot) rather than treating "no answer" as "empty"
+    if (results.some(r => r.error || !r.data)) { setLoading(false); return }
+    let [{ data: cats }, { data: projs }, { data: todos }, { data: notes }, { data: links }, { data: aTodos }, { data: aNotes }] = results
+
+    if (cats.length === 0) {
+      await supabase.from('categories').insert(
+        DEFAULT_CATEGORIES.map(c => ({ ...c, user_id: user.id }))
+      )
+      await supabase.from('projects').insert({ ...DEFAULT_PROJECT, user_id: user.id })
+      cats = DEFAULT_CATEGORIES
+      ;({ data: projs } = await supabase.from('projects').select('*').order('sort_order'))
+    }
 
     const builtCats = (cats || []).map(cat => ({
       id: cat.id,

@@ -22,6 +22,22 @@ function openDb() {
   return dbPromise
 }
 
+// A synchronous copy of the same snapshot in localStorage, so the very first
+// render can paint from it — IndexedDB can only be read asynchronously, which
+// left a blank frame (and a beat with no canvases to add to) on every open.
+// Best-effort: skipped if it won't fit.
+const LS_PREFIX = 'scribble-cache:'
+export function readCacheSync(key) {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+function writeCacheSync(key, value) {
+  try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(value)) }
+  catch { try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ } }
+}
+
 export async function readCache(key) {
   try {
     const db = await openDb()
@@ -34,6 +50,7 @@ export async function readCache(key) {
 }
 
 export async function writeCache(key, value) {
+  writeCacheSync(key, value)
   try {
     const db = await openDb()
     await new Promise((resolve, reject) => {
@@ -46,6 +63,7 @@ export async function writeCache(key, value) {
 }
 
 export async function clearCache(key) {
+  try { localStorage.removeItem(LS_PREFIX + key) } catch { /* ignore */ }
   try {
     const db = await openDb()
     await new Promise((resolve) => {

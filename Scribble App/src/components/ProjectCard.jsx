@@ -1291,12 +1291,17 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     el.style.height = newH + 'px'
     const done = (e) => {
       if (e && e.propertyName !== 'height') return
+      clearTimeout(fallback)
       el.style.height = ''
       el.style.overflow = ''
       el.style.transition = ''
       el.removeEventListener('transitionend', done)
     }
     el.addEventListener('transitionend', done)
+    // transitionend doesn't always arrive (the page was hidden behind a note,
+    // another change cut in…), which left the body stuck at the old height and
+    // clipped new rows until a collapse / expand reset it — so finish anyway
+    const fallback = setTimeout(done, 320)
   }, [displayType])
 
   // ---- Collapse / expand the card body when the header is tapped ----
@@ -1317,13 +1322,15 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     el.style.height = (collapsed ? 0 : full) + 'px'
     const done = (e) => {
       if (e && e.propertyName !== 'height') return
+      clearTimeout(fallback)
       el.style.transition = ''
       if (!collapsed) { el.style.height = ''; el.style.overflow = '' }
       itemsHeightRef.current = el.scrollHeight
       el.removeEventListener('transitionend', done)
     }
     el.addEventListener('transitionend', done)
-    return () => el.removeEventListener('transitionend', done)
+    const fallback = setTimeout(done, 320)   // see the tab-switch effect
+    return () => { clearTimeout(fallback); el.removeEventListener('transitionend', done) }
   }, [collapsed])
 
   // Revealing or re-hiding completed / archived items changes how tall the body

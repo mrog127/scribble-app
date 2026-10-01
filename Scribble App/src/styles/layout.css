@@ -3753,7 +3753,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -3932,7 +3932,7 @@ body.resizing-detail .phone { transition: none !important; }
     border-radius: inherit;
     padding: 1px;
     opacity: 0.7;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -4208,7 +4208,7 @@ body.resizing-detail .phone { transition: none !important; }
     border-radius: inherit;
     padding: 1px;
     opacity: 0.7;
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -5316,7 +5316,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -5480,7 +5480,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -5906,7 +5906,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -5953,7 +5953,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -6165,7 +6165,7 @@ body.resizing-detail .phone { transition: none !important; }
     border-radius: inherit;
     padding: 1px;
     opacity: 0.7;
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -7156,7 +7156,7 @@ body.resizing-detail .phone { transition: none !important; }
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) { animation-name: ld-box-glow; }
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
     opacity: 1;
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   }
 }
 
@@ -7326,7 +7326,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .mbar-circle::before,
 :root[data-theme="light-dots"] .footer .add-row .link-input-stack::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   opacity: 1;
 }
 @media (max-width: 999.98px) {
@@ -7334,7 +7334,7 @@ body.resizing-detail .phone { transition: none !important; }
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
   }
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
     opacity: 1;
   }
 }
@@ -7343,7 +7343,7 @@ body.resizing-detail .phone { transition: none !important; }
     animation-name: ld-box-glow;
   }
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
     opacity: 1;
   }
 }
@@ -7356,7 +7356,7 @@ body.resizing-detail .phone { transition: none !important; }
   animation-name: ld-box-glow;
 }
 :root[data-theme="light-dots"] .archive-modal::before {
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -7368,7 +7368,7 @@ body.resizing-detail .phone { transition: none !important; }
   animation-name: ld-box-glow;
 }
 :root[data-theme="light-dots"] .todo-section-card .todo-composer .project-input-wrap::before {
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -7380,7 +7380,7 @@ body.resizing-detail .phone { transition: none !important; }
   animation-name: ld-box-glow;
 }
 :root[data-theme="light-dots"] #app .move-to-card::before {
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -7392,7 +7392,7 @@ body.resizing-detail .phone { transition: none !important; }
   animation-name: ld-box-glow;
 }
 :root[data-theme="light-dots"] #app .cal-card::before {
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -7413,7 +7413,7 @@ body.resizing-detail .phone { transition: none !important; }
     animation-name: ld-box-glow;
   }
   :root[data-theme="light-dots"] .footer .add-row .search-stack.open::before {
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
     opacity: 1;
   }
 }
@@ -7647,7 +7647,7 @@ body.resizing-detail .phone { transition: none !important; }
     border-radius: inherit;
     padding: 1px;
     opacity: 0.7;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -7935,7 +7935,7 @@ body.resizing-detail .phone { transition: none !important; }
     border-radius: inherit;
     padding: 1px;
     opacity: 0.7;
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -8136,7 +8136,7 @@ body.resizing-detail .phone { transition: none !important; }
 @media (min-width: 1000px) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
     opacity: 1;
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
   }
 }
 @media (min-width: 1000px) {
@@ -8151,7 +8151,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (min-width: 1000px) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
     opacity: 1;
   }
 }
@@ -8162,7 +8162,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (min-width: 1000px) {
   :root[data-theme="light-dots"] .footer.keyboard-open:not(.search-open):not(.easel-open)::before {
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
     opacity: 1;
   }
 }
@@ -8272,7 +8272,7 @@ body.resizing-detail .phone { transition: none !important; }
     border-radius: inherit;
     padding: 1px;
     opacity: 0.7;
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -8368,7 +8368,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @media (min-width: 1000px) {
   :root[data-theme="light-dots"] .footer .add-row .search-stack.open::before {
-    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
     opacity: 1;
   }
 }
@@ -8497,7 +8497,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke {
   opacity: 1;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.04));
 }
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow {
   opacity: 1;
@@ -8516,7 +8516,7 @@ body.resizing-detail .phone { transition: none !important; }
   opacity: 1;
   background: linear-gradient(var(--cb-stroke-angle),
     rgba(255, 255, 255, 1),
-    rgba(var(--accent-base-rgb), 0.5));
+    rgba(var(--accent-base-rgb), 0.4));
   animation: cb-stroke-orbit 8s linear infinite;
   pointer-events: none;
 }
@@ -8757,7 +8757,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -8770,7 +8770,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .link-preview-card::before {
   opacity: 1;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-image { border-radius: 16px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-divider { display: none; }
@@ -8922,7 +8922,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -8951,7 +8951,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::before {
   opacity: 1;
-  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 :root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::after {
   box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
@@ -9073,7 +9073,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -9086,7 +9086,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .drag-ghost-card.card::before {
   opacity: 1;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 
 /* Dots themes: a pinned canvas's pin icon at 2px */
@@ -9114,7 +9114,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: inherit;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -9143,7 +9143,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .cards-dragging .project-card:not(.gallery-canvas)::before {
   opacity: 1;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 :root[data-theme="light-dots"] .cards-dragging .project-card:not(.gallery-canvas)::after {
   box-shadow: inset -6px -6px 6px rgba(255, 255, 255, 0.6);
@@ -9158,7 +9158,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: 16px;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -9168,7 +9168,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] .drag-glass-stroke {
   opacity: 1;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 
 /* Dots themes: a card row under its long-press menu takes the drag copy's shape —
@@ -9215,7 +9215,7 @@ body.resizing-detail .phone { transition: none !important; }
   border-radius: 999px;
   padding: 1px;
   opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -9228,7 +9228,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 :root[data-theme="light-dots"] :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::after {
   opacity: 1;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 
 /* Dots themes: while rearranging, a canvas card is just its title with the same
@@ -9614,7 +9614,7 @@ body.resizing-detail .phone { transition: none !important; }
   opacity: 1;
   background:
     linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(var(--accent-base-rgb), 0.5)),
-    linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.16));
+    linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
 @keyframes ld-mc-glow {
   0%   { box-shadow: 0 6px 24px rgb(from rgb(var(--accent-base-rgb)) calc(r * 0.5) calc(g * 0.5) calc(b * 0.5) / 0.12), -6px 0 16px rgba(var(--accent-base-rgb), 0.08), inset 10px 0 6px rgba(255, 255, 255, 0.6), inset 10px 0 22px rgba(var(--accent-base-rgb), 0.1); }
@@ -10657,3 +10657,136 @@ body.resizing-detail .phone { transition: none !important; }
   vector-effect: non-scaling-stroke;
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) svg.mc-check :is(path, line, polyline) { stroke-width: 2; vector-effect: non-scaling-stroke; }
+
+/* Dots themes: Mark as Complete's outline (both layered gradients in Light Dots)
+   is 2px, still sitting just outside the button's edge */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn:not(.done)::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 999px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .mark-complete-btn:not(.done)::before { opacity: 0.5; }
+
+/* Dots themes: the Send buttons' outline matches Mark as Complete's — 2px, just
+   outside the edge, at 50% */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .todo-section-card .todo-composer .project-send-btn.visible::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+/* …and the canvas card plus button (still held still) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .project-bottom-bar .project-add-btn::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+/* …and the Save buttons on note / list item / link pages */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .note-detail-page.editing .note-detail-done::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .note-detail-page .note-detail-done.is-saving::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 999px;
+  opacity: 0.5;
+}
+
+
+/* Dots themes: every clear liquid glass outline (and every gradient stroke drawn
+   the same way — a ring punched out of a padded layer) is now 2px. Rings that
+   sat just outside the edge (inset -1px) move out to -2px so they still do; rings
+   drawn inside the edge (inset 0) grow 1px inward. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-add-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-circle::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .link-input-stack::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open)::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page.editing .note-detail-done::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-rename-wrap .project-send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .new-project-card .project-send-btn.visible::before,
+:root[data-theme="light-dots"] .note-detail-page:has(> .todo-complete-flash) .note-detail-done.is-saving::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .easel-stack .easel-send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-detail-done.is-saving::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-stroke {
+  inset: -2px;
+  padding: 2px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .drag-ghost-card.card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.gallery-canvas)::before,
+.drag-glass-stroke,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .swipe-row.row-lifted.row-lifted.row-lifted .swipe-content::after {
+  padding: 2px;
+}
+
+/* Dots themes: the Gallery button's ::before is both the glass outline and (in
+   the shared rules) an idle inner-glow layer with a pink-tinted default colour.
+   The outline's mask let that glow tint the left of the ring — drop it except
+   while the activation pulse is actually spinning. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-circle.mbar-gallery:not(.pulse-spin)::before { box-shadow: none; }
+
+/* Dots themes: the resting Add item pill holds three content-type buttons —
+   list, note, link — sharing its width equally, icons centred in each. Tapping
+   one opens Add item on that type. On desktop each third takes a full-height
+   pill hover. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-placeholder.mbar-type-picks {
+  justify-content: stretch;
+  gap: 0;
+  padding: 4px;
+  pointer-events: auto;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open .mbar-placeholder.mbar-type-picks { pointer-events: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-type-pick {
+  position: relative;
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-type-pick svg { position: relative; z-index: 1; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-type-pick svg * { stroke: #7A7A7A; stroke-width: 2; }
+:root[data-theme="light-dots"] .mbar-type-pick svg * { stroke: #969696; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-type-pick:hover { background: rgba(255, 255, 255, 0.04); }
+  :root[data-theme="light-dots"] .mbar-type-pick:hover { background: rgba(0, 0, 0, 0.04); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-type-pick.is-pressed { background: rgba(255, 255, 255, 0.04); }
+:root[data-theme="light-dots"] .mbar-type-pick.is-pressed { background: rgba(0, 0, 0, 0.04); }
+/* …icons in the text colour */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-type-pick svg * { stroke: #E6E6E6; }
+:root[data-theme="light-dots"] .mbar-type-pick svg * { stroke: #292929; }
+
+/* First-load spinner (App.jsx): centred over the page area, behind the chrome */
+.app-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  z-index: 1;
+  pointer-events: none;
+}
+.app-loading svg { width: 100%; height: 100%; display: block; animation: pull-spin 0.8s linear infinite; }
+@media (min-width: 1000px) {
+  .app-loading { left: calc(340px + var(--gutter, 0px) + (100% - 340px - var(--gutter, 0px)) / 2); }
+}

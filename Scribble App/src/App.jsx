@@ -226,7 +226,7 @@ function usePullToRefresh(onRefresh) {
 
 function AppInner() {
   const {
-    categories, activeTodos, activeNotes,
+    categories, activeTodos, activeNotes, loading,
     addActiveTodo, addActiveNote, toggleActiveTodo, deleteActiveTodo, deleteActiveNote, updateActiveNote, reorderActiveTodos, reorderActiveNotes,
     addProjectTodo, addProjectNote, addProjectLink,
     setOpenDetail, setAutoEditNoteId, refresh,
@@ -234,6 +234,22 @@ function AppInner() {
     openDetail, updateProjectNote, toggleProjectNoteActivated, setProjectNoteScheduled,
   } = useAppContext()
   const pullSpinnerRef = usePullToRefresh(refresh)
+
+  // (see goToNewNote) Once the new note's page has closed, flash its row
+  const prevOpenDetailRef = useRef(null)
+  useEffect(() => {
+    const prev = prevOpenDetailRef.current
+    prevOpenDetailRef.current = openDetail
+    const pending = newNoteNavRef.current
+    if (!pending || openDetail || prev?.type !== 'note') return
+    if (String(prev.id) !== String(pending.holder.id)) return
+    newNoteNavRef.current = null
+    // Already on the right page (goToNewNote went there): just flash the row —
+    // or, if it hasn't been found yet, let it flash as soon as it is
+    pending.closed = true
+    if (pending.flash) setTimeout(pending.flash, 150)
+  }, [openDetail])
+  const openSearchResultRef = useRef(null)
 
   // A note opened from the footer (a new note) usually opens on the page it lands
   // on — its canvas card or the Gallery's notes card renders the note page. When
@@ -248,6 +264,15 @@ function AppInner() {
     }, 150)
     return () => clearTimeout(t)
   }, [openDetail])
+  // If the note's own page turns up after all (its canvas finished mounting),
+  // step aside so there's only ever one note page
+  useEffect(() => {
+    if (orphanNoteId == null) return
+    const iv = setInterval(() => {
+      if (document.querySelectorAll('#app > .note-detail-page').length > 1) setOrphanNoteId(null)
+    }, 200)
+    return () => clearInterval(iv)
+  }, [orphanNoteId])
   let orphanNote = null
   if (orphanNoteId != null && openDetail?.type === 'note' && String(openDetail.id) === String(orphanNoteId)) {
     outer:
@@ -282,6 +307,9 @@ function AppInner() {
   // Re-render the whole app when the theme changes, so accent colours (which are
   // read at render time) refresh with it.
   const theme = useTheme()
+  const dotsTheme = theme === 'dark-dots' || theme === 'light-dots'
+  // The content type picked on the resting Add item pill (Dots themes)
+  const pendingTypeRef = useRef(null)
   // Dark Dots draws the add box's content-type tabs with the canvas card tabs'
   // Feather icons (2px, selected one at 24px)
   const featherTabs = ['dark-dots', 'light-dots'].includes(theme)
@@ -648,7 +676,10 @@ function AppInner() {
         setSaveToTab(categoryId)
         setSaveToProject({ categoryId, projectId })
       } else {
-        setToolbarType('list')     // every fresh open starts on the list type
+        // every fresh open starts on the list type — unless it was opened from
+        // one of the resting pill's type buttons
+        setToolbarType(pendingTypeRef.current || 'list')
+        pendingTypeRef.current = null
         const { tab, target } = computeSaveDefault()
         setSaveToTab(tab)
         setSaveToProject(target)
@@ -936,13 +967,24 @@ function AppInner() {
       }
       clearInterval(hunt)
 
-      const flash = () => {
-        row.classList.remove('search-flash')
-        void row.offsetWidth
-        row.classList.add('search-flash')
-        setTimeout(() => row.classList.remove('search-flash'), 1500)
+      const doFlash = () => {
+        // Look the row up again: a new item's row is re-created when its
+        // temporary id is swapped for the real one, which can happen between
+        // finding it and flashing it (always, when the flash waits on a note)
+        const id = itemIdNow()
+        const live = (row.isConnected && !isCanvas) ? row
+          : isCanvas ? row
+          : (document.querySelector(`[data-project-id="${r.projectId}"] .swipe-row[data-swipe-id="${id}"]`)
+            || document.querySelector(`.page.active:not(.page-exiting) .swipe-row[data-swipe-id="${id}"], .page.active:not(.page-exiting) .link-grid-cell[data-swipe-id="${id}"]`)
+            || row)
+        live.classList.remove('search-flash')
+        void live.offsetWidth
+        live.classList.add('search-flash')
+        setTimeout(() => live.classList.remove('search-flash'), 1500)
         opts.onFlashed?.()
       }
+      // opts.deferFlash(fn): hand the flash back to be played later instead
+      const flash = () => (opts.deferFlash ? opts.deferFlash(doFlash) : doFlash())
 
       // Revealing the item changes the card's height (expand animation, plus rows
       // that were hidden), so one scroll pass lands against a moving layout.
@@ -974,6 +1016,7 @@ function AppInner() {
       setTimeout(settleAndScroll, 360)
     }, 60)
   }, [closeSearch, handleTabChange, expandCategory])
+  openSearchResultRef.current = openSearchResult
 
   /* Three-dot menus open below their button; if the menu would hang off the
      bottom of the window, flip it above instead. They're rendered inline all
@@ -1779,18 +1822,24 @@ function AppInner() {
     return activeTab === categoryId
   }
 
-  // A new note from Add item: go to its easel, canvas and Notes tab, scroll to
-  // and highlight its row, then open it in edit mode (the keyboard is held up
-  // the whole time by keepKeyboardAlive).
+  // A new note from Add item opens straight away — body active, keyboard up (held
+  // by keepKeyboardAlive) — wherever you are. When you then close it, you land on
+  // its easel, scrolled to its canvas on the Notes tab, and its row flashes.
+  const newNoteNavRef = useRef(null)   // { holder, categoryId, projectId }
   const goToNewNote = (holder, categoryId, projectId) => {
-    openSearchResult(
+    const nav = { holder, categoryId, projectId, flash: null, closed: false }
+    newNoteNavRef.current = nav
+    // Go to the note's easel / canvas / Notes tab now, so it's already there
+    // behind the note; its row flash waits until the note closes.
+    openSearchResultRef.current?.(
       { type: 'note', categoryId, projectId, itemId: () => holder.id },
-      { onFlashed: () => setTimeout(() => {
-          if (holder.id == null) return
-          setAutoEditNoteId(holder.id)
-          setOpenDetail({ type: 'note', id: holder.id })
-        }, 1300) },   // the whole 1300ms highlight plays before the note covers it
+      { deferFlash: (fn) => { if (nav.closed) setTimeout(fn, 150); else nav.flash = fn } },
     )
+    setTimeout(() => {
+      if (holder.id == null) return
+      setAutoEditNoteId(holder.id)
+      setOpenDetail({ type: 'note', id: holder.id })
+    }, 350)
   }
 
   const addItem = useCallback(() => {
@@ -2114,6 +2163,18 @@ function AppInner() {
             <path d="M21 12a9 9 0 0 0-9-9" stroke="var(--accent-dark)" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </div>
+
+        {/* First load with nothing cached yet: a spinner in the middle while the
+            content arrives. The header, control bar and Add item are already up
+            and usable around it. */}
+        {loading && categories.length === 0 && (
+          <div className="app-loading" aria-label="Loading">
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="var(--accent-base)" strokeOpacity="0.25" strokeWidth="2"/>
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="var(--accent-base)" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+        )}
 
         {/* Persistent date header — shown in the left sidebar on desktop only */}
         <div className="sidebar-date">
@@ -2754,6 +2815,31 @@ function AppInner() {
                   >{inputValue}</span>
                 </span>
               )}
+              {dotsTheme ? (
+                /* Dots themes: the resting Add item pill is three content-type
+                   buttons, evenly spaced; tapping one opens Add item on that type.
+                   The focus happens inside the tap so iOS raises the keyboard. */
+                <span className="mbar-placeholder mbar-type-picks">
+                  {[['list', FeatherListIcon, 'Add a list item'], ['note', FeatherFileIcon, 'Add a note'], ['link', FeatherLinkIcon, 'Add a link']].map(([type, Icon, label]) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className="mbar-type-pick"
+                      aria-label={label}
+                      onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
+                      onPointerUp={e => {
+                        e.stopPropagation()
+                        pendingTypeRef.current = type
+                        flushSync(() => setToolbarType(type))
+                        inputRef.current?.focus({ preventScroll: true })
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Icon size={20} color="#7A7A7A" />
+                    </button>
+                  ))}
+                </span>
+              ) : (
               <span className="mbar-placeholder" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                   <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
@@ -2761,13 +2847,14 @@ function AppInner() {
                 </svg>
                 <span className="mbar-placeholder-label">Add item</span>
               </span>
+              )}
               <input
                 ref={inputRef}
                 className={`add-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}${ccActive ? ' cc-token' : ''}`}
                 style={ccActive && ccAccent
                   ? { color: 'transparent', caretColor: ccAccent.dark }
                   : undefined}
-                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (isMobileView ? 'Add an item' : 'Scribble something down...')}
+                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (dotsTheme && !inputFocused ? '' : (isMobileView ? 'Add an item' : 'Scribble something down...'))}
                 value={inputValue}
                 onChange={e => handleAddInputChange(e.target.value)}
                 onFocus={() => setInputFocused(true)}

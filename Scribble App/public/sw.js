@@ -36,15 +36,22 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
 
-  // Page loads: network first so a deploy is picked up, cache as the fallback
-  // that makes an offline open work at all.
+  // Page loads: network first so a deploy is picked up — but only for a moment.
+  // On a slow or flaky connection, waiting on the network made every open sit on
+  // a blank screen, so after 1.2s the cached page is served instead (the network
+  // copy still lands in the cache for next time). Offline, the cache answers at once.
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
-      try {
-        const fresh = await fetch(request)
-        const cache = await caches.open(CACHE)
-        cache.put('/index.html', fresh.clone())
+      const network = fetch(request).then(async (fresh) => {
+        if (fresh.ok) (await caches.open(CACHE)).put('/index.html', fresh.clone())
         return fresh
+      })
+      network.catch(() => {})          // a late failure after the cache answered is fine
+      const cachedSoon = new Promise(resolve => setTimeout(async () => resolve(await caches.match('/index.html')), 1200))
+      try {
+        const first = await Promise.race([network, cachedSoon])
+        if (first) return first
+        return await network            // nothing cached yet: wait for the network
       } catch {
         const cached = await caches.match('/index.html')
         return cached || Response.error()

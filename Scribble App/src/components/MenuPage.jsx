@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
+import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
@@ -138,7 +139,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
 
     const doStart = (clientY) => {
       if (started) return
-      started = start(clientY)
+      started = start(clientY); if (started) lockRowDrag()
       if (!started) return
       const s = dragRef.current
       if (s) {
@@ -168,7 +169,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
       const dx = Math.abs(moveE.clientX - startX), dy = Math.abs(moveE.clientY - startY)
       if (longPressTimer && (dx > 8 || dy > 8)) {
         clearTimeout(longPressTimer); longPressTimer = null
-        document.removeEventListener('touchmove', preventScroll)
+        document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       }
       if (!started) return
       moveE.preventDefault()
@@ -200,7 +201,7 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
     }
 
     const onCancel = () => {

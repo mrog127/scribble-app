@@ -1,4 +1,5 @@
 import { useRef, useCallback, useLayoutEffect } from 'react'
+import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { flushSync } from 'react-dom'
 
 // Cards listen for this to show their content-type tabs for the duration of a
@@ -261,7 +262,7 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
 
     const doStart = (clientY) => {
       if (started) return
-      started = start(clientY)
+      started = start(clientY); if (started) lockRowDrag()
     }
 
     longPressTimer = setTimeout(() => { longPressTimer = null; doStart(startY) }, 250)
@@ -282,7 +283,7 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
       const dx = Math.abs(e2.clientX - startX), dy2 = Math.abs(e2.clientY - startY)
       if (longPressTimer && (dx > 8 || dy2 > 8)) {
         clearTimeout(longPressTimer); longPressTimer = null
-        document.removeEventListener('touchmove', preventScroll)
+        document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       }
       if (!started) return
       e2.preventDefault()
@@ -330,7 +331,7 @@ export function useCardDragReorder(containerRef, projects, onReorder) {
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
 
       const s = dragRef.current
       if (s?.scrollRaf) { cancelAnimationFrame(s.scrollRaf); s.scrollRaf = null }

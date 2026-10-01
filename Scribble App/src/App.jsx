@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
+import { isRowDragging } from './rowDragLock.js'
 import { flushSync } from 'react-dom'
 import { ACCENT_COLORS, getCategoryAccent, getHomeAccent, mixHex } from './theme.js'
 import { useTheme } from './useTheme.js'
@@ -150,6 +151,8 @@ function usePullToRefresh(onRefresh) {
     }
     const onMove = (e) => {
       if (!s.active) return
+      // Reordering a row: the page stays put and never pulls to refresh
+      if (isRowDragging()) { s.active = false; s.fingerDown = false; if (s.pull && !s.refreshing) settle(); return }
       if (!s.page || (s.pull === 0 && scrolledAbove(s.target, s.page))) { s.active = false; s.fingerDown = false; return }
       const dy = e.touches[0].clientY - s.startY
       if (dy <= 0) { if (s.pull) paint(0, false); return }

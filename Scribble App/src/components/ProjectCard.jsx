@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, useId } from 'react'
+import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
@@ -154,13 +155,13 @@ export function useGridDragReorder(containerRef, items, onReorder) {
       })
     }
 
-    timer = setTimeout(() => { timer = null; started = begin() }, 250)
+    timer = setTimeout(() => { timer = null; started = begin(); if (started) lockRowDrag() }, 250)
     document.addEventListener('touchmove', preventScroll, { passive: false })
 
     const onMove = (ev) => {
       if (timer && (Math.abs(ev.clientX - startX) > 8 || Math.abs(ev.clientY - startY) > 8)) {
         clearTimeout(timer); timer = null
-        document.removeEventListener('touchmove', preventScroll)
+        document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       }
       if (!started) return
       ev.preventDefault()
@@ -186,7 +187,7 @@ export function useGridDragReorder(containerRef, items, onReorder) {
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       const st = dragRef.current
       dragRef.current = null
       tileDragging = false
@@ -286,7 +287,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
     const doStart = (clientY, longPress) => {
       if (started) return
-      started = start(clientY)
+      started = start(clientY); if (started) lockRowDrag()
       if (!started) return
       if (!longPress) return
       const s = dragRef.current
@@ -316,7 +317,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
 
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
-      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll) }
+      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll); unlockRowDrag() }
       if (!started) return
       e2.preventDefault()
       const s = dragRef.current
@@ -336,7 +337,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       const s = dragRef.current
       if (!s) return
       dragRef.current = null
@@ -349,7 +350,7 @@ function useDragReorder(containerRef, items, onReorder, uncheckedCountProp) {
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       const s = dragRef.current
       if (!s || !started) return
       dragRef.current = null

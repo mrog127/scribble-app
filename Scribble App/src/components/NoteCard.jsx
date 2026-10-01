@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
+import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { swappedFrom } from '../noteIdSwap.js'
 import { createPortal } from 'react-dom'
 import underlineUrl from '../assets/Underline.svg?url'
@@ -95,7 +96,7 @@ function useDragReorder(containerRef, items, onReorder) {
 
     const doStart = (clientY, longPress) => {
       if (started) return
-      started = start(clientY)
+      started = start(clientY); if (started) lockRowDrag()
       if (!started) return
       if (longPress) {
         const s = dragRef.current
@@ -123,7 +124,7 @@ function useDragReorder(containerRef, items, onReorder) {
 
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
-      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll) }
+      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll); unlockRowDrag() }
       if (!started) return
       e2.preventDefault()
       const s = dragRef.current
@@ -143,7 +144,7 @@ function useDragReorder(containerRef, items, onReorder) {
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       const s = dragRef.current
       if (!s) return
       dragRef.current = null
@@ -156,7 +157,7 @@ function useDragReorder(containerRef, items, onReorder) {
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
       const s = dragRef.current
       if (!s || !started) return
       dragRef.current = null

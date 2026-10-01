@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react'
+import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { createPortal } from 'react-dom'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { useAppContext } from '../context/AppContext.jsx'
@@ -416,7 +417,7 @@ function useAttachDrag(containerRef, items, onReorder) {
       return true
     }
 
-    longPressTimer = setTimeout(() => { longPressTimer = null; started = start() }, 250)
+    longPressTimer = setTimeout(() => { longPressTimer = null; started = start(); if (started) lockRowDrag() }, 250)
     document.addEventListener('touchmove', preventScroll, { passive: false })
 
     const applyShifts = (s) => {
@@ -432,7 +433,7 @@ function useAttachDrag(containerRef, items, onReorder) {
 
     const onMove = (e2) => {
       const dx = Math.abs(e2.clientX - startX), dy = Math.abs(e2.clientY - startY)
-      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll) }
+      if (longPressTimer && (dx > 8 || dy > 8)) { clearTimeout(longPressTimer); longPressTimer = null; document.removeEventListener('touchmove', preventScroll); unlockRowDrag() }
       if (!started) return
       e2.preventDefault()
       const s = dragRef.current
@@ -450,7 +451,7 @@ function useAttachDrag(containerRef, items, onReorder) {
       document.removeEventListener('pointermove', onMove, { passive: false })
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', onCancel)
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener('touchmove', preventScroll); unlockRowDrag()
     }
     const reset = (s) => s.snapshots.forEach(snap => { snap.el.style.transition = ''; snap.el.style.transform = ''; snap.el.style.opacity = '' })
     const onCancel = () => {

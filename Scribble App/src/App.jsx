@@ -14,6 +14,8 @@ import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
 import AddCanvasRow from './components/AddCanvasRow.jsx'
+import { NoteDetailPage } from './components/NoteCard.jsx'
+import { createPortal } from 'react-dom'
 import { subscribeGalleryPulse, setOrderHold } from './galleryPulse.js'
 import { registerKeyboardKeeper, keepKeyboardAlive } from './keyboardKeeper.js'
 import { pasteInto } from './clipboard.js'
@@ -229,8 +231,33 @@ function AppInner() {
     addProjectTodo, addProjectNote, addProjectLink,
     setOpenDetail, setAutoEditNoteId, refresh,
     registerComposeHandler, addCategory, reorderCategories,
+    openDetail, updateProjectNote, toggleProjectNoteActivated, setProjectNoteScheduled,
   } = useAppContext()
   const pullSpinnerRef = usePullToRefresh(refresh)
+
+  // A note opened from the footer (a new note) usually opens on the page it lands
+  // on — its canvas card or the Gallery's notes card renders the note page. When
+  // nothing on screen is showing that note (e.g. a new, not-displayed note added
+  // from the Gallery or Settings), App opens it itself so it never silently fails.
+  const [orphanNoteId, setOrphanNoteId] = useState(null)
+  useEffect(() => {
+    if (openDetail?.type !== 'note') { setOrphanNoteId(null); return }
+    const id = openDetail.id
+    const t = setTimeout(() => {
+      if (!document.querySelector('#app > .note-detail-page')) setOrphanNoteId(id)
+    }, 150)
+    return () => clearTimeout(t)
+  }, [openDetail])
+  let orphanNote = null
+  if (orphanNoteId != null && openDetail?.type === 'note' && String(openDetail.id) === String(orphanNoteId)) {
+    outer:
+    for (const cat of categories) {
+      for (const p of cat.projects) {
+        const n = p.notes.find(x => String(x.id) === String(orphanNoteId))
+        if (n) { orphanNote = { note: { ...n, categoryId: cat.id }, cat, proj: p }; break outer }
+      }
+    }
+  }
   const categoryIds = categories.map(c => c.id)
   const [activeTab, setActiveTab] = useState('star')
   const [toolbarType, setToolbarType] = useState('list')
@@ -863,7 +890,10 @@ function AppInner() {
     return () => document.removeEventListener('pointerdown', onDown)
   }, [searchOpen, closeSearch])
 
-  const openSearchResult = useCallback((r) => {
+  // opts.onFlashed: called once the row has been scrolled to and flashed.
+  // r.itemId may be a function, for a new item whose temporary id is swapped
+  // for its real one while we're still looking for its row.
+  const openSearchResult = useCallback((r, opts = {}) => {
     // Everything the destination needs to make this item visible: the content tab,
     // an expand if the canvas is collapsed, and whichever hide-toggle is hiding it.
     const isCanvas = r.type === 'canvas'
@@ -886,6 +916,7 @@ function AppInner() {
     handleTabChange(r.categoryId)
     // Wait for the destination canvas + its content tab to render, scroll the row
     // itself into view, then flash it once the smooth scroll has actually settled.
+    const itemIdNow = () => (typeof r.itemId === 'function' ? r.itemId() : r.itemId)
     let tries = 0
     const hunt = setInterval(() => {
       requestProjectFocus(focusReq)
@@ -897,8 +928,8 @@ function AppInner() {
       const page = document.querySelector('.page.active:not(.page-exiting)')
       const row = isCanvas
         ? scope?.querySelector('.card')
-        : (scope?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"]`)
-          || page?.querySelector(`.swipe-row[data-swipe-id="${r.itemId}"], .link-grid-cell[data-swipe-id="${r.itemId}"]`))
+        : (scope?.querySelector(`.swipe-row[data-swipe-id="${itemIdNow()}"]`)
+          || page?.querySelector(`.swipe-row[data-swipe-id="${itemIdNow()}"], .link-grid-cell[data-swipe-id="${itemIdNow()}"]`))
       if (!row) {
         if (++tries > 40) clearInterval(hunt)
         return
@@ -910,6 +941,7 @@ function AppInner() {
         void row.offsetWidth
         row.classList.add('search-flash')
         setTimeout(() => row.classList.remove('search-flash'), 1500)
+        opts.onFlashed?.()
       }
 
       // Revealing the item changes the card's height (expand animation, plus rows
@@ -1747,6 +1779,20 @@ function AppInner() {
     return activeTab === categoryId
   }
 
+  // A new note from Add item: go to its easel, canvas and Notes tab, scroll to
+  // and highlight its row, then open it in edit mode (the keyboard is held up
+  // the whole time by keepKeyboardAlive).
+  const goToNewNote = (holder, categoryId, projectId) => {
+    openSearchResult(
+      { type: 'note', categoryId, projectId, itemId: () => holder.id },
+      { onFlashed: () => setTimeout(() => {
+          if (holder.id == null) return
+          setAutoEditNoteId(holder.id)
+          setOpenDetail({ type: 'note', id: holder.id })
+        }, 1300) },   // the whole 1300ms highlight plays before the note covers it
+    )
+  }
+
   const addItem = useCallback(() => {
     // Link mode: requires a URL and a destination project
     if (toolbarType === 'link') {
@@ -1807,17 +1853,20 @@ function AppInner() {
           newId = addProjectTodo(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
         } else {
           newId = addProjectNote(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
-          openNoteSoon('note', holder)
         }
         holder.id = newId
 
-        if (animRect && appRect && newId != null) {
-          pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
-        }
-        if (landsOnThisScreen(categoryId)) {
-          flashNewRow(holder, { categoryId, projectId, type: toolbarType })
+        if (toolbarType === 'note') {
+          goToNewNote(holder, categoryId, projectId)   // navigates, highlights, opens
         } else {
-          showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
+          if (animRect && appRect && newId != null) {
+            pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
+          }
+          if (landsOnThisScreen(categoryId)) {
+            flashNewRow(holder, { categoryId, projectId, type: toolbarType })
+          } else {
+            showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
+          }
         }
       } else {
         // Inactive: add without animation
@@ -1826,11 +1875,13 @@ function AppInner() {
           holder.id = addProjectTodo(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
         } else if (toolbarType === 'note') {
           holder.id = addProjectNote(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
-          openNoteSoon('note', holder)
+          goToNewNote(holder, categoryId, projectId)   // navigates, highlights, opens
         }
         // An inactive item never shows on the gallery, so only flash it when
         // you're on its own canvas's page — otherwise the toast points at it.
-        if (landsOnThisScreen(categoryId)) {
+        if (toolbarType === 'note') {
+          // handled by goToNewNote
+        } else if (landsOnThisScreen(categoryId)) {
           flashNewRow(holder, { categoryId, projectId, type: toolbarType })
         } else {
           showAddToast(holder, { categoryId, projectId, type: toolbarType, title: text })
@@ -1876,7 +1927,7 @@ function AppInner() {
     setToolbarType('list')
     inputRef.current?.blur()
     setInputFocused(false)
-  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId, openSearchResult])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {
@@ -2895,6 +2946,23 @@ function AppInner() {
 
 
         </div>
+
+        {orphanNote && createPortal(
+          <NoteDetailPage
+            note={orphanNote.note}
+            onClose={() => setOpenDetail(null)}
+            onSave={(noteId, html, text) => updateProjectNote(orphanNote.cat.id, orphanNote.proj.id, noteId, html, text)}
+            activated={!!orphanNote.note.activated}
+            onToggleActive={() => toggleProjectNoteActivated(orphanNote.cat.id, orphanNote.proj.id, orphanNote.note.id)}
+            onSchedule={(date) => setProjectNoteScheduled(orphanNote.cat.id, orphanNote.proj.id, orphanNote.note.id, date)}
+            onClearSchedule={() => setProjectNoteScheduled(orphanNote.cat.id, orphanNote.proj.id, orphanNote.note.id, null)}
+            projectName={orphanNote.proj.name}
+            categoryId={orphanNote.cat.id}
+            projectId={orphanNote.proj.id}
+            archived={!!(orphanNote.note.archived || orphanNote.proj.archived)}
+          />,
+          document.getElementById('app')
+        )}
 
         {/* Settings sheet — slides up over the homepage. Mobile only (CSS hides it
             above 1000px, where Settings stays a normal nav tab). */}

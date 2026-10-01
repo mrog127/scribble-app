@@ -515,6 +515,13 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [linkComposerOpen, setLinkComposerOpen] = useState(false)
   const [linkAttachOpen, setLinkAttachOpen] = useState(false)
   const [openNoteId, setOpenNoteId] = useState(null)
+  // A new attached note opens with its temporary id; follow it to its real id
+  // when the insert lands, or the note page would lose its note and close
+  useEffect(() => {
+    const onSwap = (e) => setOpenNoteId(prev => prev === e.detail.from ? e.detail.to : prev)
+    window.addEventListener('note-id-swap', onSwap)
+    return () => window.removeEventListener('note-id-swap', onSwap)
+  }, [])
   const [openAttachLinkId, setOpenAttachLinkId] = useState(null)
   const titleRef = useRef(null)
   const commentRef = useRef(null)

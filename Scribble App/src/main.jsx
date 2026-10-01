@@ -10,10 +10,13 @@ import { installPressState } from './pressState.js'
 import { installOutbox } from './outbox.js'
 import { installPushSync } from './push.js'
 import { installTheme } from './themes.js'
+import { installRowFlashPill } from './rowFlashPill.js'
 
 // Paint in the saved theme before the first render
 installTheme()
 installPressState()
+// Row flashes play on the hover pill in the Dots themes
+installRowFlashPill()
 // Replay any writes that were made while offline
 installOutbox()
 // Keep the morning summary's time zone in step with the phone's clock

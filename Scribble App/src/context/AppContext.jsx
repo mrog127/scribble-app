@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import { announceNoteIdSwap } from '../noteIdSwap.js'
 import { supabase, functionsUrl, functionsKey } from '../supabaseClient'
 import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
@@ -45,6 +46,13 @@ export function AppProvider({ children }) {
   const [openDetail, setOpenDetail] = useState(null)
   // Id of a freshly-created note that should auto-enter edit mode when its page opens.
   const [autoEditNoteId, setAutoEditNoteId] = useState(null)
+  // A new note's temporary id was just replaced by its real one: keep the open
+  // note (and the "open it in edit mode" request) pointing at it
+  const followNoteIdSwap = useCallback((tempId, realId) => {
+    setOpenDetail(prev => (prev && prev.id === tempId) ? { ...prev, id: realId } : prev)
+    setAutoEditNoteId(prev => prev === tempId ? realId : prev)
+    announceNoteIdSwap(tempId, realId)
+  }, [])
 
   // Refs so toggle/delete callbacks can read current state without stale closures
   const activeTodosRef = useRef([])
@@ -264,7 +272,7 @@ export function AppProvider({ children }) {
     send(supabase.from('notes')
       .insert({ user_id: user.id, project_id: null, text, activated: false, editor_html: null, sort_order: 0 })
       .select().single(), 'insert notes').then(({ data }) => {
-        if (data) setActiveNotes(prev => prev.map(n => n.id === tempId ? { ...n, id: data.id } : n))
+        if (data) { setActiveNotes(prev => prev.map(n => n.id === tempId ? { ...n, id: data.id } : n)); followNoteIdSwap(tempId, data.id) }
         if (data && onCreated) onCreated(data.id)
       })
     return tempId
@@ -339,6 +347,7 @@ export function AppProvider({ children }) {
           ...proj,
           notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n)
         }))
+        if (data) followNoteIdSwap(tempId, data.id)
         if (data && onCreated) onCreated(data.id)
       })
     return tempId
@@ -510,6 +519,7 @@ export function AppProvider({ children }) {
           notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n),
           todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: (t.linkedNoteIds || []).map(x => x === tempId ? data.id : x) })
         }))
+        followNoteIdSwap(tempId, data.id)
         dbw(supabase.from('todos').update({ linked_note_ids: realIds }).eq('id', todoId), 'addTodoNote')
         if (onCreated) onCreated(data.id)
       })

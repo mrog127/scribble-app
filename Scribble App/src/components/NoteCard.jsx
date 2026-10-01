@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
+import { swappedFrom } from '../noteIdSwap.js'
 import { createPortal } from 'react-dom'
 import underlineUrl from '../assets/Underline.svg?url'
 import { useAppContext } from '../context/AppContext.jsx'
@@ -219,6 +220,12 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   }, [note, categories])
 
   const [editing, setEditing] = useState(false)
+  // Title-only editing (Dots themes): tapping the title edits just the title,
+  // like a list item page — the body stays put, and Save / Enter / tapping away
+  // saves it. Separate from editing the body (`editing`).
+  const [editingTitle, setEditingTitle] = useState(false)
+  const editingTitleRef = useRef(false)
+  const skipButtonClickRef = useRef(false)
   const editingRef = useRef(false)
   const [currentStyle, setCurrentStyle] = useState('body')
   const [isOpen, setIsOpen] = useState(false)
@@ -308,7 +315,15 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
   }, [])
 
+  // Rebuild the editor when a different note is shown — but not when this same
+  // note just traded its temporary id for its real one (see noteIdSwap.js), or
+  // whatever you've started typing would be wiped.
+  const shownNoteIdRef = useRef(null)
+  const isIdSwap = () => shownNoteIdRef.current != null && swappedFrom.get(note?.id) === shownNoteIdRef.current
   useEffect(() => {
+    const swap = isIdSwap()
+    shownNoteIdRef.current = note?.id
+    if (swap) return
     if (contentRef.current) {
       contentRef.current.innerHTML = buildNoteContent(note)
     }
@@ -319,6 +334,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // in it writes straight back, so saving and the row label are unchanged.
   useEffect(() => {
     if (!darkDots || !titleFieldRef.current) return
+    if (titleFieldRef.current.textContent && document.activeElement && pageRef.current?.contains(document.activeElement)) return   // mid-edit (an id swap): leave it
     const first = contentRef.current?.querySelector('.note-para')
     const text = (first?.textContent || '').trim()
     titleFieldRef.current.textContent = text
@@ -564,34 +580,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     enterEdit(savedRange)
   }, [editing, enterEdit, archived])
 
-  // Tap the title (Dots themes) — same as a list item page title: go straight
-  // into editing with the cursor where you tapped in the title
-  const handleTitleClick = useCallback((e) => {
-    if (editing || archived) return
-    let range = null
-    if (document.caretRangeFromPoint) {
-      range = document.caretRangeFromPoint(e.clientX, e.clientY)
-    } else if (document.caretPositionFromPoint) {
-      const pos = document.caretPositionFromPoint(e.clientX, e.clientY)
-      if (pos) { range = document.createRange(); range.setStart(pos.offsetNode, pos.offset); range.collapse(true) }
-    }
-    enterEdit(null)
-    const t = titleFieldRef.current
-    if (!t) return
-    t.contentEditable = 'true'
-    t.focus()
-    const sel = window.getSelection()
-    sel.removeAllRanges()
-    if (range && t.contains(range.startContainer)) {
-      sel.addRange(range)
-    } else {
-      const end = document.createRange()
-      end.selectNodeContents(t)
-      end.collapse(false)
-      sel.addRange(end)
-    }
-  }, [editing, enterEdit, archived])
-
   // Click on empty area below text — place cursor at end
   const handleEmptyAreaClick = useCallback(() => {
     if (archived) return
@@ -736,6 +724,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
   // Save exits edit mode but keeps note open; Done closes the note
   const handleButtonClick = useCallback(() => {
+    if (skipButtonClickRef.current) { skipButtonClickRef.current = false; return }
     if (editing) {
       const content = contentRef.current
       if (content) {
@@ -916,6 +905,39 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     handleInput()
     if (editorRef.current) checkBottomOverflow(editorRef.current)
   }, [enforceTitlePara, handleInput, checkBottomOverflow])
+
+  const saveTitleEdit = useCallback(() => {
+    if (!editingTitleRef.current) return
+    editingTitleRef.current = false
+    setEditingTitle(false)
+    const content = contentRef.current
+    if (!content) return
+    const firstPara = content.querySelector('.note-para')
+    const text = firstPara ? firstPara.textContent.trim() : note.text
+    onSave(note.id, content.innerHTML, text)
+  }, [note, onSave])
+
+  const handleTitleFocus = useCallback(() => {
+    if (editing || archived) return
+    editingTitleRef.current = true
+    setEditingTitle(true)
+  }, [editing, archived])
+
+  const handleTitleKeyDown = useCallback((e) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    if (editingTitleRef.current) titleFieldRef.current?.blur()   // blur saves
+    else contentRef.current?.focus()                             // body editing: on into the body
+  }, [])
+
+  // The top button while editing the title: Save (keep the note open). Held on
+  // mousedown so the title doesn't blur first and the click read as "Done".
+  const handleTopButtonDown = useCallback((e) => {
+    if (!editingTitleRef.current) return
+    e.preventDefault()
+    skipButtonClickRef.current = true
+    titleFieldRef.current?.blur()
+  }, [])
 
   const handleTitleFieldInput = useCallback(() => {
     const text = titleFieldRef.current?.textContent ?? ''
@@ -1180,8 +1202,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         )}
         {archived && <span className="detail-archived-label">Archived</span>}
         <span ref={scrollTitleRef} className="note-scroll-title" />
-        <button className="note-detail-done" onClick={handleButtonClick}>
-          {editing ? 'Save' : 'Done'}
+        <button className={`note-detail-done${editingTitle ? ' is-saving' : ''}`} onMouseDown={handleTopButtonDown} onClick={handleButtonClick}>
+          {(editing || editingTitle) ? 'Save' : 'Done'}
         </button>
       </div>
 
@@ -1189,12 +1211,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         <div
           ref={titleFieldRef}
           className="note-detail-title"
-          contentEditable={editing}
+          contentEditable={!archived}
           suppressContentEditableWarning
           spellCheck="false"
+          autoCapitalize="sentences"
           onInput={handleTitleFieldInput}
-          onClick={handleTitleClick}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); contentRef.current?.focus() } }}
+          onFocus={handleTitleFocus}
+          onBlur={saveTitleEdit}
+          onKeyDown={handleTitleKeyDown}
         />
       )}
 

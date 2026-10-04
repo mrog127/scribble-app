@@ -11072,3 +11072,11 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   :root[data-theme="light-dots"] .home-page .card .dots-menu-btn:hover::before { background: rgba(0, 0, 0, 0.04); }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card .dots-menu-btn.is-pressed::before { background: rgba(0, 0, 0, 0.04); border-radius: 50%; }
+
+/* Dots themes: Gallery cards and an Easel's content type cards — rows 4px closer
+   together (8px → 6px above and below each row); canvas cards unchanged */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page .card, .category-page .card:not(.project-card)) :is(.todo-row, .note-row, .link-row),
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page .card, .category-page .card:not(.project-card)) :is(.todo-row, .note-row, .link-row):not(:has(.source-label)) {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}

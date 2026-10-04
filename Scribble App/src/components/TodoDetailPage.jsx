@@ -72,6 +72,16 @@ function PaperclipIcon() {
   )
 }
 
+// The search bar's close X — "unattach"
+function UnattachIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+      <line x1="15" y1="5" x2="5" y2="15" stroke="currentColor" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+    </svg>
+  )
+}
+
 function PlusIcon({ color = '#242424' }) {
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -284,7 +294,7 @@ function LinkComposer({ onAdd, autoFocus, onDismiss }) {
   )
 }
 
-function AttachedNoteRow({ note, divider, onOpen, onPointerDown, onDragPointerDown, onMenuDown, onContextMenu }) {
+function AttachedNoteRow({ note, divider, onOpen, onPointerDown, onDragPointerDown, onMenuDown, onContextMenu, onUnattach }) {
   return (
     <>
     {divider && <div className="divider"/>}
@@ -302,6 +312,15 @@ function AttachedNoteRow({ note, divider, onOpen, onPointerDown, onDragPointerDo
             <div className="item-content">
               <NoteRowContent note={note}/>
             </div>
+            {onUnattach && (
+              <button
+                type="button"
+                className="attach-row-unattach-btn"
+                aria-label="Unattach"
+                onPointerDown={e => { e.preventDefault(); e.stopPropagation() }}
+                onClick={e => { e.stopPropagation(); onUnattach(e.currentTarget) }}
+              ><UnattachIcon/></button>
+            )}
           </div>
         </div>
       </div>
@@ -357,7 +376,16 @@ function useSectionCollapse(storageKey, disabled = false) {
     })
   }, [storageKey, disabled])
 
-  return { collapsed, bodyRef, onHeaderClick }
+  // Open the section if it's collapsed. Returns true when it had to open, so a
+  // caller can wait for the 250ms expand before showing a menu inside it.
+  const expand = useCallback(() => {
+    if (!collapsed) return false
+    setCollapsed(false)
+    try { localStorage.setItem(storageKey, 'false') } catch {}
+    return true
+  }, [collapsed, storageKey])
+
+  return { collapsed, bodyRef, onHeaderClick, expand }
 }
 
 // Long-press drag-reorder for a todo's attached note/link rows (a flat list).
@@ -863,7 +891,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   className={`todo-attach-btn section-attach-btn${noteAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a note"
-                  onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false); setNoteAttachOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false); if (noteSection.expand()) setTimeout(() => setNoteAttachOpen(true), 260); else setNoteAttachOpen(v => !v) }}
                 >
                   <span className={`project-tab-count${attachedNotes.length > 0 ? '' : ' empty'}`}>{attachedNotes.length > 0 ? attachedNotes.length : ''}</span>
                   <PaperclipIcon/>
@@ -873,7 +901,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   type="button"
                   className="project-add-btn"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setLinkComposerOpen(false); setNoteComposerOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setLinkComposerOpen(false); if (noteSection.expand()) { keepKeyboardAlive(); setTimeout(() => setNoteComposerOpen(true), 260) } else setNoteComposerOpen(v => !v) }}
                 >
                   <PlusIcon/>
                 </button>
@@ -913,6 +941,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 onDragPointerDown={onNoteAttachDrag}
                 onMenuDown={e => !archived && rowMenu.press(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
                 onContextMenu={e => !archived && rowMenu.context(e, unattachItems(() => detachNoteFromTodo(categoryId, projectId, todo.id, n.id)))}
+                onUnattach={archived ? undefined : (el) => handleUnattach(el, () => detachNoteFromTodo(categoryId, projectId, todo.id, n.id))}
               />
             ))}
           </div>
@@ -940,7 +969,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   className={`todo-attach-btn section-attach-btn${linkAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a link"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false); setLinkAttachOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false); if (linkSection.expand()) setTimeout(() => setLinkAttachOpen(true), 260); else setLinkAttachOpen(v => !v) }}
                 >
                   <span className={`project-tab-count${attachedLinks.length > 0 ? '' : ' empty'}`}>{attachedLinks.length > 0 ? attachedLinks.length : ''}</span>
                   <PaperclipIcon/>
@@ -950,7 +979,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   type="button"
                   className="project-add-btn"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(v => !v) }}
+                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(false); if (linkSection.expand()) { keepKeyboardAlive(); setTimeout(() => setLinkComposerOpen(true), 260) } else setLinkComposerOpen(v => !v) }}
                 >
                   <PlusIcon/>
                 </button>

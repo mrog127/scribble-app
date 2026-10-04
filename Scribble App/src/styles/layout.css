@@ -11080,3 +11080,100 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   padding-top: 7px;
   padding-bottom: 7px;
 }
+
+/* Dots themes: secondary labels sit 1px closer under the primary label on every row type */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, #animation-portal) :is(.todo-row, .link-row) .source-label { margin-top: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, #animation-portal) .note-row:not(.link-row) .source-label { margin-top: 1px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, #animation-portal) .note-preview-text { margin-top: 0; }
+
+/* Dots themes: attachment cards (a list item's Notes / Links cards) take the
+   same sizing and spacing changes as canvas / Gallery cards:
+   - title 20px
+   - first row as far below the header as on a canvas card (4px header padding +
+     8px row padding = 12px from the header buttons to the first row's text)
+   - rows 2px closer together
+   - secondary labels 14px, 1px closer under the primary label
+   - row adornment labels regular weight, attachment count hidden */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .card-title { font-size: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .project-items > div:has(:is(.note-row, .link-row, .todo-row)) { margin-top: 7px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card :is(.note-row, .link-row, .todo-row) { padding-top: 5px; padding-bottom: 5px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card :is(.source-label-text, .note-preview-text) { font-size: 14px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .note-preview-text { margin-top: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .source-label { margin-top: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card :is(.row-schedule-date, .row-attach-count) { font-weight: 400; }
+
+/* Dots themes: attachment cards' rows highlight like a canvas card's — a pill 8px
+   in from the card, fully rounded, 4% wash (white Dark Dots, black Light Dots) —
+   and drop the old 64px minimum row height so the card ends as a canvas card's
+   rows do */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card :is(.note-row, .link-row, .todo-row) { min-height: 0; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-swipe-row:hover .todo-swipe-content::before {
+    left: 8px;
+    right: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  :root[data-theme="light-dots"] .todo-section-card .todo-swipe-row:hover .todo-swipe-content::before { background: rgba(0, 0, 0, 0.04); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-swipe-row:is(.is-pressed, .row-context-held) .todo-swipe-content::before {
+  left: 8px;
+  right: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+:root[data-theme="light-dots"] .todo-section-card .todo-swipe-row:is(.is-pressed, .row-context-held) .todo-swipe-content::before { background: rgba(0, 0, 0, 0.04); }
+
+/* Attached note rows: an Unattach X at the right end (Dots themes only), styled
+   like the open search field's close X and lined up under the card's plus
+   button (16px in from the card's right edge) */
+.attach-row-unattach-btn { display: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .attach-row-unattach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 -8px 0 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: #E6E6E6;
+  cursor: pointer;
+}
+:root[data-theme="light-dots"] .todo-section-card .attach-row-unattach-btn { color: #292929; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .attach-row-unattach-btn svg * {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .attach-row-unattach-btn:hover {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  }
+  :root[data-theme="light-dots"] .todo-section-card .attach-row-unattach-btn:hover {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .attach-row-unattach-btn:active { background: rgba(255, 255, 255, 0.1); }
+/* …and the row itself doesn't highlight while the pointer is on its X */
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-swipe-row:has(.attach-row-unattach-btn:hover) .todo-swipe-content::before { background: transparent; }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-swipe-row:has(.attach-row-unattach-btn:active) .todo-swipe-content::before { background: transparent; }
+
+/* Dots themes: Notes / Links attachment cards have no hover state of their own */
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card.todo-section-card:is(.empty-card:hover, :has(> .card-header:hover)) {
+    background-image: none;
+    box-shadow: none;
+  }
+}
+
+/* Dots themes: a row's attachment paperclip is drawn at 1.5px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, #animation-portal) .todo-attach-indicator svg * {
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}

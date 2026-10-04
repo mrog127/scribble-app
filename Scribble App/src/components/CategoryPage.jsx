@@ -273,7 +273,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                 inputRef.current?.focus()
               }}
             >
-              {darkDots ? <PlusSquareIcon size={20} color="#E6E6E6"/> : <AddIcon/>}
+              {darkDots ? <PlusSquareIcon size={22} color="#E6E6E6"/> : <AddIcon/>}
             </button>
             <div className="dots-menu-wrap" ref={menuRef}>
               <div

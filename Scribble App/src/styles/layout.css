@@ -3542,7 +3542,7 @@ body.resizing-detail .phone { transition: none !important; }
 }
 /* Canvas cards sit a shade lighter than the Gallery's aggregate cards */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .project-card { background: #2B2B2B; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card .card-header { padding: 16px 16px 8px 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card .card-header { padding: 16px 16px 4px 20px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card .card-title {
   font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
   font-size: 22px;
@@ -3574,8 +3574,8 @@ body.resizing-detail .phone { transition: none !important; }
 /* Active item: ring in the easel's colour, filled at 24%.
    Inactive item: hollow grey circle on the card. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .checkbox.activated-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 13px;
   border: 2px solid var(--cb-base, var(--accent-base));
   background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.24);
@@ -3588,8 +3588,8 @@ body.resizing-detail .phone { transition: none !important; }
   border-color: var(--cb-base, var(--accent-base));
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .checkbox:not(.activated-checkbox) {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 1px solid #7A7A7A;
   background: #262626;
@@ -5254,8 +5254,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #animation-portal .note-preview-text { font-size: 12px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #animation-portal .divider { display: none; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #animation-portal .checkbox.activated-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 13px;
   border: 2px solid var(--cb-base, var(--accent-base));
   background: rgba(var(--cb-base-rgb, var(--accent-base-rgb)), 0.24);
@@ -5263,8 +5263,8 @@ body.resizing-detail .phone { transition: none !important; }
   animation: none;
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #animation-portal .checkbox:not(.activated-checkbox) {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 1px solid #7A7A7A;
   background: #262626;
@@ -7307,11 +7307,11 @@ body.resizing-detail .phone { transition: none !important; }
 }
 
 /* Dots themes: Gallery cards — the header is always as tall as it is with the
-   three-dot button showing (16px above the 40px button, 8px below), so the title
+   three-dot button showing (16px above the 40px button, 4px below), so the title
    sits at that same height whether or not the button is there. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card > .card-header {
   box-sizing: border-box;
-  min-height: 64px;
+  min-height: 60px;
 }
 
 /* Light Dots: Gallery card three-dot buttons */
@@ -8868,7 +8868,7 @@ body.resizing-detail .phone { transition: none !important; }
 /* Dots themes: more room above a canvas / Gallery card's bottom tab row
    (8px → 20px); the plus button moves down with it. The tab-less variant, where
    the plus rides up onto the last row, is unchanged. */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar:not(.no-tabs) { padding-top: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar:not(.no-tabs) { padding-top: 16px; }
 
 /* Light Dots: the page-title dot keeps the easel's unadjusted colour (baseRgb),
    so yellow stays yellow there while its solid uses deepen to #B0A314 */
@@ -10798,3 +10798,277 @@ body.resizing-detail .phone { transition: none !important; }
 
 /* Reordering rows: freeze the page's scroll for the length of the drag */
 html.row-dragging #app .page { overflow: hidden !important; touch-action: none; overscroll-behavior: none; }
+
+/* Dots themes: Gallery cards are see-through glass, so a menu's blur has nothing
+   to work on there — give it a near-solid fill so row text doesn't show through */
+:root[data-theme="dark-dots"] .home-page .card .card-context-menu { background: rgba(43, 43, 43, 0.96); }
+:root[data-theme="light-dots"] .home-page .card .card-context-menu { background: rgba(250, 250, 250, 0.96); }
+
+/* Dots themes: card titles 20px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card .card-title { font-size: 20px; }
+
+/* Dots themes: row adornment labels (scheduled / recurring date, attachment count) regular weight */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, #animation-portal) :is(.row-schedule-date, .row-attach-count) { font-weight: 400; }
+
+/* Dots themes: secondary labels on every row type 14px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, #animation-portal) :is(.source-label-text, .note-preview-text) { font-size: 14px; }
+
+/* Dots themes: a row's attachment adornment is just the paperclip — no count */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .row-attach-count { display: none; }
+
+/* Dots themes: Save to — the easel tab pill floats over the bottom of the list as
+   clear liquid glass, and the list fades out as it passes behind it */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card { position: relative; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs-scroll {
+  pointer-events: auto;
+  background: var(--glass-fill);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs-scroll {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+/* The glass stroke: a 2px ring just outside the pill (drawn on the non-scrolling
+   wrapper so it stays put while the tabs scroll) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  border-radius: 34px;
+  padding: 2px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .save-to-panel:not(.search-panel) .save-to-card .card-tabs-scroll {
+  background: var(--glass-fill);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
+}
+:root[data-theme="light-dots"] .save-to-panel:not(.search-panel) .save-to-card .card-tabs::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
+  opacity: 1;
+}
+/* The list runs to the bottom of the card, under the pill, fading out behind it */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .save-to-scroll {
+  padding-bottom: 80px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 40px));
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 40px));
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .save-to-scroll.scrolled {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 96px), transparent calc(100% - 40px));
+  mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 96px), transparent calc(100% - 40px));
+}
+
+/* Dots themes: Save to / Move to "Add new canvas" check button — the canvas
+   rename send button's treatment: a 24% easel-colour glass circle with the
+   gradient stroke, inner glow and a 2px check in the easel colour */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-send {
+  --sn-c: var(--cb-base, var(--accent-base));
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sn-c) 24%, transparent);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  animation: none;
+  overflow: visible;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-send {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-send::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  padding: 2px;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+    hsl(from var(--sn-c) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--sn-c) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .save-to-new-row .save-to-new-send::before {
+  background: linear-gradient(135deg, hsl(from var(--sn-c) h s l / 0.6), hsl(from var(--sn-c) h s calc(l * 0.576 - 4) / 0.6));
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-send::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.1;
+  box-shadow: inset -6px -6px 4px hsl(from var(--sn-c) h calc(s * 1.08) calc(l * 0.98));
+  pointer-events: none;
+  z-index: 1;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-send svg { position: relative; z-index: 3; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-send svg path {
+  stroke: var(--sn-c) !important;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Dots themes: Save to, Move to and Schedule titles 20px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-title,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-title { font-size: 20px; }
+
+/* Dots themes: Schedule card drop shadow, as on the Add item box. The card clips
+   its glass layer (where the glow's shadow lives), so it carries its own. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
+
+/* Dots themes: the "Name canvas" field's X matches the open search field's */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-btn:active { background: rgba(255, 255, 255, 0.1); }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-btn:hover {
+    background: rgba(255, 255, 255, 0.06) linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  }
+  :root[data-theme="light-dots"] .save-to-new-row .save-to-new-btn:hover {
+    background: rgba(255, 255, 255, 0.06) linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-btn svg { width: 18px; height: 18px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-new-row .save-to-new-btn svg * {
+  stroke: #E6E6E6;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+:root[data-theme="light-dots"] .save-to-new-row .save-to-new-btn svg * { stroke: #292929; }
+
+/* Dots themes: Save to / Move to — list starts 8px closer to the header (12px → 4px) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-header { padding-bottom: 4px; }
+
+/* Dots themes: Schedule header — Cancel matches the Save to menu's Cancel, and
+   Save matches the Save button on note / list item pages */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel:not(.is-save) { background: #333333; color: #E6E6E6; }
+:root[data-theme="light-dots"] #app .cal-card .save-to-cancel:not(.is-save) { background: rgba(0, 0, 0, 0.06); color: #292929; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save { color: var(--accent-base); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save {
+  /* Held still, like the canvas plus button: coloured end and glows down-right */
+  --mc-a: 142deg;
+  --mc-u: 0.433;
+  --mc-v: 1;
+  animation: none;
+  background:
+    radial-gradient(ellipse 24px 10px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
+    radial-gradient(ellipse 52px 26px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98) / 0.45), transparent),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.24), rgba(var(--accent-base-rgb), 0.24)),
+    #2B2B2B;
+  color: var(--accent-base);
+  overflow: visible;
+  box-shadow:
+    0 6px 24px rgb(from rgb(var(--accent-base-rgb)) calc(r * 0.5) calc(g * 0.5) calc(b * 0.5) / 0.12),
+    calc(var(--mc-u) * 4px) calc(var(--mc-v) * 4.5px) 16px rgba(var(--accent-base-rgb), 0.08),
+    calc(var(--mc-u) * -4px) calc(var(--mc-v) * -4.5px) 16px rgba(0, 0, 0, 0.02);
+}
+:root[data-theme="light-dots"] #app .cal-card .save-to-cancel.is-save {
+  background:
+    radial-gradient(ellipse 30px 12px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(ellipse 52px 26px at calc(50% - var(--mc-u) * 50%) calc(50% - var(--mc-v) * 50%), rgba(var(--accent-base-rgb), 0.18), transparent),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.24), rgba(var(--accent-base-rgb), 0.24)),
+    var(--glass-fill);
+  box-shadow:
+    0 6px 24px rgb(from rgb(var(--accent-base-rgb)) calc(r * 0.5) calc(g * 0.5) calc(b * 0.5) / 0.12),
+    calc(var(--mc-u) * 4px) calc(var(--mc-v) * 4.5px) 16px rgba(var(--accent-base-rgb), 0.24),
+    calc(var(--mc-u) * -4px) calc(var(--mc-v) * -4.5px) 16px rgba(0, 0, 0, 0.02);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save::before {
+  animation: none;
+  opacity: 0.7;
+  background: conic-gradient(from var(--mc-a),
+    hsl(from var(--accent-dark) h s calc(l * 0.576 - 4) / 0.6),
+    hsl(from var(--accent-dark) h s calc(l * 1.53) / 0.55) 50%,
+    hsl(from var(--accent-dark) h s calc(l * 0.576 - 4) / 0.6));
+}
+:root[data-theme="light-dots"] #app .cal-card .save-to-cancel.is-save::before {
+  opacity: 1;
+  background:
+    conic-gradient(from var(--mc-a), rgba(var(--accent-base-rgb), 0.5), rgba(255, 255, 255, 1) 50%, rgba(var(--accent-base-rgb), 0.5)),
+    conic-gradient(from var(--mc-a), rgba(0, 0, 0, 0.16), rgba(255, 255, 255, 1) 50%, rgba(0, 0, 0, 0.16));
+}
+/* Hover / press: the easel wash deepens (16% Dark Dots, 20% Light Dots) in place
+   of the flat 4% overlay */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save::after { display: none; }
+@media (hover: hover) {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save:hover {
+    background:
+      radial-gradient(ellipse 24px 10px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
+    radial-gradient(ellipse 52px 26px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98) / 0.45), transparent),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.28), rgba(var(--accent-base-rgb), 0.28)),
+    #2B2B2B;
+  }
+:root[data-theme="light-dots"] #app .cal-card .save-to-cancel.is-save:hover {
+    background:
+      radial-gradient(ellipse 30px 12px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(ellipse 52px 26px at calc(50% - var(--mc-u) * 50%) calc(50% - var(--mc-v) * 50%), rgba(var(--accent-base-rgb), 0.18), transparent),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.32), rgba(var(--accent-base-rgb), 0.32)),
+    var(--glass-fill);
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save.is-pressed {
+  background:
+    radial-gradient(ellipse 24px 10px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
+    radial-gradient(ellipse 52px 26px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98) / 0.45), transparent),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.28), rgba(var(--accent-base-rgb), 0.28)),
+    #2B2B2B;
+}
+:root[data-theme="light-dots"] #app .cal-card .save-to-cancel.is-save.is-pressed {
+  background:
+    radial-gradient(ellipse 30px 12px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(ellipse 52px 26px at calc(50% - var(--mc-u) * 50%) calc(50% - var(--mc-v) * 50%), rgba(var(--accent-base-rgb), 0.18), transparent),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.32), rgba(var(--accent-base-rgb), 0.32)),
+    var(--glass-fill);
+}
+@media (prefers-reduced-motion: reduce) {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save { animation: none; }
+}
+
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 999px;
+  opacity: 0.5;
+}
+
+/* Dots themes: Gallery card three-dot buttons match the Gallery's settings button —
+   same fill (#333333 dark, #E3E3E3 light), 4% hover wash over the full circle
+   (white dark, black light), and its 4% black press */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card .card-header .dots-menu { background: #333333; }
+:root[data-theme="light-dots"] .home-page .card .card-header .dots-menu { background: #E3E3E3; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card .dots-menu-btn:hover::before { background: rgba(255, 255, 255, 0.04); border-radius: 50%; }
+  :root[data-theme="light-dots"] .home-page .card .dots-menu-btn:hover::before { background: rgba(0, 0, 0, 0.04); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card .dots-menu-btn.is-pressed::before { background: rgba(0, 0, 0, 0.04); border-radius: 50%; }

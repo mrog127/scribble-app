@@ -68,7 +68,7 @@ export async function enableMorningSummary() {
   }
   let sub
   try {
-    const reg = await withTimeout(navigator.serviceWorker.ready, 8000, 'Background worker not running — reopen Scribble and try again')
+    const reg = await withTimeout(navigator.serviceWorker.ready, 8000, 'Background worker not running — reopen Easels and try again')
     sub = (await reg.pushManager.getSubscription()) ||
       (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC_KEY) }))
   } catch (e) {

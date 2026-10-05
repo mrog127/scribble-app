@@ -382,9 +382,9 @@ function NotificationsCard() {
   }
 
   const sublabel = {
-    'needs-install': 'Add Scribble to your Home Screen to turn this on',
+    'needs-install': 'Add Easels to your Home Screen to turn this on',
     denied: isIOS()
-      ? 'Notifications are turned off for Scribble in iPhone Settings'
+      ? 'Notifications are turned off for Easels in iPhone Settings'
       : 'Notifications are blocked for this site in your browser settings',
     unsupported: 'Not available in this browser',
   }[state] || '9:30am \u00b7 your active list items'

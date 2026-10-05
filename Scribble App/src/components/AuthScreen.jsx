@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 
+// Sign in / sign up. Its looks live in layout.css under .auth-* — the original
+// cream design by default, with Dark Dots and Light Dots versions keyed off
+// <html data-theme>, which is set before this first renders (themes.js).
 export default function AuthScreen() {
   const [mode, setMode] = useState('signin') // 'signin' | 'signup'
   const [email, setEmail] = useState('')
@@ -29,93 +32,45 @@ export default function AuthScreen() {
 
   return (
     <div className="app-wrap">
-      <div className="phone" id="app" style={{ justifyContent: 'center', alignItems: 'center', padding: '0 32px' }}>
-        <div style={{ width: '100%' }}>
-          <p style={{
-            fontFamily: "'BaskervilleSemi', 'Baskerville', 'Georgia', serif",
-            fontSize: 40,
-            fontWeight: 700,
-            color: '#242424',
-            margin: '0 0 4px 0',
-            lineHeight: 1.1,
-          }}>
-            Scribble
-          </p>
-          <p style={{
-            fontFamily: "'Open Sans', system-ui, sans-serif",
-            fontSize: 14,
-            fontWeight: 500,
-            color: '#959493',
-            margin: '0 0 40px 0',
-          }}>
+      <div className="phone auth-screen" id="app">
+        <div className="auth-body">
+          <p className="auth-title">Easels</p>
+          <p className="auth-subtitle">
             {mode === 'signin' ? 'Sign in to your account' : 'Create an account'}
           </p>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <form className="auth-form" onSubmit={handleSubmit}>
             <input
-              className="add-input"
+              className="add-input auth-input"
               type="email"
               placeholder="Email"
+              autoComplete="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              style={{ width: '100%', boxSizing: 'border-box' }}
             />
             <input
-              className="add-input"
+              className="add-input auth-input"
               type="password"
               placeholder="Password"
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              style={{ width: '100%', boxSizing: 'border-box' }}
             />
 
-            {error && (
-              <p style={{ fontFamily: "'Open Sans', system-ui, sans-serif", fontSize: 13, color: '#B24A4A', margin: 0 }}>
-                {error}
-              </p>
-            )}
-            {message && (
-              <p style={{ fontFamily: "'Open Sans', system-ui, sans-serif", fontSize: 13, color: '#607787', margin: 0 }}>
-                {message}
-              </p>
-            )}
+            {error && <p className="auth-note auth-error">{error}</p>}
+            {message && <p className="auth-note auth-message">{message}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                height: 48,
-                borderRadius: 4,
-                background: '#607787',
-                border: 'none',
-                color: '#fff',
-                fontFamily: "'Open Sans', system-ui, sans-serif",
-                fontSize: 16,
-                fontWeight: 500,
-                cursor: loading ? 'default' : 'pointer',
-                opacity: loading ? 0.6 : 1,
-                marginTop: 4,
-              }}
-            >
+            <button type="submit" className="auth-submit" disabled={loading}>
               {loading ? '...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
             </button>
           </form>
 
           <button
+            type="button"
+            className="auth-switch"
             onClick={() => { setMode(m => m === 'signin' ? 'signup' : 'signin'); setError(null); setMessage(null) }}
-            style={{
-              marginTop: 20,
-              background: 'none',
-              border: 'none',
-              fontFamily: "'Open Sans', system-ui, sans-serif",
-              fontSize: 14,
-              fontWeight: 500,
-              color: '#607787',
-              cursor: 'pointer',
-              padding: 0,
-            }}
           >
             {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
           </button>

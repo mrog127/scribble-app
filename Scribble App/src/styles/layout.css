@@ -11705,3 +11705,6 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root[data-theme="dark-dots"] #app .link-tile-image.is-phone { background: #212121 !important; }
 :root[data-theme="dark-dots"] #app .link-tile-image.is-phone .link-tile-fallback { color: #FFFFFF; }
 :root[data-theme="dark-dots"] #app .home-page .link-tile-image.is-phone { background: #292929 !important; }
+
+/* Move to... card: same 500px cap as the Schedule card, centred in its space */
+#app .move-to-card { max-width: 500px; margin-left: auto; margin-right: auto; }

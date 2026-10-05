@@ -10816,67 +10816,6 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 /* Dots themes: a row's attachment adornment is just the paperclip — no count */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .row-attach-count { display: none; }
 
-/* Dots themes: Save to — the easel tab pill floats over the bottom of the list as
-   clear liquid glass, and the list fades out as it passes behind it */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card { position: relative; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs-scroll {
-  pointer-events: auto;
-  background: var(--glass-fill);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
-}
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs-scroll {
-    -webkit-backdrop-filter: blur(10px) saturate(180%);
-    backdrop-filter: blur(10px) saturate(180%);
-  }
-}
-/* The glass stroke: a 2px ring just outside the pill (drawn on the non-scrolling
-   wrapper so it stays put while the tabs scroll) */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .card-tabs::before {
-  content: '';
-  position: absolute;
-  top: 6px;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
-  border-radius: 34px;
-  padding: 2px;
-  opacity: 0.7;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 2;
-}
-:root[data-theme="light-dots"] .save-to-panel:not(.search-panel) .save-to-card .card-tabs-scroll {
-  background: var(--glass-fill);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
-}
-:root[data-theme="light-dots"] .save-to-panel:not(.search-panel) .save-to-card .card-tabs::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
-  opacity: 1;
-}
-/* The list runs to the bottom of the card, under the pill, fading out behind it */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .save-to-scroll {
-  padding-bottom: 80px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 40px));
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 40px));
-}
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .save-to-scroll.scrolled {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 96px), transparent calc(100% - 40px));
-  mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 96px), transparent calc(100% - 40px));
-}
-
 /* Dots themes: Save to / Move to "Add new canvas" check button — the canvas
    rename send button's treatment: a 24% easel-colour glass circle with the
    gradient stroke, inner glow and a 2px check in the easel colour */
@@ -11177,3 +11116,16 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
+
+/* Dots themes: Schedule — a Recurring button set to anything but Never reads like
+   an active Display button: the easel colour at 24% behind a full-strength label
+   (outranks the Cancel pill treatment it shares a class with) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.cal-recur-btn.on {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  color: var(--accent-base);
+}
+
+/* Schedule: the open Recurring menu rises over the header instead of being
+   clipped at the top of the calendar's scroll area */
+.cal-card:has(.cal-recur-menu.open) .cal-body { overflow: visible; }
+.cal-card:has(.cal-recur-menu.open) .cal-recur-wrap { z-index: 5; }

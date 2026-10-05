@@ -40,18 +40,19 @@ export function isScheduleReached(str) {
 }
 
 // ---- Recurrence ----------------------------------------------------------
-// A todo can repeat: weekly (same weekday), monthly (same weekday-of-month,
+// A todo can repeat: daily (comes back the next day, at midnight), weekly (same weekday), monthly (same weekday-of-month,
 // e.g. every 2nd Tuesday) or yearly (same calendar date). `recur_anchor` holds
 // the occurrence the next one is measured from, so checking an item off late
 // never drifts the series.
-export const RECURRENCE_CYCLE = ['never', 'weekly', 'biweekly', 'monthly', 'bimonthly', 'semiannual', 'yearly']
+export const RECURRENCE_CYCLE = ['never', 'daily', 'weekly', 'biweekly', 'monthly', 'bimonthly', 'semiannual', 'yearly']
 
-// How many weeks / months each recurrence steps by
+// How many days / weeks / months each recurrence steps by
+const DAY_STEP = { daily: 1 }
 const WEEK_STEP = { weekly: 1, biweekly: 2 }
 const MONTH_STEP = { monthly: 1, bimonthly: 2, semiannual: 6 }
 
 // Most frequent first — how recurring items are ordered within a list.
-const RECURRENCE_RANK = { weekly: 0, biweekly: 1, monthly: 2, bimonthly: 3, semiannual: 4, yearly: 5 }
+const RECURRENCE_RANK = { daily: -1, weekly: 0, biweekly: 1, monthly: 2, bimonthly: 3, semiannual: 4, yearly: 5 }
 export function recurrenceRank(r) {
   const rank = RECURRENCE_RANK[r]
   return rank === undefined ? Infinity : rank
@@ -59,6 +60,7 @@ export function recurrenceRank(r) {
 
 export function recurrenceLabel(r) {
   switch (r) {
+    case 'daily': return 'Daily'
     case 'weekly': return 'Weekly'
     case 'biweekly': return 'Bi-weekly'
     case 'monthly': return 'Monthly'
@@ -87,6 +89,12 @@ function nthWeekdayOfMonth(year, month, weekday, nth) {
 
 // One step forward from `date` under the given recurrence.
 function stepRecurrence(date, recurrence) {
+  const days = DAY_STEP[recurrence]
+  if (days) {
+    const d = new Date(date)
+    d.setDate(d.getDate() + days)
+    return d
+  }
   const weeks = WEEK_STEP[recurrence]
   if (weeks) {
     const d = new Date(date)

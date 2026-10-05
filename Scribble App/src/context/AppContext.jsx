@@ -95,6 +95,33 @@ export function AppProvider({ children }) {
     }
   }, [user?.id]) // eslint-disable-line
 
+  // A new day starts at local midnight: re-read so anything scheduled for today
+  // (daily recurring items included) comes back without a manual refresh — both
+  // while the app sits open across midnight and when it's reopened the next day.
+  useEffect(() => {
+    if (!user?.id) return
+    const dayKey = () => new Date().toDateString()
+    let loadedDay = dayKey()
+    let timer = null
+    const rollOver = () => {
+      if (dayKey() === loadedDay) return
+      loadedDay = dayKey()
+      loadAll()
+    }
+    const armMidnight = () => {
+      const next = new Date()
+      next.setHours(24, 0, 5, 0)   // 5s past the coming midnight
+      timer = setTimeout(() => { rollOver(); armMidnight() }, next - Date.now())
+    }
+    armMidnight()
+    const onVisible = () => { if (document.visibilityState === 'visible') rollOver() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [user?.id]) // eslint-disable-line
+
   // Re-save shortly after anything settles, so an edit made and then closed on
   // straight away is still there next time.
   useEffect(() => {

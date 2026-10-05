@@ -11701,3 +11701,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 /* Phone-number links: plain grey top half, full-strength black phone icon */
 #app .link-tile-image.is-phone { background: #E3E3E3 !important; }
 #app .link-tile-image.is-phone .link-tile-fallback { opacity: 1; }
+#app .link-tile-image.is-phone .link-tile-fallback { color: #000000; }
+:root[data-theme="dark-dots"] #app .link-tile-image.is-phone { background: #212121 !important; }
+:root[data-theme="dark-dots"] #app .link-tile-image.is-phone .link-tile-fallback { color: #FFFFFF; }
+:root[data-theme="dark-dots"] #app .home-page .link-tile-image.is-phone { background: #292929 !important; }

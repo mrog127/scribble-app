@@ -11572,18 +11572,20 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   padding: 0;
 }
 
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.phone.auth-screen { background: #212121; }
-:root[data-theme="light-dots"] #app.phone.auth-screen { background: #F0F0F0; }
+/* Signed out, the page always wears Light Dots (AuthScreen applies it) with an
+   accent that cycles through the easel colours — every accent use below reads
+   the --accent-* variables AuthScreen fades from one colour to the next. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.phone.auth-screen { background: #F0F0F0; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-screen * { font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-title {
   font-size: 40px;
   font-weight: 700;
   letter-spacing: -0.8px;
   line-height: 44px;
-  color: #E6E6E6;
+  color: #292929;
   margin-bottom: 8px;
 }
-/* The Easel title's dot, in the app's blue */
+/* The Easel title's dot, in the current accent; it pops at each colour change */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-title::after {
   content: '';
   display: inline-block;
@@ -11591,42 +11593,43 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   height: 14px;
   margin-left: 6px;
   border-radius: 50%;
-  background: #6993FE;
+  background: var(--accent-base);
+  transform-origin: center;
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-subtitle { font-size: 16px; color: #7A7A7A; margin-bottom: 32px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-title.dot-pop::after {
+  animation: auth-dot-pop 450ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes auth-dot-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.55); }
+  100% { transform: scale(1); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-subtitle { font-size: 16px; color: #969696; margin-bottom: 32px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-input {
   height: 48px;
   padding: 0 20px;
   border: none;
   border-radius: 32px;
-  background: #2B2B2B;
-  color: #E6E6E6;
+  background: #FAFAFA;
+  color: #292929;
   font-size: 16px;
   font-weight: 500;
   box-shadow: none;
   outline: none;
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-input::placeholder { color: #7A7A7A; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-input:focus { box-shadow: 0 0 0 2px rgba(105, 147, 254, 0.5); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-input::placeholder { color: #969696; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-input:focus { box-shadow: 0 0 0 2px rgba(var(--accent-base-rgb), 0.5); }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-note { font-size: 14px; padding: 0 20px; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-error { color: #FF7070; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-message { color: #6993FE; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-submit {
-  height: 48px;
-  margin-top: 8px;
-  border-radius: 32px;
-  background: rgba(105, 147, 254, 0.24);
-  color: #6993FE;
-  font-size: 16px;
-  font-weight: 700;
-}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-error { color: #B24A4A; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-message { color: var(--accent-base); }
+/* Sign In / Sign Up wears Mark as Complete (mark-complete-btn); only spacing here */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn.auth-submit { margin-top: 8px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn.auth-submit:disabled { opacity: 0.6; cursor: default; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-switch { display: block; margin: 24px auto 0; font-size: 14px; color: var(--accent-base); }
+
+/* Login fields: hover lays a 2% black wash over the field's fill */
 @media (hover: hover) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-submit:not(:disabled):hover { background: rgba(105, 147, 254, 0.32); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.auth-screen .auth-input:hover {
+    background: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02)), #FAFAFA;
+  }
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-submit:not(:disabled):active { background: rgba(105, 147, 254, 0.32); }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .auth-switch { display: block; margin: 24px auto 0; font-size: 14px; color: #6993FE; }
-:root[data-theme="light-dots"] .auth-title { color: #292929; }
-:root[data-theme="light-dots"] .auth-subtitle { color: #969696; }
-:root[data-theme="light-dots"] .auth-input { background: #FAFAFA; color: #292929; }
-:root[data-theme="light-dots"] .auth-input::placeholder { color: #969696; }
-:root[data-theme="light-dots"] .auth-error { color: #B24A4A; }

@@ -11513,10 +11513,10 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 #animation-portal .drag-clone-scope::after { display: none !important; }
 
 /* Dots themes, phone: the list item / note / link page's control bar (Display,
-   folder, three-dot) sits 16px lower — 4px above the safe area instead of 20px */
+   folder, three-dot) sits 8px lower — 12px above the safe area instead of 20px */
 @media (max-width: 999.98px) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page.has-footer .detail-footer,
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer { padding-bottom: calc(env(safe-area-inset-bottom) + 4px); }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer { padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
 }
 
 /* =============================================
@@ -11633,3 +11633,40 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
     background: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02)), #FAFAFA;
   }
 }
+
+/* Dots themes: a Displayed link's tile badge is the easel colour at 24% behind
+   a full-strength glyph (like an active Display button), over photos too */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-badge.activated,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-badge.on-dark.activated {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  color: var(--accent-base);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-badge.activated svg path { stroke: var(--accent-base); }
+
+/* Dots themes, desktop: the link whose page is open washes its whole tile in the
+   an 8% wash (white Dark Dots, black Light Dots) */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-grid-cell.cell-open .link-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+    z-index: 4;
+  }
+  :root[data-theme="light-dots"] .link-grid-cell.cell-open .link-tile::after { background: rgba(0, 0, 0, 0.08); }
+}
+
+/* Dots themes: on a list item / note / link page, Display at rest has no fill and
+   no outline — just its icon and label. Hovering shows the footer's usual wash;
+   Displayed (.on) keeps its easel-colour fill. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn:not(.on) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn:not(.on)::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn:not(.on)::after { display: none; }

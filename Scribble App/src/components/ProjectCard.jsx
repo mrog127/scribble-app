@@ -2306,7 +2306,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
           {displayType === 'link' && (
             <div className="link-grid" ref={linkContainerRef}>
               {displayLinks.map(l => (
-                <div key={l.id} className="link-grid-cell" data-swipe-id={l.id}>
+                <div key={l.id} className={`link-grid-cell${l.id === openLinkId ? ' cell-open' : ''}`} data-swipe-id={l.id}>
                   {editingLinkId === l.id ? (
                     <LinkRowEditor
                       link={l}

@@ -11837,3 +11837,17 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
    (#7A7A7A Dark Dots, #A3A3A3 Light Dots) */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-pin-icon :is(path, line) { stroke: #7A7A7A; }
 :root[data-theme="light-dots"] .card-pin-icon :is(path, line) { stroke: #A3A3A3; }
+
+/* Dots themes, desktop: an open list item / note / link page starts at the
+   width that makes its white body card exactly as wide as the canvas cards
+   beside it (body card = page width - 32px of margins).
+   - With the sidebar: canvas card = 100vw - 476px - page width
+     (sidebar 340 + 20 gutter, 36 / 48 card column sides, 32 page inset).
+   - Narrow desktop (sidebar hidden): canvas card = 100vw - 128px - page width.
+   Dragging the page's edge overrides this (inline on :root) until a reload. */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: calc((100vw - 444px) / 2); }
+}
+@media (min-width: 1000px) and (max-width: 1240px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: calc((100vw - 96px) / 2); }
+}

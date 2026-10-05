@@ -34,6 +34,13 @@ function openUrl(url) {
   window.open(u, '_blank', 'noopener,noreferrer')
 }
 
+// A phone number typed into the link field (same test openUrl uses)
+function isPhoneLink(url) {
+  const u = (url || '').trim()
+  const digits = u.replace(/\D/g, '')
+  return /^[+()\-.\s\d]+$/.test(u) && digits.length >= 7 && digits.length <= 15
+}
+
 // Strip the scheme for a cleaner one-line preview
 // Bare hostname, used when a link has no title of its own.
 function hostOf(url) {
@@ -625,14 +632,15 @@ function PinnedTitleIcon() {
 
 // One tile in the links grid. Styled like the preview card on a link page:
 // the site's own og:image up top, title and host beneath.
-export function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, onContextMenu, onOpenPage }) {
+export function LinkGridCard({ link, categoryId, projectId, archived, onPointerDown, onContextMenu, onOpenPage, sourceLabel, onSourceClick }) {
   const { ensureLinkImage } = useAppContext()
   const [failed, setFailed] = useState(false)
 
   // Resolve the image once, the first time this card is shown.
   useEffect(() => { ensureLinkImage(categoryId, projectId, link) }, [link.id, link.imageFetchedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showImg = !!link.imageUrl && !failed
+  const isPhone = isPhoneLink(link.url)
+  const showImg = !!link.imageUrl && !failed && !isPhone
   return (
     <div
       className={`link-tile${link.archived ? ' archived' : ''}`}
@@ -641,7 +649,7 @@ export function LinkGridCard({ link, categoryId, projectId, archived, onPointerD
     >
       {/* Image opens the site; the label block opens the link's own page. */}
       <div
-        className={`link-tile-image${showImg && link.imageIsIcon ? ' is-logo' : ''}`}
+        className={`link-tile-image${showImg && link.imageIsIcon ? ' is-logo' : ''}${isPhone ? ' is-phone' : ''}`}
         onClick={() => openUrl(link.url)}
         /* A logo sits on the colour the site puts behind it; a page photo just
            covers the tile and this does nothing. */
@@ -661,10 +669,16 @@ export function LinkGridCard({ link, categoryId, projectId, archived, onPointerD
           <img src={link.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
         ) : (
           <div className="link-tile-fallback">
+            {isPhone ? (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ transform: 'scaleX(-1)' }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="#000000" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
               <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="var(--accent-dark)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="var(--accent-dark)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
+            )}
           </div>
         )}
       </div>
@@ -672,7 +686,20 @@ export function LinkGridCard({ link, categoryId, projectId, archived, onPointerD
       <div className="link-tile-body" onClick={() => openUrl(link.url)}>
         <div className="link-tile-text">
           <span className="link-tile-title">{link.title || hostOf(link.url)}</span>
-          <span className="link-tile-url">{displayUrl(link.url)}</span>
+          <span className="link-tile-url">
+            {/* Gallery / content-type cards: the canvas name, a dot, then the url */}
+            {sourceLabel && (
+              <>
+                <span
+                  className="source-label-text canvas-link"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={e => { e.stopPropagation(); onSourceClick?.() }}
+                >{sourceLabel}</span>
+                {' · '}
+              </>
+            )}
+            {displayUrl(link.url)}
+          </span>
         </div>
         {/* The one part of the tile that doesn't follow the link — it opens the page */}
         <button

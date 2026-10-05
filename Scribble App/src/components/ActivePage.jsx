@@ -8,7 +8,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { EyeIcon, EyeOffIcon, CalendarMenuIcon } from './MenuIcons.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
-import ProjectCard from './ProjectCard.jsx'
+import ProjectCard, { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
 import { useCardDragReorder } from './useCardDragReorder.js'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import GalleryDecoration from '../assets/gallery-page-decoration.svg?react'
@@ -841,7 +841,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
     if (!item) return
     promptDelete(() => {
       const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-      const wrapper = swipeRow?.parentElement
+      const wrapper = swipeRow
       if (!wrapper) { onDelete(item.categoryId, item.projectId, id); return }
       wrapper.animate([{ background: 'rgba(178,74,74,0)' }, { background: 'rgba(178,74,74,0.20)', offset: 0.4 }, { background: 'rgba(178,74,74,0)' }], { duration: 280, fill: 'none' })
       setTimeout(() => {
@@ -857,7 +857,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
     const item = items.find(l => l.id === id)
     if (!item) return
     const swipeRow = containerRef.current?.querySelector(`[data-swipe-id="${id}"]`)
-    const wrapper = swipeRow?.parentElement
+    const wrapper = swipeRow
     if (!wrapper) { onDeactivate(item.categoryId, item.projectId, id); return }
     const catIdx = categories.findIndex(c => c.id === item.categoryId)
     const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
@@ -884,7 +884,7 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
     { label: l.scheduledDate ? 'Reschedule' : 'Schedule', icon: <CalendarMenuIcon/>, onSelect: () => openSchedule(l.id, row) },
     { label: 'Delete Link', icon: <TrashMenuIcon/>, danger: true, onSelect: () => handleDelete(l.id) },
   ]), [handleDeactivate, openSchedule, handleDelete])
-  const { onDragPointerDown } = useDragReorder(containerRef, items, handleReorder)
+  const { onDragPointerDown } = useGridDragReorder(containerRef, items, handleReorder)
 
   // Plain tap opens the link; drag and long-press are handled elsewhere.
   const onLinkPointerDown = useCallback((e, id, url) => {
@@ -921,53 +921,28 @@ function ActivatedLinksCard({ items, onDelete, onDeactivate }) {
       <div className="card-header">
         <span className="card-title">Links</span>
       </div>
-      <div ref={containerRef}>
-        {items.map((l, i) => {
+      <div className="link-grid" ref={containerRef}>
+        {items.map(l => {
           const catIdx = categories.findIndex(c => c.id === l.categoryId)
           const a = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
           return (
-          <div key={l.id}>
-            {i > 0 && <div className="divider"/>}
-            <div className={`swipe-row${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id} style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }} onPointerDown={e => { rowMenu.press(e, buildRowItems(l)); onLinkPointerDown(e, l.id, l.url); onDragPointerDown(e, l.id) }}
-                        onContextMenu={e => rowMenu.context(e, buildRowItems(l))}>
-
-              <div className="swipe-content">
-                <div className="note-row">
-                  <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <defs>
-                        <filter id={`li-${l.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                          <feOffset dx="4" dy="8"/>
-                          <feGaussianBlur stdDeviation="4" result="ob"/>
-                          <feComposite operator="out" in="SourceGraphic" in2="ob" result="inv"/>
-                          <feFlood floodColor={a.light} floodOpacity="1" result="col"/>
-                          <feComposite operator="in" in="col" in2="inv" result="sh"/>
-                          <feComposite operator="over" in="sh" in2="SourceGraphic"/>
-                        </filter>
-                      </defs>
-                      <circle cx="12" cy="12" r="8" fill="#F7F6F3" filter={`url(#li-${l.id})`}/>
-                      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={a.dark} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={a.dark} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <div className="item-content">
-                    <span className="note-text">{l.title}</span>
-                    <div className="source-label">
-                      <span
-                        className="source-label-text canvas-link"
-                        onPointerDown={e => { e.stopPropagation() }}
-                        onClick={e => {
-                          e.stopPropagation()
-                          openInCanvas({ type: 'link', itemId: l.id, projectId: l.projectId, categoryId: l.categoryId })
-                        }}
-                      >{l.projectName}</span>
-                    </div>
-                  </div>
-                  <OutlinkButton onOpen={() => openUrl(l.url)} />
-                </div>
-              </div>
+            <div
+              key={l.id}
+              className={`link-grid-cell${l.id === openLinkId ? ' cell-open' : ''}`}
+              data-swipe-id={l.id}
+              style={{ '--accent-base': a.base, '--accent-light': a.light, '--accent-dark': a.dark, '--accent-base-rgb': a.baseRgb }}
+            >
+              <LinkGridCard
+                link={l}
+                categoryId={l.categoryId}
+                projectId={l.projectId}
+                onOpenPage={() => setOpenLinkId(l.id)}
+                sourceLabel={l.projectName}
+                onSourceClick={() => openInCanvas({ type: 'link', itemId: l.id, projectId: l.projectId, categoryId: l.categoryId })}
+                onPointerDown={e => { rowMenu.press(e, buildRowItems(l), { side: true }); onDragPointerDown(e, l.id) }}
+                onContextMenu={e => rowMenu.context(e, buildRowItems(l))}
+              />
             </div>
-          </div>
           )
         })}
       </div>

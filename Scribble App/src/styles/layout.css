@@ -11670,3 +11670,34 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn:not(.on)::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer .project-active-btn:not(.on)::after { display: none; }
+
+
+/* --- Link tiles: canvas label + url, and secondary labels like row items --- */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-tile-url {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+}
+:root[data-theme="light-dots"] .link-tile-url { color: #969696; }
+/* Room for the canvas name's hover pill, and a stacking context so it sits
+   behind the label rather than behind the tile. */
+.link-tile-url:has(.canvas-link) {
+  position: relative;
+  z-index: 0;
+  padding-top: 2px;
+  margin-top: -1px;
+  padding-left: 2px;
+  margin-left: -2px;
+}
+/* The canvas name owns the hover while it's under the cursor */
+@media (hover: hover) {
+  .link-tile:has(.canvas-link:hover) .link-tile-hover { opacity: 0 !important; }
+}
+
+/* Gallery page only: the label half of a link tile is #FAFAFA */
+:root[data-theme="light-dots"] .home-page .link-tile-body { background: #FAFAFA; }
+
+/* Phone-number links: plain grey top half, full-strength black phone icon */
+#app .link-tile-image.is-phone { background: #E3E3E3 !important; }
+#app .link-tile-image.is-phone .link-tile-fallback { opacity: 1; }

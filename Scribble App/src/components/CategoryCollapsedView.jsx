@@ -14,6 +14,7 @@ import { EyeIcon, EyeOffIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, 
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
+import { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
@@ -984,7 +985,7 @@ export function CollapsedLinksCard({ category, bare = false, onlyActivated = fal
     reorderCategoryLinks(category.id, newOrder)
   }, [reorderCategoryLinks, category.id])
   const linkGroupKeys = sortedLinks.map(l => l.archived ? null : (l.activated ? 'active' : 'inactive'))
-  const { onDragPointerDown } = useDragReorder(containerRef, sortedLinks, handleReorder, linkGroupKeys)
+  const { onDragPointerDown } = useGridDragReorder(containerRef, sortedLinks, handleReorder)
 
   useEffect(() => {
     const card = cardRef.current
@@ -1123,44 +1124,19 @@ export function CollapsedLinksCard({ category, bare = false, onlyActivated = fal
           </div>
         )}
     </>}>
-      <div ref={containerRef}>
-        {sortedLinks.map((l, i) => (
-          <div key={l.id}>
-            {i > 0 && <div className="divider"/>}
-            <div className={`swipe-row archivable${l.id === openLinkId ? ' row-open' : ''}`} data-swipe-id={l.id}>
-              <div className="swipe-content">
-                <div
-                  className={`note-row link-row${l.archived ? ' archived' : ''}`}
-                  onPointerDown={e => { rowMenu.press(e, buildRowItems(l)); onLinkPointerDown(e, l.id); if (!isScheduleLocked(l)) onDragPointerDown(e, l.id) }}
-                        onContextMenu={e => rowMenu.context(e, buildRowItems(l))}
-                >
-                  <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      {l.activated && <circle cx="12" cy="12" r="8" fill="var(--accent-light)"/>}
-                      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={l.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={l.activated ? 'var(--accent-dark)' : '#7A7A7A'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <div className="item-content">
-                    <span className="note-text">{l.title || displayUrl(l.url)}</span>
-                    <div className="source-label">
-                      <span
-                        className="source-label-text canvas-link"
-                        onPointerDown={e => { e.stopPropagation() }}
-                        onClick={e => {
-                          e.stopPropagation()
-                          openInCanvas({ type: 'link', itemId: l.id, projectId: l.projectId, categoryId: category.id })
-                        }}
-                      >{l.projectName}</span>
-                    </div>
-                  </div>
-                  {(l.scheduledDate && !l.activated) && (
-                    <span className="row-schedule-indicator"><span className="row-schedule-date">{formatScheduleShort(l.scheduledDate)}</span><CalendarIcon size={20}/></span>
-                  )}
-                  <OutlinkButton onOpen={() => openUrl(l.url)} />
-                </div>
-              </div>
-            </div>
+      <div className="link-grid" ref={containerRef}>
+        {sortedLinks.map(l => (
+          <div key={l.id} className={`link-grid-cell${l.id === openLinkId ? ' cell-open' : ''}`} data-swipe-id={l.id}>
+            <LinkGridCard
+              link={l}
+              categoryId={category.id}
+              projectId={l.projectId}
+              onOpenPage={() => setOpenLinkId(l.id)}
+              sourceLabel={l.projectName}
+              onSourceClick={() => openInCanvas({ type: 'link', itemId: l.id, projectId: l.projectId, categoryId: category.id })}
+              onPointerDown={e => { rowMenu.press(e, buildRowItems(l), { side: true }); if (!l.archived && !isScheduleLocked(l)) onDragPointerDown(e, l.id) }}
+              onContextMenu={e => rowMenu.context(e, buildRowItems(l))}
+            />
           </div>
         ))}
       </div>

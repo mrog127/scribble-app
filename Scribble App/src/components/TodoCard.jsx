@@ -4,6 +4,7 @@ import { EyeIcon, EyeOffIcon, TrashMenuIcon } from './MenuIcons.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import { useRowMenu, RowActionMenu } from './RowMenu.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
+import { runCheckOff } from '../checkGhost.js'
 
 function useDragReorder(containerRef, items, onReorder) {
   const dragRef = useRef(null)
@@ -438,14 +439,14 @@ export default function TodoCard({ todos, onToggle, onDelete, onReorder }) {
       }
 
       // After flash completes, snapshot + trigger reorder
-      setTimeout(() => {
-        if (containerRef.current) {
+      runCheckOff(todoRow, (flip) => {
+        if (flip && containerRef.current) {
           toggleFlipRef.current = [...containerRef.current.children].map(el => ({
             el, top: el.getBoundingClientRect().top,
           }))
         }
         onToggle(id)
-      }, 500)
+      })
     } else {
       // Unchecking: snapshot then animate up
       if (containerRef.current) {

@@ -39,7 +39,10 @@ export function installPressState() {
   }
 
   const onDown = (e) => {
-    if (e.pointerType === 'mouse' || pointerId !== null) return
+    if (e.pointerType === 'mouse') return
+    // A new touch means any earlier one is over — even if its release never
+    // reached us — so a stuck press can't block every press after it
+    if (pointerId !== null) end()
     const target = e.target instanceof Element ? e.target : null
     if (!target) return
     control = target.closest(CONTROL) || target

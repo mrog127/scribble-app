@@ -11791,3 +11791,32 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   margin: 0;
   z-index: 1;
 }
+
+/* Light Dots: a pressed row (touch) shows the hover pill in black, as on hover —
+   the shared rule above paints it white, which vanished on the light cards */
+:root[data-theme="light-dots"] :is(.home-page, .category-page) .swipe-row.is-pressed:not(:has(.checkbox-wrap.is-pressed)) .swipe-content::before {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Dots themes: the list item / note / link page's folder button takes the
+   three-dot button's hover — a 4% wash laid over its fill (white in Dark Dots,
+   black in Light Dots). The cell's wash used to sit behind the button's
+   solid fill, so it never showed. */
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer-cell.right:has(.detail-footer-project-btn:hover)::after {
+    z-index: 2;
+    pointer-events: none;
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer-cell.right:has(.detail-footer-project-btn.is-pressed)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  height: auto;
+  transform: none;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.04);
+  z-index: 2;
+  pointer-events: none;
+}
+:root[data-theme="light-dots"] .detail-footer-cell.right:has(.detail-footer-project-btn.is-pressed)::after { background: rgba(0, 0, 0, 0.04); }

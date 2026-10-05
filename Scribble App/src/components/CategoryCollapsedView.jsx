@@ -16,6 +16,7 @@ import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
+import { runCheckOff } from '../checkGhost.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -489,8 +490,8 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
         const rgb = getComputedStyle(todoRow).getPropertyValue('--accent-base-rgb').trim() || '96,119,135'
         todoRow.animate([{ background: `rgba(${rgb},0)` }, { background: `rgba(${rgb},0.18)`, offset: 0.2 }, { background: `rgba(${rgb},0)` }], { duration: 500, easing: 'ease', fill: 'none' })
       }
-      setTimeout(() => {
-        snapshotForFlip()
+      runCheckOff(todoRow, (flip) => {
+        if (flip) snapshotForFlip()
         toggleProjectTodo(category.id, projectId, id)
         // A recurring item rolls to its next date and stays unchecked
         if (isRecurring(item?.recurrence)) {
@@ -499,7 +500,7 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
         } else {
           promptArchiveAttachments(category.id, projectId, attachedNoteIds)
         }
-      }, 500)
+      }, { collapse: !isRecurring(item?.recurrence) })
     } else {
       snapshotForFlip()
       toggleProjectTodo(category.id, projectId, id)

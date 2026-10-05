@@ -19,6 +19,7 @@ import { subscribeOrderHold } from '../galleryPulse.js'
 import { useTheme } from '../useTheme.js'
 import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon, PlusIcon as FeatherPlusIcon } from './FeatherIcons.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
+import { runCheckOff } from '../checkGhost.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -1089,8 +1090,8 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
           { duration: 500, easing: 'ease', fill: 'none' }
         )
       }
-      setTimeout(() => {
-        if (todoContainerRef.current) {
+      runCheckOff(todoRow, (flip) => {
+        if (flip && todoContainerRef.current) {
           sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))
         }
         toggleProjectTodo(categoryId, project.id, id)
@@ -1102,7 +1103,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
         } else {
           promptArchiveAttachments(categoryId, project.id, attachedNoteIds)
         }
-      }, 500)
+      }, { collapse: !isRecurring(todoItem?.recurrence) })
     } else {
       if (todoContainerRef.current) {
         sortFlipRef.current = [...todoContainerRef.current.children].map(el => ({ el, top: el.getBoundingClientRect().top }))

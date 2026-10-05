@@ -313,6 +313,7 @@ function AppInner() {
   const dotsTheme = theme === 'dark-dots' || theme === 'light-dots'
   // The content type picked on the resting Add item pill (Dots themes)
   const pendingTypeRef = useRef(null)
+  const typePickDownRef = useRef(null)   // which resting type button a press began on
   // Dark Dots draws the add box's content-type tabs with the canvas card tabs'
   // Feather icons (2px, selected one at 24px)
   const featherTabs = ['dark-dots', 'light-dots'].includes(theme)
@@ -1235,8 +1236,9 @@ function AppInner() {
       const dx = e.clientX - s.startX
       const dy = e.clientY - s.startY
       if (!s.engaged) {
-        // A link tile has been lifted for a grid reorder — it owns the gesture
-        if (isTileDragging() || isCardDragging()) { dragRef.current = null; return }
+        // A link tile, canvas card or row has been lifted for a reorder — it owns
+        // the gesture, whichever way the finger moves first
+        if (isTileDragging() || isCardDragging() || isRowDragging()) { dragRef.current = null; return }
         // Starting on a tile: hold off long enough for the lift to claim it
         if (s.fromTile && Math.abs(dx) < 12) return
         // Hand off to vertical scrolling only when the gesture is clearly vertical:
@@ -1498,6 +1500,63 @@ function AppInner() {
     })
   }, [])
 
+  // The new row as it's actually on screen. The same item can also be rendered
+  // in a page that isn't showing (or a card copy that's hidden), whose box is
+  // all zeros — flying there sent the clone off to the top-left corner.
+  const visibleRow = (selector) => {
+    const all = [...document.querySelectorAll(selector)]
+    const onPage = all.filter(el => el.closest('.page.active:not(.page-exiting)'))
+    const shown = (list) => list.find(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
+    // Nothing on screen (it landed somewhere else — the toast covers that): no flight
+    return shown(onPage) || shown(all) || null
+  }
+
+  // Fly a clone onto a row, re-reading where the row is on every frame — the
+  // page can still be scrolling (or the card settling) while it travels, and a
+  // destination read once at take-off left it landing short of the row.
+  // Positions are measured against the portal the clone lives in.
+  const flyCloneTo = (clone, getTarget, duration, onDone) => {
+    const portal = clone.parentElement
+    const from = clone.getBoundingClientRect()
+    const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+    const t0 = performance.now()
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / duration)
+      const k = ease(t)
+      const target = getTarget()
+      const to = target ? target.getBoundingClientRect() : from
+      const pr = portal.getBoundingClientRect()
+      clone.style.transition = 'none'
+      clone.style.left = `${from.left + (to.left - from.left) * k - pr.left}px`
+      clone.style.top = `${from.top + (to.top - from.top) * k - pr.top}px`
+      clone.style.width = `${from.width + (to.width - from.width) * k}px`
+      clone.style.height = `${from.height + (to.height - from.height) * k}px`
+      if (t < 1) requestAnimationFrame(step)
+      else onDone()
+    }
+    requestAnimationFrame(step)
+  }
+
+  // Touchdown: the row's contents appear under the clone, the row's highlight
+  // flashes in, and the glass clone fades out as the highlight fades in (the
+  // flash reaches full strength at 25% of its 1300ms, ~325ms) — then the
+  // highlight fades away, leaving the row in place.
+  const landClone = (clone, rowEl) => {
+    // A 100ms beat on the spot before the flash begins
+    setTimeout(() => {
+      const sr = rowEl?.closest('.swipe-row')
+      if (sr) {
+        sr.classList.remove('search-flash')
+        void sr.offsetWidth
+        sr.classList.add('search-flash')
+        setTimeout(() => sr.classList.remove('search-flash'), 1500)
+      }
+      clone.style.transition = 'opacity 325ms ease'
+      clone.style.opacity = '0'
+      setTimeout(() => clone.remove(), 345)
+    }, 100)
+  }
+
   // Clone animation: fly new item from input to card
   useEffect(() => {
     const anim = pendingAnimRef.current
@@ -1508,21 +1567,16 @@ function AppInner() {
     const selector = type === 'list' ? `.todo-row[data-id="${id}"]` : `.note-row[data-note-id="${id}"]`
 
     requestAnimationFrame(() => {
-      const targetEl = document.querySelector(selector)
+      const targetEl = visibleRow(selector)
       if (!targetEl) return
       const portal = document.getElementById('animation-portal')
       if (!portal) return
 
-      // Hide the entire row wrapper so the card doesn't expand until clone lands
+      // The row keeps its space in the card from the start; only its contents
+      // stay hidden until the clone lands on it
       const swipeRow = targetEl.closest('.swipe-row')
       const rowWrapper = swipeRow?.parentElement
-      let naturalHeight = 60
-      if (rowWrapper) {
-        naturalHeight = rowWrapper.scrollHeight || 60
-        rowWrapper.style.overflow = 'hidden'
-        rowWrapper.style.maxHeight = '0'
-        rowWrapper.style.opacity = '0'
-      }
+      if (rowWrapper) rowWrapper.style.opacity = '0'
 
       const targetRect = targetEl.getBoundingClientRect()
 
@@ -1550,6 +1604,7 @@ function AppInner() {
         'text-overflow:ellipsis',
         'box-sizing:border-box',
       ].join(';')
+      clone.className = 'add-fly-clone'
       clone.textContent = text
       portal.appendChild(clone)
 
@@ -1565,40 +1620,10 @@ function AppInner() {
       // Step 2: pause 100ms, animate clone to target
       setTimeout(() => {
         setTimeout(() => {
-          const finalRect = targetEl.getBoundingClientRect()
-          const finalAppRect = document.getElementById('app')?.getBoundingClientRect() || appRect
-
-          clone.style.transition = [
-            'left 280ms cubic-bezier(0.4,0,0.2,1)',
-            'top 280ms cubic-bezier(0.4,0,0.2,1)',
-            'width 280ms cubic-bezier(0.4,0,0.2,1)',
-            'height 280ms cubic-bezier(0.4,0,0.2,1)',
-          ].join(',')
-          clone.style.left = `${finalRect.left - finalAppRect.left}px`
-          clone.style.top = `${finalRect.top - finalAppRect.top}px`
-          clone.style.width = `${finalRect.width}px`
-          clone.style.height = `${finalRect.height}px`
-
-          // Expand the card during flight — opacity stays 0 so content is hidden
-          if (rowWrapper) {
-            rowWrapper.style.transition = 'max-height 280ms cubic-bezier(0.4,0,0.2,1)'
-            rowWrapper.style.maxHeight = naturalHeight + 'px'
-          }
-
-          // When clone lands: remove it and fade content in
-          setTimeout(() => {
-            clone.remove()
-            if (rowWrapper) {
-              rowWrapper.style.transition = 'opacity 150ms ease'
-              rowWrapper.style.opacity = '1'
-              setTimeout(() => {
-                rowWrapper.style.maxHeight = ''
-                rowWrapper.style.overflow = ''
-                rowWrapper.style.transition = ''
-                rowWrapper.style.opacity = ''
-              }, 150)
-            }
-          }, 300)
+          flyCloneTo(clone, () => (targetEl.isConnected ? targetEl : visibleRow(selector)), 280, () => {
+            if (rowWrapper) rowWrapper.style.opacity = ''
+            landClone(clone, targetEl.isConnected ? targetEl : visibleRow(selector))
+          })
         }, 100)
       }, 250)
     })
@@ -1611,25 +1636,45 @@ function AppInner() {
     if (!anim) return
 
     const { id, type, text, inputRect, appRect } = anim
-    const selector = type === 'list' ? `.todo-row[data-id="${id}"]` : `.note-row[data-note-id="${id}"]`
+    // Follow the item if it trades its temporary id for its real one mid-flight
+    const rowSel = () => {
+      const cur = anim.holder?.id ?? id
+      return type === 'list' ? `.todo-row[data-id="${cur}"]` : `.note-row[data-note-id="${cur}"]`
+    }
+    const selector = rowSel()
 
-    // Hide the item immediately so it doesn't flash during the footer close
-    const targetEl = document.querySelector(selector)
-    if (!targetEl) { pendingProjectAnimRef.current = null; return }
-    const rowWrapper = targetEl.closest('.swipe-row')?.parentElement
-    if (rowWrapper) rowWrapper.style.opacity = '0'
+    // The row takes its space in the card straight away, but its contents stay
+    // hidden until the clone lands. The row can be re-rendered under a new id
+    // partway through, so every frame re-hides whatever element is the row now.
+    if (!document.querySelector(selector)) { pendingProjectAnimRef.current = null; if (anim.holder) anim.holder.flying = false; return }
     pendingProjectAnimRef.current = null
+    const hidden = new Set()
+    let holdRaf = 0
+    const holdHidden = () => {
+      document.querySelectorAll(rowSel()).forEach(el => {
+        const w = el.closest('.swipe-row')?.parentElement
+        if (w && !hidden.has(w)) { w.style.opacity = '0'; hidden.add(w) }
+      })
+      holdRaf = requestAnimationFrame(holdHidden)
+    }
+    holdHidden()
+    const reveal = (fade) => {
+      cancelAnimationFrame(holdRaf)
+      hidden.forEach(w => {
+        if (!fade) { w.style.opacity = ''; return }
+        w.style.transition = 'opacity 150ms ease'
+        w.style.opacity = '1'
+        setTimeout(() => { w.style.transition = ''; w.style.opacity = '' }, 150)
+      })
+    }
 
     const portal = document.getElementById('animation-portal')
     const appEl = document.getElementById('app')
 
     // Wait for footer/panel close transitions (~200ms), then fly
     setTimeout(() => {
-      const finalTarget = document.querySelector(selector)
-      if (!finalTarget || !portal || !appEl) {
-        if (rowWrapper) rowWrapper.style.opacity = ''
-        return
-      }
+      const finalTarget = visibleRow(rowSel())
+      if (!finalTarget || !portal || !appEl) { reveal(false); if (anim.holder) anim.holder.flying = false; return }
 
       const fa = appEl.getBoundingClientRect()
 
@@ -1667,27 +1712,16 @@ function AppInner() {
         'text-overflow:ellipsis',
         'box-sizing:border-box',
       ].join(';')
+      clone.className = 'add-fly-clone'
       clone.textContent = text
       portal.appendChild(clone)
 
-      // Pause, then fly to target
+      // Pause, then fly onto the row, following it if it's still moving
       setTimeout(() => {
-        const targetRect = finalTarget.getBoundingClientRect()
-        const fa2 = document.getElementById('app')?.getBoundingClientRect() || fa
-        clone.style.transition = 'left 280ms cubic-bezier(0.4,0,0.2,1), top 280ms cubic-bezier(0.4,0,0.2,1), width 280ms cubic-bezier(0.4,0,0.2,1), height 280ms cubic-bezier(0.4,0,0.2,1)'
-        clone.style.left = `${targetRect.left - fa2.left}px`
-        clone.style.top = `${targetRect.top - fa2.top}px`
-        clone.style.width = `${targetRect.width}px`
-        clone.style.height = `${targetRect.height}px`
-
-        setTimeout(() => {
-          clone.remove()
-          if (rowWrapper) {
-            rowWrapper.style.transition = 'opacity 150ms ease'
-            rowWrapper.style.opacity = '1'
-            setTimeout(() => { rowWrapper.style.transition = ''; rowWrapper.style.opacity = '' }, 150)
-          }
-        }, 300)
+        flyCloneTo(clone, () => visibleRow(rowSel()) || (finalTarget.isConnected ? finalTarget : null), 280, () => {
+          reveal(false)
+          landClone(clone, visibleRow(rowSel()) || finalTarget)
+        })
       }, 100)
     }, 260)
   }, [inputFocused]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1809,7 +1843,7 @@ function AppInner() {
       // one as soon as the insert comes back.
       setTimeout(() => {
         scrollRowIntoView(findRow())
-        setTimeout(() => { const row = findRow(); if (row) flash(row) }, 500)
+        setTimeout(() => { const row = findRow(); if (row && !holder.flying) flash(row) }, 500)
       }, 400)
     }, 60)
   }, [activeTab])
@@ -1914,7 +1948,8 @@ function AppInner() {
           goToNewNote(holder, categoryId, projectId)   // navigates, highlights, opens
         } else {
           if (animRect && appRect && newId != null) {
-            pendingProjectAnimRef.current = { id: newId, type: toolbarType, text, inputRect: animRect, appRect }
+            holder.flying = true   // the flight flashes the row as it lands
+            pendingProjectAnimRef.current = { id: newId, holder, type: toolbarType, text, inputRect: animRect, appRect }
           }
           if (landsOnThisScreen(categoryId)) {
             flashNewRow(holder, { categoryId, projectId, type: toolbarType })
@@ -1991,7 +2026,17 @@ function AppInner() {
       // Naming a new canvas moves focus into the Save-to panel — that's still
       // the same compose session, so don't dismiss it.
       if (ae && ae.closest && ae.closest('.save-to-panel')) return
+      // The whole window lost focus (another app, another tab): leave the
+      // draft as it is for when you come back
+      if (!document.hasFocus()) return
+      // Clicked or tapped away: Add item closes and forgets what was typed,
+      // rather than closing with the text still sitting in it
       setInputFocused(false)
+      setInputValue('')
+      setLinkUrlValue('')
+      setToolbarType('list')
+      setCcActive(false)
+      setCcPick(null)
     })
   }, [])
 
@@ -2831,9 +2876,16 @@ function AppInner() {
                       type="button"
                       className="mbar-type-pick"
                       aria-label={label}
-                      onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
+                      onPointerDown={e => { e.stopPropagation(); e.preventDefault(); typePickDownRef.current = type }}
                       onPointerUp={e => {
                         e.stopPropagation()
+                        // Only a press that began on this button counts. Clicking
+                        // Send closes Add item and the resting pill reappears under
+                        // the cursor — its release would otherwise land on the
+                        // link button and reopen Add item on Link.
+                        const began = typePickDownRef.current === type
+                        typePickDownRef.current = null
+                        if (!began) return
                         pendingTypeRef.current = type
                         flushSync(() => setToolbarType(type))
                         inputRef.current?.focus({ preventScroll: true })

@@ -10,6 +10,7 @@ import { getCategoryAccent } from '../theme.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { useCardDragReorder } from './useCardDragReorder.js'
 import { useTheme } from '../useTheme.js'
+import { hyphenateSync } from 'hyphen/en'
 import { MinimizeIcon, MaximizeIcon, PlusSquareIcon } from './FeatherIcons.jsx'
 
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
@@ -204,6 +205,39 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
     setRenaming(false)
   }
 
+  // Dots themes: a title too long for its line wraps between words; a single
+  // word too wide for the line on its own gets soft hyphens at its syllable
+  // breaks, so it splits there with a real hyphen ("Entertain-" / "ment").
+  // Words that fit are left alone, so they always move to the next line whole.
+  const titleRef = useRef(null)
+  const [titleText, setTitleText] = useState(category?.name || '')
+  useLayoutEffect(() => {
+    const name = category?.name || ''
+    const el = titleRef.current
+    if (!el || !darkDots) { setTitleText(name); return }
+    const canvas = document.createElement('canvas').getContext('2d')
+    const fit = () => {
+      const cs = getComputedStyle(el)
+      const avail = el.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)
+      if (!avail) return
+      canvas.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+      const ls = parseFloat(cs.letterSpacing) || 0
+      const parts = name.split(/(\s+)/)
+      const lastWord = parts.length - 1 - [...parts].reverse().findIndex(w => w && !/^\s+$/.test(w))
+      const next = parts.map((w, i) => {
+        if (!w || /^\s+$/.test(w)) return w
+        // The last word carries the easel dot (6px gap + 12px dot)
+        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord ? 18 : 0)
+        return width > avail ? hyphenateSync(w) : w
+      }).join('')
+      setTitleText(next)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [category?.name, darkDots])
+
   if (!category) return null
 
   const inGallery = category.sendToHomescreen !== false
@@ -211,6 +245,16 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
   const activeProjects = category.projects.filter(p => !p.archived)
   const archivedProjects = category.projects.filter(p => p.archived)
   const archivedCanvasCount = archivedProjects.length
+
+  // Start a new canvas: the header's plus and the empty state's button.
+  // flushSync commits the state (and mounts the input) before this handler
+  // returns, so focus() still counts as part of the tap — iOS only raises the
+  // keyboard for a focus inside a gesture.
+  const startNewCanvas = (e) => {
+    e.preventDefault()
+    flushSync(() => { setCreating(true); setTitle('') })
+    inputRef.current?.focus()
+  }
 
   return (
     <div
@@ -238,7 +282,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               onBlur={commitRename}
             />
           ) : (
-            <p className="active-title" style={{ marginBottom: '0' }}>{category.name}</p>
+            <p ref={titleRef} className="active-title" style={{ marginBottom: '0' }}>{titleText}</p>
           )}
           <div className="category-header-actions">
           {renaming ? (
@@ -252,6 +296,8 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               </svg>
             </button>
           ) : (<>
+            {/* Nothing to expand or collapse on an empty easel */}
+            {!(darkDots && category.projects.length === 0) && (
             <button
               className="category-header-btn"
               onMouseDown={e => { e.preventDefault(); toggleCollapsed() }}
@@ -262,16 +308,10 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
                     : <MinimizeIcon size={20} color="#E6E6E6"/>)
                 : <CollapseToggleIcon collapsed={collapsed}/>}
             </button>
+            )}
             <button
               className="category-header-btn"
-              onMouseDown={e => {
-                e.preventDefault()
-                // flushSync commits the state (and mounts the input) before this
-                // handler returns, so focus() still counts as part of the tap —
-                // iOS only raises the keyboard for a focus inside a gesture.
-                flushSync(() => { setCreating(true); setTitle('') })
-                inputRef.current?.focus()
-              }}
+              onMouseDown={startNewCanvas}
             >
               {darkDots ? <PlusSquareIcon size={22} color="#E6E6E6"/> : <AddIcon/>}
             </button>
@@ -379,7 +419,13 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
 
         {category.projects.length === 0 && !creating && (
           <div className="empty-state">
-            <p>No projects yet</p>
+            {!darkDots && <p>No projects yet</p>}
+            {darkDots && (
+              <button type="button" className="mark-complete-btn empty-add-canvas-btn" onMouseDown={startNewCanvas}>
+                <PlusSquareIcon size={20} color="currentColor"/>
+                <span>New canvas</span>
+              </button>
+            )}
           </div>
         )}
 

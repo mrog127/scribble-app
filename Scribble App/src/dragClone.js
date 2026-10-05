@@ -18,8 +18,17 @@ export function buildDragCloneShell(srcRowEl, cloneInner, fallbackBg = '#F7F6F3'
 
   cloneInner.style.cssText = `pointer-events:none;background:${darkDots ? 'transparent' : bg};`
 
+  // The copy is taken mid long-press, so it carries the row's lifted / pressed
+  // states — and with them a glass pill of its own, which showed as a second
+  // container inside this one. The copy's shell is the only glass.
+  const transient = ['row-lifted', 'row-context-held', 'is-pressed', 'search-flash', 'row-open']
+  ;[cloneInner, ...cloneInner.querySelectorAll('*')].forEach(el => el.classList?.remove(...transient))
+
   const scope = document.createElement('div')
   if (srcCard) scope.className = srcCard.className
+  // …but not the card's own skin: a glass card draws its fill and outline on
+  // ::before / ::after, which showed as a second container inside the copy
+  scope.classList.add('drag-clone-scope')
   scope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;overflow:visible;opacity:1;transform:none;'
   scope.appendChild(cloneInner)
 

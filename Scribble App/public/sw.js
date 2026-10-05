@@ -10,7 +10,7 @@
  * Bump CACHE when the caching strategy itself changes; the build's own hashed
  * filenames handle ordinary deploys.
  */
-const CACHE = 'scribble-shell-v1'
+const CACHE = 'scribble-shell-v2'   // v2: new app icons (same filenames, so the old ones were cached)
 
 self.addEventListener('install', () => {
   // Take over as soon as the new worker is ready

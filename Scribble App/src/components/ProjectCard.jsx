@@ -2343,8 +2343,28 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
           )}
         </div>
 
+        {/* Dots: an empty canvas offers the control bar's three add-item buttons
+            (list, note, link) under its header instead of the plus */}
+        {tabsAtBottom && isEmptyCanvas && !archived && !cardsDragging && (
+          <div className="empty-canvas-picks-wrap">
+            <div className="empty-canvas-picks">
+              {[['list', FeatherListIcon, 'Add a list item'], ['note', FeatherFileIcon, 'Add a note'], ['link', FeatherLinkIcon, 'Add a link']].map(([type, Icon, label]) => (
+                <button
+                  key={type}
+                  type="button"
+                  className="mbar-type-pick"
+                  aria-label={label}
+                  onClick={e => { e.stopPropagation(); requestCompose({ categoryId, projectId: project.id, type }) }}
+                >
+                  <Icon size={20} color="currentColor" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Dark Dots: type tabs + add button below the items */}
-        {tabsAtBottom && !collapsed && !cardsDragging && (showTabs || !archived) && (
+        {tabsAtBottom && !isEmptyCanvas && !collapsed && !cardsDragging && (showTabs || !archived) && (
           <div className={`project-bottom-bar${showTabs ? '' : ' no-tabs'}`}>
             {showTabs && tabRow}
             {!archived && addBtn}

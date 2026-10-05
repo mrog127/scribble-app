@@ -303,6 +303,112 @@ async function siteNameFrom(meta: Record<string, string>, html: string, pageUrl:
   return host.charAt(0).toUpperCase() + host.slice(1);
 }
 
+// ---- Amazon ----
+// Amazon answers a server's fetch with a robot-check page, so the product page
+// itself never gives us an og:image (every tile came back as the Amazon logo).
+// But the product id (ASIN) is in the URL — short a.co / amzn.to links carry it
+// in their redirect — and Amazon serves a product's main photo from a fixed path
+// built from that id, without the robot check.
+const AMAZON_HOST = /(^|\.)(amazon\.[a-z.]+|a\.co|amzn\.to|amzn\.com|amzn\.eu)$/i;
+const ASIN_RE = /\/(?:dp|gp\/product|gp\/aw\/d|exec\/obidos\/asin|o\/asin|product)\/([A-Z0-9]{10})(?=[/?#]|$)/i;
+
+function asinIn(u: string): string | null {
+  const m = u.match(ASIN_RE) || u.match(/[?&](?:asin|ASIN)=([A-Z0-9]{10})\b/);
+  return m ? m[1].toUpperCase() : null;
+}
+
+// Amazon hands link-unfurling bots (anything that doesn't look like a browser)
+// a generic share page instead of redirecting, so this leg goes as Safari.
+const BROWSER_UA = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
+let amazonNote = '';
+
+// Follow the short link's redirects by hand until a hop names the product. If a
+// hop answers with a page instead of a redirect, look for the product id in it.
+async function amazonAsin(pageUrl: URL): Promise<string | null> {
+  let url = pageUrl.href;
+  const hops: string[] = [];
+  for (let hop = 0; hop < 6; hop++) {
+    const found = asinIn(url);
+    if (found) { amazonNote = hops.join(' > '); return found; }
+    let res: Response;
+    try {
+      res = await fetch(url, { redirect: 'manual', headers: BROWSER_UA, signal: AbortSignal.timeout(6000) });
+    } catch (err) { amazonNote = `${hops.join(' > ')} | fetch error ${String(err).slice(0, 80)}`; return null; }
+    const loc = res.headers.get('location');
+    hops.push(`${res.status}${loc ? ' ' + loc.slice(0, 120) : ''}`);
+    if (loc && res.status >= 300 && res.status < 400) {
+      await res.body?.cancel();
+      url = new URL(loc, url).href;
+      continue;
+    }
+    // A page, not a redirect: the id is usually in a canonical link, og:url or
+    // the page's own data.
+    const html = (await res.text()).slice(0, 400000);
+    const m = html.match(/\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})(?=[/?#"'&\s]|$)/)
+      || html.match(/["'](?:asin|ASIN|data-asin|currentAsin|parentAsin)["']?\s*[:=]\s*["']([A-Z0-9]{10})["']/)
+      || html.match(/data-asin=["']([A-Z0-9]{10})["']/);
+    amazonNote = `${hops.join(' > ')} | page ${m ? 'asin ' + m[1] : 'no asin'}`;
+    return m ? m[1].toUpperCase() : null;
+  }
+  amazonNote = hops.join(' > ');
+  return asinIn(url);
+}
+
+// The product page, fetched as a browser, names its photos on Amazon's image
+// host (images/I/...). Not every request gets the real page — a robot check
+// comes back now and then — so this is tried first and the fixed-path photo is
+// the fallback.
+async function amazonPageImage(asin: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://www.amazon.com/dp/${asin}`, {
+      redirect: 'follow', headers: BROWSER_UA, signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.body?.cancel(); amazonNote += ` | page http ${res.status}`; return null; }
+    const html = (await res.text()).slice(0, 1500000);
+    const m = html.match(/data-old-hires=["'](https:\/\/[^"']+\/images\/I\/[^"']+)["']/)
+      || html.match(/"hiRes"\s*:\s*"(https:\/\/[^"]+\/images\/I\/[^"]+)"/)
+      || html.match(/"large"\s*:\s*"(https:\/\/[^"]+\/images\/I\/[^"]+)"/)
+      || html.match(/id=["']landingImage["'][^>]*?src=["'](https:\/\/[^"']+\/images\/I\/[^"']+)["']/)
+      || html.match(/property=["']og:image["'][^>]*content=["'](https:\/\/[^"']+\/images\/I\/[^"']+)["']/)
+      || html.match(/(https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+%-]{8,}\._[A-Z0-9_,]*_\.jpg)/);
+    amazonNote += ` | page ${m ? 'image' : (/captcha|robot/i.test(html) ? 'robot check' : 'no image')}`;
+    return m ? m[1] : null;
+  } catch (err) {
+    amazonNote += ` | page error ${String(err).slice(0, 60)}`;
+    return null;
+  }
+}
+
+async function amazonPreview(pageUrl: URL): Promise<Response | null> {
+  amazonNote = '';
+  if (!AMAZON_HOST.test(pageUrl.hostname)) return null;
+  const asin = await amazonAsin(pageUrl);
+  if (!asin) return null;
+  const fromPage = await amazonPageImage(asin);
+  const candidates = [
+    ...(fromPage ? [fromPage] : []),
+    `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.LZZZZZZZ.jpg`,
+    `https://m.media-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_.jpg`,
+    `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SL500_.jpg`,
+  ];
+  for (const image of candidates) {
+    const img = await loadImage(image);
+    // A missing product comes back as a tiny placeholder (often a 1x1 GIF,
+    // which can't be sampled).
+    if (!img || img.w < 20 || img.h < 20) { amazonNote += ` | miss ${image.split('/').pop()} ${loadNote}`; continue; }
+    return json({
+      image, isIcon: false, imageBg: null, cornerDark: cornerIsDark(img),
+      title: null, siteName: 'Amazon', debugCorner: `amazon ${asin} | ${loadNote} | ${cornerNote}`, debugAmazon: amazonNote,
+    });
+  }
+  return null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
@@ -320,6 +426,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const amazon = await amazonPreview(pageUrl);
+    if (amazon) return amazon;
+
     const res = await fetch(pageUrl.href, {
       redirect: 'follow',
       headers: UA,
@@ -394,7 +503,7 @@ Deno.serve(async (req: Request) => {
     // Temporary: lets us see what the parser actually found if this still misses.
     const debugMetaKeys = Object.keys(meta).slice(0, 60);
 
-    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}` });
+    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}`, debugAmazon: amazonNote });
   } catch (err) {
     return json({ image: null, isIcon: false, imageBg: null, cornerDark: false, title: null, siteName: null, error: String(err) });
   }

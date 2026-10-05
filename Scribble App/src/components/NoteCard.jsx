@@ -321,17 +321,63 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // whatever you've started typing would be wiped.
   const shownNoteIdRef = useRef(null)
   const isIdSwap = () => shownNoteIdRef.current != null && swappedFrom.get(note?.id) === shownNoteIdRef.current
+
+  // Autosave: typing saves as you go (shortly after you pause), and anything not
+  // yet saved is written when the note closes, another note replaces it, or the
+  // app is hidden / closed — so nothing depends on pressing Save.
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
+  const noteTextRef = useRef(note?.text)
+  noteTextRef.current = note?.text
+  const autosaveIdRef = useRef(null)      // the note whose content is in the editor
+  const savedHtmlRef = useRef(null)       // what was last saved for it
+  const autosaveTimerRef = useRef(null)
+  // The editor element itself, kept so a save on close still has it after React
+  // has detached contentRef
+  const autosaveElRef = useRef(null)
+  const flushAutosave = useCallback(() => {
+    clearTimeout(autosaveTimerRef.current)
+    autosaveTimerRef.current = null
+    const content = contentRef.current || autosaveElRef.current
+    const id = autosaveIdRef.current
+    if (!content || id == null) return
+    const html = content.innerHTML
+    if (html === savedHtmlRef.current) return
+    savedHtmlRef.current = html
+    const firstPara = content.querySelector('.note-para')
+    onSaveRef.current(id, html, firstPara ? firstPara.textContent.trim() : (noteTextRef.current || ''))
+  }, [])
+  const scheduleAutosave = useCallback(() => {
+    clearTimeout(autosaveTimerRef.current)
+    autosaveTimerRef.current = setTimeout(flushAutosave, 700)
+  }, [flushAutosave])
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flushAutosave() }
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', flushAutosave)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', flushAutosave)
+      flushAutosave()   // closing the note (or switching to another) saves it
+    }
+  }, [flushAutosave])
+
   useEffect(() => {
     const swap = isIdSwap()
     shownNoteIdRef.current = note?.id
-    if (swap) return
+    if (swap) { autosaveIdRef.current = note?.id; return }
+    // A different note is replacing this one in place: save what was typed first
+    flushAutosave()
     if (contentRef.current) {
       contentRef.current.innerHTML = buildNoteContent(note)
+      autosaveIdRef.current = note?.id
+      autosaveElRef.current = contentRef.current
       // Heal notes saved with stray lines (see enforceTitlePara) as they open
       if (enforceTitlePara()) {
         const firstPara = contentRef.current.querySelector('.note-para')
         onSave(note.id, contentRef.current.innerHTML, firstPara ? firstPara.textContent.trim() : note.text)
       }
+      savedHtmlRef.current = contentRef.current.innerHTML
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id])
@@ -545,7 +591,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     setCurrentStyle(style)
     updateStyleIndicator(style)
     if (target && content.contains(target)) target.className = 'note-para style-' + style
-  }, [getCursorPara, updateStyleIndicator])
+    scheduleAutosave()
+  }, [getCursorPara, updateStyleIndicator, scheduleAutosave])
 
   const enterEdit = useCallback((savedRange) => {
     editingRef.current = true
@@ -679,8 +726,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (!editingRef.current) {
       const firstPara = content.querySelector('.note-para')
       onSave(note.id, content.innerHTML, firstPara ? firstPara.textContent.trim() : note.text)
+    } else {
+      scheduleAutosave()
     }
-  }, [note, onSave])
+  }, [note, onSave, scheduleAutosave])
 
   // The listeners below must attach ONCE: saving updates the `note` prop, which
   // would otherwise re-run this effect mid-gesture and reset its one-per-swipe
@@ -764,33 +813,61 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     // Touch events keep flowing through a scroll, unlike pointer events; once the
     // drag is clearly sideways its default (scroll / selection) is cancelled.
     const surface = editorRef.current || content
-    let t = null   // { x, y, para, decided, horizontal, done }
+    let t = null   // { x, y, para, decided, horizontal, done, own, lastY }
+    // A touch that lands on the cursor's own bullet line is iOS's to take over:
+    // it starts dragging the caret (or a selection) there and cancels the touch,
+    // so the swipe never registers. On that line the touch is claimed up front
+    // instead, and the things iOS would have done are done by hand — a tap puts
+    // the caret where it landed, a vertical drag scrolls the note.
     const onTouchStart = (e) => {
       if (!editingRef.current || e.touches.length !== 1) { t = null; return }
       const para = cursorBullet()
       if (!para) { t = null; return }
-      t = { x: e.touches[0].clientX, y: e.touches[0].clientY, para, decided: false, horizontal: false, done: false }
+      const x = e.touches[0].clientX, y = e.touches[0].clientY
+      const r = para.getBoundingClientRect()
+      const own = y >= r.top && y <= r.bottom
+      if (own) e.preventDefault()
+      t = { x, y, para, decided: false, horizontal: false, done: false, own, lastY: y }
     }
     const onTouchMove = (e) => {
       if (!t || t.done) return
-      const dx = e.touches[0].clientX - t.x, dy = e.touches[0].clientY - t.y
+      const cx = e.touches[0].clientX, cy = e.touches[0].clientY
+      const dx = cx - t.x, dy = cy - t.y
       if (!t.decided) {
         if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
         t.decided = true
         t.horizontal = Math.abs(dx) > Math.abs(dy) * 1.5
-        if (!t.horizontal) { t = null; return }   // a scroll — leave it alone
+        if (!t.horizontal && !t.own) { t = null; return }   // a scroll — leave it alone
       }
       e.preventDefault()   // sideways: no scrolling, no text selection
+      if (!t.horizontal) {
+        // Claimed touch going up or down: scroll the note ourselves
+        const scroller = editorRef.current
+        if (scroller) scroller.scrollTop -= cy - t.lastY
+        t.lastY = cy
+        return
+      }
       if (Math.abs(dx) >= THRESHOLD) {
         t.done = true
         tryShift(t.para, dx > 0 ? 1 : -1)
       }
     }
-    const onTouchEnd = () => { t = null }
+    const onTouchEnd = (e) => {
+      // A plain tap on the claimed line: put the caret where the finger landed
+      if (t && t.own && !t.decided && e.type === 'touchend') {
+        const range = document.caretRangeFromPoint?.(t.x, t.y)
+        if (range && content.contains(range.startContainer)) {
+          const sel = window.getSelection()
+          sel.removeAllRanges()
+          sel.addRange(range)
+        }
+      }
+      t = null
+    }
 
     content.addEventListener('pointerdown', onPointerDown)
     content.addEventListener('wheel', onWheel, { passive: false })
-    surface.addEventListener('touchstart', onTouchStart, { passive: true })
+    surface.addEventListener('touchstart', onTouchStart, { passive: false })
     surface.addEventListener('touchmove', onTouchMove, { passive: false })
     surface.addEventListener('touchend', onTouchEnd)
     surface.addEventListener('touchcancel', onTouchEnd)
@@ -987,7 +1064,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     enforceTitlePara()
     handleInput()
     if (editorRef.current) checkBottomOverflow(editorRef.current)
-  }, [enforceTitlePara, handleInput, checkBottomOverflow])
+    scheduleAutosave()
+  }, [enforceTitlePara, handleInput, checkBottomOverflow, scheduleAutosave])
 
   const saveTitleEdit = useCallback(() => {
     if (!editingTitleRef.current) return

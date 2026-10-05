@@ -473,16 +473,39 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     return null
   }, [])
 
+  // Every leaf paragraph a (non-collapsed) selection touches, in order
+  const getSelectedParas = useCallback(() => {
+    const content = contentRef.current
+    const sel = window.getSelection()
+    if (!content || !sel || sel.rangeCount === 0 || sel.isCollapsed) return []
+    const range = sel.getRangeAt(0)
+    if (!content.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== content) return []
+    return [...content.querySelectorAll('.note-para')]
+      .filter(p => !p.querySelector('.note-para') && range.intersectsNode(p))
+      // A selection ending at the very start of the next line doesn't count it
+      .filter(p => !(range.endContainer && p.contains(range.endContainer) && range.endOffset === 0 && p !== getParaOf(range.startContainer)))
+  }, [])
+
   const detectCursorStyle = useCallback(() => {
     const para = getCursorPara()
     if (!para) return
     lastCursorParaRef.current = para
+    // A selection across several lines: their style if they all share one,
+    // otherwise no style is lit
+    const selected = getSelectedParas()
+    if (selected.length > 1) {
+      const styles = new Set(selected.map(p => (p.className.match(/style-(\w+)/) || [])[1] || 'body'))
+      const only = styles.size === 1 ? [...styles][0] : null
+      setCurrentStyle(only)
+      updateStyleIndicator(only)
+      return
+    }
     const match = para.className.match(/style-(\w+)/)
     if (match) {
       setCurrentStyle(match[1])
       updateStyleIndicator(match[1])
     }
-  }, [getCursorPara, updateStyleIndicator])
+  }, [getCursorPara, getSelectedParas, updateStyleIndicator])
 
   // Update style indicator whenever selection changes (cursor moves)
   useEffect(() => {
@@ -584,15 +607,25 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const selectStyle = useCallback((style) => {
     const content = contentRef.current
     if (!content || !editingRef.current) return
+    const first = content.querySelector('.note-para')
+    // A selection across several lines: every one of them takes the style
+    // (all but the title, whose style is fixed)
+    const selected = getSelectedParas().filter(p => p !== first)
+    if (selected.length > 1 || (selected.length === 1 && getSelectedParas().length > 1)) {
+      selected.forEach(p => { if (!/style-/.test(p.className) || !p.classList.contains('style-' + style)) p.className = 'note-para style-' + style })
+      setCurrentStyle(style)
+      updateStyleIndicator(style)
+      scheduleAutosave()
+      return
+    }
     const target = getCursorPara() || lastCursorParaRef.current || content.querySelector('.note-para:last-of-type')
     // The title line's style is fixed — the tap does nothing at all.
-    const first = content.querySelector('.note-para')
     if (target && target === first) return
     setCurrentStyle(style)
     updateStyleIndicator(style)
     if (target && content.contains(target)) target.className = 'note-para style-' + style
     scheduleAutosave()
-  }, [getCursorPara, updateStyleIndicator, scheduleAutosave])
+  }, [getCursorPara, getSelectedParas, updateStyleIndicator, scheduleAutosave])
 
   const enterEdit = useCallback((savedRange) => {
     editingRef.current = true
@@ -1181,6 +1214,65 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }).filter(Boolean)
   ), [])
 
+  // Copy / cut a selection: besides plain text and ordinary HTML (headings,
+  // bullets, bold, italic) for other apps, each line carries its exact note
+  // style and indent so pasting into a note brings them back as they were.
+  const writeSelectionToClipboard = useCallback((e) => {
+    const content = contentRef.current
+    const sel = window.getSelection()
+    if (!content || !sel || sel.rangeCount === 0 || sel.isCollapsed || !e.clipboardData) return false
+    const range = sel.getRangeAt(0)
+    const paras = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para') && range.intersectsNode(p))
+    if (!paras.length) return false
+    const lines = paras.map(p => {
+      const r = document.createRange()
+      r.selectNodeContents(p)
+      if (p.contains(range.startContainer)) r.setStart(range.startContainer, range.startOffset)
+      if (p.contains(range.endContainer)) r.setEnd(range.endContainer, range.endOffset)
+      return {
+        style: (p.className.match(/style-(\w+)/) || [])[1] || 'body',
+        indent: Number((p.className.match(/indent-(\d)/) || [])[1] || 0),
+        text: r.toString().replace(/\u00a0/g, ' '),
+      }
+    })
+    // A selection that ends at the very start of a line doesn't take that line
+    if (lines.length > 1 && !lines[lines.length - 1].text) lines.pop()
+    const tag = (l) => {
+      const t = escapeHtml(l.text)
+      const attrs = `data-easels-style="${l.style}" data-easels-indent="${l.indent}"`
+      if (l.style === 'title' || l.style === 'heading') return `<h2 ${attrs}>${t}</h2>`
+      if (l.style === 'bold') return `<div ${attrs}><b>${t}</b></div>`
+      if (l.style === 'italic') return `<div ${attrs}><i>${t}</i></div>`
+      if (l.style === 'bullet') return `<ul><li ${attrs}>${t}</li></ul>`
+      return `<div ${attrs}>${t || '<br>'}</div>`
+    }
+    e.clipboardData.setData('text/html', `<meta charset="utf-8">${lines.map(tag).join('')}`)
+    e.clipboardData.setData('text/plain', lines.map(l => (l.style === 'bullet' ? '• ' : '') + l.text).join('\n'))
+    e.preventDefault()
+    return true
+  }, [])
+
+  const handleSelectionCopy = useCallback((e) => { writeSelectionToClipboard(e) }, [writeSelectionToClipboard])
+  const handleSelectionCut = useCallback((e) => {
+    if (!editingRef.current) return
+    if (!writeSelectionToClipboard(e)) return
+    const sel = window.getSelection()
+    sel.getRangeAt(0).deleteContents()
+    handleEditorInput()
+  }, [writeSelectionToClipboard, handleEditorInput])
+
+  // Lines copied from a note, with their exact styles (see above)
+  const blocksFromNoteHtml = useCallback((html) => {
+    if (!/data-easels-style/.test(html)) return null
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    return [...doc.querySelectorAll('[data-easels-style]')].map(el => ({
+      // The title style belongs to a note's first line only
+      style: el.getAttribute('data-easels-style') === 'title' ? 'heading' : el.getAttribute('data-easels-style'),
+      indent: Number(el.getAttribute('data-easels-indent') || 0),
+      text: (el.textContent || '').replace(/\u00a0/g, ' '),
+    }))
+  }, [])
+
   const handlePaste = useCallback((e) => {
     if (!editingRef.current) return
     const dt = e.clipboardData
@@ -1188,7 +1280,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     e.preventDefault()
     const html = dt.getData('text/html')
     const plain = dt.getData('text/plain') || ''
-    let blocks = html ? blocksFromHtml(html) : []
+    let blocks = (html && blocksFromNoteHtml(html)) || (html ? blocksFromHtml(html) : [])
     if (!blocks.length) blocks = blocksFromText(plain)
     if (!blocks.length) return
 
@@ -1211,8 +1303,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       if (i === 0) {
         // The paragraph the caret is in takes the first block: an empty one adopts
         // its style outright, otherwise the text just joins the line.
-        if (!(para.textContent || '').trim()) {
-          para.className = 'note-para style-' + b.style
+        const first = contentRef.current?.querySelector('.note-para')
+        if (!(para.textContent || '').trim() && para !== first) {
+          para.className = 'note-para style-' + b.style + (b.indent ? ' indent-' + b.indent : '')
           para.textContent = b.text
         } else {
           range.insertNode(document.createTextNode(b.text))
@@ -1222,8 +1315,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         return
       }
       const div = document.createElement('div')
-      div.className = 'note-para style-' + b.style
-      div.textContent = b.text
+      div.className = 'note-para style-' + b.style + (b.indent ? ' indent-' + b.indent : '')
+      if (b.text) div.textContent = b.text
+      else div.appendChild(document.createElement('br'))
       const prev = made[made.length - 1]
       prev.parentNode.insertBefore(div, prev.nextSibling)
       made.push(div)
@@ -1240,7 +1334,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (m) { setCurrentStyle(m[1]); updateStyleIndicator(m[1]) }
     lastCursorParaRef.current = last
     handleEditorInput()
-  }, [blocksFromHtml, blocksFromText, getCursorPara, updateStyleIndicator, handleEditorInput])
+  }, [blocksFromHtml, blocksFromNoteHtml, blocksFromText, getCursorPara, updateStyleIndicator, handleEditorInput])
 
   // Copy the note's text WITH styling so it can be pasted into the iOS Notes app.
   // Builds an HTML payload (h1/h2/h3, <ul><li> for bullets) plus a plain-text
@@ -1393,6 +1487,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           onKeyDown={handleKeyDown}
           onInput={handleEditorInput}
           onPaste={handlePaste}
+          onCopy={handleSelectionCopy}
+          onCut={handleSelectionCut}
           onClick={handleContentClick}
         />
         <div
@@ -1453,7 +1549,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
 export { NoteDetailPage }
 
-export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
+export default // The .note-para holding a node (or null)
+function getParaOf(node) {
+  let n = node
+  while (n && n.nodeType !== 1) n = n.parentNode
+  return n && n.closest ? n.closest('.note-para') : null
+}
+
+function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   const { openDetail, setOpenDetail, promptDelete } = useAppContext()
   // Local active notes use their own type so their ids can't collide with project notes
   const openNoteId = openDetail?.type === 'local-note' ? openDetail.id : null

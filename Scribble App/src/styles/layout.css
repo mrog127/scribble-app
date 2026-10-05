@@ -11828,3 +11828,12 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   padding-left: max(20px, calc((100% - 800px) / 2 + 16px));
   padding-right: max(20px, calc((100% - 800px) / 2 + 16px));
 }
+
+/* Light Dots: a canvas card pinned on the Gallery keeps a canvas card's
+   three-dot fill (#F0F0F0), not the Gallery cards' #E3E3E3 */
+:root[data-theme="light-dots"] .home-page .project-card .card-header .dots-menu { background: #F0F0F0; }
+
+/* Dots themes: a pinned canvas's pin icon in the scheduled-row calendar grey
+   (#7A7A7A Dark Dots, #A3A3A3 Light Dots) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-pin-icon :is(path, line) { stroke: #7A7A7A; }
+:root[data-theme="light-dots"] .card-pin-icon :is(path, line) { stroke: #A3A3A3; }

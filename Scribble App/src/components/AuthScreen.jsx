@@ -39,10 +39,23 @@ export default function AuthScreen() {
     setLoading(false)
   }
 
-  // Light Dots while this page is up; the device's own theme comes back after
+  // Light Dots while this page is up; the device's own theme comes back after.
+  // On the iPhone home-screen app the status-bar strip (around the Dynamic
+  // Island) takes its colour once, when the page loads, and ignores later
+  // changes — so after signing in it would stay this page's light grey. When the
+  // device's theme differs, reload once so the strip picks up the right colour
+  // (the same thing switching themes in Settings does).
   useLayoutEffect(() => {
+    const shownAt = Date.now()
     applyTheme('light-dots')
-    return () => applyTheme(getTheme())
+    return () => {
+      const theme = getTheme()
+      applyTheme(theme)
+      const stayedUp = Date.now() - shownAt > 500   // not a dev double-mount
+      if (window.navigator.standalone === true && theme !== 'light-dots' && stayedUp) {
+        setTimeout(() => window.location.reload(), 150)
+      }
+    }
   }, [])
 
   // Every 2s the accent fades to the next easel colour, and the title's dot pops

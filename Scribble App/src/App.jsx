@@ -3138,7 +3138,7 @@ function AppInner() {
             const startW = panel ? panel.getBoundingClientRect().width : 500
             const startX = e.clientX
             const onMove = (e2) => {
-              const w = Math.max(400, Math.min(750, startW - (e2.clientX - startX)))
+              const w = Math.max(400, Math.min(Math.max(750, window.innerWidth - 340 - 400), startW - (e2.clientX - startX)))
               document.documentElement.style.setProperty('--detail-w', w + 'px')
             }
             const onUp = () => {

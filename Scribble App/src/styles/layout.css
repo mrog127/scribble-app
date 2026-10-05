@@ -1246,7 +1246,7 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* ---- Cards column (everything right of the sidebar) ---- */
   /* Detail panel width — overridden inline on :root by the resize handle, so a
      size set once holds for every panel opened this session. */
-  :root { --detail-w: min(500px, calc((100vw - 340px) / 2)); }
+  :root { --detail-w: calc((100vw - 340px) / 2); }   /* cards column and panel split the space beside the sidebar */
   @media (max-width: 1240px) { :root { --detail-w: min(500px, 50vw); } }
   /* Left gutter that centres the app when nothing is pinned to the right edge */
   .phone { --gutter: 0px; }
@@ -11708,3 +11708,86 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 
 /* Move to... card: same 500px cap as the Schedule card, centred in its space */
 #app .move-to-card { max-width: 500px; margin-left: auto; margin-right: auto; }
+
+/* List item page composers (Add a note / Add a link): text fields wear the
+   add-item module's grey pill */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer :is(.project-input, .project-link-url-input) {
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 24px;
+  background-color: transparent;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+}
+:root[data-theme="light-dots"] .todo-section-card .todo-composer :is(.project-input, .project-link-url-input) {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+}
+
+/* --- Title / rename fields wear the add-item module's grey pill ---
+   4% wash (white in Dark Dots, black in Light Dots), fully rounded, with the
+   check button sitting outside the field. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --title-field-wash: rgba(255, 255, 255, 0.04); }
+:root[data-theme="light-dots"] { --title-field-wash: rgba(0, 0, 0, 0.04); }
+
+/* Canvas card rename (field already ends 8px before the check) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-rename-wrap .project-input { background: var(--title-field-wash); }
+
+/* Easel page rename: a 48px pill, the check 8px to its right */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row > .category-title-input {
+  box-sizing: border-box;
+  height: 64px;
+  margin-right: 8px;
+  padding: 0 24px;
+  border-radius: 32px;
+  background: var(--title-field-wash);
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row:has(> .category-title-input) .category-header-actions { align-self: center; }
+
+/* List item / link / note page titles while being edited: the pill grows to
+   fit every line of the title, 32px corners. The wash spreads 8px past the
+   text box with a shadow so the title itself doesn't move. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.todo-detail-title, .note-detail-title):focus {
+  position: relative;
+  isolation: isolate;
+}
+/* The pill: 16px above and below the text, 8px past the text box at the sides */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.todo-detail-title, .note-detail-title):focus::before {
+  content: '';
+  position: absolute;
+  inset: -16px -8px;
+  border-radius: 32px;
+  background: var(--title-field-wash);
+  pointer-events: none;
+  z-index: -1;
+}
+/* Text sits 8px further in from the pill's left edge */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-title:focus { padding-left: 12px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-title:focus {
+  margin-left: 12px;
+  margin-right: 12px;
+  padding-left: 16px;
+  padding-right: 8px;
+}
+
+/* Every link tile's image area uses the phone tiles' fill (a site's own logo
+   colour, set inline, still wins) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-tile-image { background-color: #E3E3E3; }
+:root[data-theme="dark-dots"] #app .link-tile-image { background-color: #212121; }
+:root[data-theme="dark-dots"] #app .home-page .link-tile-image { background-color: #292929; }
+
+/* Dots themes: list item / note / link page titles on a 36px line */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.todo-detail-title, .note-detail-title) { line-height: 36px; }
+
+/* Easel rename: the field runs full width and the check sits inside its right
+   end, 12px in (centred in the 64px field) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row:has(> .category-title-input) { position: relative; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row > .category-title-input {
+  margin-right: 0;
+  padding-right: 64px;   /* 12px + the 40px check + 12px */
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row:has(> .category-title-input) .category-header-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin: 0;
+  z-index: 1;
+}

@@ -8859,16 +8859,16 @@ body.resizing-detail .phone { transition: none !important; }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .cards-area { padding-top: 89px; }
 }
 
-/* Dots themes: a canvas card's (and the Gallery card's) content type tab pill is
-   never wider than 500px */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-tab-bar { max-width: 500px; }
+/* Dots themes: a canvas card's (and the Gallery card's) content type tab pill always
+   fills the row up to the plus button (no maximum width) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-tab-bar { max-width: none; }
 /* …and the plus button keeps to the card's right edge when the pill stops short */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-add-btn { margin-left: auto; }
 
 /* Dots themes: more room above a canvas / Gallery card's bottom tab row
    (8px → 20px); the plus button moves down with it. The tab-less variant, where
    the plus rides up onto the last row, is unchanged. */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar:not(.no-tabs) { padding-top: 16px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar:not(.no-tabs) { padding-top: 12px; }
 
 /* Light Dots: the page-title dot keeps the easel's unadjusted colour (baseRgb),
    so yellow stays yellow there while its solid uses deepen to #B0A314 */

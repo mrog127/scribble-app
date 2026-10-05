@@ -12,8 +12,8 @@
     <script>
       (function () {
         try {
-          var id = localStorage.getItem('scribble-theme') || 'dark-dots'
-          if (['dark-dots', 'light-dots', 'paintbrush'].indexOf(id) < 0) id = 'dark-dots'
+          var id = localStorage.getItem('scribble-theme') || 'light-dots'
+          if (['dark-dots', 'light-dots', 'paintbrush'].indexOf(id) < 0) id = 'light-dots'
           document.documentElement.dataset.theme = id
           var c = id === 'light-dots' ? '#F0F0F0' : id === 'dark-dots' ? '#212121' : '#F2F0EB'
           document.querySelector('meta[name="theme-color"]').setAttribute('content', c)

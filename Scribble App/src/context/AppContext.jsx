@@ -533,18 +533,19 @@ export function AppProvider({ children }) {
   }, [updateProject])
 
   // Create a new note in the project AND attach it to the todo
-  const addTodoNote = useCallback((categoryId, projectId, todoId, text, activated = false, onCreated) => {
+  const addTodoNote = useCallback((categoryId, projectId, todoId, text, activated = false, onCreated, scheduledDate = null) => {
+    if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
     const sortOrder = proj?.notes.length || 0
     const current = proj?.todos.find(t => t.id === todoId)?.linkedNoteIds || []
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      notes: [...proj.notes, { id: tempId, text, activated, editorHTML: null }],
+      notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }],
       todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: [...current, tempId] })
     }))
     send(supabase.from('notes')
-      .insert({ user_id: user.id, project_id: projectId, text, activated, editor_html: null, sort_order: sortOrder })
+      .insert({ user_id: user.id, project_id: projectId, text, activated, scheduled_date: scheduledDate, editor_html: null, sort_order: sortOrder })
       .select().single(), 'insert notes').then(({ data }) => {
         if (!data) return
         const realIds = [...current, data.id]
@@ -561,7 +562,8 @@ export function AppProvider({ children }) {
   }, [user, updateProject])
 
   // Create a new link in the project AND attach it to the todo
-  const addTodoLink = useCallback((categoryId, projectId, todoId, title, url, activated = false) => {
+  const addTodoLink = useCallback((categoryId, projectId, todoId, title, url, activated = false, scheduledDate = null) => {
+    if (scheduledDate) activated = false
     const tempId = Date.now()
     const finalTitle = (title && title.trim()) || url
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
@@ -569,11 +571,11 @@ export function AppProvider({ children }) {
     const current = proj?.todos.find(t => t.id === todoId)?.linkedLinkIds || []
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      links: [...proj.links, { id: tempId, url, title: finalTitle, activated }],
+      links: [...proj.links, { id: tempId, url, title: finalTitle, activated, scheduledDate }],
       todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedLinkIds: [...current, tempId] })
     }))
     send(supabase.from('links')
-      .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, sort_order: sortOrder })
+      .insert({ user_id: user.id, project_id: projectId, url, title: finalTitle, activated, scheduled_date: scheduledDate, sort_order: sortOrder })
       .select().single(), 'insert links').then(({ data }) => {
         if (!data) return
         const realIds = [...current, data.id]

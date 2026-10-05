@@ -16,7 +16,8 @@ import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { pasteInto } from '../clipboard.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
-import { isRecurring } from './ScheduleBits.jsx'
+import { isRecurring, useActivatePress, CalendarIcon, formatSchedule } from './ScheduleBits.jsx'
+import CalendarPopup from './CalendarPopup.jsx'
 import { useScrollable } from '../useScrollable.js'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 
@@ -138,10 +139,42 @@ function NoteRowIcon({ activated }) {
 }
 
 // ---- Inline composer (matches the project-card footer input) ----
+// Add-note / add-link composers: the Display button. Tap toggles Display (or
+// clears a picked date); a long press opens the calendar to schedule the new
+// item instead.
+function ComposerDisplayButton({ active, setActive, schedule, setSchedule, refocus }) {
+  const [calOpen, setCalOpen] = useState(false)
+  const press = useActivatePress({
+    onTap: () => { if (schedule) setSchedule(null); else setActive(v => !v) },
+    onLongPress: () => setCalOpen(true),
+  })
+  return (
+    <>
+      <button
+        className={`project-active-btn${active || schedule ? ' on' : ''}${schedule ? ' scheduled' : ''}`}
+        onMouseDown={e => e.preventDefault()}
+        onPointerDown={press.onPointerDown}
+        onContextMenu={e => e.preventDefault()}
+      >
+        {schedule ? <CalendarIcon size={20}/> : <ActivateIcon activated={active}/>}
+        <span className={schedule ? 'schedule-date' : undefined}>{schedule ? formatSchedule(schedule) : (active ? 'Displayed' : 'Display')}</span>
+      </button>
+      {calOpen && (
+        <CalendarPopup
+          initialDate={schedule}
+          onSelect={(d) => { setSchedule(d); if (d) setActive(false) }}
+          onClose={() => { setCalOpen(false); requestAnimationFrame(() => refocus && refocus()) }}
+        />
+      )}
+    </>
+  )
+}
+
 function NoteComposer({ onAdd, autoFocus, onDismiss }) {
   const [value, setValue] = useState('')
   const [focused, setFocused] = useState(false)
   const [active, setActive] = useState(false)
+  const [schedule, setSchedule] = useState(null)
   const inputRef = useRef(null)
 
   useEffect(() => { if (autoFocus) inputRef.current?.focus() }, [autoFocus])
@@ -149,8 +182,9 @@ function NoteComposer({ onAdd, autoFocus, onDismiss }) {
   const submit = () => {
     const text = value.trim()
     if (!text) return
-    onAdd(text, active)
+    onAdd(text, active, schedule)
     setValue('')
+    setSchedule(null)
     // The new note opens into edit mode ~650ms later, on a timer — hold the
     // keyboard so focus can transfer to the editor when it does.
     keepKeyboardAlive()
@@ -171,6 +205,8 @@ function NoteComposer({ onAdd, autoFocus, onDismiss }) {
           onChange={e => setValue(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => requestAnimationFrame(() => {
+            // Scheduling from a long-press on Display: still composing
+            if (document.querySelector('.cal-overlay')) return
             setFocused(false)
             // The box only exists while it's being typed in
             if (!value.trim() && onDismiss) onDismiss()
@@ -185,13 +221,7 @@ function NoteComposer({ onAdd, autoFocus, onDismiss }) {
         <div className="project-input-divider"/>
         <div className="project-footer-toolbar">
           <div className="project-toolbar-left">
-            <button
-              className={`project-active-btn${active ? ' on' : ''}`}
-              onMouseDown={e => { e.preventDefault(); setActive(v => !v) }}
-            >
-              <ActivateIcon activated={active}/>
-              <span>{active ? 'Displayed' : 'Display'}</span>
-            </button>
+            <ComposerDisplayButton active={active} setActive={setActive} schedule={schedule} setSchedule={setSchedule} refocus={() => inputRef.current?.focus()}/>
           </div>
         </div>
       </div>
@@ -204,6 +234,7 @@ function LinkComposer({ onAdd, autoFocus, onDismiss }) {
   const [url, setUrl] = useState('')
   const [focused, setFocused] = useState(false)
   const [active, setActive] = useState(false)
+  const [schedule, setSchedule] = useState(null)
   const titleRef = useRef(null)
   const urlRef = useRef(null)
   const wrapRef = useRef(null)
@@ -213,7 +244,8 @@ function LinkComposer({ onAdd, autoFocus, onDismiss }) {
   const submit = () => {
     const u = url.trim()
     if (!u) return
-    onAdd(title.trim(), u, active)
+    onAdd(title.trim(), u, active, schedule)
+    setSchedule(null)
     setTitle('')
     setUrl('')
     titleRef.current?.blur()
@@ -224,6 +256,8 @@ function LinkComposer({ onAdd, autoFocus, onDismiss }) {
   const onBlur = () => requestAnimationFrame(() => {
     const ae = document.activeElement
     if (ae && wrapRef.current && wrapRef.current.contains(ae)) return
+    // Scheduling from a long-press on Display: still composing
+    if (document.querySelector('.cal-overlay')) return
     setFocused(false)
     // The box only exists while it's being typed in
     if (!title.trim() && !url.trim() && onDismiss) onDismiss()
@@ -280,13 +314,7 @@ function LinkComposer({ onAdd, autoFocus, onDismiss }) {
         <div className="project-input-divider"/>
         <div className="project-footer-toolbar">
           <div className="project-toolbar-left">
-            <button
-              className={`project-active-btn${active ? ' on' : ''}`}
-              onMouseDown={e => { e.preventDefault(); setActive(v => !v) }}
-            >
-              <ActivateIcon activated={active}/>
-              <span>{active ? 'Displayed' : 'Display'}</span>
-            </button>
+            <ComposerDisplayButton active={active} setActive={setActive} schedule={schedule} setSchedule={setSchedule} refocus={() => (url ? urlRef : titleRef).current?.focus()}/>
           </div>
         </div>
       </div>
@@ -948,9 +976,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
           {noteComposerOpen && !archived && (
           <div className={`todo-composer${archived ? ' disabled' : ''}`}>
-            <NoteComposer autoFocus onDismiss={() => setNoteComposerOpen(false)} onAdd={(text, active) => {
+            <NoteComposer autoFocus onDismiss={() => setNoteComposerOpen(false)} onAdd={(text, active, schedule) => {
               const holder = { id: null }
-              holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId })
+              holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId }, schedule)
               setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenNoteId(holder.id) } }, 650)
             }} />
           </div>
@@ -1029,7 +1057,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
           {linkComposerOpen && !archived && (
           <div className={`todo-composer${archived ? ' disabled' : ''}`}>
-            <LinkComposer autoFocus onDismiss={() => setLinkComposerOpen(false)} onAdd={(title, url, active) => addTodoLink(categoryId, projectId, todo.id, title, url, active)} />
+            <LinkComposer autoFocus onDismiss={() => setLinkComposerOpen(false)} onAdd={(title, url, active, schedule) => addTodoLink(categoryId, projectId, todo.id, title, url, active, schedule)} />
           </div>
           )}
           </div>

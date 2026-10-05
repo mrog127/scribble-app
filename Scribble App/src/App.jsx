@@ -13,6 +13,8 @@ import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import CardTabs from './components/CardTabs.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
+import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
+import CalendarPopup from './components/CalendarPopup.jsx'
 import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
 import AddCanvasRow from './components/AddCanvasRow.jsx'
 import { NoteDetailPage } from './components/NoteCard.jsx'
@@ -581,6 +583,16 @@ function AppInner() {
   const scrollSelPendingRef = useRef(false)                  // scroll the Save to list to the selected option on open
   const prevInputFocused = useRef(false)
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
+  // Long-press Display in Add item: a date the new item will be displayed on
+  const [addScheduleDate, setAddScheduleDate] = useState(null)
+  const [addCalOpen, setAddCalOpen] = useState(false)
+  const addDisplayPress = useActivatePress({
+    onTap: () => {
+      if (addScheduleDate) setAddScheduleDate(null)
+      else setAddAsActiveFlag(v => !v)
+    },
+    onLongPress: () => setAddCalOpen(true),
+  })
 
   // Per-category expand/collapse state (persisted). Lifted here so the shared
   // footer can show its text box only when the active category is collapsed.
@@ -689,6 +701,8 @@ function AppInner() {
         setSaveToProject(target)
       }
       setAddAsActiveFlag(false)     // new items are not displayed unless asked
+      setAddScheduleDate(null)
+      setAddCalOpen(false)
       scrollSelPendingRef.current = true   // scroll the list to the selected canvas
     }
     prevInputFocused.current = inputFocused
@@ -1887,7 +1901,7 @@ function AppInner() {
       if (footerInputMode && saveToProject) {
         const { categoryId, projectId } = saveToProject
         const holder = { id: null }
-        holder.id = addProjectLink(categoryId, projectId, inputValue.trim(), url, addAsActiveFlag, null, (rid) => { holder.id = rid })
+        holder.id = addProjectLink(categoryId, projectId, inputValue.trim(), url, addAsActiveFlag, addScheduleDate, (rid) => { holder.id = rid })
         lastAddedRef.current = { categoryId, projectId }
         pageAddedRef.current = { tab: activeTab, categoryId, projectId }
         const title = inputValue.trim() || url
@@ -1938,9 +1952,9 @@ function AppInner() {
         let newId
         const holder = { id: null }
         if (toolbarType === 'list') {
-          newId = addProjectTodo(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
+          newId = addProjectTodo(categoryId, projectId, text, true, addScheduleDate, (rid) => { holder.id = rid })
         } else {
-          newId = addProjectNote(categoryId, projectId, text, true, null, (rid) => { holder.id = rid })
+          newId = addProjectNote(categoryId, projectId, text, true, addScheduleDate, (rid) => { holder.id = rid })
         }
         holder.id = newId
 
@@ -1961,9 +1975,9 @@ function AppInner() {
         // Inactive: add without animation
         const holder = { id: null }
         if (toolbarType === 'list') {
-          holder.id = addProjectTodo(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
+          holder.id = addProjectTodo(categoryId, projectId, text, addAsActiveFlag, addScheduleDate, (rid) => { holder.id = rid })
         } else if (toolbarType === 'note') {
-          holder.id = addProjectNote(categoryId, projectId, text, addAsActiveFlag, null, (rid) => { holder.id = rid })
+          holder.id = addProjectNote(categoryId, projectId, text, addAsActiveFlag, addScheduleDate, (rid) => { holder.id = rid })
           goToNewNote(holder, categoryId, projectId)   // navigates, highlights, opens
         }
         // An inactive item never shows on the gallery, so only flash it when
@@ -2016,7 +2030,7 @@ function AppInner() {
     setToolbarType('list')
     inputRef.current?.blur()
     setInputFocused(false)
-  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId, openSearchResult])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addScheduleDate, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId, openSearchResult])
 
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {
@@ -2026,6 +2040,8 @@ function AppInner() {
       // Naming a new canvas moves focus into the Save-to panel — that's still
       // the same compose session, so don't dismiss it.
       if (ae && ae.closest && ae.closest('.save-to-panel')) return
+      // Scheduling from a long-press on Display — still the same compose session
+      if (document.querySelector('.cal-overlay')) return
       // The whole window lost focus (another app, another tab): leave the
       // draft as it is for when you come back
       if (!document.hasFocus()) return
@@ -3017,10 +3033,12 @@ function AppInner() {
             >
               <div className="toolbar-left">
                 <button
-                  className={`toolbar-source-btn${addAsActiveFlag ? '' : ' inactive'}`}
-                  onMouseDown={e => { e.preventDefault(); setAddAsActiveFlag(v => !v) }}
+                  className={`toolbar-source-btn${addAsActiveFlag || addScheduleDate ? '' : ' inactive'}${addScheduleDate ? ' scheduled' : ''}`}
+                  onMouseDown={e => e.preventDefault()}
+                  onPointerDown={addDisplayPress.onPointerDown}
+                  onContextMenu={e => e.preventDefault()}
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-base)' : '#242424' }}>
+                  {addScheduleDate ? <CalendarIcon size={20}/> : <svg width="16" height="16" viewBox="0 0 20 20" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round" style={{ fill: addAsActiveFlag ? 'rgba(var(--accent-base-rgb),0.3)' : 'none', stroke: addAsActiveFlag ? 'var(--accent-base)' : '#242424' }}>
                     <polyline points="3,6.8 10,2.6 17,6.8" vectorEffect="non-scaling-stroke"/>
                     <line x1="5" y1="7.6" x2="5" y2="14" vectorEffect="non-scaling-stroke"/>
                     <line x1="8.33" y1="7.6" x2="8.33" y2="14" vectorEffect="non-scaling-stroke"/>
@@ -3028,9 +3046,17 @@ function AppInner() {
                     <line x1="15" y1="7.6" x2="15" y2="14" vectorEffect="non-scaling-stroke"/>
                     <line x1="3.5" y1="14" x2="16.5" y2="14" vectorEffect="non-scaling-stroke"/>
                     <line x1="3" y1="17" x2="17" y2="17" vectorEffect="non-scaling-stroke"/>
-                  </svg>
-                  <span className={`toolbar-source-label${addAsActiveFlag ? '' : ' inactive'}`}>{addAsActiveFlag ? 'Displayed' : 'Display'}</span>
+                  </svg>}
+                  <span className={`toolbar-source-label${addAsActiveFlag || addScheduleDate ? '' : ' inactive'}`}>{addScheduleDate ? formatSchedule(addScheduleDate) : (addAsActiveFlag ? 'Displayed' : 'Display')}</span>
                 </button>
+                {addCalOpen && (
+                  <CalendarPopup
+                    initialDate={addScheduleDate}
+                    accent={footerAccent}
+                    onSelect={(d) => { setAddScheduleDate(d); if (d) setAddAsActiveFlag(false) }}
+                    onClose={() => { setAddCalOpen(false); requestAnimationFrame(() => { if (!document.activeElement || document.activeElement === document.body) (toolbarType === 'link' ? linkUrlRef : inputRef).current?.focus() }) }}
+                  />
+                )}
               </div>
               <div className="toolbar-divider"></div>
               <div className="toolbar-right">

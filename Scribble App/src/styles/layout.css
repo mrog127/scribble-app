@@ -11820,3 +11820,11 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   pointer-events: none;
 }
 :root[data-theme="light-dots"] .detail-footer-cell.right:has(.detail-footer-project-btn.is-pressed)::after { background: rgba(0, 0, 0, 0.04); }
+
+/* Dots themes: a list item / note / link page's footer (Mark as Complete and the
+   control bar) lines up with the page's 800px content column — its 16px inner
+   gutter included — instead of running the panel's full width */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer {
+  padding-left: max(20px, calc((100% - 800px) / 2 + 16px));
+  padding-right: max(20px, calc((100% - 800px) / 2 + 16px));
+}

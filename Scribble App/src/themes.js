@@ -11,7 +11,7 @@ export const THEMES = [
   { id: 'paintbrush', name: 'Paintbrush' },
 ]
 
-export const DEFAULT_THEME = 'dark-dots'
+export const DEFAULT_THEME = 'light-dots'
 
 const KEY = 'scribble-theme'
 

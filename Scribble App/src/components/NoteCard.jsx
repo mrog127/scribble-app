@@ -1093,12 +1093,39 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   }, [])
 
   // Keep the bottom fade in sync while typing (clear it when the last line is the end)
-  const handleEditorInput = useCallback(() => {
+  const handleEditorInput = useCallback((e) => {
+    // Typing "- " at the start of a line turns it into a bullet
+    const ne = e && e.nativeEvent
+    if (ne && ne.inputType === 'insertText' && ne.data === ' ') {
+      const content = contentRef.current
+      const para = getCursorPara()
+      const first = content && content.querySelector('.note-para')
+      const sel = window.getSelection()
+      if (para && para !== first && !para.classList.contains('style-bullet') && sel && sel.rangeCount && sel.isCollapsed) {
+        const caret = sel.getRangeAt(0)
+        const before = document.createRange()
+        before.selectNodeContents(para)
+        before.setEnd(caret.startContainer, caret.startOffset)
+        if (/^-[ \u00a0]$/.test(before.toString())) {
+          before.deleteContents()
+          para.className = 'note-para style-bullet'
+          if (!para.textContent) { para.innerHTML = ''; para.appendChild(document.createElement('br')) }
+          const r = document.createRange()
+          r.setStart(para, 0)
+          r.collapse(true)
+          sel.removeAllRanges()
+          sel.addRange(r)
+          lastCursorParaRef.current = para
+          setCurrentStyle('bullet')
+          updateStyleIndicator('bullet')
+        }
+      }
+    }
     enforceTitlePara()
     handleInput()
     if (editorRef.current) checkBottomOverflow(editorRef.current)
     scheduleAutosave()
-  }, [enforceTitlePara, handleInput, checkBottomOverflow, scheduleAutosave])
+  }, [enforceTitlePara, handleInput, checkBottomOverflow, scheduleAutosave, getCursorPara, updateStyleIndicator])
 
   const saveTitleEdit = useCallback(() => {
     if (!editingTitleRef.current) return

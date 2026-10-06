@@ -292,6 +292,8 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState('star')
   const [toolbarType, setToolbarType] = useState('list')
   const [inputFocused, setInputFocused] = useState(false)
+  const inputFocusedRef = useRef(false)
+  inputFocusedRef.current = inputFocused
   const [toolbarFadedIn, setToolbarFadedIn] = useState(false)
   // Mobile = below the 1000px desktop breakpoint. Drives the floating action bar.
   const [isMobileView, setIsMobileView] = useState(
@@ -1894,6 +1896,7 @@ function AppInner() {
   }
 
   const addItem = useCallback(() => {
+    pressInsideAddRef.current = 0   // sending closes Add item on purpose
     // Link mode: requires a URL and a destination project
     if (toolbarType === 'link') {
       const url = linkUrlValue.trim()
@@ -2032,9 +2035,35 @@ function AppInner() {
     setInputFocused(false)
   }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addScheduleDate, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId, openSearchResult])
 
+  // A click or tap anywhere inside Add item or its Save to menu never closes
+  // them: a press on their own surface (not a text field) keeps the field
+  // focused, and a blur that follows a press in there puts focus straight back.
+  const pressInsideAddRef = useRef(0)
+  useEffect(() => {
+    if (!inputFocused) return
+    const SEL = '.footer .add-row, .input-toolbar, .save-to-panel:not(.search-panel)'
+    const onDown = (e) => {
+      const t = e.target instanceof Element ? e.target : null
+      if (!t || !t.closest(SEL)) return
+      pressInsideAddRef.current = Date.now()
+      if (e.type === 'mousedown' && !t.closest('input, textarea, [contenteditable="true"]')) e.preventDefault()
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('mousedown', onDown, true)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('mousedown', onDown, true)
+    }
+  }, [inputFocused])
+
   // Keep the footer "focused" while focus moves between the title and URL fields
   const handleAddInputBlur = useCallback(() => {
     requestAnimationFrame(() => {
+      if (inputFocusedRef.current && Date.now() - pressInsideAddRef.current < 800) {
+        const ae0 = document.activeElement
+        if (!ae0 || ae0 === document.body) inputRef.current?.focus({ preventScroll: true })
+        return
+      }
       const ae = document.activeElement
       if (ae && addRowRef.current && addRowRef.current.contains(ae)) return
       // Naming a new canvas moves focus into the Save-to panel — that's still

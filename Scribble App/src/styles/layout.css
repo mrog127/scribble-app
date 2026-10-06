@@ -10806,10 +10806,6 @@ body.resizing-detail .phone { transition: none !important; }
 /* Reordering rows: freeze the page's scroll for the length of the drag */
 html.row-dragging #app .page { overflow: hidden !important; touch-action: none; overscroll-behavior: none; }
 
-/* Dots themes: Gallery cards are see-through glass, so a menu's blur has nothing
-   to work on there — give it a near-solid fill so row text doesn't show through */
-:root[data-theme="dark-dots"] .home-page .card .card-context-menu { background: rgba(43, 43, 43, 0.96); }
-:root[data-theme="light-dots"] .home-page .card .card-context-menu { background: rgba(250, 250, 250, 0.96); }
 
 /* Dots themes: card titles 20px */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .card .card-title { font-size: 20px; }
@@ -11203,13 +11199,6 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   background: radial-gradient(circle closest-side, var(--title-dot) 96%, transparent 100%) no-repeat right 0 bottom 0.22em / 12px 12px;
 }
 
-/* Dots themes: a menu that opens over a see-through glass card (the Easel's
-   pinned Gallery canvas, Gallery cards) can't blur it — the glass card gives the
-   menu's blur nothing to work on, so its rows showed straight through. The
-   Easel header's menu and the Gallery canvas's own menus get a near-solid fill,
-   as Gallery card menus already do. */
-:root[data-theme="dark-dots"] :is(.page-header, .gallery-canvas) .card-context-menu { background: rgba(43, 43, 43, 0.96); }
-:root[data-theme="light-dots"] :is(.page-header, .gallery-canvas) .card-context-menu { background: rgba(250, 250, 250, 0.96); }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .empty-canvas-picks .mbar-type-pick.is-pressed {
   background: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), #333333;
 }
@@ -11851,3 +11840,40 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 @media (min-width: 1000px) and (max-width: 1240px) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: calc((100vw - 96px) / 2); }
 }
+
+/* Dots themes: Save to's Cancel sits 16px in from the menu's right edge */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel:not(.search-panel) .save-to-card .save-to-header { padding-right: 16px; }
+
+/* …and a touch press on Cancel (Save to / Move to) looks exactly like its
+   desktop hover: a 4% wash over the whole pill (white Dark Dots, black Light) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-cancel.is-pressed::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: auto;
+  transform: none;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+:root[data-theme="light-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .save-to-cancel.is-pressed::after { background: rgba(0, 0, 0, 0.04); }
+
+/* Dots themes: Move to's Cancel also sits 16px in from the menu's right edge */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card .save-to-header { padding-right: 16px; }
+
+/* Dots themes: why menus couldn't blur a see-through glass card beneath them.
+   A page masks itself to fade its content under the control bar (and at the
+   top once scrolled). A masked element is a "backdrop root": a menu's
+   backdrop-filter can only see what's painted inside the page — and the page
+   was transparent, the app's background being painted by .phone outside it.
+   Over an opaque card that didn't matter, but over a glass card the blurred
+   copy came out see-through and the sharp text showed through it. Painting the
+   page's own background (the app's colour, so nothing visibly changes — the
+   mask still fades it into the identical colour behind) gives the blur an
+   opaque backdrop. Content box only, so the desktop sidebar beside the cards
+   and the detail panel's space stay clear. */
+:root[data-theme="light-dots"] .page { background-color: #F0F0F0; background-clip: content-box; }
+:root[data-theme="dark-dots"] .page { background-color: #212121; background-clip: content-box; }

@@ -27,24 +27,54 @@ export function runCheckOff(todoRowEl, commit, { collapse = true } = {}) {
     const rowEl = todoRowEl.closest('.swipe-row') || todoRowEl
     const wrapper = rowEl.parentElement
     let done = false
-    const restore = () => {
-      if (!wrapper) return
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        ;['height', 'overflow', 'transition', 'opacity'].forEach(p => wrapper.style.removeProperty(p))
-      }))
-    }
+    const clear = (el, props) => props.forEach(p => el.style.removeProperty(p))
     const finish = () => {
       if (done) return
       done = true
-      if (!collapse || !wrapper || !wrapper.isConnected) { commit(false); restore(); return }
-      // Close the row's empty slot, then mark it done
-      wrapper.style.height = wrapper.getBoundingClientRect().height + 'px'
+      if (!collapse || !wrapper || !wrapper.isConnected || !wrapper.parentNode) {
+        commit(false)
+        if (wrapper) requestAnimationFrame(() => requestAnimationFrame(() => clear(wrapper, ['opacity'])))
+        return
+      }
+      // The row's slot closes in one smooth motion while everything else in
+      // the card — the rows below, the card's own height — moves with it.
+      // A stand-in holds the slot; the row itself is marked done at once with
+      // no height, so wherever it lands (the checked items at the bottom, or
+      // nowhere when completed items are hidden) it never jolts the card.
+      const h = wrapper.getBoundingClientRect().height
+      const spacer = document.createElement('div')
+      spacer.setAttribute('aria-hidden', 'true')
+      spacer.style.cssText = `height:${h}px;overflow:hidden;pointer-events:none`
+      wrapper.parentNode.insertBefore(spacer, wrapper)
+      wrapper.style.height = '0px'
       wrapper.style.overflow = 'hidden'
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        wrapper.style.transition = `height ${COLLAPSE_MS}ms ease`
-        wrapper.style.height = '0px'
-      }))
-      setTimeout(() => { commit(false); restore() }, COLLAPSE_MS + 10)
+      wrapper.style.opacity = '0'
+      commit(false)
+      requestAnimationFrame(() => {
+        spacer.offsetHeight   // eslint-disable-line no-unused-expressions
+        spacer.style.transition = `height ${COLLAPSE_MS}ms ease`
+        spacer.style.height = '0px'
+        // Still shown (completed items visible): it opens up at the bottom in
+        // step, so the card's height stays put and nothing jumps
+        const shown = wrapper.isConnected
+        let full = 0
+        if (shown) {
+          wrapper.style.height = 'auto'
+          full = wrapper.getBoundingClientRect().height
+          wrapper.style.height = '0px'
+          wrapper.offsetHeight   // eslint-disable-line no-unused-expressions
+          wrapper.style.transition = `height ${COLLAPSE_MS}ms ease`
+          wrapper.style.height = full + 'px'
+        }
+        setTimeout(() => {
+          spacer.remove()
+          if (!shown || !wrapper.isConnected) return
+          clear(wrapper, ['height', 'overflow'])
+          wrapper.style.transition = 'opacity 200ms ease'
+          wrapper.style.opacity = '1'
+          setTimeout(() => clear(wrapper, ['opacity', 'transition']), 220)
+        }, COLLAPSE_MS + 20)
+      })
     }
     const played = playCheckGhost(rowEl, {
       onShown: () => { if (wrapper) wrapper.style.opacity = '0' },

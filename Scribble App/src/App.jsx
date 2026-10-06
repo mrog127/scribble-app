@@ -2485,10 +2485,10 @@ function AppInner() {
                           )}
                           {r.type === 'canvas' && (
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                            <rect x="3.5" y="2.5" width="13" height="9.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15"/>
-                            <line x1="10" y1="12" x2="10" y2="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
-                            <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
-                            <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
+                            <rect x="3.5" y="2.5" width="13" height="9.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15"/>
+                            <line x1="10" y1="12" x2="10" y2="17.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
+                            <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
+                            <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
                           </svg>
                         )}
                         {r.type === 'link' && (
@@ -2646,10 +2646,10 @@ function AppInner() {
                 {activeTab === 'star' ? (
                   /* On the gallery page: easel, in black */
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                    <rect x="3.5" y="2.5" width="13" height="9.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                    <line x1="10" y1="12" x2="10" y2="17.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                    <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="#242424" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <rect x="3.5" y="2.5" width="13" height="9.5" stroke="#242424" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                    <line x1="10" y1="12" x2="10" y2="17.5" stroke="#242424" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="#242424" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                    <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="#242424" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                   </svg>
                 ) : (
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -2825,10 +2825,10 @@ function AppInner() {
                                 <stop offset="100%" stopColor={theme === 'light-dots' ? mixHex(acc.base, '#F0F0F0', 0.72) : acc.light} />
                               </linearGradient>
                             </defs>
-                            <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.6" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                            <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                            <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                            <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                            <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.6" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                            <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                            <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                            <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                           </svg>
                           <span className="mbar-page-menu-label" style={{ color: acc.dark }}>{cat.name}</span>
                         </button>

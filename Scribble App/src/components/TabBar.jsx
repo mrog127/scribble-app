@@ -46,10 +46,10 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
                   <stop offset="100%" stopColor="var(--accent-light)" />
                 </linearGradient>
               </defs>
-              <rect x="3.5" y="2.5" width="13" height="9.5" fill="url(#tab-indicator-easel-grad)" fillOpacity="0.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-              <line x1="10" y1="12" x2="10" y2="17.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-              <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-              <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+              <rect x="3.5" y="2.5" width="13" height="9.5" fill="url(#tab-indicator-easel-grad)" fillOpacity="0.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+              <line x1="10" y1="12" x2="10" y2="17.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+              <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+              <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
             </svg>
           </div>
           {categories.map((cat, idx) => {

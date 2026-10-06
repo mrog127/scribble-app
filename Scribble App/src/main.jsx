@@ -28,6 +28,23 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* http, or blocked */ })
   })
+  // The page opened from the offline cache and a newer version has since
+  // arrived: switch to it — straight away if the app has only just opened and
+  // nothing is being typed, otherwise the next time it comes back to the front.
+  const loadedAt = Date.now()
+  let updatePending = false
+  const typing = () => {
+    const a = document.activeElement
+    return !!(a && (a.isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName)))
+  }
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type !== 'app-updated') return
+    if (Date.now() - loadedAt < 10000 && !typing()) location.reload()
+    else updatePending = true
+  })
+  document.addEventListener('visibilitychange', () => {
+    if (updatePending && document.visibilityState === 'visible' && !typing()) location.reload()
+  })
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

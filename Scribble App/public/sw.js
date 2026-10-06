@@ -10,7 +10,7 @@
  * Bump CACHE when the caching strategy itself changes; the build's own hashed
  * filenames handle ordinary deploys.
  */
-const CACHE = 'scribble-shell-v4'   // bumped whenever the app icons change (same filenames, so the old ones stay cached)
+const CACHE = 'scribble-shell-v5'   // bumped whenever the app icons change (same filenames, so the old ones stay cached)
 
 self.addEventListener('install', () => {
   // Take over as soon as the new worker is ready
@@ -42,15 +42,37 @@ self.addEventListener('fetch', (event) => {
   // copy still lands in the cache for next time). Offline, the cache answers at once.
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
+      let servedCached = null   // the cached page, if that's what answered
       const network = fetch(request).then(async (fresh) => {
-        if (fresh.ok) (await caches.open(CACHE)).put('/index.html', fresh.clone())
+        if (fresh.ok) {
+          const cache = await caches.open(CACHE)
+          // The cached page answered first and this one is newer: tell the page,
+          // so it can switch to the new version instead of running the old one
+          // until the next open (desktop dock apps can stay open for days)
+          if (servedCached) {
+            try {
+              const [a, b] = await Promise.all([servedCached.clone().text(), fresh.clone().text()])
+              if (a !== b) {
+                const id = event.resultingClientId || event.clientId
+                const client = id && await self.clients.get(id)
+                const targets = client ? [client] : await self.clients.matchAll({ type: 'window' })
+                targets.forEach(c => c.postMessage({ type: 'app-updated' }))
+              }
+            } catch { /* compare failed: the next open picks it up */ }
+          }
+          await cache.put('/index.html', fresh.clone())
+        }
         return fresh
       })
       network.catch(() => {})          // a late failure after the cache answered is fine
       const cachedSoon = new Promise(resolve => setTimeout(async () => resolve(await caches.match('/index.html')), 1200))
       try {
         const first = await Promise.race([network, cachedSoon])
-        if (first) return first
+        if (first) {
+          const fromNetwork = await Promise.race([network.then(r => r === first, () => false), Promise.resolve(false)])
+          if (!fromNetwork) servedCached = first.clone()
+          return first
+        }
         return await network            // nothing cached yet: wait for the network
       } catch {
         const cached = await caches.match('/index.html')

@@ -50,6 +50,19 @@ export function AppProvider({ children }) {
   const [autoEditNoteId, setAutoEditNoteId] = useState(null)
   // A new note's temporary id was just replaced by its real one: keep the open
   // note (and the "open it in edit mode" request) pointing at it
+  // A brand-new note has a temporary id until the database answers with its real
+  // one. Anything typed in that window can't be saved to the database yet (the
+  // row isn't there to update), so it's held here and written as soon as the
+  // real id arrives — otherwise the first words typed in a new note were lost.
+  const tempNoteIdsRef = useRef(new Set())
+  const pendingNoteSaveRef = useRef(new Map())   // tempId → { editorHTML, text }
+  const flushPendingNoteSave = useCallback((tempId, realId) => {
+    tempNoteIdsRef.current.delete(tempId)
+    const pending = pendingNoteSaveRef.current.get(tempId)
+    if (!pending) return
+    pendingNoteSaveRef.current.delete(tempId)
+    db(supabase.from('notes').update({ editor_html: pending.editorHTML, ...(pending.text ? { text: pending.text } : {}) }).eq('id', realId))
+  }, [])
   const followNoteIdSwap = useCallback((tempId, realId) => {
     setOpenDetail(prev => (prev && prev.id === tempId) ? { ...prev, id: realId } : prev)
     setAutoEditNoteId(prev => prev === tempId ? realId : prev)
@@ -374,6 +387,7 @@ export function AppProvider({ children }) {
       ...proj,
       notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }]
     }))
+    tempNoteIdsRef.current.add(tempId)
     send(supabase.from('notes')
       .insert({ user_id: user.id, project_id: projectId, text, activated, scheduled_date: scheduledDate, editor_html: null, sort_order: sortOrder })
       .select().single(), 'insert notes').then(({ data }) => {
@@ -381,7 +395,7 @@ export function AppProvider({ children }) {
           ...proj,
           notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n)
         }))
-        if (data) followNoteIdSwap(tempId, data.id)
+        if (data) { flushPendingNoteSave(tempId, data.id); followNoteIdSwap(tempId, data.id) }
         if (data && onCreated) onCreated(data.id)
       })
     return tempId
@@ -451,6 +465,7 @@ export function AppProvider({ children }) {
       ...proj,
       notes: proj.notes.map(n => n.id !== noteId ? n : { ...n, editorHTML, text: text || n.text })
     }))
+    if (tempNoteIdsRef.current.has(noteId)) { pendingNoteSaveRef.current.set(noteId, { editorHTML, text }); return }
     db(supabase.from('notes').update({ editor_html: editorHTML, ...(text ? { text } : {}) }).eq('id', noteId))
   }, [updateProject])
 
@@ -544,6 +559,7 @@ export function AppProvider({ children }) {
       notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }],
       todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: [...current, tempId] })
     }))
+    tempNoteIdsRef.current.add(tempId)
     send(supabase.from('notes')
       .insert({ user_id: user.id, project_id: projectId, text, activated, scheduled_date: scheduledDate, editor_html: null, sort_order: sortOrder })
       .select().single(), 'insert notes').then(({ data }) => {
@@ -554,6 +570,7 @@ export function AppProvider({ children }) {
           notes: proj.notes.map(n => n.id === tempId ? { ...n, id: data.id } : n),
           todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: (t.linkedNoteIds || []).map(x => x === tempId ? data.id : x) })
         }))
+        flushPendingNoteSave(tempId, data.id)
         followNoteIdSwap(tempId, data.id)
         dbw(supabase.from('todos').update({ linked_note_ids: realIds }).eq('id', todoId), 'addTodoNote')
         if (onCreated) onCreated(data.id)

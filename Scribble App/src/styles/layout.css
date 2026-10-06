@@ -11676,8 +11676,8 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   z-index: 0;
   padding-top: 2px;
   margin-top: -1px;
-  padding-left: 2px;
-  margin-left: -2px;
+  padding-left: 8px;
+  margin-left: -8px;
 }
 /* The canvas name owns the hover while it's under the cursor */
 @media (hover: hover) {
@@ -11877,3 +11877,13 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
    and the detail panel's space stay clear. */
 :root[data-theme="light-dots"] .page { background-color: #F0F0F0; background-clip: content-box; }
 :root[data-theme="dark-dots"] .page { background-color: #212121; background-clip: content-box; }
+
+/* Dots themes: a canvas name's hover / press box (Gallery cards, an Easel's
+   Gallery and content type cards, link tiles, pinned canvas cards) is a pill */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .source-label-text.canvas-link::before {
+  top: -2px;
+  bottom: -1px;
+  left: -8px;
+  right: -8px;
+  border-radius: 999px;
+}

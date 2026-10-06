@@ -207,6 +207,10 @@ function StarIcon() {
 
 function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
   const darkDots = ['dark-dots', 'light-dots'].includes(useTheme())
+  const darkDotsRef = useRef(darkDots)
+  darkDotsRef.current = darkDots
+  const noteTitleRef = useRef(note?.text)
+  noteTitleRef.current = note?.text
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
   const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId,
@@ -507,6 +511,84 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
   }, [getCursorPara, getSelectedParas, updateStyleIndicator])
 
+  // ---- The title line is off-limits while editing the body (Dots themes) ----
+  // In the Dots themes the note's title is edited in its own field above the
+  // body; inside the body editor its line is hidden. The caret must never get
+  // into it: typing there changed the title unseen, Enter split part of the
+  // title down into the body, and Backspace at the start of the first body line
+  // merged body text up into the title. So the caret / selection is kept out of
+  // it, and edits that would cross into it are stopped.
+  const bodyStartPara = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return null
+    const leaves = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para'))
+    if (leaves[1]) return leaves[1]
+    if (!leaves[0]) return null
+    const p = document.createElement('div')
+    p.className = 'note-para style-body'
+    p.appendChild(document.createElement('br'))
+    leaves[0].after(p)
+    return p
+  }, [])
+  useEffect(() => {
+    if (!editing || !darkDots) return
+    const content = contentRef.current
+    if (!content) return
+    const titleOf = () => content.querySelector('.note-para')
+    const inTitle = (node) => { const t = titleOf(); return !!(t && node && t.contains(node)) }
+    const onSelChange = () => {
+      const sel = window.getSelection()
+      if (!sel || !sel.rangeCount || !content.contains(sel.anchorNode)) return
+      const aIn = inTitle(sel.anchorNode) || sel.anchorNode === content && sel.anchorOffset === 0
+      const fIn = inTitle(sel.focusNode)
+      if (!aIn && !fIn) return
+      const body = bodyStartPara()
+      if (!body) return
+      const r = document.createRange()
+      if (sel.isCollapsed || (aIn && fIn)) {
+        r.setStart(body, 0); r.collapse(true)
+        sel.removeAllRanges(); sel.addRange(r)
+      } else {
+        // A selection reaching into the title starts at the body instead
+        const other = aIn ? { n: sel.focusNode, o: sel.focusOffset } : { n: sel.anchorNode, o: sel.anchorOffset }
+        sel.setBaseAndExtent(body, 0, other.n, other.o)
+      }
+    }
+    const onBeforeInput = (e) => {
+      const sel = window.getSelection()
+      if (!sel || !sel.rangeCount) return
+      const range = sel.getRangeAt(0)
+      const title = titleOf()
+      if (!title) return
+      // Anything that would edit the title line from in here: refuse it
+      if (range.intersectsNode(title) && (title.contains(range.startContainer) || range.startContainer === content)) {
+        if (!sel.isCollapsed) {
+          const body = bodyStartPara()
+          if (body) range.setStart(body, 0)
+          if (range.collapsed) { e.preventDefault(); return }
+        } else { e.preventDefault(); return }
+      }
+      // Backspace at the very start of the first body line would merge it up
+      // into the title
+      if (sel.isCollapsed && /^delete.*Backward$/.test(e.inputType)) {
+        const body = bodyStartPara()
+        if (body && (body.contains(range.startContainer) || range.startContainer === body)) {
+          const pre = document.createRange()
+          pre.selectNodeContents(body)
+          pre.setEnd(range.startContainer, range.startOffset)
+          if (pre.toString() === '' && !pre.cloneContents().querySelector?.('img')) e.preventDefault()
+        }
+      }
+    }
+    document.addEventListener('selectionchange', onSelChange)
+    content.addEventListener('beforeinput', onBeforeInput)
+    onSelChange()
+    return () => {
+      document.removeEventListener('selectionchange', onSelChange)
+      content.removeEventListener('beforeinput', onBeforeInput)
+    }
+  }, [editing, darkDots, bodyStartPara])
+
   // Update style indicator whenever selection changes (cursor moves)
   useEffect(() => {
     if (!editing) return
@@ -590,7 +672,18 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (changed && caret && caret.node.isConnected && content.contains(caret.node)) {
       try { const r = document.createRange(); r.setStart(caret.node, caret.offset); r.collapse(true); sel.removeAllRanges(); sel.addRange(r) } catch {}
     }
-    const paras = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para'))
+    let paras = [...content.querySelectorAll('.note-para')].filter(p => !p.querySelector('.note-para'))
+    // Dots themes: the title lives in its own field, so if the title line has
+    // gone missing from the body it's put back from that field — a body line is
+    // never promoted to be the title (that turned body text into the title)
+    if (darkDotsRef.current && (!paras[0] || !/style-title/.test(paras[0].className))) {
+      const t = document.createElement('div')
+      t.className = 'note-para style-title'
+      t.textContent = (titleFieldRef.current?.textContent || noteTitleRef.current || 'Untitled note').trim() || 'Untitled note'
+      content.insertBefore(t, content.firstChild)
+      paras = [t, ...paras]
+      changed = true
+    }
     paras.forEach((p, i) => {
       const isTitle = /style-title/.test(p.className)
       if (i === 0 && !isTitle) {
@@ -1170,8 +1263,12 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (e.key !== 'Enter') return
     e.preventDefault()
     if (editingTitleRef.current) titleFieldRef.current?.blur()   // blur saves
-    else contentRef.current?.focus()                             // body editing: on into the body
-  }, [])
+    else {                                                       // body editing: on into the body
+      contentRef.current?.focus()
+      const body = bodyStartPara()
+      if (body) { const r = document.createRange(); r.setStart(body, 0); r.collapse(true); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r) }
+    }
+  }, [bodyStartPara])
 
   // The top button while editing the title: Save (keep the note open). Held on
   // mousedown so the title doesn't blur first and the click read as "Done".
@@ -1200,7 +1297,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const doc = new DOMParser().parseFromString(html, 'text/html')
     const out = []
     const clean = (t) => (t || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
-    const push = (style, text) => { const t = clean(text); if (t) out.push({ style, text: t }) }
+    const push = (style, text, indent = 0) => { const t = clean(text); if (t) out.push({ style, text: t, indent }) }
 
     // A block whose whole text sits inside a <b>/<strong> (or <i>/<em>) reads as
     // that style; an inline font-weight/style says the same thing.
@@ -1228,6 +1325,16 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         const tag = child.tagName.toLowerCase()
         if (tag === 'br') { flush(); continue }
         if (tag === 'style' || tag === 'script' || tag === 'meta') continue
+        // A line copied straight out of a note (the browser's own copy, when the
+        // app's copy handler didn't get the event) still carries its style class
+        const cls = child.getAttribute('class') || ''
+        const own = /\bnote-para\b/.test(cls) && cls.match(/style-(\w+)/)
+        if (own && !child.querySelector('.note-para')) {
+          flush()
+          const st = own[1] === 'title' ? 'heading' : own[1]
+          push(st, child.textContent, Number((cls.match(/indent-(\d)/) || [])[1] || 0))
+          continue
+        }
         if (!BLOCK.test(tag)) { buffer += child.textContent; continue }
         flush()
         // h1 maps to the toolbar's H1 (the 'heading' style) — the note's own
@@ -1303,7 +1410,22 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     return true
   }, [])
 
-  const handleSelectionCopy = useCallback((e) => { writeSelectionToClipboard(e) }, [writeSelectionToClipboard])
+  // Copy is caught at the document, not only on the editor: when the note isn't
+  // being edited (or in Safari), the copy event can be aimed at the page rather
+  // than the editor, and the note's styles were lost to the browser's plain copy.
+  useEffect(() => {
+    const onDocCopy = (e) => {
+      const content = contentRef.current
+      const sel = window.getSelection()
+      if (!content || !sel || !sel.rangeCount || sel.isCollapsed) return
+      const range = sel.getRangeAt(0)
+      if (!content.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== content) return
+      writeSelectionToClipboard(e)
+    }
+    document.addEventListener('copy', onDocCopy, true)
+    return () => document.removeEventListener('copy', onDocCopy, true)
+  }, [writeSelectionToClipboard])
+  const handleSelectionCopy = useCallback(() => {}, [])
   const handleSelectionCut = useCallback((e) => {
     if (!editingRef.current) return
     if (!writeSelectionToClipboard(e)) return

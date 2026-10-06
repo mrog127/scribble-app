@@ -847,6 +847,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     // drag is clearly sideways its default (scroll / selection) is cancelled.
     const surface = editorRef.current || content
     let t = null   // { x, y, para, decided, horizontal, done, own, lastY }
+    let lastTap = null
     // A touch that lands on the cursor's own bullet line is iOS's to take over:
     // it starts dragging the caret (or a selection) there and cancels the touch,
     // so the swipe never registers. On that line the touch is claimed up front
@@ -858,7 +859,19 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       if (!para) { t = null; return }
       const x = e.touches[0].clientX, y = e.touches[0].clientY
       const r = para.getBoundingClientRect()
-      const own = y >= r.top && y <= r.bottom
+      // A touch right on the caret stays iOS's own: tap for the Paste / Select
+      // menu, double tap to select a word, drag to move the caret
+      let nearCaret = false
+      const sel = window.getSelection()
+      if (sel && sel.rangeCount) {
+        const rect = sel.getRangeAt(0).getClientRects()[0] || sel.getRangeAt(0).getBoundingClientRect()
+        if (rect && (rect.height || rect.width)) {
+          nearCaret = Math.abs(x - (sel.isCollapsed ? rect.left : x)) <= 28 && y >= rect.top - 12 && y <= rect.bottom + 12
+          // With text selected, any touch on the selection belongs to iOS too
+          if (!sel.isCollapsed) nearCaret = [...sel.getRangeAt(0).getClientRects()].some(q => x >= q.left - 12 && x <= q.right + 12 && y >= q.top - 12 && y <= q.bottom + 12)
+        }
+      }
+      const own = y >= r.top && y <= r.bottom && !nearCaret
       if (own) e.preventDefault()
       t = { x, y, para, decided: false, horizontal: false, done: false, own, lastY: y }
     }
@@ -893,6 +906,15 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           const sel = window.getSelection()
           sel.removeAllRanges()
           sel.addRange(range)
+          // Second tap in the same spot: select the word, as iOS would
+          const now = Date.now()
+          if (lastTap && now - lastTap.at < 350 && Math.abs(t.x - lastTap.x) < 24 && Math.abs(t.y - lastTap.y) < 24 && sel.modify) {
+            sel.modify('move', 'backward', 'word')
+            sel.modify('extend', 'forward', 'word')
+            lastTap = null
+          } else {
+            lastTap = { at: now, x: t.x, y: t.y }
+          }
         }
       }
       t = null
@@ -1274,7 +1296,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       return `<div ${attrs}>${t || '<br>'}</div>`
     }
     e.clipboardData.setData('text/html', `<meta charset="utf-8">${lines.map(tag).join('')}`)
-    e.clipboardData.setData('text/plain', lines.map(l => (l.style === 'bullet' ? '• ' : '') + l.text).join('\n'))
+    const plain = lines.map(l => (l.style === 'bullet' ? '• ' : '') + l.text).join('\n')
+    e.clipboardData.setData('text/plain', plain)
+    lastNoteCopy = { text: normClip(plain), lines: lines.map(l => ({ ...l, style: l.style === 'title' ? 'heading' : l.style })) }
     e.preventDefault()
     return true
   }, [])
@@ -1307,7 +1331,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     e.preventDefault()
     const html = dt.getData('text/html')
     const plain = dt.getData('text/plain') || ''
-    let blocks = (html && blocksFromNoteHtml(html)) || (html ? blocksFromHtml(html) : [])
+    let blocks = (html && blocksFromNoteHtml(html)) ||
+      (lastNoteCopy && normClip(plain) === lastNoteCopy.text ? lastNoteCopy.lines.map(l => ({ ...l })) : null) ||
+      (html ? blocksFromHtml(html) : [])
     if (!blocks.length) blocks = blocksFromText(plain)
     if (!blocks.length) return
 
@@ -1576,14 +1602,21 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
 export { NoteDetailPage }
 
-export default // The .note-para holding a node (or null)
+// The lines last copied from a note, kept in memory as well as on the
+// clipboard: some browsers (Safari above all) clean the copied HTML on paste
+// and drop the attributes that carry each line's style. When the pasted plain
+// text matches what was copied here, these lines are used instead.
+let lastNoteCopy = null   // { text, lines }
+const normClip = (t) => (t || '').replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').replace(/\s+$/, '')
+
+// The .note-para holding a node (or null)
 function getParaOf(node) {
   let n = node
   while (n && n.nodeType !== 1) n = n.parentNode
   return n && n.closest ? n.closest('.note-para') : null
 }
 
-function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
+export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
   const { openDetail, setOpenDetail, promptDelete } = useAppContext()
   // Local active notes use their own type so their ids can't collide with project notes
   const openNoteId = openDetail?.type === 'local-note' ? openDetail.id : null

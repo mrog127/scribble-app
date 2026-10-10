@@ -16,6 +16,22 @@ function FolderIcon({ active }) {
   )
 }
 
+// The canvas's Easel, drawn as in the Easels menu: a dark Easel-colour
+// outline on a 16% wash of the Easel colour. Without a known Easel it falls
+// back to the page's accent colours.
+function EaselIcon({ accent }) {
+  const dark = accent?.dark || 'var(--accent-dark)'
+  const line = { stroke: dark }
+  return (
+    <svg className="detail-footer-easel-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+      <rect x="3.5" y="2.5" width="13" height="9.5" style={{ ...line, fill: accent?.base || 'var(--accent-base)', fillOpacity: 0.16 }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      <line x1="10" y1="12" x2="10" y2="17.5" style={line} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+      <line x1="6" y1="12" x2="3.5" y2="17.5" style={line} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+      <line x1="14" y1="12" x2="16.5" y2="17.5" style={line} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function CopyIcon({ copied }) {
   if (copied) {
     return (
@@ -113,7 +129,7 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
             className="detail-footer-project-btn"
             onMouseDown={e => { e.preventDefault(); onProjectClick && onProjectClick() }}
           >
-            <FolderIcon active={menuOpen}/>
+            <EaselIcon accent={accent}/>
             <span className="detail-footer-project">{projectName}</span>
           </button>
         </div>

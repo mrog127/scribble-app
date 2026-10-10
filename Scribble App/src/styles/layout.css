@@ -12088,3 +12088,676 @@ html.solo-window #app .note-detail-page {
 
 /* The page's own window: the page is simply there — no slide up on open */
 html.solo-window #app .note-detail-page { transition: none !important; }
+
+/* ==== Add item, v2 ====
+   The open box is one tall field (the new item's title, set like a list item
+   page's title) with a type button above Send at its top right; underneath,
+   Display and the destination's folder button. Save to opens only from that
+   button and lies over the box; an "@" tag search drops a menu under the line.
+   The field is a textarea; at rest it sits empty inside the pill. */
+.add-row textarea.add-input { resize: none; overflow: hidden; display: block; box-sizing: border-box; }
+.add-type-wrap, .toolbar-folder-btn { display: none; }
+
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+  --add-font: 700 28px/36px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --add-ls: -0.56px;
+  --add-lh: 36px;
+  --add-btn: 40px;
+  --add-field-r: 24px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  transition: opacity 160ms ease;
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+  --add-font: 500 32px/44px Merriweather, Georgia, serif;
+  --add-ls: normal;
+  --add-lh: 44px;
+  --add-btn: 32px;
+  --add-field-r: 0px;
+}
+/* Phone: from 16px under the top of the screen to 16px above the keyboard, at most 500px */
+@media (max-width: 999px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    flex: none;
+    height: min(500px, calc(var(--ivh, 100dvh) - 32px - env(safe-area-inset-top, 0px)));
+    margin-top: auto;
+  }
+}
+/* Desktop: hangs from its place at the top of the sidebar */
+@media (min-width: 1000px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    height: min(500px, calc(100dvh - 216px));
+    bottom: auto;
+  }
+}
+
+/* The field row takes all the height; the type / send buttons ride on its right */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+  align-items: stretch;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  margin: 0 calc(var(--add-btn) + 8px) 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  position: relative;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack)::before,
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack)::after { display: none; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > textarea.add-input {
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--add-field-r);
+  font: var(--add-font);
+  letter-spacing: var(--add-ls);
+  white-space: pre-wrap;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > textarea.add-input::-webkit-scrollbar { display: none; }
+/* Link: the URL row keeps its one-row place under the title */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
+  height: var(--mbar-h);
+  max-height: none;
+  margin: 0;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input {
+  height: var(--mbar-h);
+}
+/* Send at the bottom of the title field; the type button at its top */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+  top: auto;
+  bottom: calc((var(--mbar-h) - var(--add-btn)) / 2);
+  right: calc(-8px - var(--add-btn));
+  width: var(--add-btn);
+  height: var(--add-btn);
+}
+:root #app .footer.keyboard-open.add-open.add-link:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+  bottom: calc(var(--mbar-h) + 8px + (var(--mbar-h) - var(--add-btn)) / 2);
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-wrap {
+  display: block;
+  position: absolute;
+  top: calc((var(--mbar-h) - var(--add-btn)) / 2);
+  right: calc(-8px - var(--add-btn));
+  width: var(--add-btn);
+  height: var(--add-btn);
+  z-index: 6;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(var(--accent-base-rgb), 0.24);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn:hover { background: rgba(var(--accent-base-rgb), 0.32); }
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn.is-pressed,
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn.open { background: rgba(var(--accent-base-rgb), 0.32); }
+/* Its menu drops from the button, right edges together */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.add-type-menu {
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  bottom: auto;
+  z-index: 60;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-menu .card-context-item.selected { color: var(--accent-base); }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-menu .card-context-item.selected svg * { stroke: var(--accent-base); }
+
+/* "@" tag search: a menu just under the first line of the field */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.cc-menu {
+  top: calc(16px + var(--add-lh) + 8px);
+  left: 8px;
+  right: auto;
+  bottom: auto;
+  width: min(600px, calc(100% - 16px));
+  max-height: min(400px, calc(100% - 32px - var(--add-lh)));
+  overflow-y: auto;
+  scrollbar-width: none;
+  z-index: 60;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu .cc-menu-item {
+  height: auto;
+  min-height: 56px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu .cc-option-page { font-size: 14px; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu-empty {
+  padding: 16px;
+  font: 500 16px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #7A7A7A;
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu-empty { font-family: 'Open Sans', system-ui, sans-serif; font-weight: 400; }
+/* The first match is the one Return picks */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu .cc-menu-item.active { background: rgba(var(--cb-base-rgb), 0.12); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu .cc-menu-item.active { background: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu .cc-menu-item.active::before { background: rgba(var(--cb-base-rgb), 0.16); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .cc-menu .cc-menu-item.active .cc-option-name { color: var(--cb-base); }
+
+/* The tag's highlight mirror, laid over the field's first line */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay {
+  top: 0;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  height: auto;
+  padding: 16px 16px 0 11px;
+  display: block;
+  z-index: 2;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay .cc-overlay-text {
+  font: var(--add-font);
+  letter-spacing: var(--add-ls);
+  padding: 0 5px;
+  white-space: pre-wrap;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Underneath: Display as before, then the destination's folder button where
+   the content-type picker was */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .tab-area { flex: none; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: var(--mbar-h);
+  padding: 0 16px;
+  border: none;
+  border-radius: 32px;
+  background: transparent;
+  color: #242424;
+  font: 500 16px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  cursor: pointer;
+  position: relative;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn svg { flex-shrink: 0; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn { color: #E6E6E6; }
+@media (hover: hover) {
+  :root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:hover { background: rgba(0, 0, 0, 0.04); }
+  :root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:hover { background: rgba(255, 255, 255, 0.06); }
+}
+:root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:is(.is-pressed, .open) { background: rgba(0, 0, 0, 0.04); }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:is(.is-pressed, .open) { background: rgba(255, 255, 255, 0.06); }
+
+/* Save to: lies exactly over the box (the box steps out of sight under it) */
+:root #app .save-to-panel.as-overlay {
+  position: absolute;
+  display: flex;
+  flex: none;
+  padding: 0;
+  margin: 0;
+  right: auto;
+  bottom: auto;
+  z-index: 300;
+  overflow: visible;   /* the card's shadow reaches past the box's edges */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
+}
+:root #app .save-to-panel.as-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 160ms ease;
+}
+:root #app .save-to-panel.as-overlay .save-to-card.move-to-card {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  transform: none;
+  opacity: 1;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-panel.as-overlay .save-to-card.move-to-card { border-radius: 32px; }
+:root #app .footer.keyboard-open.add-open.saveto-open:not(.search-open):not(.easel-open) { opacity: 0; pointer-events: none; }
+/* Paintbrush: the type button is a flat version of its Send square */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn {
+  border-radius: 6px;
+  background: rgba(var(--accent-base-rgb), 0.16);
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn:is(.open, .is-pressed) { background: rgba(var(--accent-base-rgb), 0.24); }
+@media (hover: hover) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-btn:hover { background: rgba(var(--accent-base-rgb), 0.24); }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:hover { background: rgba(0, 0, 0, 0.03); }
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn {
+  border-radius: 4px;
+  height: 40px;
+  font-family: 'Open Sans', system-ui, sans-serif;
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:is(.open, .is-pressed) { background: rgba(0, 0, 0, 0.04); }
+/* Paintbrush, desktop: the open box is its phone box, hung in the sidebar */
+@media (min-width: 1000px) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    left: 28px;
+    width: 284px;
+    padding: 0;
+    background: #FAF9F7;
+    border: 1px solid #C2C1BF;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+    overflow: visible;
+  }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row { padding: 0 8px 0 0; margin: 0; }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 48px;
+  }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) { margin-top: 0; }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > textarea.add-input { background: transparent; }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .tab-area {
+    height: auto;
+    border-top: 1px solid #DBDAD8;
+    padding: 4px 8px;
+  }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .tab-area > :not(.input-toolbar) { display: none; }
+}
+
+/* Add item: Display and the folder button split the row, 8px apart; the
+   folder button is the list / note / link page footer's grey pill */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar {
+  gap: 8px;
+  justify-content: stretch;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-divider { display: none; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-left {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-left .toolbar-source-btn { width: 100%; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn {
+  flex: 1 1 0;
+  align-self: center;
+  height: 40px;
+  gap: 6px;
+  border-radius: 32px;
+}
+:root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn { background: #E3E3E3; color: #292929; }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn { background: #333333; color: #E6E6E6; }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn svg * { stroke: #B8B8B8; }
+@media (hover: hover) {
+  :root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:hover { background: #DBDBDB; }
+  :root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:hover { background: #3B3B3B; }
+}
+:root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:is(.is-pressed, .open) { background: #DBDBDB; }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:is(.is-pressed, .open) { background: #3B3B3B; }
+/* Paintbrush: its page footer's folder (accent icon, slate label) on a soft grey pill */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn {
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #43535E;
+  font: 600 16px 'Open Sans', system-ui, sans-serif;
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn svg * { stroke: var(--accent-base); }
+@media (hover: hover) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:hover { background: rgba(0, 0, 0, 0.07); }
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:is(.is-pressed, .open) { background: rgba(0, 0, 0, 0.07); }
+
+/* Add item, v3: the canvas cards' type tabs sit 8px above a full-width field,
+   and Send moves down to the end of the Display / folder row */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+  --add-bar-gap: 8px;   /* field to the Display / folder row */
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row { margin-bottom: 0; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .tab-area { margin-top: var(--add-bar-gap); }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) { margin-right: 0; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-tabs {
+  display: flex;
+  flex: none;
+  padding: 0;
+  margin: 0;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-tabs .project-tab-bar { flex: 1 1 0; position: relative; }
+/* The tag search's highlight and menu move down with the field */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay { top: 48px; }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay { top: var(--add-tabs-h, 48px); }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.cc-menu {
+  top: calc(48px + 16px + var(--add-lh) + 8px);
+  max-height: min(400px, calc(100% - 80px - var(--add-lh)));
+}
+/* Send: the last thing on the Display / folder row */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible,
+:root #app .footer.keyboard-open.add-open.add-link:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+  top: auto;
+  right: 0;
+  bottom: calc(0px - var(--add-bar-gap) - (var(--mbar-h) + var(--add-btn)) / 2);
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar { padding-right: calc(var(--add-btn) + 8px); }
+/* Link, phone: the full-width URL pill holds its own Paste / clear button */
+@media (max-width: 999px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) {
+    top: calc((var(--mbar-h) - 40px) / 2);
+    right: 4px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input { padding-right: 52px; }
+}
+/* Paintbrush: the tabs sit in from the box's edges, as in a canvas card's header */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-tabs { padding: 8px 8px 0; }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-tabs .project-tab-btn { flex: 1 1 0; }
+/* Light Dots: on the box's glass the tabs' track is a 4% wash, as on the Gallery canvas */
+:root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-tabs .project-tab-bar { background: rgba(0, 0, 0, 0.04); }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar { box-sizing: border-box; }
+/* Paintbrush, desktop: the row sits under a hairline, 8px in from the sides */
+@media (min-width: 1000px) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .tab-area { margin-top: 0; padding: 0 8px; }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible,
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open.add-link:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible {
+    bottom: -41px;   /* centred on the 48px row under the 1px rule */
+    right: 0;
+  }
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-source-btn svg { flex-shrink: 0; }
+/* Paintbrush, phone: Send sits 8px in from the box's edge */
+@media (max-width: 999px) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible,
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open.add-link:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) .send-btn.visible { right: 6px; }
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar { padding-right: calc(var(--add-btn) + 16px); }
+}
+/* Add item: 4px more room between the folder button and Send */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar { padding-right: calc(var(--add-btn) + 12px); }
+@media (max-width: 999px) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar { padding-right: calc(var(--add-btn) + 20px); }
+}
+/* Add item: 12px between the type tabs and the field (the tag search follows) */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-type-tabs { margin-bottom: 4px; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay { top: 52px; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.cc-menu { top: calc(52px + 16px + var(--add-lh) + 8px); }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay { top: 52px; }
+/* Add item, phone: centred in the space above the keyboard, at most 500px
+   tall; when that space is shorter, it fills it with 16px above and below */
+@media (max-width: 999px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    --add-avail: calc(var(--ivh, 100dvh) - env(safe-area-inset-top, 0px));
+    --add-h: min(500px, calc(var(--add-avail) - 32px));
+    height: var(--add-h);
+    margin-top: calc(env(safe-area-inset-top, 0px) + (var(--add-avail) - var(--add-h)) / 2);
+    margin-bottom: auto;
+  }
+}
+
+/* Add item, v4 header: type button + its menu, "Add new …" (the Move to
+   menu's title style), and Cancel at the right — 12px above the field */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  height: 40px;
+  margin-bottom: 4px;   /* + the stack's 8px gap = 12px to the field */
+  position: relative;
+  z-index: 6;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-wrap {
+  position: relative;
+  top: auto;
+  right: auto;
+  flex: none;
+  width: var(--add-btn);
+  height: var(--add-btn);
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .card-context-menu.add-type-menu { left: 0; right: auto; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 20px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  letter-spacing: -0.44px;
+  color: #292929;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel {
+  flex: none;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 32px;
+  background: rgba(0, 0, 0, 0.06);
+  font: 500 16px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color: #292929;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel:hover { background: rgba(0, 0, 0, 0.1); }
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel.is-pressed { background: rgba(0, 0, 0, 0.1); }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-title { color: #E6E6E6; }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel { background: rgba(255, 255, 255, 0.06); color: #E6E6E6; }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel:hover { background: rgba(255, 255, 255, 0.1); }
+}
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel.is-pressed { background: rgba(255, 255, 255, 0.1); }
+/* Paintbrush: its Move to title (Merriweather) and plain slate Cancel */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head { padding: 8px 8px 0 8px; height: 48px; }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-title {
+  font: 500 18px Merriweather, Georgia, serif;
+  letter-spacing: normal;
+  color: #242424;
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: transparent;
+  font: 600 16px 'Open Sans', system-ui, sans-serif;
+  color: #43535E;
+}
+@media (hover: hover) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel:hover { background: rgba(0, 0, 0, 0.04); }
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel.is-pressed { background: rgba(0, 0, 0, 0.04); }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay { top: 60px; }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.cc-menu { top: calc(60px + 16px + var(--add-lh) + 8px); }
+
+/* Add item: the box's blur lives on a layer behind its contents rather than on
+   the box itself. A box with its own backdrop-filter becomes the backdrop root
+   for everything inside it, so the type menu and tag menu had nothing to blur
+   and the field's text and caret showed straight through them. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+/* Add item, desktop: 400px wide */
+@media (min-width: 1000px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) { width: 400px; }
+}
+@media (min-width: 1000px) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) { width: 400px; }
+}
+
+/* Add item: the type button wears Cancel's fill, with a 2px icon in the text colour */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn { background: rgba(0, 0, 0, 0.06); color: #292929; }
+@media (hover: hover) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:hover { background: rgba(0, 0, 0, 0.1); }
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:is(.open, .is-pressed) { background: rgba(0, 0, 0, 0.1); }
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn { background: rgba(255, 255, 255, 0.06); color: #E6E6E6; }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:hover { background: rgba(255, 255, 255, 0.1); }
+}
+:root[data-theme="dark-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:is(.open, .is-pressed) { background: rgba(255, 255, 255, 0.1); }
+/* Paintbrush's Cancel has no fill, so its type button keeps a faint grey square */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn { background: rgba(0, 0, 0, 0.04); color: #242424; }
+@media (hover: hover) {
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:hover { background: rgba(0, 0, 0, 0.07); }
+}
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:is(.open, .is-pressed) { background: rgba(0, 0, 0, 0.07); }
+/* Add item: the "New …" title sits 2px further from the type button */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-title { padding-left: 2px; }
+
+/* Add item: Display and the folder button are exactly the same width (a flex
+   split counted the folder button's own padding as extra width) */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .input-toolbar > :is(.toolbar-left, .toolbar-folder-btn) { width: auto; min-width: 0; }
+
+
+/* Add item: Display is 40px tall, matching the folder button */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-source-btn { height: 40px; }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-source-btn { width: 100%; border-radius: 4px; justify-content: center; }
+
+
+/* List item / note / link pages: the canvas button shows its Easel's icon */
+:root .detail-footer-project-btn .detail-footer-easel-icon { margin-right: 8px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-footer-project-btn .detail-footer-easel-icon { margin-right: 0; }
+
+/* Easels menu (phone): 16px between the menu and the Add new easel field */
+@media (max-width: 999px) {
+  :root #app .card-context-menu.mbar-page-menu { margin-bottom: 8px; }
+}
+
+/* Add item: the type button and Cancel sit inside the top of the field, 12px
+   in from its top and sides; the text starts beneath them */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+  --add-text-top: 64px;   /* 12 + the 40px buttons + 12 */
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head,
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  justify-content: space-between;
+  pointer-events: none;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head > * { pointer-events: auto; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > textarea.add-input { padding-top: var(--add-text-top); }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay,
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .cc-overlay { top: calc(var(--add-text-top) - 16px); }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.cc-menu,
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .card-context-menu.cc-menu {
+  top: calc(var(--add-text-top) + var(--add-lh) + 8px);
+  max-height: min(400px, calc(100% - var(--add-text-top) - var(--add-lh) - 16px));
+}
+/* Paintbrush: Cancel as a 40px-tall target, like its type square */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-wrap { width: 40px; height: 40px; }
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head-cancel { height: 40px; padding: 0 12px; }
+
+/* Add item: the type button is a Cancel-style pill — icon, then List / Note / Link */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-wrap,
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-wrap { width: auto; height: 40px; }
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn {
+  width: auto;
+  height: 40px;
+  gap: 8px;
+  padding: 0 18px 0 14px;
+  border-radius: 32px;
+  font: 500 16px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  white-space: nowrap;
+}
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn svg { flex-shrink: 0; }
+/* Paintbrush: like its Cancel — slate Open Sans, no resting fill */
+:root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn {
+  padding: 0 12px 0 8px;
+  border-radius: 4px;
+  background: transparent;
+  color: #43535E;
+  font: 600 16px 'Open Sans', system-ui, sans-serif;
+}
+
+/* Add item: the type button in the destination Easel's colour, on a 24% fill of it */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"], [data-theme="paintbrush"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  color: var(--accent-base);
+}
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"], [data-theme="paintbrush"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:hover { background: rgba(var(--accent-base-rgb), 0.32); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"], [data-theme="paintbrush"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-head .add-type-btn:is(.open, .is-pressed) { background: rgba(var(--accent-base-rgb), 0.32); }
+
+/* Add item (Light Dots): the canvas button's grey is #EAEAEA (between #E3E3E3 and #F0F0F0) */
+:root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:not(#_) { background: #EAEAEA; }
+@media (hover: hover) {
+  :root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:not(#_):hover { background: #E3E3E3; }
+}
+:root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:not(#_):is(.open, .is-pressed) { background: #E3E3E3; }
+
+/* Light Dots: the Gallery page's glass cards (not pinned canvases) use the Add
+   item canvas button's #EAEAEA for their three-dot buttons */
+:root[data-theme="light-dots"] .home-page .card:not(.project-card) .card-header .dots-menu { background: #EAEAEA; }
+
+/* Add item, desktop: 440px wide, centred over the left-hand column (340px wide,
+   starting at the gutter) — kept at least 16px in from the window's edge */
+@media (min-width: 1000px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open),
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    width: 440px;
+    left: max(16px, calc(var(--gutter, 0px) + 170px - 220px));
+  }
+}
+
+/* Add item, note: an empty field reads "Untitled note" in dark grey, in the
+   title's own size and weight (that's the title if nothing is typed) */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > textarea.add-input.untitled-note::placeholder {
+  color: #7A7A7A;
+  opacity: 1;
+  font: inherit;
+  letter-spacing: inherit;
+}

@@ -732,9 +732,11 @@ function AppInner() {
     const q = inputValue.replace(/^@/, '').trim().toLowerCase()
     const out = []
     categories.forEach((cat, catIdx) => {
-      (cat.projects || []).forEach(proj => {
+      // An Easel's name matches all of its canvases
+      const easelHit = !!q && (cat.name || '').toLowerCase().includes(q)
+      ;(cat.projects || []).forEach(proj => {
         if (proj.archived) return
-        if (!q || (proj.name || '').toLowerCase().includes(q)) {
+        if (!q || easelHit || (proj.name || '').toLowerCase().includes(q)) {
           out.push({ categoryId: cat.id, projectId: proj.id, name: proj.name, categoryName: cat.name, accentIdx: catIdx })
         }
       })
@@ -797,6 +799,11 @@ function AppInner() {
     setInputValue(raw)
   }, [ccActive, ccCommit])
 
+  // Add item: the Save to menu opens only from the folder button, and the
+  // content type is picked from a small menu off the type button
+  const [saveToOpen, setSaveToOpen] = useState(false)
+  const [stPending, setStPending] = useState(null)        // the Save to menu's choice, until Save
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false)
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
   const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
@@ -807,7 +814,7 @@ function AppInner() {
   // Whenever the Save-to list is shown (or its page / destination changes),
   // centre the chosen canvas so the panel never opens scrolled away from it.
   useEffect(() => {
-    if (!inputFocused || ccActive) return
+    if (!inputFocused || !saveToOpen) return
     const id = requestAnimationFrame(() => {
       const scroller = saveToScrollRef.current
       if (!scroller) return
@@ -819,7 +826,7 @@ function AppInner() {
       scroller.classList.toggle('scrolled', scroller.scrollTop > 4)
     })
     return () => cancelAnimationFrame(id)
-  }, [inputFocused, ccActive, saveToTab, saveToProject])
+  }, [inputFocused, saveToOpen, saveToTab, saveToProject])
   const scrollSelPendingRef = useRef(false)                  // scroll the Save to list to the selected option on open
   const prevInputFocused = useRef(false)
   const [addAsActiveFlag, setAddAsActiveFlag] = useState(true)
@@ -1057,6 +1064,8 @@ function AppInner() {
     } else {
       setToolbarFadedIn(false)
       toolbarIndicatorMounted.current = false
+      setSaveToOpen(false)
+      setTypeMenuOpen(false)
     }
   }, [inputFocused])
 
@@ -2514,6 +2523,109 @@ function AppInner() {
     addItem()
   }, [addItem, ccActive, ccCommit])
 
+  // Change the new item's content type (the type button's menu)
+  const chooseType = useCallback((type) => {
+    setTypeMenuOpen(false)
+    if (type === 'link' && toolbarType !== 'link') {
+      // Whatever was typed as a list item / note becomes the URL, and the
+      // title field above it is left empty and focused
+      const carried = inputValue.trim()
+      if (carried) { setLinkUrlValue(carried); setInputValue('') }
+      setCcActive(false)
+      setCcPick(null)
+    }
+    setToolbarType(type)
+    requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
+  }, [toolbarType, inputValue])
+
+  // Slide the type tabs' selector box to the chosen type
+  const addTabBarRef = useRef(null)
+  const addTabIndRef = useRef(null)
+  const addTabPlacedRef = useRef(false)
+  useLayoutEffect(() => {
+    const bar = addTabBarRef.current
+    const ind = addTabIndRef.current
+    if (!bar || !ind) { addTabPlacedRef.current = false; return }
+    const sel = bar.querySelector('.project-tab-btn.selected')
+    if (!sel) return
+    const place = () => { ind.style.opacity = '1'; ind.style.left = sel.offsetLeft + 'px'; ind.style.width = sel.offsetWidth + 'px' }
+    if (!addTabPlacedRef.current) {
+      ind.style.transition = 'none'
+      place()
+      ind.offsetWidth   // eslint-disable-line no-unused-expressions
+      ind.style.transition = ''
+      addTabPlacedRef.current = true
+    } else place()
+    const ro = new ResizeObserver(() => {
+      const t = ind.style.transition
+      ind.style.transition = 'none'
+      const s2 = bar.querySelector('.project-tab-btn.selected')
+      if (s2) { ind.style.left = s2.offsetLeft + 'px'; ind.style.width = s2.offsetWidth + 'px' }
+      ind.offsetWidth   // eslint-disable-line no-unused-expressions
+      ind.style.transition = t
+    })
+    ro.observe(bar)
+    return () => ro.disconnect()
+  }, [toolbarType, inputFocused, footerInputMode])
+
+  // Folder button: open (or close) the Save to menu over Add item
+  const toggleSaveTo = useCallback(() => {
+    setTypeMenuOpen(false)
+    if (saveToOpen) { setSaveToOpen(false); return }
+    setStPending(saveToProject)
+    if (saveToProject) setSaveToTab(saveToProject.categoryId)
+    setSaveToOpen(true)
+  }, [saveToOpen, saveToProject])
+  const closeSaveTo = useCallback((apply) => {
+    if (apply && stPending) {
+      setSaveToProject(stPending)
+      setSaveToTab(stPending.categoryId)
+    } else if (saveToProject) {
+      setSaveToTab(saveToProject.categoryId)
+    }
+    setSaveToOpen(false)
+  }, [stPending, saveToProject])
+
+  // The Save to menu sits exactly over the Add item box
+  const [saveToRect, setSaveToRect] = useState(null)
+  useLayoutEffect(() => {
+    if (!saveToOpen) return
+    const measure = () => {
+      // Measured against the menu's own containing box, so it lands on the
+      // Add item box whatever that box is positioned within
+      const panel = document.querySelector('.save-to-panel.as-overlay')
+      const box = document.querySelector('.footer.add-open')
+      const base = panel?.offsetParent || document.getElementById('app')
+      if (!base || !box) return
+      const a = base.getBoundingClientRect()
+      const b = box.getBoundingClientRect()
+      setSaveToRect({ top: b.top - a.top - base.clientTop, left: b.left - a.left - base.clientLeft, width: b.width, height: b.height })
+    }
+    measure()
+    const vv = window.visualViewport
+    window.addEventListener('resize', measure)
+    vv?.addEventListener('resize', measure)
+    const ro = new ResizeObserver(measure)
+    const box = document.querySelector('.footer.add-open')
+    if (box) ro.observe(box)
+    return () => {
+      window.removeEventListener('resize', measure)
+      vv?.removeEventListener('resize', measure)
+      ro.disconnect()
+    }
+  }, [saveToOpen])
+
+  // Close the type menu on a press anywhere outside it
+  useEffect(() => {
+    if (!typeMenuOpen) return
+    const onDown = (e) => {
+      if (e.target instanceof Element && e.target.closest('.add-type-wrap')) return
+      setTypeMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [typeMenuOpen])
+
   const toggleTodo = useCallback((id) => toggleActiveTodo(id), [toggleActiveTodo])
   const deleteTodo = useCallback((id) => deleteActiveTodo(id), [deleteActiveTodo])
   const deleteNote = useCallback((id) => deleteActiveNote(id), [deleteActiveNote])
@@ -2753,36 +2865,37 @@ function AppInner() {
           />
         )}
 
-        {/* Save to… panel — homescreen & collapsed category pages, flex sibling to footer */}
+        {/* Save to… menu — opened from Add item's folder button. It lies exactly
+            over the Add item box (on a phone, the space above the keyboard),
+            in the Move to menu's style: pick a canvas, then Save. */}
         {footerInputMode && (
           <div
-            className={`save-to-panel${inputFocused ? ' visible' : ''}`}
+            className={`save-to-panel as-overlay${inputFocused && saveToOpen ? ' visible' : ''}`}
             style={{
               '--accent-base': footerAccent.base,
               '--accent-dark': footerAccent.dark,
               '--accent-light': footerAccent.light,
               '--accent-base-rgb': footerAccent.baseRgb,
+              ...(saveToRect ? { top: saveToRect.top, left: saveToRect.left, width: saveToRect.width, height: saveToRect.height } : {}),
             }}
           >
-            <div className="save-to-card">
+            <div
+              className="save-to-card move-to-card open"
+              style={(() => {
+                const idx = categories.findIndex(c => c.id === stPending?.categoryId)
+                return idx < 0 ? undefined : { '--accent-dark': getCategoryAccent(idx).dark }
+              })()}
+            >
               <div className="save-to-header">
                 <p className="save-to-title">Save to...</p>
                 <button
                   className="save-to-cancel"
                   onMouseDown={e => {
                     e.preventDefault()
-                    // Cancel discards the draft — the bar returns to its resting state empty
-                    setInputValue('')
-                    setLinkUrlValue('')
-                    setCcActive(false)
-                    setCcPick(null)
-                    inputRef.current?.blur()
-                    linkUrlRef.current?.blur()
-                    // Focus may be elsewhere (e.g. the new-canvas field), so blur
-                    // alone can't be relied on to dismiss the panel
-                    setInputFocused(false)
+                    const changed = stPending && stPending.projectId !== saveToProject?.projectId
+                    closeSaveTo(changed)
                   }}
-                >Cancel</button>
+                >{stPending && stPending.projectId !== saveToProject?.projectId ? 'Save' : 'Cancel'}</button>
               </div>
               <div
                 className="save-to-scroll"
@@ -2795,30 +2908,7 @@ function AppInner() {
                   return { '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb }
                 })()}
               >
-                {ccActive ? (
-                  ccMatches.length === 0 ? (
-                    <p className="save-to-empty search-empty">No canvases</p>
-                  ) : ccMatches.map((m, i) => {
-                    const acc = getCategoryAccent(m.accentIdx)
-                    const on = ccSelected?.projectId === m.projectId
-                    return (
-                      <div key={`${m.categoryId}-${m.projectId}`}>
-                        {i > 0 && <div className="save-to-divider"/>}
-                        <button
-                          className={`save-to-option${on ? ' selected' : ''}`}
-                          style={{ '--cb-base': acc.base, '--cb-dark': acc.dark, '--cb-light': acc.light, '--cb-base-rgb': acc.baseRgb }}
-                          onMouseDown={e => { e.preventDefault(); setCcPick({ categoryId: m.categoryId, projectId: m.projectId }) }}
-                        >
-                          <div className={`save-to-radio${on ? ' filled' : ''}`}/>
-                          <span className="cc-option-text">
-                            <span className="cc-option-name">{m.name}</span>
-                            <span className="cc-option-page">{m.categoryName}</span>
-                          </span>
-                        </button>
-                      </div>
-                    )
-                  })
-                ) : (() => {
+                {(() => {
                   const cat = categories.find(c => c.id === saveToTab)
                   const projs = (cat?.projects || []).filter(p => !p.archived)
                   return (
@@ -2827,34 +2917,29 @@ function AppInner() {
                         <div key={proj.id}>
                           {i > 0 && <div className="save-to-divider"/>}
                           <button
-                            className={`save-to-option${saveToProject?.projectId === proj.id ? ' selected' : ''}`}
-                            onMouseDown={e => { e.preventDefault(); setSaveToProject({ categoryId: saveToTab, projectId: proj.id }) }}
+                            className={`save-to-option${stPending?.projectId === proj.id ? ' selected' : ''}`}
+                            onMouseDown={e => { e.preventDefault(); setStPending({ categoryId: saveToTab, projectId: proj.id }) }}
                           >
-                            <div className={`save-to-radio${saveToProject?.projectId === proj.id ? ' filled' : ''}`}/>
+                            <div className={`save-to-radio${stPending?.projectId === proj.id ? ' filled' : ''}`}/>
                             <span>{proj.name}</span>
                           </button>
                         </div>
                       ))}
                       <AddCanvasRow
-                        active={inputFocused}
+                        active={inputFocused && saveToOpen}
                         categoryId={saveToTab}
-                        onCreated={pick => setSaveToProject(pick)}
+                        onCreated={pick => setStPending(pick)}
                         onDone={() => inputRef.current?.focus({ preventScroll: true })}
                       />
                     </>
                   )
                 })()}
               </div>
-              {!ccActive && <CardTabs
+              <CardTabs
                 categories={categories}
                 selected={saveToTab}
-                onSelect={(catId) => {
-                  setSaveToTab(catId)
-                  const cat = categories.find(c => c.id === catId)
-                  const proj = cat?.projects.find(p => !p.archived)
-                  setSaveToProject(proj ? { categoryId: catId, projectId: proj.id } : null)
-                }}
-              />}
+                onSelect={(catId) => setSaveToTab(catId)}
+              />
             </div>
           </div>
         )}
@@ -2905,7 +2990,7 @@ function AppInner() {
                           )}
                           {r.type === 'canvas' && (
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                            <rect x="3.5" y="2.5" width="13" height="9.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15"/>
+                            <rect x="3.5" y="2.5" width="13" height="9.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" fill="currentColor" fillOpacity="0.16"/>
                             <line x1="10" y1="12" x2="10" y2="17.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
                             <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
                             <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round"/>
@@ -2953,7 +3038,7 @@ function AppInner() {
 
         {/* Footer */}
         <div
-          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${searchOpen ? ' search-open' : ''}${pageMenuOpen ? ' easel-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
+          className={`footer${footerInputMode ? '' : ' category-mode'}${inputFocused ? ' keyboard-open' : ''}${inputFocused && footerInputMode && !searchOpen && !pageMenuOpen ? ' add-open' : ''}${saveToOpen && inputFocused ? ' saveto-open' : ''}${toolbarType === 'link' ? ' add-link' : ''}${searchOpen ? ' search-open' : ''}${pageMenuOpen ? ' easel-open' : ''}${pageScrollable ? ' has-scroll' : ''}`}
           style={{
             '--accent-base': activeAccent.base,
             '--accent-dark': activeAccent.dark,
@@ -3195,7 +3280,6 @@ function AppInner() {
                 <div className="mbar-page-menu-list" ref={easelListRef}>
                   {categories.map((cat, idx) => {
                     const acc = getCategoryAccent(idx)
-                    const gradId = `easel-page-menu-${cat.id}`
                     return (
                       <div key={cat.id}>
                         <button
@@ -3224,13 +3308,7 @@ function AppInner() {
                           }}
                         >
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark, marginRight: 2 }}>
-                            <defs>
-                              <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor={acc.base} />
-                                <stop offset="100%" stopColor={theme === 'light-dots' ? mixHex(acc.base, '#F0F0F0', 0.72) : acc.light} />
-                              </linearGradient>
-                            </defs>
-                            <rect x="3.5" y="2.5" width="13" height="9.5" fill={`url(#${gradId})`} fillOpacity="0.6" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                            <rect x="3.5" y="2.5" width="13" height="9.5" fill={acc.base} fillOpacity="0.16" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
                             <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                             <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                             <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
@@ -3280,7 +3358,7 @@ function AppInner() {
             </div>
 
             <div
-              className={`link-input-stack${searchOpen ? ' add-hidden' : ''}`}
+              className={`link-input-stack add-stack${searchOpen ? ' add-hidden' : ''}`}
               onPointerDown={e => {
                 // Open on release, not on press. The field itself is
                 // pointer-events:none while closed (see CSS), so a press can't
@@ -3355,18 +3433,68 @@ function AppInner() {
                 <span className="mbar-placeholder-label">Add item</span>
               </span>
               )}
-              <input
+              {/* The content type button (with its menu) and Cancel, laid
+                  over the top of the field */}
+              {inputFocused && footerInputMode && (
+                <div className="add-head">
+                  <div className="add-type-wrap">
+                    <button
+                      type="button"
+                      className={`add-type-btn${typeMenuOpen ? ' open' : ''}`}
+                      aria-label="Content type"
+                      onMouseDown={e => { e.preventDefault(); setTypeMenuOpen(v => !v) }}
+                    >
+                      {(() => { const Icon = toolbarType === 'note' ? FeatherFileIcon : toolbarType === 'link' ? FeatherLinkIcon : FeatherListIcon; return <Icon size={20} color="currentColor" strokeWidth={2}/> })()}
+                      <span className="add-type-label">{toolbarType === 'note' ? 'Note' : toolbarType === 'link' ? 'Link' : 'List'}</span>
+                    </button>
+                    <div className={`card-context-menu add-type-menu${typeMenuOpen ? ' open' : ''}`}>
+                      {[['list', FeatherListIcon, 'List item'], ['note', FeatherFileIcon, 'Note'], ['link', FeatherLinkIcon, 'Link']].map(([type, Icon, label]) => (
+                        <button
+                          key={type}
+                          type="button"
+                          className={`card-context-item${toolbarType === type ? ' selected' : ''}`}
+                          onMouseDown={e => { e.preventDefault(); chooseType(type) }}
+                        >
+                          <Icon size={20} color="currentColor" strokeWidth={dotsTheme ? 2 : 1}/>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="add-head-cancel"
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      // Cancel discards the draft — the bar returns to its resting state empty
+                      setInputValue('')
+                      setLinkUrlValue('')
+                      setCcActive(false)
+                      setCcPick(null)
+                      inputRef.current?.blur()
+                      linkUrlRef.current?.blur()
+                      setInputFocused(false)
+                    }}
+                  >Cancel</button>
+                </div>
+              )}
+              <textarea
                 ref={inputRef}
-                className={`add-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}${ccActive ? ' cc-token' : ''}`}
+                rows={1}
+                className={`add-input add-title-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}${toolbarType === 'note' ? ' untitled-note' : ''}${ccActive ? ' cc-token' : ''}`}
                 style={ccActive && ccAccent
                   ? { color: 'transparent', caretColor: ccAccent.dark }
                   : undefined}
-                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (dotsTheme && !inputFocused ? '' : (isMobileView ? 'Add an item' : 'Scribble something down...'))}
+                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (toolbarType === 'note' && inputFocused ? 'Untitled note' : (dotsTheme && !inputFocused ? '' : (isMobileView ? 'Add an item' : 'Scribble something down...')))}
                 value={inputValue}
                 onChange={e => handleAddInputChange(e.target.value)}
                 onFocus={() => setInputFocused(true)}
                 onBlur={handleAddInputBlur}
-                onKeyDown={e => { if (toolbarType === 'link') { if (e.key === 'Enter') { e.preventDefault(); linkUrlRef.current?.focus() } } else handleKeyDown(e) }}
+                onKeyDown={e => {
+                  // The tag search's Return picks the highlighted canvas, whatever the type
+                  if (ccActive) { handleKeyDown(e); return }
+                  if (toolbarType === 'link') { if (e.key === 'Enter') { e.preventDefault(); linkUrlRef.current?.focus() } } else handleKeyDown(e)
+                }}
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="sentences"
@@ -3434,6 +3562,32 @@ function AppInner() {
                   <path d="M4 9 L10 3 L16 9" style={{ stroke: 'var(--accent-dark)' }} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
+
+              {/* Tag search ("@…"): matching canvases, and every canvas of a
+                  matching Easel — tap one to send the item there */}
+              {inputFocused && footerInputMode && ccActive && (
+                <div className="card-context-menu cc-menu open">
+                  {ccMatches.length === 0 ? (
+                    <div className="cc-menu-empty">No canvases</div>
+                  ) : ccMatches.map(m => {
+                    const acc = getCategoryAccent(m.accentIdx)
+                    return (
+                      <button
+                        key={`${m.categoryId}-${m.projectId}`}
+                        type="button"
+                        className={`card-context-item cc-menu-item${ccSelected?.projectId === m.projectId ? ' active' : ''}`}
+                        style={{ '--cb-base': acc.base, '--cb-dark': acc.dark, '--cb-base-rgb': acc.baseRgb }}
+                        onMouseDown={e => { e.preventDefault(); ccCommit(m) }}
+                      >
+                        <span className="cc-option-text">
+                          <span className="cc-option-name">{m.name}</span>
+                          <span className="cc-option-page">{m.categoryName}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Mobile floating action bar — trailing Search circle (hidden on desktop) */}
@@ -3493,56 +3647,25 @@ function AppInner() {
                 )}
               </div>
               <div className="toolbar-divider"></div>
-              <div className="toolbar-right">
-                <div className="toolbar-indicator" id="toolbarIndicator"></div>
-                <button
-                  className={`toolbar-icon-btn${toolbarType === 'list' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setToolbarType('list') }}
-                >
-                  {featherTabs ? <FeatherListIcon size={toolbarType === 'list' ? 24 : 20} color={toolbarType === 'list' ? 'var(--accent-base)' : '#7A7A7A'}/> : (
-                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                    <circle cx="5" cy="7" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
-                    <line x1="9" y1="7" x2="19" y2="7" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                    <circle cx="5" cy="12" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
-                    <line x1="9" y1="12" x2="19" y2="12" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                    <circle cx="5" cy="17" r="1.5" fill={toolbarType === 'list' ? '#607787' : '#3D3D3D'}/>
-                    <line x1="9" y1="17" x2="14" y2="17" stroke={toolbarType === 'list' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                  </svg>)}
-                </button>
-                <button
-                  className={`toolbar-icon-btn${toolbarType === 'note' ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setToolbarType('note') }}
-                >
-                  {featherTabs ? <FeatherFileIcon size={toolbarType === 'note' ? 24 : 20} color={toolbarType === 'note' ? 'var(--accent-base)' : '#7A7A7A'}/> : (
-                  <svg width="20" height="20" viewBox="0 0 20 22" fill="none">
-                    <path d="M3 3h9l5 5v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round" fill="none"/>
-                    <path d="M12 3v5h5" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinejoin="round"/>
-                    <line x1="5" y1="13" x2="15" y2="13" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                    <line x1="5" y1="16.5" x2="12" y2="16.5" stroke={toolbarType === 'note' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round"/>
-                  </svg>)}
-                </button>
-                <button
-                  className={`toolbar-icon-btn${toolbarType === 'link' ? ' selected' : ''}`}
-                  onMouseDown={e => {
-                    e.preventDefault()
-                    // Whatever was typed as a list item / note becomes the URL, and
-                    // the title field above it is left empty and focused.
-                    if (toolbarType !== 'link') {
-                      const carried = inputValue.trim()
-                      if (carried) { setLinkUrlValue(carried); setInputValue('') }
-                      setCcActive(false)
-                      setCcPick(null)
-                    }
-                    setToolbarType('link')
-                  }}
-                >
-                  {featherTabs ? <FeatherLinkIcon size={toolbarType === 'link' ? 24 : 20} color={toolbarType === 'link' ? 'var(--accent-base)' : '#7A7A7A'}/> : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke={toolbarType === 'link' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke={toolbarType === 'link' ? '#607787' : '#3D3D3D'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>)}
-                </button>
-              </div>
+              {/* Destination canvas — the same folder button as a list / note /
+                  link page's footer; opens the Save to menu over Add item */}
+              <button
+                type="button"
+                className={`toolbar-folder-btn${saveToOpen ? ' open' : ''}`}
+                onMouseDown={e => { e.preventDefault(); toggleSaveTo() }}
+              >
+                {/* The destination Easel's icon, outlined in its colour as in the Easels menu */}
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <rect x="3.5" y="2.5" width="13" height="9.5" fill={footerAccent.base} fillOpacity="0.16" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                  <line x1="10" y1="12" x2="10" y2="17.5" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="6" y1="12" x2="3.5" y2="17.5" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                  <line x1="14" y1="12" x2="16.5" y2="17.5" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+                </svg>
+                <span className="toolbar-folder-label">{(() => {
+                  const cat = categories.find(c => c.id === saveToProject?.categoryId)
+                  return cat?.projects.find(p => p.id === saveToProject?.projectId)?.name || 'Choose canvas'
+                })()}</span>
+              </button>
             </div>
 
             <TabBar activeTab={activeTab} onSelectTab={handleTabChange} inputFocused={inputFocused} onTabsScroll={handleTabsScroll} pulse={galleryPulse} pulseVars={pulseVars} />

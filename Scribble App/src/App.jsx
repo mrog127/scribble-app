@@ -1137,7 +1137,7 @@ function AppInner() {
   // leave iOS with the keyboard up but no live caret. Re-assert focus once the new
   // layout has settled so typing works without needing a second tap.
   useEffect(() => {
-    if (!inputFocused || !isMobileView || toolbarType === 'link') return
+    if (!inputFocused || !isMobileView) return
     const el = inputRef.current
     if (!el) return
     const raf = requestAnimationFrame(() => {
@@ -1797,11 +1797,18 @@ function AppInner() {
     requestAnimationFrame(updateToolbarIndicator)
   }, [toolbarType, inputFocused])
 
-  // When switching to link mode while the footer is open, focus the title field
+  // When switching to link mode while the footer is open, keep the caret in the
+  // title field — the same way List and Note do it: only if focus has strayed,
+  // and without scrolling (a bare focus() lets iOS scroll the box as the
+  // keyboard comes up).
   useEffect(() => {
-    if (inputFocused && toolbarType === 'link') {
-      requestAnimationFrame(() => inputRef.current?.focus())
-    }
+    if (!inputFocused || toolbarType !== 'link') return
+    const raf = requestAnimationFrame(() => {
+      const el = inputRef.current
+      const ae = document.activeElement
+      if (el && ae !== el && ae !== linkUrlRef.current) el.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(raf)
   }, [toolbarType, inputFocused])
 
   const handleScroll = useCallback((e) => {

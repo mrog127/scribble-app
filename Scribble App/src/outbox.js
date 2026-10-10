@@ -75,7 +75,16 @@ const isOfflineError = (err) => {
 // Resolves to the builder's own { data, error }, so an insert can still read
 // back the row it created. A queued write resolves with no data — the caller's
 // optimistic id stands until the next load.
+// Writes still on their way to the server (a window closing waits for them)
+let inFlightCount = 0
+export function inFlight() { return inFlightCount }
+
 export async function send(builder, label = 'write') {
+  inFlightCount++
+  try { return await sendOnce(builder, label) } finally { inFlightCount-- }
+}
+
+async function sendOnce(builder, label) {
   try {
     const { data, error } = await builder
     if (error) {

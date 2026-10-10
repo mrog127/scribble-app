@@ -14,6 +14,8 @@ import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon } from './Feat
 import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { pasteInto } from '../clipboard.js'
+import { soloItem, DONE_LABEL, openSoloWindow } from '../soloWindow.js'
+import { moveWithAnimation } from '../moveFx.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
 import { isRecurring, useActivatePress, CalendarIcon, formatSchedule } from './ScheduleBits.jsx'
@@ -614,12 +616,18 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     if (noteCount + linkCount > 0) {
       const destName = categories.find(c => c.id === sel.categoryId)?.projects.find(p => p.id === sel.projectId)?.name || 'the new canvas'
       promptMoveAttachments({ noteCount, linkCount, destName }, (moveAttach) => {
-        moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id, { moveAttachments: moveAttach })
+        moveWithAnimation({
+          type: 'todo', id: todo.id, toCategoryId: sel.categoryId, toProjectId: sel.projectId, title: todo.text,
+          commit: () => moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id, { moveAttachments: moveAttach }),
+        })
       })
     } else {
-      moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id)
+      moveWithAnimation({
+        type: 'todo', id: todo.id, toCategoryId: sel.categoryId, toProjectId: sel.projectId, title: todo.text,
+        commit: () => moveProjectTodo(categoryId, projectId, sel.categoryId, sel.projectId, todo.id),
+      })
     }
-  }, [categoryId, projectId, todo.id, todo.linkedNoteIds, todo.linkedLinkIds, categories, moveProjectTodo, promptMoveAttachments])
+  }, [categoryId, projectId, todo.id, todo.text, todo.linkedNoteIds, todo.linkedLinkIds, categories, moveProjectTodo, promptMoveAttachments])
 
   // Press down: shrink (subtly) and hold while pressed, drop the shadow
   const completeDown = useCallback(() => {
@@ -1080,7 +1088,21 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <NoteListIcon/>
         {archived && <span className="detail-archived-label">Archived</span>}
         <span className="note-scroll-title" ref={scrollTitleRef} />
-        <button className={`note-detail-done${(editingTitle || editingComment) ? ' is-saving' : ''}`} onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : 'Done'}</button>
+        {!soloItem && (
+          <button
+            className="detail-popout-btn"
+            aria-label="Open in a new window"
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => { openSoloWindow('todo', todo.id); handleDone() /* it now lives in that window */ }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </button>
+        )}
+        <button className={`note-detail-done${(editingTitle || editingComment) ? ' is-saving' : ''}`} onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : DONE_LABEL}</button>
       </div>
 
       <div className="todo-detail-scroll" ref={scrollRef}>

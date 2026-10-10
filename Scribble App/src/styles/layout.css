@@ -10532,11 +10532,11 @@ body.resizing-detail .phone { transition: none !important; }
   100% { --mc-a: 502.0deg; --mc-u: 0.152; --mc-v: 1.000; }
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .add-toast {
-  border-radius: 32px;
+  border-radius: 24px;
   background:
     radial-gradient(ellipse 60px 24px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
     radial-gradient(ellipse 140px 64px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98) / 0.45), transparent),
-    linear-gradient(rgba(var(--accent-base-rgb), 0.12), rgba(var(--accent-base-rgb), 0.12)),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.08), rgba(var(--accent-base-rgb), 0.08)),
     #2B2B2B;
   box-shadow:
     0 6px 24px rgb(from rgb(var(--accent-base-rgb)) calc(r * 0.5) calc(g * 0.5) calc(b * 0.5) / 0.12),
@@ -10548,7 +10548,7 @@ body.resizing-detail .phone { transition: none !important; }
   background:
     radial-gradient(ellipse 80px 28px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
     radial-gradient(ellipse 140px 64px at calc(50% - var(--mc-u) * 50%) calc(50% - var(--mc-v) * 50%), rgba(var(--accent-base-rgb), 0.18), transparent),
-    linear-gradient(rgba(var(--accent-base-rgb), 0.12), rgba(var(--accent-base-rgb), 0.12)),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.08), rgba(var(--accent-base-rgb), 0.08)),
     var(--glass-fill),
     #F0F0F0;
   box-shadow:
@@ -10577,14 +10577,14 @@ body.resizing-detail .phone { transition: none !important; }
     background:
       radial-gradient(ellipse 60px 24px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
     radial-gradient(ellipse 140px 64px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98) / 0.45), transparent),
-    linear-gradient(rgba(var(--accent-base-rgb), 0.16), rgba(var(--accent-base-rgb), 0.16)),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.12), rgba(var(--accent-base-rgb), 0.12)),
     #2B2B2B;
   }
   :root[data-theme="light-dots"] #app .add-toast:hover {
     background:
       radial-gradient(ellipse 80px 28px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
     radial-gradient(ellipse 140px 64px at calc(50% - var(--mc-u) * 50%) calc(50% - var(--mc-v) * 50%), rgba(var(--accent-base-rgb), 0.18), transparent),
-    linear-gradient(rgba(var(--accent-base-rgb), 0.2), rgba(var(--accent-base-rgb), 0.2)),
+    linear-gradient(rgba(var(--accent-base-rgb), 0.12), rgba(var(--accent-base-rgb), 0.12)),
     var(--glass-fill),
     #F0F0F0;
   }
@@ -11887,3 +11887,204 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
   right: -8px;
   border-radius: 999px;
 }
+
+/* Mobile layout on a larger touch screen (an iPad in split view, Slide Over or
+   a narrow window): the app was 100vh tall, which on iPad Safari is the height
+   with its toolbars hidden — taller than what's actually visible, so the control
+   bar sat below the bottom edge. Size to the visible height instead (and, with
+   the keyboard up, to the space above it, as phones already do). */
+@media (max-width: 999.98px) {
+  .app-wrap { height: 100dvh; }
+  .phone { height: var(--ivh, 100dvh); }
+}
+/* …and a touch screen with no home indicator (no bottom safe area) still keeps
+   the bar 12px off the bottom edge rather than 4px past it */
+@media (max-width: 999.98px) and (pointer: coarse) {
+  .phone { --mbar-bottom: max(12px, calc(env(safe-area-inset-bottom) - 4px)); }
+}
+
+/* Dots themes: every icon in the Easels menu and its field (search, add, clear,
+   close, confirm and the easel icons) is drawn at 2px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.mbar-easel-wrap, .card-context-menu.mbar-page-menu) svg :is(path, line, polyline, rect, circle, polygon) {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Dots themes, phone: the Easels menu's contents sit 8px further in from its
+   left edge */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card-context-menu.mbar-page-menu { padding-left: 4px; padding-bottom: 12px; /* 4px + 8px */ }
+}
+
+/* Dots themes: an Easels menu row's highlight (hover, press, and the row held
+   under a long-press) is a full pill ending 16px in from the menu's right edge
+   (the row stops 1px inside it, at the menu's border) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-context-menu.mbar-page-menu .card-context-item::before {
+  left: 4px;
+  right: 15px;
+  border-radius: 999px;
+}
+
+/* Dots themes: Easels menu easel icons sit 4px further in (the dragged copy too) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-context-menu.mbar-page-menu .card-context-item > svg,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #animation-portal .easel-drag-ghost .card-context-item > svg { margin-left: 4px; }
+
+/* Dots themes: 4px less between the Easels menu header and its first row */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-page-menu-header { padding-bottom: 4px; }
+}
+
+/* ---- Easels menu: the control bar's open / close motion (phone) ----
+   The "Add new easel" field is an overlay laid over the whole bar (its left
+   edge and width are set from App.jsx to run from the Easel / Gallery circle to
+   the last control), so opening it moves nothing else in the bar. The field is
+   clipped to the circle while closed and opens out rightward to the full bar;
+   closing folds it back into the circle and then fades it. The add pill and
+   search circle stay in place underneath (slid and faded by App.jsx) instead
+   of being removed, so they can slide back in. */
+@media (max-width: 999.98px) {
+  .footer .add-row .mbar-easel-wrap,
+  .footer .add-row .mbar-easel-wrap.open {
+    position: absolute;
+    left: var(--ew-left, 0px);
+    width: var(--ew-width, 100%);
+    top: 0;
+    bottom: auto;
+    height: var(--mbar-h);
+    min-width: 0;
+    flex: none;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .footer .add-row .mbar-easel-wrap.open { pointer-events: auto; }
+  /* The field itself: starts as the circle, rests over the add pill's slot,
+     and while a name is being typed spans the full width of the menu */
+  .footer .add-row .mbar-easel-wrap .easel-stack {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--mbar-h);
+    height: var(--mbar-h);
+    opacity: 0;
+    transition: left 280ms cubic-bezier(0.4, 0, 0.2, 1), width 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 100ms ease 200ms;
+  }
+  .footer .add-row .mbar-easel-wrap.open .easel-stack {
+    left: var(--ew-rest-left, 0px);
+    width: var(--ew-rest-width, 100%);
+    opacity: 1;
+    transition: left 280ms cubic-bezier(0.4, 0, 0.2, 1), width 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 60ms ease;
+  }
+  .footer .add-row .mbar-easel-wrap.open .easel-stack.active {
+    left: -8px;
+    width: calc(100vw - 2 * var(--mbar-side) + 16px);
+  }
+  /* The rest of the bar stays laid out while the menu is up */
+  .phone.page-menu-open .add-row .link-input-stack:not(.easel-stack):not(.search-stack),
+  .phone.page-menu-open .add-row .mbar-search { display: flex !important; pointer-events: none; }
+  .footer.easel-open .mbar-circle {
+    opacity: 1;
+    flex-basis: var(--mbar-h);
+    width: var(--mbar-h);
+    margin: 0;
+    overflow: visible;
+  }
+  .footer.easel-open .mbar-gallery-wrap {
+    opacity: 1;
+    flex-basis: auto;
+    width: auto;
+    margin: 0;
+    overflow: visible;
+  }
+}
+
+/* Dots themes: "Add new easel" reads like a row's sublabel — Helvetica Neue
+   14px medium in the sublabel grey, its plus in the same grey */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .easel-placeholder .easel-placeholder-label {
+  font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A7A7A;
+}
+:root[data-theme="light-dots"] .easel-placeholder .easel-placeholder-label { color: #969696; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .easel-placeholder svg * { stroke: #7A7A7A; }
+:root[data-theme="light-dots"] .easel-placeholder svg * { stroke: #969696; }
+
+/* Easels menu field: "Add new easel" only shows once the field has finished
+   growing out of the circle (fading in over the last of the 280ms), and is the
+   first thing to go when it closes — never squeezed into the circle, never
+   over the circle's icon */
+@media (max-width: 999.98px) {
+  .footer .add-row .mbar-easel-wrap .easel-placeholder {
+    opacity: 0;
+    transition: opacity 80ms ease;
+  }
+  .footer .add-row .mbar-easel-wrap.open .easel-placeholder {
+    opacity: 1;
+    transition: opacity 120ms ease 180ms;
+  }
+}
+
+/* ---- Open a list item / note / link page in its own window (computers) ----
+   A 40px round button just left of Done, in Done's fill */
+.detail-popout-btn { display: none; }
+/* Shown on a computer (mouse / trackpad) at any window size — even a window
+   narrowed into the phone layout — and never on a phone or tablet */
+@media (hover: hover) and (pointer: fine) {
+  .detail-popout-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    margin-left: auto;
+    margin-right: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    color: #242424;
+    cursor: pointer;
+  }
+  .detail-popout-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.04);
+    opacity: 0;
+    transition: opacity 120ms ease;
+    pointer-events: none;
+  }
+  .detail-popout-btn:hover::after { opacity: 1; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-popout-btn { background: #333333; color: #E6E6E6; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .detail-popout-btn::after { background: rgba(255, 255, 255, 0.04); }
+  :root[data-theme="light-dots"] .detail-popout-btn { background: #E3E3E3; color: #292929; }
+  :root[data-theme="light-dots"] .detail-popout-btn::after { background: rgba(0, 0, 0, 0.04); }
+}
+
+/* ---- The page's own window (?solo=…) ----
+   Only the page shows, filling the window; the app behind it (sidebar, cards,
+   control bar) is hidden */
+html.solo-window #app .page,
+html.solo-window #app .footer,
+html.solo-window #app .detail-resize-handle,
+html.solo-window #app .app-loading,
+html.solo-window #app .pull-spinner { visibility: hidden !important; }
+html.solo-window { --detail-w: 100vw !important; }
+html.solo-window #app .note-detail-page {
+  left: 0 !important;
+  right: 0 !important;
+  width: auto !important;
+  border-left: none !important;
+  box-shadow: none !important;
+}
+
+/* Open-in-new-window icon drawn at a true 2px (the 24-unit icon is shown at 18px) */
+.detail-popout-btn svg * { stroke-width: 2; vector-effect: non-scaling-stroke; }
+
+/* The page's own window: the page is simply there — no slide up on open */
+html.solo-window #app .note-detail-page { transition: none !important; }

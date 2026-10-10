@@ -20,6 +20,10 @@ import { dragLiftShadow, makeGlassStroke } from '../dragClone.js'
 export function useCategoryDragReorder(containerRef, categories, onReorder, opts = {}) {
   const ghostClass = opts.ghostClass
   const ghostPill = !!opts.pill
+  // opts.ghostInset: { left, right, edge } — a pill whose left edge sits `left`
+  // px in from the row and whose right edge sits `right` px in from the
+  // element matching `edge` (the Easels menu), matching the row's highlight
+  const ghostInset = opts.ghostInset || null
   const dragRef = useRef(null)
   const flipRef = useRef(null)
   const catsRef = useRef(categories)
@@ -93,8 +97,15 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
       cloneInner.style.background = darkGhost ? 'transparent' : '#F7F6F3'
       // Settings in the Dots themes: a pill set 8px in from the card's edges,
       // with the row's content held where it was
-      const pill = darkGhost && ghostPill
-      if (pill) { cloneInner.style.marginLeft = '-8px'; cloneInner.style.boxSizing = 'border-box'; cloneInner.style.width = dragged.rect.width + 'px' }
+      const pill = darkGhost && (ghostPill || !!ghostInset)
+      let insetL = 8, cloneW = dragged.rect.width - 16
+      if (darkGhost && ghostInset) {
+        const edge = dragged.el.closest(ghostInset.edge)?.getBoundingClientRect()
+        insetL = ghostInset.left
+        const rightEdge = (edge ? edge.right : dragged.rect.right) - ghostInset.right
+        cloneW = rightEdge - (dragged.rect.left + insetL)
+      }
+      if (pill) { cloneInner.style.marginLeft = -insetL + 'px'; cloneInner.style.boxSizing = 'border-box'; cloneInner.style.width = dragged.rect.width + 'px' }
       const clone = document.createElement('div')
       if (darkGhost) clone.className = ghostClass
       const skin = darkGhost
@@ -105,9 +116,9 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
            'border:1px solid #C2C1BF', 'background:#F7F6F3']
       clone.style.cssText = [
         'position:absolute',
-        `left:${dragged.rect.left - appRect.left + (pill ? 8 : -4)}px`,
+        `left:${dragged.rect.left - appRect.left + (pill ? insetL : -4)}px`,
         `top:${cloneTop}px`,
-        `width:${dragged.rect.width + (pill ? -16 : 8)}px`,
+        `width:${pill ? cloneW : dragged.rect.width + 8}px`,
         'padding:4px 0',
         'pointer-events:none',
         ...skin,

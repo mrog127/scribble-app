@@ -5,7 +5,25 @@ import { useAuth } from './AuthContext'
 import { fireGalleryPulse } from '../galleryPulse.js'
 import { isRecurring, nextRecurrence } from '../components/ScheduleBits.jsx'
 import { readCache, readCacheSync, writeCache } from '../localCache.js'
-import { send, flush, pendingCount } from '../outbox.js'
+import { send as outboxSend, flush, pendingCount } from '../outbox.js'
+
+// Every write bumps this, so a full reload that was already in flight when
+// something was added or changed knows its answer may be missing that change
+let mutationSeq = 0
+// Other windows of the app (a page opened in its own window, or the main one)
+// hear about writes made here and reload, so both stay in step
+const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('easels-sync') : null
+let syncTimer = null
+const announceWrite = () => {
+  if (!syncChannel) return
+  clearTimeout(syncTimer)
+  // Long enough for the write to have landed before the other window reads
+  syncTimer = setTimeout(() => { try { syncChannel.postMessage('changed') } catch {} }, 1200)
+}
+const send = (...args) => { mutationSeq++; announceWrite(); return outboxSend(...args) }
+// Items added in this session that the database hasn't answered for yet carry a
+// temporary id (Date.now()); real ids are far smaller numbers or strings
+const isTempId = (id) => typeof id === 'number' && id > 1e12
 
 export const AppContext = createContext(null)
 
@@ -80,6 +98,16 @@ export function AppProvider({ children }) {
   // The last loaded state, kept locally so a fresh open paints from it while
   // Supabase is still answering. Fresh data always wins if it lands first.
   const freshLoadedRef = useRef(false)
+  const reloadAgainRef = useRef(null)
+  // Another window wrote something: load again (shortly, and once per burst)
+  const loadAllRef = useRef(null)
+  useEffect(() => {
+    if (!syncChannel) return
+    let t = null
+    const onMsg = () => { clearTimeout(t); t = setTimeout(() => loadAllRef.current?.(), 300) }
+    syncChannel.addEventListener('message', onMsg)
+    return () => { syncChannel.removeEventListener('message', onMsg); clearTimeout(t) }
+  }, [])
   const cacheKey = user ? `state-${user.id}` : null
 
   useEffect(() => {
@@ -145,8 +173,10 @@ export function AppProvider({ children }) {
     return () => clearTimeout(t)
   }, [cacheKey, loading, categories, activeTodos, activeNotes])
 
+  loadAllRef.current = () => loadAll()
   async function loadAll() {
     setLoading(true)
+    const seqAtStart = mutationSeq
 
     // Everything in one round trip (categories used to be fetched on its own first)
     const results = await Promise.all([
@@ -225,14 +255,42 @@ export function AppProvider({ children }) {
       proj.notes = proj.notes.map(n => { if (isDue(n.scheduledDate)) { dueNoteIds.push(n.id); return due(n) } return n })
       proj.links = proj.links.map(l => { if (isDue(l.scheduledDate)) { dueLinkIds.push(l.id); return due(l) } return l })
     }))
+    // (checked before this load's own writes below, which bump the counter too)
+    const seqBeforeOwn = mutationSeq
     const dueUpdate = { activated: true, scheduled_date: null, home_sort_order: dueOrder }
     if (dueTodoIds.length) db(supabase.from('todos').update(dueUpdate).in('id', dueTodoIds))
     if (dueNoteIds.length) db(supabase.from('notes').update(dueUpdate).in('id', dueNoteIds))
     if (dueLinkIds.length) db(supabase.from('links').update(dueUpdate).in('id', dueLinkIds))
 
-    setCategories(builtCats)
-    setActiveTodos((aTodos || []).map(t => ({ id: t.id, text: t.text, checked: t.checked, activated: t.activated, source: 'Active' })))
-    setActiveNotes((aNotes || []).map(n => ({ id: n.id, text: n.text, activated: n.activated, editorHTML: n.editor_html, source: 'Active', accent: false })))
+    const freshTodos = (aTodos || []).map(t => ({ id: t.id, text: t.text, checked: t.checked, activated: t.activated, source: 'Active' }))
+    const freshNotes = (aNotes || []).map(n => ({ id: n.id, text: n.text, activated: n.activated, editorHTML: n.editor_html, source: 'Active', accent: false }))
+    if (seqBeforeOwn === seqAtStart) {
+      setCategories(builtCats)
+      setActiveTodos(freshTodos)
+      setActiveNotes(freshNotes)
+    } else {
+      // Something was added or changed while this load was out (you opened the
+      // app and went straight to adding an item): its answer predates that, so
+      // keep anything still waiting on its real id rather than wiping it from
+      // the screen, and load again once the write has had time to land.
+      setCategories(prev => builtCats.map(cat => {
+        const old = prev.find(c => c.id === cat.id)
+        if (!old) return cat
+        return { ...cat, projects: cat.projects.map(proj => {
+          const op = old.projects.find(p => p.id === proj.id)
+          if (!op) return proj
+          const keep = (fresh, mine, top) => {
+            const extra = (mine || []).filter(x => isTempId(x.id) && !fresh.some(f => f.id === x.id))
+            return top ? [...extra, ...fresh] : [...fresh, ...extra]
+          }
+          return { ...proj, todos: keep(proj.todos, op.todos), notes: keep(proj.notes, op.notes, true), links: keep(proj.links, op.links) }
+        }) }
+      }))
+      setActiveTodos(prev => [...freshTodos, ...prev.filter(x => isTempId(x.id) && !freshTodos.some(f => f.id === x.id))])
+      setActiveNotes(prev => [...freshNotes, ...prev.filter(x => isTempId(x.id) && !freshNotes.some(f => f.id === x.id))])
+      clearTimeout(reloadAgainRef.current)
+      reloadAgainRef.current = setTimeout(() => loadAll(), 1500)
+    }
     freshLoadedRef.current = true
     setLoading(false)
 
@@ -382,10 +440,15 @@ export function AppProvider({ children }) {
     if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
-    const sortOrder = proj?.notes.length || 0
+    // New notes go to the top of the canvas's Notes tab: it takes the first
+    // place and every existing note moves down one
+    const sortOrder = 0
+    ;(proj?.notes || []).forEach((n, k) => {
+      if (!tempNoteIdsRef.current.has(n.id)) db(supabase.from('notes').update({ sort_order: k + 1 }).eq('id', n.id))
+    })
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }]
+      notes: [{ id: tempId, text, activated, scheduledDate, editorHTML: null }, ...proj.notes]
     }))
     tempNoteIdsRef.current.add(tempId)
     send(supabase.from('notes')
@@ -552,11 +615,16 @@ export function AppProvider({ children }) {
     if (scheduledDate) activated = false
     const tempId = Date.now()
     const proj = categoriesRef.current.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)
-    const sortOrder = proj?.notes.length || 0
+    // New notes go to the top of the canvas's Notes tab: it takes the first
+    // place and every existing note moves down one
+    const sortOrder = 0
+    ;(proj?.notes || []).forEach((n, k) => {
+      if (!tempNoteIdsRef.current.has(n.id)) db(supabase.from('notes').update({ sort_order: k + 1 }).eq('id', n.id))
+    })
     const current = proj?.todos.find(t => t.id === todoId)?.linkedNoteIds || []
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      notes: [...proj.notes, { id: tempId, text, activated, scheduledDate, editorHTML: null }],
+      notes: [{ id: tempId, text, activated, scheduledDate, editorHTML: null }, ...proj.notes],
       todos: proj.todos.map(t => t.id !== todoId ? t : { ...t, linkedNoteIds: [...current, tempId] })
     }))
     tempNoteIdsRef.current.add(tempId)

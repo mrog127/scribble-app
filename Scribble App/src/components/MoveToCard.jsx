@@ -4,7 +4,7 @@ import { getCategoryAccent } from '../theme.js'
 import CardTabs from './CardTabs.jsx'
 import AddCanvasRow from './AddCanvasRow.jsx'
 
-// "Move to..." card — pick a destination project. Nothing applies until Save.
+// "Move to..." card — pick a destination project. Nothing applies until Move.
 // Opens centered over a dim scrim. Reuses the .save-to-* styles. Defaults to the
 // tab and project the item is currently in.
 // mode 'projects' (default) picks a destination canvas; mode 'pages' picks a
@@ -89,7 +89,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
           className="save-to-cancel"
           onMouseDown={e => { e.preventDefault(); changed ? finish(() => onSave(sel)) : finish(onCancel) }}
         >
-          {changed ? 'Save' : 'Cancel'}
+          {changed ? 'Move' : 'Cancel'}
         </button>
       </div>
       <div

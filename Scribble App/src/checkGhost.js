@@ -114,7 +114,11 @@ function playCheckGhost(rowEl, { onShown, onDone }) {
   ghost.appendChild(content)
   portal.appendChild(ghost)
 
-  const end = () => { ghost.remove(); onDone?.() }
+  // The row's slot starts closing 200ms after the glass starts to grow and fade;
+  // the glass finishes fading on its own
+  let doneCalled = false
+  const done = () => { if (!doneCalled) { doneCalled = true; onDone?.() } }
+  const end = () => { ghost.remove(); done() }
   const fadeIn = ghost.animate(
     [{ opacity: 0, transform: 'scale(1)' }, { opacity: 1, transform: 'scale(1)' }],
     { duration: FADE_IN_MS, easing: 'ease-out', fill: 'forwards' }
@@ -129,6 +133,7 @@ function playCheckGhost(rowEl, { onShown, onDone }) {
     )
     out.onfinish = end
     out.oncancel = end
+    setTimeout(done, 200)   // the slot starts closing 200ms into the glass's grow and fade
   }
   return true
 }

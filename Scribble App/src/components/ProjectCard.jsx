@@ -20,6 +20,7 @@ import { useTheme } from '../useTheme.js'
 import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon, PlusIcon as FeatherPlusIcon } from './FeatherIcons.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { runCheckOff } from '../checkGhost.js'
+import { moveWithAnimation } from '../moveFx.js'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -735,7 +736,12 @@ function CommentDotIcon() {
 }
 
 export default function ProjectCard({ categoryId, project, sourceLabel }) {
-  const [activeTab, setActiveTab] = useState('list')
+  // The content tab (lists / notes / links) is remembered per canvas, so a
+  // reload of the app shows each card as you left it
+  const [activeTab, setActiveTab] = useState(() => {
+    try { const t = localStorage.getItem(`tab-project-${project.id}`); return t === 'note' || t === 'link' ? t : 'list' } catch { return 'list' }
+  })
+  useEffect(() => { try { localStorage.setItem(`tab-project-${project.id}`, activeTab) } catch {} }, [activeTab, project.id])
 
   // A search result can ask this canvas to open on a particular content type and,
   // if the target item is currently hidden, to reveal it: expand the canvas and
@@ -2006,9 +2012,18 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
             const { type, id } = moveItem
             setMoveItem(null)
             if (sel.projectId === project.id) return
-            if (type === 'todo') moveProjectTodo(categoryId, project.id, sel.categoryId, sel.projectId, id)
-            else if (type === 'note') moveProjectNote(categoryId, project.id, sel.categoryId, sel.projectId, id)
-            else moveProjectLink(categoryId, project.id, sel.categoryId, sel.projectId, id)
+            const item = type === 'todo' ? project.todos.find(t => t.id === id)
+              : type === 'note' ? project.notes.find(n => n.id === id)
+              : project.links.find(l => l.id === id)
+            moveWithAnimation({
+              type, id, toCategoryId: sel.categoryId, toProjectId: sel.projectId,
+              title: item ? (item.title || item.text || item.url || '') : '',
+              commit: () => {
+                if (type === 'todo') moveProjectTodo(categoryId, project.id, sel.categoryId, sel.projectId, id)
+                else if (type === 'note') moveProjectNote(categoryId, project.id, sel.categoryId, sel.projectId, id)
+                else moveProjectLink(categoryId, project.id, sel.categoryId, sel.projectId, id)
+              },
+            })
           }}
         />
       )}

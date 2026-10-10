@@ -101,11 +101,27 @@ export default function GalleryCanvas({ category }) {
     return () => window.removeEventListener(CARD_DRAG_EVENT, onDrag)
   }, [])
 
-  const typesWithItems = ['list', 'note', 'link'].filter(t =>
-    (t === 'list' && activeTodos.length > 0) ||
+  // Completed list items are hidden here unless this Easel shows them, so a
+  // list of nothing but checked items counts as empty.
+  let showChecked = false
+  try { showChecked = localStorage.getItem(`hc-cat-${category.id}`) === 'false' } catch {}
+  const liveTypes = ['list', 'note', 'link'].filter(t =>
+    (t === 'list' && activeTodos.some(x => !x.checked || showChecked)) ||
     (t === 'note' && activeNotes.length > 0) ||
     (t === 'link' && activeLinks.length > 0)
   )
+
+  // ---- Leaving: the last item went, so the card bows out ----
+  // Its body closes down to the header as usual; once the removed row's own
+  // animation has finished, the header pill fades up and out and its space
+  // closes so the cards below slide up.
+  const hadItemsRef = useRef(liveTypes.length > 0)
+  const [leaving, setLeaving] = useState(false)
+  const [gone, setGone] = useState(liveTypes.length === 0)
+  const leavingRef = useRef(false)
+  const leaveAnimsRef = useRef([])
+  const leaveTimerRef = useRef(null)
+  const typesWithItems = liveTypes
   // Same rule as a regular canvas: tabs appear when there's more than one
   // content type, and a single-type canvas shows its one icon only while
   // collapsed or while cards are being rearranged.
@@ -219,6 +235,84 @@ export default function GalleryCanvas({ category }) {
     return () => el.removeEventListener('transitionend', done)
   }, [displayType, contentKey])
 
+  // ---- Leave when the last item goes; come back if one returns ----
+  useLayoutEffect(() => {
+    const empty = liveTypes.length === 0
+    if (!empty) {
+      hadItemsRef.current = true
+      if (leavingRef.current || gone) {
+        leavingRef.current = false
+        clearTimeout(leaveTimerRef.current)
+        leaveAnimsRef.current.forEach(a => { try { a.cancel() } catch {} })
+        leaveAnimsRef.current = []
+        const card = cardRef.current
+        if (card) {
+          card.style.removeProperty('overflow'); card.style.removeProperty('box-sizing')
+          card.querySelectorAll(':scope > .project-items, :scope > .project-bottom-bar').forEach(el => el.style.removeProperty('overflow'))
+        }
+        if (leaving) setLeaving(false)
+        if (gone) setGone(false)
+      }
+      return
+    }
+    if (gone || leavingRef.current) return
+    if (!hadItemsRef.current) { setGone(true); return }
+    leavingRef.current = true
+    setLeaving(true)
+  })
+
+  useLayoutEffect(() => {
+    if (!leaving) return
+    const card = cardRef.current
+    if (!card) { setGone(true); return }
+    const anims = leaveAnimsRef.current
+    const CLOSE_MS = 280
+    const t0 = performance.now()
+    // Wait for the removed row's animation to finish — its glass ghost (if
+    // any) leaving the animation portal — and for the body to close up
+    const wait = () => {
+      if (!leavingRef.current || !card.isConnected) return
+      const portal = document.getElementById('animation-portal')
+      const busy = (portal && portal.childElementCount > 0) ||
+        card.getAnimations({ subtree: true }).some(a => a.playState === 'running' && !(a.animationName || '').includes('orbit'))
+      const waited = performance.now() - t0
+      if ((busy && waited < 2500) || waited < 280) { leaveTimerRef.current = setTimeout(wait, 50); return }
+      // Quick fade up and out
+      const out = card.animate(
+        [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-12px)' }],
+        { duration: 200, easing: 'ease-out', fill: 'forwards' }
+      )
+      anims.push(out)
+      out.onfinish = () => {
+        if (!leavingRef.current || !card.isConnected) return
+        // Close its space so everything below slides up
+        const cs = getComputedStyle(card)
+        const r = card.getBoundingClientRect()
+        const next = card.nextElementSibling
+        const space = next ? next.getBoundingClientRect().top - r.bottom : 0
+        const mb = parseFloat(cs.marginBottom) || 0
+        card.style.boxSizing = 'border-box'
+        card.style.overflow = 'hidden'
+        const close = card.animate(
+          [{ height: r.height + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, marginBottom: mb + 'px', borderWidth: cs.borderTopWidth },
+           { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginBottom: (mb - space) + 'px', borderWidth: '0px' }],
+          { duration: CLOSE_MS, easing: 'ease', fill: 'forwards' }
+        )
+        anims.push(close)
+        close.onfinish = () => {
+          if (!leavingRef.current) return
+          leavingRef.current = false
+          leaveAnimsRef.current = []
+          setLeaving(false)
+          setGone(true)
+        }
+      }
+    }
+    leaveTimerRef.current = setTimeout(wait, 50)
+  }, [leaving]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => () => clearTimeout(leaveTimerRef.current), [])
+
   // ---- Collapse / expand the body when the header is tapped ----
   useLayoutEffect(() => {
     const el = itemsRef.current
@@ -272,7 +366,7 @@ export default function GalleryCanvas({ category }) {
     const card = cardRef.current
     if (!card) return
     requestAnimationFrame(() => { card.classList.add('visible') })
-  }, [])
+  }, [gone])
 
   // Dots themes put the type tabs in a row at the foot of the card, as a canvas
   // card does, instead of in the header.
@@ -280,7 +374,7 @@ export default function GalleryCanvas({ category }) {
 
   // Nothing active in this Easel — no Gallery canvas at all. (After the hooks,
   // so the hook order stays stable across renders.)
-  if (typesWithItems.length === 0) return null
+  if (gone) return null
 
   const tabButton = (type, Icon) => (
     <button

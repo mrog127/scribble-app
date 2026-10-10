@@ -16,6 +16,31 @@ import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
 import CalendarPopup from './components/CalendarPopup.jsx'
 import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
+import { setMoveHandler } from './moveFx.js'
+import { soloItem, subscribeSolo, onSoloClosed, focusSoloWindow } from './soloWindow.js'
+import { inFlight } from './outbox.js'
+
+// ---- Where you were, kept across reloads ----
+// iOS shuts a home-screen web app down soon after it's backgrounded, so the
+// next open is a fresh page load. The page you were on, its scroll position,
+// any open list item / note / link page, and a half-typed Add item draft are
+// kept here, so that reload lands you right back where you left off.
+const VIEW_KEY = 'easels-view'
+const VIEW_MAX_AGE = 24 * 60 * 60 * 1000
+function readView() {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null')
+    return v && Date.now() - (v.at || 0) < VIEW_MAX_AGE ? v : null
+  } catch { return null }
+}
+function writeView(patch) {
+  if (soloItem) return   // a page opened in its own window doesn't move the main window's place
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null') || {}
+    localStorage.setItem(VIEW_KEY, JSON.stringify({ ...v, ...patch, at: Date.now() }))
+  } catch { /* storage full or blocked: nothing to restore next time */ }
+}
+const startupView = readView()
 import AddCanvasRow from './components/AddCanvasRow.jsx'
 import { NoteDetailPage } from './components/NoteCard.jsx'
 import { createPortal } from 'react-dom'
@@ -289,7 +314,17 @@ function AppInner() {
     }
   }
   const categoryIds = categories.map(c => c.id)
-  const [activeTab, setActiveTab] = useState('star')
+  const [activeTab, setActiveTab] = useState(() => {
+    // A page opened in its own window: its easel's page sits behind it
+    if (soloItem) {
+      if (soloItem.type === 'local-note') return 'star'
+      const key = { todo: 'todos', note: 'notes', link: 'links' }[soloItem.type]
+      const cat = categories.find(c => c.projects.some(p => (p[key] || []).some(x => String(x.id) === soloItem.id)))
+      return cat ? cat.id : 'star'
+    }
+    const t = startupView?.tab
+    return t && categories.some(c => c.id === t && !c.archived) ? t : 'star'
+  })
   const [toolbarType, setToolbarType] = useState('list')
   const [inputFocused, setInputFocused] = useState(false)
   const inputFocusedRef = useRef(false)
@@ -454,7 +489,7 @@ function AppInner() {
   const addEaselRef = useRef(null)
   // Press-and-hold an easel to drag it — the same reorder the Easels page uses
   const easelListRef = useRef(null)
-  const { onDragPointerDown: onEaselDrag } = useCategoryDragReorder(easelListRef, categories, reorderCategories, { ghostClass: 'easel-drag-ghost' })
+  const { onDragPointerDown: onEaselDrag } = useCategoryDragReorder(easelListRef, categories, reorderCategories, { ghostClass: 'easel-drag-ghost', ghostInset: { left: 4, right: 16, edge: '.mbar-page-menu' } })
   // A drag shouldn't also navigate: only a quick, still press counts as a tap
   const easelTap = useRef({})
   const closeAddEasel = useCallback(() => { setAddEaselOpen(false); setAddEaselName('') }, [])
@@ -489,6 +524,199 @@ function AppInner() {
   // anywhere — including the other control-bar buttons — only closes the menu.
   const [inputValue, setInputValue] = useState('')
   const [linkUrlValue, setLinkUrlValue] = useState('')
+
+  // ---- Where you were (see readView / writeView) ----
+  // The page you're on
+  useEffect(() => { writeView({ tab: activeTab }) }, [activeTab])
+  // The open list item / note / link page: put back once on start (if the item
+  // is still there), then kept up to date
+  const viewRestoredRef = useRef(false)
+  useEffect(() => {
+    if (viewRestoredRef.current) { writeView({ detail: openDetail ? { type: openDetail.type, id: openDetail.id } : null }); return }
+    viewRestoredRef.current = true
+    if (soloItem) {
+      const key = { todo: 'todos', note: 'notes', link: 'links' }[soloItem.type]
+      let found = null
+      if (soloItem.type === 'local-note') found = activeNotes.find(n => String(n.id) === soloItem.id)
+      else categories.some(c => c.projects.some(p => (found = (p[key] || []).find(x => String(x.id) === soloItem.id))))
+      if (found) setOpenDetail({ type: soloItem.type, id: found.id })
+      return
+    }
+    const d = startupView?.detail
+    if (!d || openDetail) return
+    const exists = d.type === 'local-note'
+      ? activeNotes.some(n => n.id === d.id)
+      : categories.some(c => c.projects.some(p =>
+          (d.type === 'todo' && p.todos.some(t => t.id === d.id)) ||
+          (d.type === 'note' && p.notes.some(n => n.id === d.id)) ||
+          (d.type === 'link' && p.links.some(l => l.id === d.id))))
+    if (exists) setOpenDetail({ type: d.type, id: d.id })
+  }, [openDetail]) // eslint-disable-line react-hooks/exhaustive-deps
+  // ---- Pages out in their own windows (main window) ----
+  // Their rows, wherever they show (Gallery, Easel pages, attachment cards,
+  // link tiles), carry the open-in-window mark at their right end in place of
+  // their usual trailing markers; a tap on one brings its window forward; and
+  // the moment a window closes, this one reloads to show what changed there.
+  useEffect(() => {
+    if (soloItem) return
+    const style = document.createElement('style')
+    style.id = 'solo-open-marks'
+    document.head.appendChild(style)
+    const icon = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E\")"
+    const unsub = subscribeSolo(keys => {
+      const rowSels = [], cellSels = []
+      keys.forEach(key => {
+        const i = key.indexOf(':')
+        const type = key.slice(0, i)
+        const id = CSS.escape(key.slice(i + 1))
+        if (type === 'todo') rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.todo-row)`)
+        if (type === 'note' || type === 'local-note') {
+          rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.note-row:not(.link-row))`)
+          rowSels.push(`.todo-attach-row-wrap[data-attach-id="${id}"] .todo-swipe-row`)
+        }
+        if (type === 'link') {
+          rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.link-row)`)
+          cellSels.push(`.link-grid-cell[data-swipe-id="${id}"]`)
+        }
+      })
+      const all = [...rowSels, ...cellSels]
+      if (!all.length) { style.textContent = ''; return }
+      // A 20px icon drawn at a true 2px (its 24-unit art shown at 20px ≈ 1.67,
+      // so the mask art carries 2.4)
+      const art = icon.replace("stroke-width='2'", "stroke-width='2.4'")
+      style.textContent = `
+        ${all.join(',\n')} { position: relative; }
+        ${all.map(x => x + '::after').join(',\n')} {
+          content: ''; position: absolute; right: 26px; top: 50%; width: 20px; height: 20px;
+          transform: translateY(-50%); background: var(--accent-base, #7A7A7A); pointer-events: none; z-index: 3;
+          -webkit-mask: ${art} center / 20px 20px no-repeat; mask: ${art} center / 20px 20px no-repeat;
+        }
+        ${cellSels.length ? cellSels.map(x => x + '::after').join(',\n') + ' { top: auto; bottom: 23px; transform: none; }' : ''}
+        :is(${all.join(', ')}) :is(.row-schedule-indicator, .todo-attach-indicator, .link-outlink-btn, .attach-row-unattach-btn, .link-tile-edit) { display: none !important; }
+        /* Text stops 16px short of the mark (26px in + 20px icon + 16px):
+           the primary label wraps there, the secondary label truncates */
+        ${rowSels.length ? `:is(${rowSels.join(', ')}) :is(.todo-row, .note-row) { padding-right: 62px !important; }` : ''}
+        ${cellSels.length ? `:is(${cellSels.join(', ')}) .link-tile-text { padding-right: 46px !important; }` : ''}
+      `
+    })
+    // A tap (not a drag or long-press) on one of those rows: to its window
+    let down = null
+    const keyFor = (el) => {
+      const cell = el.closest('.link-grid-cell[data-swipe-id]')
+      if (cell) return { type: 'link', id: cell.dataset.swipeId }
+      const att = el.closest('.todo-attach-row-wrap[data-attach-id]')
+      if (att) return { type: 'note', id: att.dataset.attachId }
+      const row = el.closest('.swipe-row[data-swipe-id]')
+      if (!row) return null
+      const id = row.dataset.swipeId
+      if (row.querySelector('.todo-row')) return { type: 'todo', id }
+      if (row.querySelector('.link-row')) return { type: 'link', id }
+      if (row.querySelector('.note-row')) return { type: 'note', id }
+      return null
+    }
+    const isOut = (k) => !!k &&
+      [k.type, k.type === 'note' ? 'local-note' : null].filter(Boolean).some(t => subscribeSoloKeys.has(`${t}:${k.id}`))
+    const subscribeSoloKeys = new Set()
+    const unsubKeys = subscribeSolo(keys => { subscribeSoloKeys.clear(); keys.forEach(k => subscribeSoloKeys.add(k)) })
+    // The row's own press handling (open, drag, long-press menu) never starts
+    // for these rows — the press belongs to the window
+    const onDown = (e) => {
+      // Only a plain (primary-button) click goes to the window — a right-click
+      // (or Ctrl-click) still opens the row's menu
+      if (e.button !== 0 || e.ctrlKey) { down = null; return }
+      const t = e.target instanceof Element ? e.target : null
+      const k = t && keyFor(t)
+      down = isOut(k) ? { k, x: e.clientX, y: e.clientY } : null
+      if (down) { e.preventDefault(); e.stopPropagation() }
+    }
+    const onUp = (e) => {
+      if (!down) return
+      const d = down
+      down = null
+      e.preventDefault()
+      e.stopPropagation()
+      if (Math.abs(e.clientX - d.x) > 8 || Math.abs(e.clientY - d.y) > 8) return
+      const t = [d.k.type, 'local-note'].find(tp => subscribeSoloKeys.has(`${tp}:${d.k.id}`)) || d.k.type
+      focusSoloWindow(t, d.k.id)
+      // …and swallow the click that follows (link tiles open their site on click)
+      const eat = (ev) => { ev.preventDefault(); ev.stopPropagation() }
+      document.addEventListener('click', eat, true)
+      setTimeout(() => document.removeEventListener('click', eat, true), 400)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('pointerup', onUp, true)
+    const unClosed = onSoloClosed(() => refresh())
+    return () => {
+      unsub(); unsubKeys(); unClosed()
+      style.remove()
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('pointerup', onUp, true)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A page in its own window: Close shuts the window at once — no slide-down.
+  // Anything not yet saved is saved first (the note's autosave flushes on
+  // pagehide), and the window waits only for writes still on their way.
+  useEffect(() => {
+    if (!soloItem) return
+    let closing = false
+    const onPress = (e) => {
+      const btn = e.target instanceof Element ? e.target.closest('.note-detail-done') : null
+      if (!btn || btn.textContent.trim() !== 'Close') return
+      e.preventDefault()
+      e.stopPropagation()
+      if (closing) return
+      closing = true
+      window.dispatchEvent(new Event('pagehide'))
+      const started = Date.now()
+      const tryClose = () => {
+        if (inFlight() === 0 || Date.now() - started > 3000) window.close()
+        else setTimeout(tryClose, 30)
+      }
+      setTimeout(tryClose, 0)
+    }
+    document.addEventListener('pointerdown', onPress, true)
+    document.addEventListener('mousedown', onPress, true)
+    document.addEventListener('click', onPress, true)
+    return () => {
+      document.removeEventListener('pointerdown', onPress, true)
+      document.removeEventListener('mousedown', onPress, true)
+      document.removeEventListener('click', onPress, true)
+    }
+  }, [])
+  // …and if the page closes any other way, the window goes with it
+  useEffect(() => {
+    if (!soloItem || !viewRestoredRef.current || openDetail) return
+    const t = setTimeout(() => window.close(), 200)
+    return () => clearTimeout(t)
+  }, [openDetail])
+  // Each page's scroll position: saved as you scroll, put back on start
+  useEffect(() => {
+    let timer = null
+    const onScroll = (e) => {
+      const el = e.target
+      if (!(el instanceof Element) || !el.classList.contains('page') || !el.classList.contains('active')) return
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        const v = readView() || {}
+        writeView({ scroll: { ...(v.scroll || {}), [activeTabRef.current]: el.scrollTop } })
+      }, 200)
+    }
+    document.addEventListener('scroll', onScroll, true)
+    return () => { document.removeEventListener('scroll', onScroll, true); clearTimeout(timer) }
+  }, [])
+  useLayoutEffect(() => {
+    const top = startupView?.scroll?.[activeTab]
+    if (!top) return
+    // The cards fill in over the first frames; set it until it holds
+    let n = 0
+    const apply = () => {
+      const page = document.querySelector('.page.active:not(.page-exiting)')
+      if (page) page.scrollTop = top
+      if (++n < 6 && (!page || Math.abs(page.scrollTop - top) > 2)) requestAnimationFrame(apply)
+    }
+    apply()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
   // ---- "@" canvas picker ----
@@ -538,6 +766,16 @@ function AppInner() {
     setCcActive(false)
     setCcPick(null)
     setInputValue('')
+    // Phone: the field is empty again, but iOS only re-reads that for
+    // auto-capitalisation when a field gains focus — so focus hops to the
+    // keyboard keeper and straight back (the keyboard stays up), and the next
+    // letter typed is a capital again
+    const input = inputRef.current
+    if (input && window.matchMedia?.('(pointer: coarse)').matches && document.activeElement === input) {
+      input.value = ''
+      keepKeyboardAlive()
+      input.focus({ preventScroll: true })
+    }
   }, [])
 
   // Runs on every keystroke in the add field.
@@ -706,9 +944,27 @@ function AppInner() {
       setAddScheduleDate(null)
       setAddCalOpen(false)
       scrollSelPendingRef.current = true   // scroll the list to the selected canvas
+      // The app was closed (or reloaded) mid-draft: bring the draft back
+      const draft = readView()?.draft
+      if (draft && (draft.text || draft.url) && !inputValueRef.current) {
+        setInputValue(draft.text || '')
+        setLinkUrlValue(draft.url || '')
+        if (draft.type) setToolbarType(draft.type)
+        if (draft.saveTo) { setSaveToTab(draft.saveTo.categoryId); setSaveToProject(draft.saveTo) }
+      }
     }
     prevInputFocused.current = inputFocused
   }, [inputFocused, footerInputMode, computeSaveDefault])
+
+  // The Add item draft, kept while you type (cleared once it's sent or
+  // dismissed) so a reload of the app can bring it back
+  const inputValueRef = useRef('')
+  inputValueRef.current = inputValue
+  useEffect(() => {
+    if (!inputValue && !linkUrlValue) { writeView({ draft: null }); return }
+    if (!inputFocused) return
+    writeView({ draft: { text: inputValue, url: linkUrlValue, type: toolbarType, saveTo: saveToProject } })
+  }, [inputFocused, inputValue, linkUrlValue, toolbarType, saveToProject])
 
   // Once the Save to list has rendered with its selection, scroll it so the
   // selected canvas is centered in view (only when the panel just opened).
@@ -807,6 +1063,58 @@ function AppInner() {
   const inputRef = useRef(null)
   const linkUrlRef = useRef(null)
   const addRowRef = useRef(null)
+
+  // ---- Easels menu: the control bar's open / close motion (phone) ----
+  // Opening, the Easel / Gallery circle becomes the "Add new easel" field: the
+  // field (an overlay laid over the bar, see layout.css) grows rightward out of
+  // the circle to the bar's full width, while the add pill and search circle
+  // slide right and fade out. Closing reverses it: the field shrinks back
+  // leftward into the circle and the others slide left and fade back in.
+  const easelAnimsRef = useRef([])
+  const easelWasOpenRef = useRef(false)
+  useLayoutEffect(() => {
+    const row = addRowRef.current
+    if (!row || window.innerWidth >= 1000) return
+    const wrap = row.querySelector(':scope > .mbar-easel-wrap')
+    const gal = row.querySelector(':scope > .mbar-gallery-wrap')
+    const others = [...row.querySelectorAll(':scope > .link-input-stack:not(.easel-stack):not(.search-stack), :scope > .mbar-search')]
+    // The overlay spans from the circle's left edge to the last control's
+    // right; inside it, the field rests over the add pill's slot
+    const pill = others.find(el => el.classList.contains('link-input-stack'))
+    const search = others.find(el => el.classList.contains('mbar-search'))
+    if (wrap && gal) {
+      const last = others[others.length - 1] || gal
+      const left = gal.offsetLeft
+      const right = last.offsetLeft + last.offsetWidth
+      wrap.style.setProperty('--ew-left', left + 'px')
+      wrap.style.setProperty('--ew-width', Math.max(right - left, gal.offsetWidth) + 'px')
+      if (pill) {
+        wrap.style.setProperty('--ew-rest-left', (pill.offsetLeft - left) + 'px')
+        wrap.style.setProperty('--ew-rest-width', pill.offsetWidth + 'px')
+      }
+    }
+    const ease = 'cubic-bezier(0.4, 0, 0.2, 1)'
+    easelAnimsRef.current.forEach(a => a.cancel())
+    easelAnimsRef.current = []
+    if (pageMenuOpen) {
+      easelWasOpenRef.current = true
+      // The circle moves and grows into the add pill's place, which fades
+      // under it; search slides right and fades
+      if (pill) easelAnimsRef.current.push(pill.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }))
+      if (search) easelAnimsRef.current.push(search.animate(
+        [{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(56px)', opacity: 0 }],
+        { duration: 280, easing: ease, fill: 'forwards' }))
+      if (gal) easelAnimsRef.current.push(gal.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }))
+    } else if (easelWasOpenRef.current) {
+      easelWasOpenRef.current = false
+      if (pill) pill.animate([{ opacity: 0 }, { opacity: 0, offset: 0.3 }, { opacity: 1 }], { duration: 300 })
+      if (search) search.animate(
+        [{ transform: 'translateX(56px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }],
+        { duration: 280, easing: ease })
+      // The circle comes back as the field finishes moving back into it
+      if (gal) gal.animate([{ opacity: 0 }, { opacity: 0, offset: 0.6 }, { opacity: 1 }], { duration: 300 })
+    }
+  }, [pageMenuOpen])
   const addTapRef = useRef(null)   // press origin, so a swipe doesn't open the field
   const tabBarRef = useRef(null)
   const indicatorRef = useRef(null)
@@ -1813,7 +2121,7 @@ function AppInner() {
     return null
   }, [])
 
-  const showAddToast = useCallback((holder, { categoryId, projectId, type, title }) => {
+  const showAddToast = useCallback((holder, { categoryId, projectId, type, title, verb = 'Added to' }) => {
     const catIdx = categories.findIndex(c => c.id === categoryId)
     const accent = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
     const canvasName = categories.find(c => c.id === categoryId)
@@ -1825,7 +2133,7 @@ function AppInner() {
     addToastHover.current = false
     addToastPending.current = false
     addToastDelay.current = setTimeout(() => {
-      setAddToast({ key: Date.now(), holder, categoryId, projectId, type, title, canvasName, accent })
+      setAddToast({ key: Date.now(), holder, categoryId, projectId, type, title, canvasName, accent, verb })
       addToastTimer.current = setTimeout(() => {
         // Cursor on it when the time is up: hold until it moves away
         if (addToastHover.current) { addToastPending.current = true; return }
@@ -1863,6 +2171,118 @@ function AppInner() {
       }, 400)
     }, 60)
   }, [activeTab])
+
+  // ---- Moving an item to another canvas (see moveFx.js) ----
+  // On an easel page: the row fades out, then its space closes up (the card
+  // shrinking with it). Moved within this easel, the page then scrolls to the
+  // destination canvas, whose card opens up a space for it, and the item fades
+  // in there with an easel-colour flash — about 2s in all. Moved to another
+  // easel (or from the Gallery), a "Moved to [canvas]" toast offers the way there.
+  useEffect(() => {
+    setMoveHandler((req) => {
+      const kind = req.type === 'todo' ? 'list' : req.type
+      const here = activeTabRef.current
+      const sameEasel = here !== 'star' && here === req.toCategoryId
+      const toast = () => showAddToast({ id: req.id }, {
+        categoryId: req.toCategoryId, projectId: req.toProjectId, type: kind,
+        title: req.title || '', verb: 'Moved to',
+      })
+      const page = document.querySelector('.page.active:not(.page-exiting)')
+      const wrapperOf = (el) => el.classList.contains('link-grid-cell') ? el : el.closest('.swipe-row')?.parentElement
+      const sources = page
+        ? [...page.querySelectorAll(`[data-project-id] .swipe-row[data-swipe-id="${req.id}"], [data-project-id] .link-grid-cell[data-swipe-id="${req.id}"]`)]
+            .map(wrapperOf).filter(Boolean)
+        : []
+
+      // Hold the item hidden (and with no height) in its new canvas from the
+      // moment it lands there, so it never flashes up before its entrance
+      let hold = null
+      if (sameEasel) {
+        hold = document.createElement('style')
+        hold.textContent =
+          `[data-project-id="${req.toProjectId}"] div:has(> .swipe-row[data-swipe-id="${req.id}"]) { height: 0 !important; overflow: hidden !important; opacity: 0 !important; }` +
+          `[data-project-id="${req.toProjectId}"] .link-grid-cell[data-swipe-id="${req.id}"] { opacity: 0 !important; }`
+        document.head.appendChild(hold)
+      }
+
+      const arrive = () => {
+        requestProjectFocus({ projectId: req.toProjectId, categoryId: req.toCategoryId, type: kind, expand: true })
+        let tries = 0
+        const hunt = setInterval(() => {
+          requestProjectFocus({ projectId: req.toProjectId, categoryId: req.toCategoryId, type: kind, expand: true })
+          const scope = document.querySelector(`[data-project-id="${req.toProjectId}"]`)
+          const row = scope?.querySelector(`.swipe-row[data-swipe-id="${req.id}"], .link-grid-cell[data-swipe-id="${req.id}"]`)
+          if (!row) {
+            if (++tries > 40) { clearInterval(hunt); hold?.remove() }
+            return
+          }
+          clearInterval(hunt)
+          const wrap = wrapperOf(row)
+          const isCell = wrap === row
+          // Take over from the stylesheet hold with the same values inline
+          if (!isCell) { wrap.style.height = '0px'; wrap.style.overflow = 'hidden' }
+          wrap.style.opacity = '0'
+          hold?.remove()
+          // Scroll to the destination canvas…
+          scrollRowIntoView(row)
+          setTimeout(() => {
+            // …its card opens up the space…
+            const grow = () => {
+              wrap.style.transition = 'opacity 300ms ease'
+              wrap.style.opacity = '1'
+              // …and the item fades in with the easel-colour flash
+              row.classList.remove('search-flash')
+              void row.offsetWidth
+              row.classList.add('search-flash')
+              setTimeout(() => row.classList.remove('search-flash'), 1500)
+              setTimeout(() => { ['opacity', 'transition'].forEach(p => wrap.style.removeProperty(p)) }, 320)
+            }
+            if (isCell) { grow(); return }
+            wrap.style.height = 'auto'
+            const full = wrap.getBoundingClientRect().height
+            wrap.style.height = '0px'
+            void wrap.offsetHeight
+            wrap.style.transition = 'height 280ms ease'
+            wrap.style.height = full + 'px'
+            setTimeout(() => {
+              ;['height', 'overflow', 'transition'].forEach(p => wrap.style.removeProperty(p))
+              grow()
+            }, 290)
+          }, 480)
+        }, 30)
+      }
+
+      const finish = () => {
+        req.commit()
+        if (sameEasel) arrive()
+        else toast()
+      }
+
+      // Nothing to animate here (the Gallery, or a collapsed easel's content
+      // type cards, where the row just changes canvas label): move straight away
+      if (!sources.length || here === 'star') { hold?.remove(); req.commit(); if (!sameEasel) toast(); return }
+
+      // Fade out…
+      sources.forEach(w => { w.style.transition = 'opacity 200ms ease'; w.style.opacity = '0' })
+      setTimeout(() => {
+        // …then the space closes up and the card shrinks with it
+        sources.forEach(w => {
+          if (w.classList.contains('link-grid-cell')) return
+          w.style.height = w.getBoundingClientRect().height + 'px'
+          w.style.overflow = 'hidden'
+        })
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          sources.forEach(w => {
+            if (w.classList.contains('link-grid-cell')) return
+            w.style.transition = 'height 260ms ease'
+            w.style.height = '0px'
+          })
+        }))
+        setTimeout(finish, 300)
+      }, 200)
+    })
+    return () => setMoveHandler(null)
+  }, [showAddToast])
 
   // Will the new row actually be on screen where you are? On a project page,
   // only if it lands on that page's easel. On the Gallery, only if it's
@@ -2582,7 +3002,7 @@ function AppInner() {
             >
               <span className="add-toast-icon"><ToastTypeIcon type={addToast.type}/></span>
               <span className="add-toast-text">
-                <span className="add-toast-canvas">Added to {addToast.canvasName}</span>
+                <span className="add-toast-canvas">{addToast.verb || 'Added to'} {addToast.canvasName}</span>
                 <span className="add-toast-title">{addToast.title}</span>
               </span>
               <svg className="add-toast-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -2694,12 +3114,12 @@ function AppInner() {
                 }}
               >
                 {!addEaselOpen && (
-                  <span className="mbar-placeholder" aria-hidden="true">
+                  <span className="mbar-placeholder easel-placeholder" aria-hidden="true">
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                       <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                       <line x1="3.5" y1="10" x2="16.5" y2="10" stroke="#B5B4B2" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                     </svg>
-                    <span className="mbar-placeholder-label">Add new easel</span>
+                    <span className="mbar-placeholder-label easel-placeholder-label">Add new easel</span>
                   </span>
                 )}
                 <input
@@ -2708,6 +3128,10 @@ function AppInner() {
                   placeholder={addEaselOpen ? 'Name easel' : ''}
                   value={addEaselName}
                   onChange={e => setAddEaselName(e.target.value)}
+                  onBlur={() => requestAnimationFrame(() => {
+                    // Tapped away with nothing typed: the field goes back to rest
+                    if (document.activeElement !== addEaselRef.current && !addEaselRef.current?.value.trim()) closeAddEasel()
+                  })}
                   onKeyDown={e => {
                     if (e.key === 'Enter') { e.preventDefault(); submitAddEasel() }
                     if (e.key === 'Escape') { e.preventDefault(); closeAddEasel() }
@@ -2718,25 +3142,6 @@ function AppInner() {
                   spellCheck="false"
                   enterKeyHint="done"
                 />
-                {!addEaselOpen && (
-                  <button
-                    className="save-to-new-btn easel-close-btn"
-                    aria-label="Close easels"
-                    /* Resting, the X dismisses the whole Easels menu — the field
-                       has nothing of its own to cancel yet. */
-                    onPointerDown={e => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setPageMenuOpen(false)
-                      closeAddEasel()
-                    }}
-                    onClick={e => { e.preventDefault(); e.stopPropagation() }}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M6 6 L14 14 M14 6 L6 14" stroke="#959493" strokeWidth="1" strokeLinecap="round"/>
-                    </svg>
-                  </button>
-                )}
                 {addEaselOpen && (
                   <button
                     className="save-to-new-btn easel-cancel-btn"

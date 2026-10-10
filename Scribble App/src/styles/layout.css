@@ -12761,3 +12761,34 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   font: inherit;
   letter-spacing: inherit;
 }
+
+/* Add item, link: Paste / clear rest with no fill; hover and press keep theirs */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear):not(:hover):not(.is-pressed) { background: transparent; }
+
+/* Add item, desktop: 400px wide, still centred over the left-hand column */
+@media (min-width: 1000px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open),
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    width: 400px;
+    left: max(16px, calc(var(--gutter, 0px) + 170px - 200px));
+  }
+}
+
+/* Add item, desktop: 360px wide, still centred over the left-hand column */
+@media (min-width: 1000px) {
+  :root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open),
+  :root[data-theme="paintbrush"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) {
+    width: 360px;
+    left: max(16px, calc(var(--gutter, 0px) + 170px - 180px));
+  }
+}
+
+/* Add item, link (desktop too): Paste / clear sit inside the right end of the
+   full-width URL field */
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open :is(.paste-btn, .add-link-clear) {
+    top: calc((var(--mbar-h) - 40px) / 2);
+    right: 2px;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input { padding-right: 52px; }
+}

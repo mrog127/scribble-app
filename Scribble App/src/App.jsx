@@ -804,6 +804,7 @@ function AppInner() {
   const [saveToOpen, setSaveToOpen] = useState(false)
   const [stPending, setStPending] = useState(null)        // the Save to menu's choice, until Save
   const [typeMenuOpen, setTypeMenuOpen] = useState(false)
+  const [addTitleFocused, setAddTitleFocused] = useState(false)   // the caret is in Add item's title field
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
   const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
@@ -3366,6 +3367,11 @@ function AppInner() {
                 // doesn't count as a tap.
                 if (toolbarType === 'link') return
                 if (e.target.closest('.send-btn')) return
+                // Presses on the open box's own controls (Cancel, the type
+                // button, the tag menu…) are never a tap on the pill. Cancel
+                // closes the box on press, so its release lands on the resting
+                // pill now under the cursor — counting it reopened Add item.
+                if (e.target.closest('.add-head, .cc-menu, .add-link-url-wrap, button')) { addTapRef.current = null; return }
                 addTapRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId }
               }}
               onPointerUp={e => {
@@ -3481,15 +3487,15 @@ function AppInner() {
               <textarea
                 ref={inputRef}
                 rows={1}
-                className={`add-input add-title-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}${toolbarType === 'note' ? ' untitled-note' : ''}${ccActive ? ' cc-token' : ''}`}
+                className={`add-input add-title-input${inputFocused && toolbarType !== 'link' ? ' focused' : ''}${toolbarType === 'note' || toolbarType === 'link' ? ' untitled-note' : ''}${ccActive ? ' cc-token' : ''}`}
                 style={ccActive && ccAccent
                   ? { color: 'transparent', caretColor: ccAccent.dark }
                   : undefined}
-                placeholder={toolbarType === 'link' && inputFocused ? 'Title your link' : (toolbarType === 'note' && inputFocused ? 'Untitled note' : (dotsTheme && !inputFocused ? '' : (isMobileView ? 'Add an item' : 'Scribble something down...')))}
+                placeholder={toolbarType === 'link' && inputFocused ? (addTitleFocused ? '' : 'Title your link') : (toolbarType === 'note' && inputFocused ? 'Untitled note' : (dotsTheme && !inputFocused ? '' : (isMobileView ? 'Add an item' : 'Scribble something down...')))}
                 value={inputValue}
                 onChange={e => handleAddInputChange(e.target.value)}
-                onFocus={() => setInputFocused(true)}
-                onBlur={handleAddInputBlur}
+                onFocus={() => { setInputFocused(true); setAddTitleFocused(true) }}
+                onBlur={(e) => { setAddTitleFocused(false); handleAddInputBlur(e) }}
                 onKeyDown={e => {
                   // The tag search's Return picks the highlighted canvas, whatever the type
                   if (ccActive) { handleKeyDown(e); return }

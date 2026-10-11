@@ -6,7 +6,7 @@ import { soloItem, DONE_LABEL, openSoloWindow } from '../soloWindow.js'
 import { createPortal } from 'react-dom'
 import underlineUrl from '../assets/Underline.svg?url'
 import { useAppContext } from '../context/AppContext.jsx'
-import { getCategoryAccent } from '../theme.js'
+import { getCategoryAccent, getInboxAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
 import { useScrollable } from '../useScrollable.js'
 import MoveToCard from './MoveToCard.jsx'
@@ -216,15 +216,18 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
   const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId,
-    promptDelete, deleteProjectNote, archiveProjectNote, unarchiveProjectNote } = useAppContext()
+    promptDelete, deleteProjectNote, archiveProjectNote, unarchiveProjectNote, isInboxId } = useAppContext()
+  // An Inbox note's page is a reduced one: Delete is its menu's only option
+  const inInbox = isInboxId(categoryId)
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
   const noteAccent = useMemo(() => {
+    if (inInbox) return getInboxAccent()
     if (!note?.categoryId) return null
     const idx = categories.findIndex(c => c.id === note.categoryId)
     if (idx === -1) return null
     return getCategoryAccent(idx)
-  }, [note, categories])
+  }, [note, categories, inInbox])
 
   const [editing, setEditing] = useState(false)
   // Title-only editing (Dots themes): tapping the title edits just the title,
@@ -1591,7 +1594,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // Footer drop shadow only when the note content can scroll
   const contentScrollable = useScrollable(editorRef, [editing, isOpen, note])
 
-  const footerMenuItems = [
+  const footerMenuItems = inInbox ? [
+    {
+      label: 'Delete Note',
+      icon: <TrashMenuIcon/>,
+      danger: true,
+      onSelect: () => promptDelete(() => { deleteProjectNote(categoryId, projectId, note.id); onClose() }),
+    },
+  ] : [
     { label: 'Copy Note', icon: <CopyMenuIcon/>, onSelect: handleCopy },
     categoryId != null && projectId != null && {
       label: note.archived ? 'Unarchive Note' : 'Archive Note',
@@ -1614,7 +1624,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}${hasFooter ? ' has-footer' : ''}`}
+      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}${hasFooter ? ' has-footer' : ''}${inInbox ? ' inbox-page' : ''}`}
       style={{
         '--underline-url': `url(${underlineUrl})`,
         ...(noteAccent ? {
@@ -1734,10 +1744,11 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           activated={!!activated}
           scheduledDate={note.scheduledDate}
           onToggleActive={onToggleActive}
-          onSchedule={onSchedule}
+          onSchedule={inInbox ? undefined : onSchedule}
           onClearSchedule={onClearSchedule}
           accent={noteAccent}
           projectName={projectName}
+          inbox={inInbox}
           onProjectClick={openMove}
           menuOpen={moveOpen}
           onCopy={handleCopy}

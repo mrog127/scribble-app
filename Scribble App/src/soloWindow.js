@@ -68,15 +68,15 @@ if (!soloItem) {
   setInterval(() => winRefs.forEach((w, key) => { if (w.closed) markClosed(key) }), 1000)
 }
 
-// Browser: a 720-wide popup window. Installed web app: a second app window.
+// Browser: a 560-wide popup window. Installed web app: a second app window.
 // The window opens at once (it has to, inside the click), blank in the app's
 // colour, and is pointed at the page once anything just saved here has
 // reached the server — so it never opens on an older copy of the page.
 export function openSoloWindow(type, id) {
   const key = soloKey(type, id)
   const h = Math.round((window.screen?.availHeight || 900) * 0.85)
-  const left = Math.max(0, (window.screen?.availWidth || 1440) - 720 - 48)
-  const w = window.open('', winName(key), `popup=yes,width=720,height=${h},left=${left},top=48`)
+  const left = Math.max(0, (window.screen?.availWidth || 1440) - 560 - 48)
+  const w = window.open('', winName(key), `popup=yes,width=560,height=${h},left=${left},top=48`)
   if (!w) { window.open(soloUrl(key), '_blank'); return }
   try {
     const bg = getComputedStyle(document.querySelector('.phone') || document.body).backgroundColor

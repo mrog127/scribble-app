@@ -6,7 +6,7 @@ import { NoteDetailPage } from './NoteCard.jsx'
 import TodoDetailPage from './TodoDetailPage.jsx'
 import { getCategoryAccent } from '../theme.js'
 import { CalendarIcon, RecurringCalendarIcon, isRecurring, isScheduleLocked, formatSchedule, useActivatePress, ActivateIcon, closeSwipeRow, toAnchorRect, groupByActivation, formatScheduleShort } from './ScheduleBits.jsx'
-import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon, PinMenuIcon } from './MenuIcons.jsx'
+import { EyeIcon, EyeOffIcon, EditIcon, ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon, CalendarMenuIcon, FolderMenuIcon, CopyMenuIcon, PinMenuIcon, GoToMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, GalleryMenuIcon, isRowMenuOpen } from './RowMenu.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import { CARD_DRAG_EVENT } from './useCardDragReorder.js'
@@ -1997,6 +1997,25 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
           </button>
   )
 
+  // Unpinned on the Gallery: the card fades up and out while its space closes,
+  // so the cards below slide up — then it's unpinned (and leaves the list)
+  const unpinFromGallery = () => {
+    const card = cardRef.current
+    const wrap = card?.parentElement
+    if (!card || !wrap || !wrap.hasAttribute('data-project-id')) { toggleProjectPinned(categoryId, project.id); return }
+    const r = wrap.getBoundingClientRect()
+    const mb = parseFloat(getComputedStyle(card).marginBottom) || 0
+    wrap.style.pointerEvents = 'none'
+    card.animate(
+      [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-12px)' }],
+      { duration: 220, easing: 'ease-out', fill: 'forwards' }
+    )
+    wrap.style.overflow = 'hidden'
+    card.animate([{ marginBottom: mb + 'px' }, { marginBottom: '0px' }], { duration: 280, easing: 'ease', fill: 'forwards' })
+    const shut = wrap.animate([{ height: (r.height + mb) + 'px' }, { height: '0px' }], { duration: 280, easing: 'ease', fill: 'forwards' })
+    shut.onfinish = () => toggleProjectPinned(categoryId, project.id)
+  }
+
   return (
     <>
       {/* NOTE: don't add render-dependent classes to this element — the intro
@@ -2043,7 +2062,11 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
         />
       )}
 
-      <div className={`card project-card card-intro${archived ? ' archived' : ''}`} ref={cardRef}>
+      <div className={`card project-card card-intro${archived ? ' archived' : ''}${sourceLabel ? ' pinned-gallery' : ''}`} ref={cardRef}>
+        {/* Pinned on the Gallery: the easel Gallery card's orbiting stroke and
+            inner glow, in this canvas's Easel colour */}
+        {sourceLabel && <span className="gallery-canvas-stroke" aria-hidden="true"/>}
+        {sourceLabel && <span className="gallery-canvas-glow" aria-hidden="true"/>}
         {/* Header */}
         <div className={`card-header${collapsed ? ' collapsed' : ''}`} onClick={handleHeaderClick}>
           {renaming ? (
@@ -2107,6 +2130,25 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
               <span/><span/><span/>
             </div>
               <div className={`card-context-menu${menuOpen ? ' open' : ''}`}>
+                {/* Pinned on the Gallery: just the way to the canvas, and Unpin */}
+                {sourceLabel ? (
+                  <>
+                    <button
+                      className="card-context-item"
+                      onMouseDown={e => { e.preventDefault(); closeCardMenu(); sourceLabel.onOpen() }}
+                    >
+                      <GoToMenuIcon/>
+                      Go to Canvas
+                    </button>
+                    <button
+                      className="card-context-item"
+                      onMouseDown={e => { e.preventDefault(); closeCardMenu(); unpinFromGallery() }}
+                    >
+                      <PinMenuIcon/>
+                      Unpin from Gallery
+                    </button>
+                  </>
+                ) : (<>
                 {displayType === 'list' && hasChecked && (
                   <button
                     className="card-context-item"
@@ -2206,6 +2248,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
                   <TrashMenuIcon/>
                   Delete Canvas
                 </button>
+                </>)}
               </div>
           </div>
           </div>

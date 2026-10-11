@@ -8,6 +8,7 @@ import { useAppContext } from '../context/AppContext.jsx'
 import { EyeIcon, EyeOffIcon, CalendarMenuIcon } from './MenuIcons.jsx'
 import OutlinkButton from './OutlinkButton.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
+import InboxCard from './InboxCard.jsx'
 import ProjectCard, { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
 import { useCardDragReorder } from './useCardDragReorder.js'
 import UnderlineSvg from '../assets/Underline.svg?react'
@@ -997,7 +998,8 @@ export default function ActivePage({
   onOpenSettings,
 }) {
   const pageRef = useRef(null)
-  const { categories, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated, reorderPinnedProjects } = useAppContext()
+  const { categories, inbox, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated, reorderPinnedProjects } = useAppContext()
+  const inboxCount = inbox ? inbox.todos.length + inbox.notes.length + inbox.links.length : 0
 
   // Fade a drop shadow in behind the cards over the first 56px of scrolling (0% → 4%)
   const handleScroll = useCallback((e) => {
@@ -1092,7 +1094,7 @@ export default function ActivePage({
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
   const decorationColor = domCatIdx >= 0 ? getCategoryAccent(domCatIdx).base : getHomeAccent().base
 
-  const hasContent = todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
+  const hasContent = inboxCount > 0 || todos.length > 0 || notes.length > 0 || allActivatedTodos.length > 0 || allActivatedNotes.length > 0 || allActivatedLinks.length > 0
 
   return (
     <div
@@ -1133,6 +1135,8 @@ export default function ActivePage({
       )}
 
       <div className="cards-area" id="cardsArea">
+        {/* The Inbox, locked to the top (only while it has something in it) */}
+        <InboxCard/>
         {pinnedProjects.length > 0 && (
           <div className="pinned-canvases" ref={pinnedRef}>
             {pinnedProjects.map(p => (

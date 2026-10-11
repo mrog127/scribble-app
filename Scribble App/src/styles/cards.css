@@ -3139,8 +3139,23 @@
      own radius either way). */
   overflow: visible;
 }
+.pinned-gallery {
+  position: relative;
+  /* The animated ring has to land ON the card's 1px gray border, not inside it,
+     or the two stack up and the edge reads 2px wide. An absolutely positioned
+     child is laid out against the padding box, so it needs inset:-1px — which
+     the card's own overflow:hidden would clip away. Let the card overflow and
+     move the corner clipping onto the body instead (the header has no
+     background of its own, and the card's background still paints inside its
+     own radius either way). */
+  overflow: visible;
+}
 
 .gallery-canvas > .project-items {
+  overflow: hidden;
+  border-radius: 0 0 15px 15px;
+}
+.pinned-gallery > .project-items {
   overflow: hidden;
   border-radius: 0 0 15px 15px;
 }
@@ -3149,6 +3164,24 @@
    card clips its overflow, so the ring sits just inside the 1px border rather
    than on top of it. */
 .gallery-canvas > .gallery-canvas-stroke {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle),
+    hsl(from var(--accent-dark) h s calc(l * 1.53) / 0.6),
+    hsl(from var(--accent-dark) h s calc(l * 0.576 - 4) / 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.pinned-gallery > .gallery-canvas-stroke {
   content: '';
   position: absolute;
   inset: -1px;
@@ -3181,6 +3214,18 @@
   pointer-events: none;
   z-index: 1;
 }
+.pinned-gallery > .gallery-canvas-glow {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  opacity: 0.5;
+  box-shadow: inset var(--glow-x) var(--glow-y) 22px
+    hsl(from var(--accent-light) h calc(s * 1.08) calc(l * 0.98));
+  animation: gallery-canvas-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
 
 @keyframes gallery-canvas-orbit {
   0%   { --glow-x: 10px;  --glow-y: 0px; }
@@ -3193,10 +3238,14 @@
 /* Keep the card's own content above both layers */
 .gallery-canvas > .card-header,
 .gallery-canvas > .project-items { position: relative; z-index: 3; }
+.pinned-gallery > .card-header,
+.pinned-gallery > .project-items { position: relative; z-index: 3; }
 
 @media (prefers-reduced-motion: reduce) {
   .gallery-canvas > .gallery-canvas-stroke,
   .gallery-canvas > .gallery-canvas-glow { animation: none; }
+.pinned-gallery > .gallery-canvas-stroke,
+  .pinned-gallery > .gallery-canvas-glow { animation: none; }
 }
 
 /* Title icon sits 6px to the left of "Gallery"; both wear the Easel's dark

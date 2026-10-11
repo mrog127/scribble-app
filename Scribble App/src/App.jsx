@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { isRowDragging } from './rowDragLock.js'
 import { flushSync } from 'react-dom'
-import { ACCENT_COLORS, getCategoryAccent, getHomeAccent, mixHex } from './theme.js'
+import { ACCENT_COLORS, getCategoryAccent, getHomeAccent, getInboxAccent, mixHex } from './theme.js'
 import { useTheme } from './useTheme.js'
 import ActivePage from './components/ActivePage.jsx'
 import CategoryPage from './components/CategoryPage.jsx'
@@ -11,7 +11,7 @@ import MenuPage, { useCategoryDragReorder } from './components/MenuPage.jsx'
 import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
-import CardTabs from './components/CardTabs.jsx'
+import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
 import CalendarPopup from './components/CalendarPopup.jsx'
@@ -262,7 +262,10 @@ function AppInner() {
     setOpenDetail, setAutoEditNoteId, refresh,
     registerComposeHandler, addCategory, reorderCategories,
     openDetail, updateProjectNote, toggleProjectNoteActivated, setProjectNoteScheduled,
+    inboxIds, isInboxId, addInboxItem,
   } = useAppContext()
+  // Is this Add item destination the Inbox?
+  const isInboxTarget = (t) => !!t && isInboxId(t.categoryId)
   const pullSpinnerRef = usePullToRefresh(refresh)
 
   // (see goToNewNote) Once the new note's page has closed, flash its row
@@ -720,17 +723,28 @@ function AppInner() {
   const [headerOpacity, setHeaderOpacity] = useState(1)
   const [headerTranslate, setHeaderTranslate] = useState(0)
   // ---- "@" canvas picker ----
-  // Typing `@` as the very first character of the add field turns it into a
-  // canvas search: the `@` and what follows read as one highlighted token, and
-  // the Save-to list shows matching canvases from every page. Return commits the
-  // highlighted one; deleting the `@` leaves the picker.
+  // Typing `@` anywhere in the add field opens a canvas tag: the `@` and what's
+  // typed after it read as one highlighted token, and a menu lists matching
+  // canvases from every page (and the Inbox, for "@inbox"). Return / tapping
+  // one commits it — the token leaves the text and that canvas becomes the
+  // destination. Backspace while the tag is open just closes it, leaving the
+  // `@…` as ordinary text (the next Backspace deletes as usual); deleting the
+  // `@` itself closes it too. (Backspace first deletes the tag's own letters;
+  // only with just the "@" left does it close the tag.)
   const [ccActive, setCcActive] = useState(false)
   const [ccPick, setCcPick] = useState(null)   // { categoryId, projectId } | null
+  const [ccStart, setCcStart] = useState(0)    // index of the tag's "@"
+  const [ccEnd, setCcEnd] = useState(0)        // end of the tag (the caret)
+  const ccQuery = ccActive ? inputValue.slice(ccStart + 1, ccEnd) : ''
 
   const ccMatches = useMemo(() => {
     if (!ccActive) return []
-    const q = inputValue.replace(/^@/, '').trim().toLowerCase()
+    const q = ccQuery.trim().toLowerCase()
     const out = []
+    // The Inbox, at the top
+    if (inboxIds && (!q || 'inbox'.includes(q))) {
+      out.push({ categoryId: inboxIds.categoryId, projectId: inboxIds.projectId, name: 'Inbox', categoryName: '', inbox: true })
+    }
     categories.forEach((cat, catIdx) => {
       // An Easel's name matches all of its canvases
       const easelHit = !!q && (cat.name || '').toLowerCase().includes(q)
@@ -742,71 +756,91 @@ function AppInner() {
       })
     })
     return out
-  }, [ccActive, inputValue, categories])
+  }, [ccActive, ccQuery, categories, inboxIds])
 
-  // Highlighted canvas: whatever the user tapped, else the first match
+  // Highlighted canvas: whatever the user tapped, else the first match — but
+  // with nothing typed after the "@" yet, the first Easel's first canvas (the
+  // Inbox is listed above it, but a bare "@" + Return files to a canvas)
   const ccSelected = useMemo(() => {
     if (!ccActive) return null
     if (ccPick) {
       const hit = ccMatches.find(m => m.projectId === ccPick.projectId)
       if (hit) return hit
     }
+    if (!ccQuery.trim()) return ccMatches.find(m => !m.inbox) || ccMatches[0] || null
     return ccMatches[0] || null
-  }, [ccActive, ccPick, ccMatches])
+  }, [ccActive, ccPick, ccMatches, ccQuery])
 
-  const ccAccent = ccSelected ? getCategoryAccent(ccSelected.accentIdx) : null
+  const ccAccentOf = (m) => (m?.inbox ? getInboxAccent() : getCategoryAccent(m?.accentIdx ?? 0))
+  const ccAccent = ccSelected ? ccAccentOf(ccSelected) : null
   const ccSelectedRef = useRef(null)
   ccSelectedRef.current = ccSelected
+  const ccRangeRef = useRef({ start: 0, end: 0 })
+  ccRangeRef.current = { start: ccStart, end: ccEnd }
 
-  // Commit the highlighted canvas: it becomes the Save-to destination, the panel
-  // returns to its normal state showing that canvas's page, and the field clears.
+  const ccClose = useCallback(() => { setCcActive(false); setCcPick(null) }, [])
+
+  // Commit the highlighted canvas: it becomes the Save-to destination and the
+  // tag leaves the text (the rest of what's typed stays).
   const ccCommit = useCallback((pick) => {
     if (pick) {
-      setSaveToTab(pick.categoryId)
+      if (!pick.inbox) setSaveToTab(pick.categoryId)
       setSaveToProject({ categoryId: pick.categoryId, projectId: pick.projectId })
     }
+    const { start, end } = ccRangeRef.current
+    const raw = inputValueRef.current || ''
+    let before = raw.slice(0, start), after = raw.slice(end)
+    // don't leave two spaces where the tag was
+    if (/\s$/.test(before) && (/^\s/.test(after) || !after)) before = before.replace(/\s$/, '')
+    const next = before + after
     setCcActive(false)
     setCcPick(null)
-    setInputValue('')
-    // Phone: the field is empty again, but iOS only re-reads that for
-    // auto-capitalisation when a field gains focus — so focus hops to the
-    // keyboard keeper and straight back (the keyboard stays up), and the next
-    // letter typed is a capital again
+    setInputValue(next)
     const input = inputRef.current
-    if (input && window.matchMedia?.('(pointer: coarse)').matches && document.activeElement === input) {
+    if (!input) return
+    if (!next && window.matchMedia?.('(pointer: coarse)').matches && document.activeElement === input) {
+      // Phone: the field is empty again, but iOS only re-reads that for
+      // auto-capitalisation when a field gains focus — so focus hops to the
+      // keyboard keeper and straight back (the keyboard stays up), and the next
+      // letter typed is a capital again
       input.value = ''
       keepKeyboardAlive()
       input.focus({ preventScroll: true })
+      return
     }
+    // the caret goes back to where the tag was
+    requestAnimationFrame(() => { try { input.setSelectionRange(before.length, before.length) } catch {} })
   }, [])
 
   // Runs on every keystroke in the add field.
-  const handleAddInputChange = useCallback((raw) => {
+  const handleAddInputChange = useCallback((raw, caret = raw.length) => {
+    const prev = inputValueRef.current || ''
     if (ccActive) {
-      // The leading "@" holds the picker open — losing it leaves. Everything
-      // else refines the search, spaces included (canvas names have them).
-      if (!/^@/.test(raw)) { setCcActive(false); setCcPick(null) }
+      // Losing the "@" (or the caret moving back before it) closes the tag.
+      // Everything typed after it refines the search, spaces included.
+      if (raw[ccStart] !== '@' || caret <= ccStart) ccClose()
+      else setCcEnd(caret)
       setInputValue(raw)
       return
     }
-    // Only the very start of an empty field can open the picker.
-    if (/^@/.test(raw)) {
+    // A freshly typed "@" — anywhere in the text — opens a tag
+    if (raw.length === prev.length + 1 && caret > 0 && raw[caret - 1] === '@' &&
+        raw.slice(0, caret - 1) + raw.slice(caret) === prev) {
       setCcActive(true)
       setCcPick(null)
-      setInputValue(raw)   // the "@" stays, as part of the token
-      return
+      setCcStart(caret - 1)
+      setCcEnd(caret)
     }
     setInputValue(raw)
-  }, [ccActive, ccCommit])
+  }, [ccActive, ccStart, ccClose])
 
   // Add item: the Save to menu opens only from the folder button, and the
   // content type is picked from a small menu off the type button
   const [saveToOpen, setSaveToOpen] = useState(false)
-  const [stPending, setStPending] = useState(null)        // the Save to menu's choice, until Save
   const [typeMenuOpen, setTypeMenuOpen] = useState(false)
   const [addTitleFocused, setAddTitleFocused] = useState(false)   // the caret is in Add item's title field
-  const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId }
-  const [saveToTab, setSaveToTab] = useState(null)           // category whose projects show in the Save to card
+  const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId } — the Inbox's ids for the Inbox
+  const [saveToTab, setSaveToTab] = useState(null)           // Easel whose canvases show in the Save to card
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
   const pageAddedRef = useRef(null)                          // { tab, categoryId, projectId } last canvas added to while on this page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
@@ -819,7 +853,7 @@ function AppInner() {
     const id = requestAnimationFrame(() => {
       const scroller = saveToScrollRef.current
       if (!scroller) return
-      const sel = scroller.querySelector('.save-to-option.selected')
+      const sel = scroller.querySelector('.save-to-option.is-current')
       if (!sel) return
       const sRect = scroller.getBoundingClientRect()
       const eRect = sel.getBoundingClientRect()
@@ -898,37 +932,28 @@ function AppInner() {
   }, [categories]) // eslint-disable-line
 
   // The default destination for the "Save to..." card:
-  //  - a project page → whichever canvas was last added to while on this page,
-  //    else the page's top canvas
-  //  - homescreen → the project last added to this session, else the first
-  //    project of the first tab
-  // Archived projects are never offered.
+  //  - the Gallery → the Inbox
+  //  - an Easel's page → that page's first canvas — or, right after adding to
+  //    one of this Easel's canvases, that canvas, for as long as you stay on
+  //    the page (adding to the Inbox or another Easel goes back to the first)
+  //  - a canvas card's add button → that canvas (pendingComposeRef, below)
+  // The Save to card's canvas list opens on the page's Easel (or, from the
+  // Gallery, the first Easel). Archived projects are never offered.
   const computeSaveDefault = useCallback(() => {
-    const firstActive = (cat) => cat?.projects.find(p => !p.archived) || null
-    if (categoryIds.includes(activeTab)) {
+    const onEasel = categoryIds.includes(activeTab)
+    const browse = onEasel ? activeTab : (categories.find(c => c.projects.some(p => !p.archived))?.id ?? categories[0]?.id ?? null)
+    if (onEasel) {
+      const cat = categories.find(c => c.id === activeTab)
       const added = pageAddedRef.current
-      if (added && added.tab === activeTab) {
-        const ac = categories.find(c => c.id === added.categoryId)
-        if (ac?.projects.some(p => p.id === added.projectId && !p.archived)) {
-          return { tab: added.categoryId, target: { categoryId: added.categoryId, projectId: added.projectId } }
-        }
+      if (added && added.tab === activeTab && added.categoryId === activeTab &&
+          cat?.projects.some(p => p.id === added.projectId && !p.archived)) {
+        return { tab: activeTab, target: { categoryId: activeTab, projectId: added.projectId } }
       }
-      const proj = firstActive(categories.find(c => c.id === activeTab))
-      return { tab: activeTab, target: proj ? { categoryId: activeTab, projectId: proj.id } : null }
+      const first = cat?.projects.find(p => !p.archived)
+      if (first) return { tab: activeTab, target: { categoryId: activeTab, projectId: first.id } }
     }
-    const last = lastAddedRef.current
-    if (last) {
-      const cat = categories.find(c => c.id === last.categoryId)
-      const proj = cat?.projects.find(p => p.id === last.projectId && !p.archived)
-      if (proj) return { tab: last.categoryId, target: last }
-    }
-    const firstCat = categories.find(c => c.projects.some(p => !p.archived))
-    const firstProj = firstActive(firstCat)
-    return {
-      tab: firstCat?.id ?? categories[0]?.id ?? null,
-      target: firstCat && firstProj ? { categoryId: firstCat.id, projectId: firstProj.id } : null,
-    }
-  }, [categories, activeTab, categoryIds])
+    return { tab: browse, target: inboxIds }
+  }, [categories, activeTab, categoryIds, inboxIds])
 
   // Apply the default each time the Save to card opens (input focused). A pending
   // compose request (from a project card's "Add" button) wins over the default.
@@ -958,7 +983,10 @@ function AppInner() {
         setInputValue(draft.text || '')
         setLinkUrlValue(draft.url || '')
         if (draft.type) setToolbarType(draft.type)
-        if (draft.saveTo) { setSaveToTab(draft.saveTo.categoryId); setSaveToProject(draft.saveTo) }
+        if (draft.saveTo) {
+          if (!isInboxId(draft.saveTo.categoryId)) setSaveToTab(draft.saveTo.categoryId)
+          setSaveToProject(draft.saveTo)
+        }
       }
     }
     prevInputFocused.current = inputFocused
@@ -982,7 +1010,7 @@ function AppInner() {
     scrollSelPendingRef.current = false
     const raf = requestAnimationFrame(() => {
       const scroller = saveToScrollRef.current
-      const sel = scroller?.querySelector('.save-to-option.selected')
+      const sel = scroller?.querySelector('.save-to-option.is-current')
       if (!scroller || !sel) return
       const sRect = scroller.getBoundingClientRect()
       const eRect = sel.getBoundingClientRect()
@@ -1018,8 +1046,8 @@ function AppInner() {
   // Keep the current selection valid as data changes (e.g. a project is deleted or
   // archived); fall back to the default when it goes stale.
   useEffect(() => {
-    const valid = saveToProject &&
-      categories.find(c => c.id === saveToProject.categoryId)?.projects.some(p => p.id === saveToProject.projectId && !p.archived)
+    const valid = saveToProject && (isInboxId(saveToProject.categoryId) ||
+      categories.find(c => c.id === saveToProject.categoryId)?.projects.some(p => p.id === saveToProject.projectId && !p.archived))
     if (!valid) {
       const { tab, target } = computeSaveDefault()
       setSaveToTab(tab)
@@ -1281,8 +1309,10 @@ function AppInner() {
     // mounted yet can't hear the first one.
     requestProjectFocus(focusReq)
     closeSearch()
-    expandCategory(r.categoryId)
-    handleTabChange(r.categoryId)
+    // Inbox items live in the Inbox card at the top of the Gallery
+    const inInbox = isInboxId(r.categoryId)
+    if (!inInbox) expandCategory(r.categoryId)
+    handleTabChange(inInbox ? 'star' : r.categoryId)
     // Wait for the destination canvas + its content tab to render, scroll the row
     // itself into view, then flash it once the smooth scroll has actually settled.
     const itemIdNow = () => (typeof r.itemId === 'function' ? r.itemId() : r.itemId)
@@ -1353,7 +1383,7 @@ function AppInner() {
       // Give the reveal (expand + re-render) a beat before measuring anything.
       setTimeout(settleAndScroll, 360)
     }, 60)
-  }, [closeSearch, handleTabChange, expandCategory])
+  }, [closeSearch, handleTabChange, expandCategory, isInboxId])
   openSearchResultRef.current = openSearchResult
 
   /* Three-dot menus open below their button; if the menu would hang off the
@@ -2139,10 +2169,11 @@ function AppInner() {
   }, [])
 
   const showAddToast = useCallback((holder, { categoryId, projectId, type, title, verb = 'Added to' }) => {
+    const inInbox = isInboxId(categoryId)
     const catIdx = categories.findIndex(c => c.id === categoryId)
-    const accent = catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
-    const canvasName = categories.find(c => c.id === categoryId)
-      ?.projects.find(p => p.id === projectId)?.name || ''
+    const accent = inInbox ? getInboxAccent() : catIdx >= 0 ? getCategoryAccent(catIdx) : getHomeAccent()
+    const canvasName = inInbox ? 'Inbox' : (categories.find(c => c.id === categoryId)
+      ?.projects.find(p => p.id === projectId)?.name || '')
     clearTimeout(addToastTimer.current)
     clearTimeout(addToastDelay.current)
     // Half a second after the add view has closed and the page is back
@@ -2157,7 +2188,7 @@ function AppInner() {
         beginToastExit()
       }, 5000)
     }, 500)
-  }, [categories, beginToastExit])
+  }, [categories, beginToastExit, isInboxId])
 
   // A row you just added gets the same treatment as a search result: scrolled
   // into view and flashed. Only when it lands on the page you're looking at —
@@ -2334,6 +2365,42 @@ function AppInner() {
 
   const addItem = useCallback(() => {
     pressInsideAddRef.current = 0   // sending closes Add item on purpose
+
+    // The Inbox: the item goes in at the top of the Inbox card on the Gallery
+    // (Display / a date are kept, and take effect once it's filed). On the Gallery its row flashes as it lands; anywhere
+    // else the toast points to it. A new note opens straight away, from there.
+    if (footerInputMode && isInboxTarget(saveToProject)) {
+      const { categoryId, projectId } = saveToProject
+      const isLink = toolbarType === 'link'
+      const url = linkUrlValue.trim()
+      const text = isLink ? inputValue.trim() : (inputValue.trim() || (toolbarType === 'note' ? 'Untitled note' : ''))
+      if (isLink ? !url : !text) return
+      const holder = { id: null }
+      holder.id = addInboxItem(toolbarType, text, url, { activated: addAsActiveFlag, scheduledDate: addScheduleDate }, (rid) => { holder.id = rid })
+      lastAddedRef.current = { categoryId, projectId }
+      pageAddedRef.current = { tab: activeTab, categoryId, projectId }
+      if (toolbarType === 'note') {
+        const away = activeTab !== 'star'
+        if (away) handleTabChange('star')
+        keepKeyboardAlive()
+        setTimeout(() => {
+          if (holder.id == null) return
+          setAutoEditNoteId(holder.id)
+          setOpenDetail({ type: 'note', id: holder.id })
+        }, away ? 450 : 350)
+      } else if (activeTab === 'star') {
+        flashNewRow(holder, { categoryId, projectId, type: toolbarType })
+      } else {
+        showAddToast(holder, { categoryId, projectId, type: toolbarType, title: isLink ? (text || url) : text })
+      }
+      setInputValue('')
+      setLinkUrlValue('')
+      if (isLink) setToolbarType('list')
+      linkUrlRef.current?.blur()
+      inputRef.current?.blur()
+      setInputFocused(false)
+      return
+    }
     // Link mode: requires a URL and a destination project
     if (toolbarType === 'link') {
       const url = linkUrlValue.trim()
@@ -2470,7 +2537,7 @@ function AppInner() {
     setToolbarType('list')
     inputRef.current?.blur()
     setInputFocused(false)
-  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addScheduleDate, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId, openSearchResult])
+  }, [inputValue, linkUrlValue, activeTab, footerInputMode, toolbarType, saveToProject, addAsActiveFlag, addScheduleDate, categories, flashNewRow, showAddToast, addProjectTodo, addProjectNote, addProjectLink, addActiveTodo, addActiveNote, setOpenDetail, setAutoEditNoteId, openSearchResult, addInboxItem, handleTabChange, isInboxId])
 
   // A click or tap anywhere inside Add item or its Save to menu never closes
   // them: a press on their own surface (not a text field) keeps the field
@@ -2580,19 +2647,17 @@ function AppInner() {
   const toggleSaveTo = useCallback(() => {
     setTypeMenuOpen(false)
     if (saveToOpen) { setSaveToOpen(false); return }
-    setStPending(saveToProject)
-    if (saveToProject) setSaveToTab(saveToProject.categoryId)
+    // Opens on the chosen canvas's Easel (the Inbox keeps whichever is listed)
+    if (saveToProject && !isInboxId(saveToProject.categoryId)) setSaveToTab(saveToProject.categoryId)
     setSaveToOpen(true)
-  }, [saveToOpen, saveToProject])
-  const closeSaveTo = useCallback((apply) => {
-    if (apply && stPending) {
-      setSaveToProject(stPending)
-      setSaveToTab(stPending.categoryId)
-    } else if (saveToProject) {
-      setSaveToTab(saveToProject.categoryId)
-    }
+  }, [saveToOpen, saveToProject, isInboxId])
+  // Picking a destination (a canvas, or the Inbox) takes effect at once
+  const pickSaveTo = useCallback((dest) => {
+    if (!dest) return
+    setSaveToProject(dest)
+    if (!isInboxId(dest.categoryId)) setSaveToTab(dest.categoryId)
     setSaveToOpen(false)
-  }, [stPending, saveToProject])
+  }, [isInboxId])
 
   // The Save to menu sits exactly over the Add item box
   const [saveToRect, setSaveToRect] = useState(null)
@@ -2696,12 +2761,13 @@ function AppInner() {
   // The text box always wears the colour of wherever the item will land — so a
   // destination picked in "Save to…" wins over the page you happen to be on.
   const footerAccent = useMemo(() => {
+    if (saveToProject && isInboxId(saveToProject.categoryId)) return getInboxAccent()
     if (saveToProject) {
       const catIdx = categories.findIndex(c => c.id === saveToProject.categoryId)
       if (catIdx !== -1) return getCategoryAccent(catIdx)
     }
     return activeAccent
-  }, [saveToProject, categories, activeAccent])
+  }, [saveToProject, categories, activeAccent, isInboxId])
 
   // Footer drop shadow only when the active page actually scrolls
   const pageScrollable = useScrollable(
@@ -2875,7 +2941,8 @@ function AppInner() {
 
         {/* Save to… menu — opened from Add item's folder button. It lies exactly
             over the Add item box (on a phone, the space above the keyboard),
-            in the Move to menu's style: pick a canvas, then Save. */}
+            in the Move to menu's style: tapping a canvas (or the Inbox, from
+            the Easel button's menu) picks it. */}
         {footerInputMode && (
           <div
             className={`save-to-panel as-overlay${inputFocused && saveToOpen ? ' visible' : ''}`}
@@ -2887,66 +2954,24 @@ function AppInner() {
               ...(saveToRect ? { top: saveToRect.top, left: saveToRect.left, width: saveToRect.width, height: saveToRect.height } : {}),
             }}
           >
-            <div
-              className="save-to-card move-to-card open"
-              style={(() => {
-                const idx = categories.findIndex(c => c.id === stPending?.categoryId)
-                return idx < 0 ? undefined : { '--accent-dark': getCategoryAccent(idx).dark }
-              })()}
-            >
+            <div className="save-to-card move-to-card open">
               <div className="save-to-header">
                 <p className="save-to-title">Save to...</p>
                 <button
                   className="save-to-cancel"
-                  onMouseDown={e => {
-                    e.preventDefault()
-                    const changed = stPending && stPending.projectId !== saveToProject?.projectId
-                    closeSaveTo(changed)
-                  }}
-                >{stPending && stPending.projectId !== saveToProject?.projectId ? 'Save' : 'Cancel'}</button>
+                  onMouseDown={e => { e.preventDefault(); setSaveToOpen(false) }}
+                >Cancel</button>
               </div>
-              <div
-                className="save-to-scroll"
-                ref={saveToScrollRef}
-                onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollTop > 4)}
-                style={(() => {
-                  const idx = categories.findIndex(c => c.id === saveToTab)
-                  if (idx < 0) return undefined
-                  const a = getCategoryAccent(idx)
-                  return { '--cb-base': a.base, '--cb-dark': a.dark, '--cb-light': a.light, '--cb-base-rgb': a.baseRgb }
-                })()}
-              >
-                {(() => {
-                  const cat = categories.find(c => c.id === saveToTab)
-                  const projs = (cat?.projects || []).filter(p => !p.archived)
-                  return (
-                    <>
-                      {projs.map((proj, i) => (
-                        <div key={proj.id}>
-                          {i > 0 && <div className="save-to-divider"/>}
-                          <button
-                            className={`save-to-option${stPending?.projectId === proj.id ? ' selected' : ''}`}
-                            onMouseDown={e => { e.preventDefault(); setStPending({ categoryId: saveToTab, projectId: proj.id }) }}
-                          >
-                            <div className={`save-to-radio${stPending?.projectId === proj.id ? ' filled' : ''}`}/>
-                            <span>{proj.name}</span>
-                          </button>
-                        </div>
-                      ))}
-                      <AddCanvasRow
-                        active={inputFocused && saveToOpen}
-                        categoryId={saveToTab}
-                        onCreated={pick => setStPending(pick)}
-                        onDone={() => inputRef.current?.focus({ preventScroll: true })}
-                      />
-                    </>
-                  )
-                })()}
-              </div>
-              <CardTabs
+              <DestinationPicker
                 categories={categories}
-                selected={saveToTab}
-                onSelect={(catId) => setSaveToTab(catId)}
+                selected={saveToProject}
+                browse={saveToTab}
+                onBrowse={setSaveToTab}
+                onPick={pickSaveTo}
+                onPickInbox={() => pickSaveTo(inboxIds)}
+                scrollRef={saveToScrollRef}
+                addCanvasActive={inputFocused && saveToOpen}
+                onAddCanvasDone={() => inputRef.current?.focus({ preventScroll: true })}
               />
             </div>
           </div>
@@ -3107,7 +3132,7 @@ function AppInner() {
           {/* Only the text box follows the Save-to destination; the nav beneath it
               keeps the page's own accent. */}
           <div
-            className="add-row"
+            className={`add-row${isInboxTarget(saveToProject) ? ' inbox-dest' : ''}`}
             ref={addRowRef}
             style={{
               '--accent-base': footerAccent.base,
@@ -3402,8 +3427,15 @@ function AppInner() {
                 <span className="cc-overlay" aria-hidden="true">
                   <span
                     className="cc-overlay-text"
-                    style={{ background: `rgba(${ccAccent.baseRgb}, 0.2)`, color: ccAccent.base }}
-                  >{inputValue}</span>
+                    style={{ color: theme === 'dark-dots' ? '#E6E6E6' : theme === 'light-dots' ? '#292929' : '#242424' }}
+                  >
+                    {inputValue.slice(0, ccStart)}
+                    <span
+                      className="cc-overlay-hit"
+                      style={{ background: `rgba(${ccAccent.baseRgb}, 0.2)`, boxShadow: `0 0 0 3px rgba(${ccAccent.baseRgb}, 0.2)`, color: ccAccent.base }}
+                    >{inputValue.slice(ccStart, ccEnd)}</span>
+                    {inputValue.slice(ccEnd)}
+                  </span>
                 </span>
               )}
               {dotsTheme ? (
@@ -3500,10 +3532,15 @@ function AppInner() {
                   : undefined}
                 placeholder={toolbarType === 'link' && inputFocused ? (addTitleFocused ? '' : 'Title your link') : (toolbarType === 'note' && inputFocused ? 'Untitled note' : (dotsTheme && !inputFocused ? '' : (isMobileView ? 'Add an item' : 'Scribble something down...')))}
                 value={inputValue}
-                onChange={e => handleAddInputChange(e.target.value)}
+                onChange={e => handleAddInputChange(e.target.value, e.target.selectionStart)}
                 onFocus={() => { setInputFocused(true); setAddTitleFocused(true) }}
                 onBlur={(e) => { setAddTitleFocused(false); handleAddInputBlur(e) }}
                 onKeyDown={e => {
+                  // An open tag: Backspace deletes what's typed after the "@" as
+                  // usual; with only the "@" left it closes the tag instead
+                  // (the "@" stays as text — the next Backspace deletes it)
+                  if (ccActive && e.key === 'Backspace' && ccEnd <= ccStart + 1) { e.preventDefault(); ccClose(); return }
+                  if (ccActive && e.key === 'Backspace') return
                   // The tag search's Return picks the highlighted canvas, whatever the type
                   if (ccActive) { handleKeyDown(e); return }
                   if (toolbarType === 'link') { if (e.key === 'Enter') { e.preventDefault(); linkUrlRef.current?.focus() } } else handleKeyDown(e)
@@ -3551,7 +3588,11 @@ function AppInner() {
                     className="paste-btn"
                     tabIndex={toolbarType === 'link' && inputFocused ? 0 : -1}
                     aria-label="Paste"
-                    onMouseDown={e => {
+                    /* The press keeps focus where it is; the read itself happens on
+                       the click — Safari only lets a page read the clipboard
+                       inside a click / tap, not a (touch-synthesised) mousedown */
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={e => {
                       e.preventDefault()
                       pasteInto(setLinkUrlValue, linkUrlRef)
                     }}
@@ -3583,18 +3624,19 @@ function AppInner() {
                   {ccMatches.length === 0 ? (
                     <div className="cc-menu-empty">No canvases</div>
                   ) : ccMatches.map(m => {
-                    const acc = getCategoryAccent(m.accentIdx)
+                    const acc = ccAccentOf(m)
                     return (
                       <button
                         key={`${m.categoryId}-${m.projectId}`}
                         type="button"
-                        className={`card-context-item cc-menu-item${ccSelected?.projectId === m.projectId ? ' active' : ''}`}
+                        className={`card-context-item cc-menu-item${ccSelected?.projectId === m.projectId ? ' active' : ''}${m.inbox ? ' cc-inbox' : ''}`}
                         style={{ '--cb-base': acc.base, '--cb-dark': acc.dark, '--cb-base-rgb': acc.baseRgb }}
                         onMouseDown={e => { e.preventDefault(); ccCommit(m) }}
                       >
+                        {m.inbox && <InboxIcon className="cc-inbox-icon" size={18} color="currentColor" strokeWidth={dotsTheme ? 2 : 1}/>}
                         <span className="cc-option-text">
                           <span className="cc-option-name">{m.name}</span>
-                          <span className="cc-option-page">{m.categoryName}</span>
+                          {!!m.categoryName && <span className="cc-option-page">{m.categoryName}</span>}
                         </span>
                       </button>
                     )
@@ -3624,7 +3666,7 @@ function AppInner() {
           <div className="tab-area">
             {/* Input toolbar */}
             <div
-              className={`input-toolbar${inputFocused ? ' visible' : ''}${toolbarFadedIn ? ' faded-in' : ''}`}
+              className={`input-toolbar${inputFocused ? ' visible' : ''}${toolbarFadedIn ? ' faded-in' : ''}${isInboxTarget(saveToProject) ? ' inbox-dest' : ''}`}
               style={{
                 '--accent-base': footerAccent.base,
                 '--accent-dark': footerAccent.dark,
@@ -3667,14 +3709,20 @@ function AppInner() {
                 className={`toolbar-folder-btn${saveToOpen ? ' open' : ''}`}
                 onMouseDown={e => { e.preventDefault(); toggleSaveTo() }}
               >
-                {/* The destination Easel's icon, outlined in its colour as in the Easels menu */}
+                {/* The destination Easel's icon, outlined in its colour as in the
+                    Easels menu — or the Inbox's tray */}
+                {isInboxTarget(saveToProject) ? (
+                  <InboxIcon size={18} color={footerAccent.dark} strokeWidth={2}/>
+                ) : (
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                   <rect x="3.5" y="2.5" width="13" height="9.5" fill={footerAccent.base} fillOpacity="0.16" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
                   <line x1="10" y1="12" x2="10" y2="17.5" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                   <line x1="6" y1="12" x2="3.5" y2="17.5" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                   <line x1="14" y1="12" x2="16.5" y2="17.5" style={{ stroke: footerAccent.dark }} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                 </svg>
+                )}
                 <span className="toolbar-folder-label">{(() => {
+                  if (isInboxTarget(saveToProject)) return 'Inbox'
                   const cat = categories.find(c => c.id === saveToProject?.categoryId)
                   return cat?.projects.find(p => p.id === saveToProject?.projectId)?.name || 'Choose canvas'
                 })()}</span>

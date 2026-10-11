@@ -3,7 +3,7 @@ import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { createPortal } from 'react-dom'
 import UnderlineSvg from '../assets/Underline.svg?react'
 import { useAppContext } from '../context/AppContext.jsx'
-import { getCategoryAccent } from '../theme.js'
+import { getCategoryAccent, getInboxAccent } from '../theme.js'
 import { NoteDetailPage } from './NoteCard.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import { LinkGridCard, NoteRowContent, useGridDragReorder } from './ProjectCard.jsx'
@@ -302,7 +302,8 @@ function LinkComposer({ onAdd, autoFocus, onDismiss }) {
             className="paste-btn"
             tabIndex={focused ? 0 : -1}
             aria-label="Paste"
-            onMouseDown={e => { e.preventDefault(); pasteInto(setUrl, urlRef) }}
+            onMouseDown={e => e.preventDefault()}
+            onClick={e => { e.preventDefault(); pasteInto(setUrl, urlRef) }}
           >
             <span className="paste-btn-label">Paste</span>
             <svg className="paste-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
@@ -561,11 +562,16 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     setAutoEditNoteId,
     promptDelete,
     deleteProjectTodo,
+    isInboxId,
   } = useAppContext()
 
+  // An Inbox item's page is a reduced one: no attachments, no Mark as
+  // Complete, and no Schedule in the menu — it's waiting to be filed
+  const inInbox = isInboxId(categoryId)
+
   const projectName = useMemo(
-    () => categories.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.name || '',
-    [categories, categoryId, projectId]
+    () => inInbox ? 'Inbox' : (categories.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.name || ''),
+    [categories, categoryId, projectId, inInbox]
   )
 
   const [isOpen, setIsOpen] = useState(false)
@@ -680,9 +686,10 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   }, [])
 
   const accent = useMemo(() => {
+    if (inInbox) return getInboxAccent()
     const idx = categories.findIndex(c => c.id === categoryId)
     return idx === -1 ? null : getCategoryAccent(idx)
-  }, [categories, categoryId])
+  }, [categories, categoryId, inInbox])
 
   // Slide in on mount
   useEffect(() => { requestAnimationFrame(() => setIsOpen(true)) }, [])
@@ -1075,7 +1082,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${isOpen ? ' open' : ''}${archived ? ' archived' : ''}`}
+      className={`note-detail-page${isOpen ? ' open' : ''}${archived ? ' archived' : ''}${inInbox ? ' inbox-page' : ''}`}
       style={accent ? {
         '--accent-base': accent.base,
         '--accent-dark': accent.dark,
@@ -1136,7 +1143,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           />
         </div>
 
-        {linksFirst ? [linksSection, notesSection] : [notesSection, linksSection]}
+        {!inInbox && (linksFirst ? [linksSection, notesSection] : [notesSection, linksSection])}
       </div>
 
       <RowActionMenu state={rowMenu.state} onClose={rowMenu.close} />
@@ -1159,14 +1166,15 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         onToggleActive={() => toggleProjectTodoActivated(categoryId, projectId, todo.id)}
         allowRecurring
         recurrence={todo.recurrence || null}
-        onSchedule={(date, r) => setProjectTodoScheduled(categoryId, projectId, todo.id, date, r)}
+        onSchedule={inInbox ? undefined : (date, r) => setProjectTodoScheduled(categoryId, projectId, todo.id, date, r)}
         onClearSchedule={() => setProjectTodoScheduled(categoryId, projectId, todo.id, null)}
         accent={accent}
         projectName={projectName}
+        inbox={inInbox}
         onProjectClick={openMove}
         menuOpen={moveOpen}
         disabledActive={archived}
-        completeButton={
+        completeButton={inInbox ? null :
           <button
             ref={completeBtnRef}
             className={`mark-complete-btn${todo.checked ? ' done' : ''}`}

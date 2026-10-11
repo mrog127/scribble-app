@@ -33,19 +33,28 @@ function PlusIcon() {
   canvas on that page and hands it back to be selected, the X restores the row
   and leaves the previous selection alone.
 */
-export default function AddCanvasRow({ categoryId, onCreated, onDone, active = true }) {
+// openSignal / hideTrigger: the Save to / Move to menus open the field from
+// their own "Add canvas" button (each change of openSignal opens it), and
+// don't show the "+ Add new canvas" row at all.
+export default function AddCanvasRow({ categoryId, onCreated, onDone, active = true, openSignal = 0, hideTrigger = false }) {
   const { addProject } = useAppContext()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const inputRef = useRef(null)
 
-  useEffect(() => { if (adding) inputRef.current?.focus() }, [adding])
+  useEffect(() => {
+    if (!adding) return
+    inputRef.current?.focus()
+    inputRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+  }, [adding])
+  useEffect(() => { if (openSignal) setAdding(true) }, [openSignal])
   // Switching pages abandons a half-typed name
   useEffect(() => { setAdding(false); setName('') }, [categoryId])
   // Closing the menu does too — it reopens on the plain "Add new canvas" row
   useEffect(() => { if (!active) { setAdding(false); setName('') } }, [active])
 
   if (!categoryId) return null
+  if (hideTrigger && !adding) return null
 
   const cancel = () => { setAdding(false); setName(''); if (onDone) onDone() }
   const submit = () => {

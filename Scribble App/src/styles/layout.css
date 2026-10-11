@@ -4558,8 +4558,11 @@ body.resizing-detail .phone { transition: none !important; }
    Its ring, glow and clipped body carry Paintbrush's 16px corners in their own
    rules; match them to this theme's 32px canvas cards. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .project-items { border-radius: 0 0 31px 31px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .project-items { border-radius: 0 0 31px 31px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-stroke { border-radius: 32px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-stroke { border-radius: 32px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-glow { border-radius: 31px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-glow { border-radius: 31px; }
 
 
 /* --- Collapsed canvas card ---
@@ -8483,14 +8486,20 @@ body.resizing-detail .phone { transition: none !important; }
 /* Dots themes: the pinned Gallery canvas casts the glass drop shadow — 20% black
    (#app outranks the Light Dots "no card shadows" rule) */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card.gallery-canvas { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card.pinned-gallery { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
 
 /* Light Dots: the pinned Gallery canvas is clear liquid glass, like the control
    bar — the 8% white fill over a blurred, saturated pull-through, the white
    gradient outline (full white → 30%) orbiting, and a white inner glow (90%)
    orbiting on the opposite side. No easel colour in the chrome. */
 :root[data-theme="light-dots"] #app .card.gallery-canvas { background: var(--mbar-chrome); }
+:root[data-theme="light-dots"] #app .card.pinned-gallery { background: var(--mbar-chrome); }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root[data-theme="light-dots"] #app .card.gallery-canvas {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+:root[data-theme="light-dots"] #app .card.pinned-gallery {
     -webkit-backdrop-filter: blur(10px) saturate(180%);
     backdrop-filter: blur(10px) saturate(180%);
   }
@@ -8499,7 +8508,15 @@ body.resizing-detail .phone { transition: none !important; }
   opacity: 1;
   background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.04));
 }
+:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-stroke {
+  opacity: 1;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.04));
+}
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow {
+  opacity: 1;
+  box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
+}
+:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-glow {
   opacity: 1;
   box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
 }
@@ -8509,6 +8526,18 @@ body.resizing-detail .phone { transition: none !important; }
    layer (the outline one is clipped to the ring by its parent's mask) running its
    own copy of the orbit, since the orbit properties don't inherit. */
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 1;
+  background: linear-gradient(var(--cb-stroke-angle),
+    rgba(255, 255, 255, 1),
+    rgba(var(--accent-base-rgb), 0.4));
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+}
+:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-stroke::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -8530,8 +8559,19 @@ body.resizing-detail .phone { transition: none !important; }
   animation: gallery-canvas-orbit 8s linear infinite;
   pointer-events: none;
 }
+:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.1;
+  box-shadow: inset var(--glow-x) var(--glow-y) 22px var(--accent-base);
+  animation: gallery-canvas-orbit 8s linear infinite;
+  pointer-events: none;
+}
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="light-dots"] .gallery-canvas > :is(.gallery-canvas-stroke, .gallery-canvas-glow)::after { animation: none; }
+:root[data-theme="light-dots"] .pinned-gallery > :is(.gallery-canvas-stroke, .gallery-canvas-glow)::after { animation: none; }
 }
 
 /* Dots themes: pinned Gallery canvas header lines up with its rows. Dots rows are
@@ -8604,6 +8644,7 @@ body.resizing-detail .phone { transition: none !important; }
 
 /* Dots themes: the Gallery canvas's bottom tab row sits above its glass layers */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .project-bottom-bar { position: relative; z-index: 3; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .project-bottom-bar { position: relative; z-index: 3; }
 
 /* Light Dots, desktop: the sidebar Gallery tab's activation pulse matches the
    easel Gallery card — an orbiting outline from pure white to the item's deep
@@ -8899,8 +8940,9 @@ body.resizing-detail .phone { transition: none !important; }
   }
 }
 
-/* TRIAL (Dots themes) — Gallery page cards as clear liquid glass, like the easel
-   page's Gallery card but with no colour: the translucent fill over a blurred,
+/* TRIAL (Dots themes) — the Gallery's Inbox card as clear liquid glass, like the
+   easel page's Gallery card but with no colour (the Gallery's content cards were
+   this glass too, until they took the canvas cards' flat styling): the translucent fill over a blurred,
    saturated pull-through, a 20% black drop shadow, and a white gradient outline
    and white inner glow orbiting. Light Dots gets the stronger white highlights.
    (Pinned canvases and the pinned easel card keep their own treatment.) Delete this block to undo.
@@ -8909,13 +8951,13 @@ body.resizing-detail .phone { transition: none !important; }
    plain rectangle when an ancestor is masked (the page's fade), which showed as
    grey squares at the card corners. The card itself keeps only the drop shadow
    and the outline. */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card:not(.gallery-canvas):not(.project-card) {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .card.inbox-card {
   position: relative;
   isolation: isolate;
   background: transparent;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -8931,7 +8973,7 @@ body.resizing-detail .phone { transition: none !important; }
   pointer-events: none;
   z-index: 2;
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -8944,21 +8986,21 @@ body.resizing-detail .phone { transition: none !important; }
   z-index: -1;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after {
     -webkit-backdrop-filter: blur(10px) saturate(180%);
     backdrop-filter: blur(10px) saturate(180%);
   }
 }
-:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::before {
+:root[data-theme="light-dots"] .home-page .card.inbox-card::before {
   opacity: 1;
   background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
 }
-:root[data-theme="light-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::after {
+:root[data-theme="light-dots"] .home-page .card.inbox-card::after {
   box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
 }
 @media (prefers-reduced-motion: reduce) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after { animation: none; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after { animation: none; }
 }
 /* END TRIAL */
 
@@ -8979,7 +9021,23 @@ body.resizing-detail .phone { transition: none !important; }
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+:root[data-theme="light-dots"] #app .card.pinned-gallery {
+  isolation: isolate;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 :root[data-theme="light-dots"] .card.gallery-canvas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  clip-path: inset(0 round 32px);
+  background: var(--mbar-chrome);
+  pointer-events: none;
+  z-index: -1;
+}
+:root[data-theme="light-dots"] .card.pinned-gallery::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -8991,6 +9049,10 @@ body.resizing-detail .phone { transition: none !important; }
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root[data-theme="light-dots"] .card.gallery-canvas::after {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+:root[data-theme="light-dots"] .card.pinned-gallery::after {
     -webkit-backdrop-filter: blur(10px) saturate(180%);
     backdrop-filter: blur(10px) saturate(180%);
   }
@@ -9268,10 +9330,30 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-stroke,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-glow,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::after,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after,
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke::after,
 :root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow::after {
+  animation: none !important;
+  --cb-stroke-angle: 135deg !important;
+  --glow-x: -8px !important;
+  --glow-y: -8px !important;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-stroke,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-glow,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after,
+:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-stroke::after,
+:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-glow::after {
   animation: none !important;
   --cb-stroke-angle: 135deg !important;
   --glow-x: -8px !important;
@@ -10727,10 +10809,33 @@ body.resizing-detail .phone { transition: none !important; }
   inset: -2px;
   padding: 2px;
 }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-bottom-bar .project-add-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mbar-circle::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .link-input-stack::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open) .add-row .link-input-stack:not(.easel-stack):not(.search-stack) .send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer.keyboard-open:not(.search-open):not(.easel-open)::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .add-toast::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page.editing .note-detail-done::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .mark-complete-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-input-wrap::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section-card .todo-composer .project-send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .card-rename-wrap .project-send-btn.visible::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card .save-to-cancel.is-save::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack.open::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .new-project-card .project-send-btn.visible::before,
+:root[data-theme="light-dots"] .note-detail-page:has(> .todo-complete-flash) .note-detail-done.is-saving::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .easel-stack .easel-send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-detail-done.is-saving::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-stroke {
+  inset: -2px;
+  padding: 2px;
+}
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .link-preview-card::before,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card:not(.gallery-canvas):not(.project-card)::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .drag-ghost-card.card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cards-dragging .project-card:not(.gallery-canvas)::before,
 .drag-glass-stroke,
@@ -10798,8 +10903,8 @@ body.resizing-detail .phone { transition: none !important; }
   .app-loading { left: calc(340px + var(--gutter, 0px) + (100% - 340px - var(--gutter, 0px)) / 2); }
 }
 
-/* Dark Dots: the Gallery page cards' glass fill fades to 2% white (not 8%) */
-:root[data-theme="dark-dots"] .home-page .card:not(.gallery-canvas):not(.project-card)::after {
+/* Dark Dots: the Inbox card's glass fill fades to 2% white (not 8%) */
+:root[data-theme="dark-dots"] .home-page .card.inbox-card::after {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.02));
 }
 
@@ -11008,7 +11113,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
    same fill (#333333 dark, #E3E3E3 light), 4% hover wash over the full circle
    (white dark, black light), and its 4% black press */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card .card-header .dots-menu { background: #333333; }
-:root[data-theme="light-dots"] .home-page .card .card-header .dots-menu { background: #E3E3E3; }
+:root[data-theme="light-dots"] .home-page .card .card-header .dots-menu { background: #F0F0F0; }   /* as on canvas cards (the glass Inbox card sets its own) */
 @media (hover: hover) {
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card .dots-menu-btn:hover::before { background: rgba(255, 255, 255, 0.04); border-radius: 50%; }
   :root[data-theme="light-dots"] .home-page .card .dots-menu-btn:hover::before { background: rgba(0, 0, 0, 0.04); }
@@ -12739,9 +12844,9 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 }
 :root[data-theme="light-dots"] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .toolbar-folder-btn:not(#_):is(.open, .is-pressed) { background: #E3E3E3; }
 
-/* Light Dots: the Gallery page's glass cards (not pinned canvases) use the Add
-   item canvas button's #EAEAEA for their three-dot buttons */
-:root[data-theme="light-dots"] .home-page .card:not(.project-card) .card-header .dots-menu { background: #EAEAEA; }
+/* Light Dots: the Gallery's glass Inbox card uses the Add item canvas button's
+   #EAEAEA for its three-dot buttons */
+:root[data-theme="light-dots"] .home-page .card.inbox-card .card-header .dots-menu { background: #EAEAEA; }
 
 /* Add item, desktop: 440px wide, centred over the left-hand column (340px wide,
    starting at the gutter) — kept at least 16px in from the window's edge */
@@ -12792,3 +12897,587 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) .add-row .link-input-stack.add-stack:not(.easel-stack):not(.search-stack) > .add-link-url-wrap.open .link-url-input { padding-right: 52px; }
 }
+
+
+/* ==== Inbox ================================================================
+   The Inbox card at the top of the Gallery, its rows' Move to arrow, and the
+   reworked Save to / Move to menus (canvas list + Easel button + Easels menu).
+   ========================================================================== */
+
+/* --- Inbox card ---
+   Dots themes: the clear liquid glass (see the TRIAL block). Paintbrush: the
+   easel Gallery card's orbiting stroke and inner glow, in the Inbox's neutral
+   colour. The header lines up as the Gallery card's does: the tray centred on
+   the rows' icon column, "Inbox" on the row labels. */
+.inbox-card { position: relative; overflow: visible; }
+.inbox-card > .card-header,
+.inbox-card > .inbox-items { position: relative; z-index: 3; }
+.inbox-card > .inbox-items { overflow: hidden; border-radius: 0 0 15px 15px; }
+.inbox-card > .card-header { padding-left: 21px; }
+.inbox-card > .card-header .inbox-title-icon { flex-shrink: 0; margin-right: 17px; color: var(--accent-dark); stroke: var(--accent-dark); }
+.inbox-card > .card-header .card-title { color: var(--accent-dark); }
+.inbox-card > .inbox-card-stroke {
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  opacity: 0.7;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.9), rgba(var(--accent-base-rgb), 0.35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.inbox-card > .inbox-card-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  opacity: 0.5;
+  box-shadow: inset var(--glow-x) var(--glow-y) 22px var(--accent-light);
+  animation: gallery-canvas-orbit 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inbox-card > :is(.inbox-card-stroke, .inbox-card-glow) { animation: none; }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-card > :is(.inbox-card-stroke, .inbox-card-glow) { display: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-card > .inbox-items { border-radius: 0 0 31px 31px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card > .card-header { padding-left: 25px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-card > .card-header .inbox-title-icon * {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* --- Inbox rows --- the Move to arrow at the right end */
+.inbox-item-row { align-items: center; }
+.inbox-item-row .item-content { flex: 1 1 auto; min-width: 0; }
+.inbox-move-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: -4px -4px -4px 8px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-dark);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .inbox-move-btn:hover { background: rgba(0, 0, 0, 0.04); }
+}
+.inbox-move-btn:active,
+.inbox-move-btn.is-pressed { background: rgba(0, 0, 0, 0.07); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-move-btn {
+  border-radius: 50%;
+  background: #EAEAEA;   /* the glass card's three-dot button grey */
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-move-btn svg * { stroke-width: 2; }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-move-btn:hover { background: #E3E3E3; }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .inbox-move-btn:is(:active, .is-pressed) { background: #E3E3E3; }
+:root[data-theme="dark-dots"] .inbox-move-btn { background: #333333; }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] .inbox-move-btn:hover { background: #3A3A3A; }
+}
+:root[data-theme="dark-dots"] .inbox-move-btn:is(:active, .is-pressed) { background: #3A3A3A; }
+
+/* --- Save to / Move to: canvas rows have no radio, so the name starts where
+   the radio did --- */
+.save-to-option.no-radio > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Save to / Move to: the Easel button at the foot (where the Easel tabs
+   were) --- */
+.dest-easel-bar {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #DBDAD8;
+  background: #FAF9F7;   /* match the text box background */
+  padding: 8px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easel-bar {
+  border-top: none;
+  background: transparent;
+  padding: 8px 16px 16px;
+}
+/* The Add item type button's pill, in the listed Easel's colours */
+.dest-easel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 12px 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(var(--cb-base-rgb), 0.24);
+  color: var(--cb-base);
+  font: 600 16px 'Open Sans', system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dest-easel-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) {
+  .dest-easel-btn:hover { background: rgba(var(--cb-base-rgb), 0.32); }
+}
+.dest-easel-btn:is(.open, .is-pressed) { background: rgba(var(--cb-base-rgb), 0.32); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easel-btn {
+  padding: 0 18px 0 14px;
+  border-radius: 32px;
+  font: 500 16px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easel-btn svg * { stroke-width: 2; }
+
+/* --- The Easels menu: the control bar's, rising from the Easel button inside
+   the card (its height is capped from JS to the room above the button) --- */
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu {
+  position: absolute;
+  top: auto;
+  bottom: 100%;
+  left: 8px;
+  right: auto;
+  width: min(320px, calc(100% - 16px));
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  transform: translateY(8px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  border-radius: 16px;
+  z-index: 120;
+}
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu::-webkit-scrollbar { display: none; }
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu.open { transform: translateY(0); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .card-context-menu.mbar-page-menu.dest-easels-menu {
+  left: 16px;
+  width: min(320px, calc(100% - 32px));
+  border-radius: 32px;
+}
+/* (the menus' "every corner round" rule would make its rows and header pills) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-easels-menu :is(.mbar-page-menu-header, .mbar-page-menu-list, .mbar-page-menu-list > div) { border-radius: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-easels-menu .card-context-item { border-radius: 0; }
+/* Desktop has no phone Easels menu styling to borrow: the essentials */
+@media (min-width: 1000px) {
+  .dest-easels-menu .mbar-page-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
+  .dest-easels-menu .mbar-page-menu-title { margin: 0; font: 500 18px 'Merriweather', Georgia, serif; color: #242424; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easels-menu .mbar-page-menu-title { font: 700 22px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; letter-spacing: -0.44px; color: #E6E6E6; }
+  :root[data-theme="light-dots"] .dest-easels-menu .mbar-page-menu-title { color: #292929; }
+  .dest-easels-menu .card-context-item { height: 52px; padding-right: 16px; font-weight: 500; }
+  .dest-easels-menu .mbar-page-menu-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easels-menu .mbar-page-menu-label { font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; color: #E6E6E6 !important; }
+  :root[data-theme="light-dots"] .dest-easels-menu .mbar-page-menu-label { color: #292929 !important; }
+}
+/* Inside a card there's nothing behind it worth blurring through — a solid
+   panel in the card's own colour (the glass let the list show through) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card-context-menu.mbar-page-menu.dest-easels-menu {
+  background: #2B2B2B;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-theme="light-dots"] #app .card-context-menu.mbar-page-menu.dest-easels-menu { background: #F7F7F7; border-color: rgba(0, 0, 0, 0.04); }
+/* No row is marked as the current one (in this menu, or in the Save to / Move
+   to lists): the current canvas is only scrolled into view on open. The Inbox
+   row instead rests in the rows' hover state, and deepens 4% on hover / press. */
+.dest-easels-menu .dest-inbox-item { background: rgba(0, 0, 0, 0.02); }
+@media (hover: hover) { .dest-easels-menu .dest-inbox-item:hover { background: rgba(0, 0, 0, 0.06); } }
+.dest-easels-menu .dest-inbox-item:active { background: rgba(0, 0, 0, 0.06); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easels-menu .dest-inbox-item { background: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-easels-menu .dest-inbox-item::before { background: rgba(255, 255, 255, 0.04); }
+@media (hover: hover) { :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-easels-menu .dest-inbox-item:hover::before { background: rgba(255, 255, 255, 0.08); } }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-easels-menu .dest-inbox-item:active::before { background: rgba(255, 255, 255, 0.08); }
+:root[data-theme="light-dots"] #app .dest-easels-menu .dest-inbox-item::before { background: rgba(0, 0, 0, 0.04); }
+@media (hover: hover) { :root[data-theme="light-dots"] #app .dest-easels-menu .dest-inbox-item:hover::before { background: rgba(0, 0, 0, 0.08); } }
+:root[data-theme="light-dots"] #app .dest-easels-menu .dest-inbox-item:active::before { background: rgba(0, 0, 0, 0.08); }
+
+/* Save to / Move to Easels menu: no header, so the list gets the room at the top */
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu { padding-top: 8px; }
+
+/* Inbox (unfiled) destinations: the liquid glass buttons — Add item's send
+   button, a page's Save — are black glass with a white icon / label, in place
+   of an Easel's colour */
+#app .add-row.inbox-dest .send-btn.visible,
+#app .note-detail-page.inbox-page .note-detail-done.is-saving,
+#app .note-detail-page.inbox-page.editing .note-detail-done {
+  background:
+    radial-gradient(ellipse 22px 12px at calc(50% + var(--mc-u, 0.43) * 50%) calc(50% + var(--mc-v, 1) * 50%), rgba(255, 255, 255, 0.22), transparent),
+    linear-gradient(135deg, #3A3A3A, #141414) !important;
+  color: #FFFFFF !important;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+@media (hover: hover) {
+  #app .add-row.inbox-dest .send-btn.visible:hover,
+  #app .note-detail-page.inbox-page .note-detail-done.is-saving:hover,
+  #app .note-detail-page.inbox-page.editing .note-detail-done:hover {
+    background:
+      radial-gradient(ellipse 22px 12px at calc(50% + var(--mc-u, 0.43) * 50%) calc(50% + var(--mc-v, 1) * 50%), rgba(255, 255, 255, 0.28), transparent),
+      linear-gradient(135deg, #474747, #1E1E1E) !important;
+  }
+}
+#app .add-row.inbox-dest .send-btn.visible svg *,
+#app .note-detail-page.inbox-page .note-detail-done.is-saving svg *,
+#app .note-detail-page.inbox-page.editing .note-detail-done svg * { stroke: #FFFFFF !important; }
+/* the glass ring: a white glint over a dark edge */
+#app .add-row.inbox-dest .send-btn.visible::before,
+#app .note-detail-page.inbox-page .note-detail-done.is-saving::before,
+#app .note-detail-page.inbox-page.editing .note-detail-done::before {
+  opacity: 1 !important;
+  background: conic-gradient(from var(--mc-a, 142deg), rgba(0, 0, 0, 0.6), rgba(255, 255, 255, 0.7) 50%, rgba(0, 0, 0, 0.6)) !important;
+}
+
+/* Inbox rows: the Move to arrow sits centred on the whole row, sublabel included */
+#app .inbox-item-row .inbox-move-btn { align-self: center; margin-top: 0; margin-bottom: 0; }
+
+/* Inbox destination: Add item's content type button is black with a white
+   icon and label, in place of an Easel's colour wash */
+#app .add-row.inbox-dest .add-head .add-type-btn { background: #292929 !important; color: #FFFFFF !important; }
+#app .add-row.inbox-dest .add-head .add-type-btn svg * { stroke: #FFFFFF !important; }
+@media (hover: hover) {
+  #app .add-row.inbox-dest .add-head .add-type-btn:hover { background: #3A3A3A !important; }
+}
+#app .add-row.inbox-dest .add-head .add-type-btn:is(.open, .is-pressed) { background: #3A3A3A !important; }
+:root[data-theme="dark-dots"] #app .add-row.inbox-dest .add-head .add-type-btn { background: #111111 !important; }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] #app .add-row.inbox-dest .add-head .add-type-btn:hover { background: #1C1C1C !important; }
+}
+:root[data-theme="dark-dots"] #app .add-row.inbox-dest .add-head .add-type-btn:is(.open, .is-pressed) { background: #1C1C1C !important; }
+
+/* Inbox destination / Inbox item pages: Display, when on (Displayed or a
+   date), is black with a white icon and label too */
+#app .input-toolbar.inbox-dest .toolbar-source-btn:not(.inactive),
+#app .note-detail-page.inbox-page .project-active-btn.on,
+#app .note-detail-page.inbox-page .project-active-btn.scheduled {
+  background: #292929 !important;
+  color: #FFFFFF !important;
+}
+#app .input-toolbar.inbox-dest .toolbar-source-btn:not(.inactive) :is(span, .toolbar-source-label),
+#app .note-detail-page.inbox-page .project-active-btn:is(.on, .scheduled) span { color: #FFFFFF !important; }
+#app .input-toolbar.inbox-dest .toolbar-source-btn:not(.inactive) svg,
+#app .input-toolbar.inbox-dest .toolbar-source-btn:not(.inactive) svg *,
+#app .note-detail-page.inbox-page .project-active-btn:is(.on, .scheduled) svg,
+#app .note-detail-page.inbox-page .project-active-btn:is(.on, .scheduled) svg * {
+  stroke: #FFFFFF !important;
+  fill: none !important;
+}
+@media (hover: hover) {
+  #app .input-toolbar.inbox-dest .toolbar-source-btn:not(.inactive):hover,
+  #app .note-detail-page.inbox-page .project-active-btn:is(.on, .scheduled):hover { background: #3A3A3A !important; }
+}
+:root[data-theme="dark-dots"] #app .input-toolbar.inbox-dest .toolbar-source-btn:not(.inactive),
+:root[data-theme="dark-dots"] #app .note-detail-page.inbox-page .project-active-btn:is(.on, .scheduled) { background: #111111 !important; }
+
+/* Move a canvas: Easel rows lead with their coloured easel icon (no radios) */
+.save-to-option .dest-page-easel { flex-shrink: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-option .dest-page-easel * { stroke-width: 2; }
+
+/* Inbox rows with a single line (no sublabel): the text centres in the row —
+   the 4px-over-8px row padding is weighted for a sublabel underneath */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .inbox-card .inbox-item-row:not(:has(.note-preview-text)) {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Save to / Move to: the Easel button takes the middle half of the card's
+   width (the bar's side padding added back in), its icon and name centred;
+   the Easels menu rises centred over it */
+.dest-easel-bar { justify-content: center; }
+.dest-easel-btn { width: calc((100% + 16px) / 2); justify-content: center; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easel-btn { width: calc((100% + 32px) / 2); padding: 0 12px; }
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu { left: calc((100% - min(320px, calc(100% - 16px))) / 2); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .card-context-menu.mbar-page-menu.dest-easels-menu { left: calc((100% - min(320px, calc(100% - 32px))) / 2); }
+
+/* Save to / Move to: while the Easels menu is open the card (and the Save to
+   panel) let it rise out past their edges; the canvas list still clips itself */
+#app :is(.save-to-card, .move-to-card, .save-to-panel).easels-open { overflow: visible !important; }
+#app :is(.save-to-card, .move-to-card).easels-open > .dest-easel-bar { z-index: 5; }
+/* (its height cap includes its own padding and border) */
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu { box-sizing: border-box; }
+
+/* Inbox rows: one-line rows centre their icon and text on the row (the 32px
+   move button sets its height); rows with a sublabel keep their top alignment */
+#app .home-page .inbox-card .inbox-item-row:not(:has(.note-preview-text)) { align-items: center; }
+#app .home-page .inbox-card .inbox-item-row:not(:has(.note-preview-text)) > .checkbox-wrap { align-self: center; margin-top: 0; }
+
+/* Save to / Move to foot: the Easel button (left) and an "Add canvas" button
+   (right) — the Add item canvas button's grey pill, with a plus in the listed
+   Easel's colour — splitting the width, 8px apart. (Replaces the centred
+   half-width Easel button; the Easels menu rises from the left again.) */
+.dest-easel-bar { justify-content: stretch; gap: 8px; }
+.dest-easel-bar > .dest-easel-btn,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-easel-bar > .dest-easel-btn { flex: 1 1 0; width: auto; min-width: 0; padding: 0 12px; }
+.dest-add-canvas-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #43535E;
+  font: 600 16px 'Open Sans', system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) { .dest-add-canvas-btn:hover { background: rgba(0, 0, 0, 0.07); } }
+.dest-add-canvas-btn.is-pressed, .dest-add-canvas-btn:active { background: rgba(0, 0, 0, 0.07); }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-add-canvas-btn {
+  border-radius: 32px;
+  font: 500 16px 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .dest-add-canvas-btn svg * { stroke-width: 2; }
+:root[data-theme="light-dots"] .dest-add-canvas-btn { background: #EAEAEA; color: #292929; }
+@media (hover: hover) { :root[data-theme="light-dots"] .dest-add-canvas-btn:hover { background: #E3E3E3; } }
+:root[data-theme="light-dots"] .dest-add-canvas-btn:is(.is-pressed, :active) { background: #E3E3E3; }
+:root[data-theme="dark-dots"] .dest-add-canvas-btn { background: #333333; color: #E6E6E6; }
+@media (hover: hover) { :root[data-theme="dark-dots"] .dest-add-canvas-btn:hover { background: #3B3B3B; } }
+:root[data-theme="dark-dots"] .dest-add-canvas-btn:is(.is-pressed, :active) { background: #3B3B3B; }
+:root #app .card-context-menu.mbar-page-menu.dest-easels-menu { left: 8px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .card-context-menu.mbar-page-menu.dest-easels-menu { left: 16px; }
+
+/* Save to / Move to Easels menu: row highlights sit as far in from the right
+   edge as from the left (8px each side) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card-context-menu.mbar-page-menu.dest-easels-menu .card-context-item::before { left: 4px; right: 8px; }
+
+/* Save to / Move to (Dots themes): the canvas list sits in a light grey box —
+   Add item's text field: a 4% wash (black Light Dots, white Dark Dots), 24px
+   corners, 16px in from the card's sides */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .save-to-scroll.dest-canvas-list {
+  margin: 0 16px;
+  padding: 4px 0;
+  border-radius: 24px;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+}
+:root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .save-to-scroll.dest-canvas-list {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option { padding-left: 16px; padding-right: 16px; }
+
+/* Save to / Move to (Dots themes): the "Name canvas" field rests in the rows'
+   hover wash; inside the grey list box the wash runs 4px in from its sides */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option.save-to-new-row::before {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+  z-index: -1;
+}
+:root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option.save-to-new-row::before { background: rgba(0, 0, 0, 0.04); }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option:hover:not(.selected)::before { inset: 0 4px; }
+}
+
+/* Save to / Move to: 4px more between the header and the canvas list, and
+   canvas names (and the Name canvas field) 4px further in */
+#app :is(.save-to-card, .move-to-card) .save-to-scroll.dest-canvas-list { margin-top: 4px; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option { padding-left: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option { padding-left: 20px; }
+/* …and 4px more between the list and the buttons beneath it */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-easel-bar { padding-top: 12px; }
+:root[data-theme="paintbrush"] #app :is(.save-to-card, .move-to-card) .dest-easel-bar { margin-top: 4px; }
+/* (the 4px header gap, at the weight of the Dots list-box rule it sits beside) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"], [data-theme="paintbrush"]) #app :is(.save-to-card, .move-to-card) .save-to-scroll.dest-canvas-list { margin-top: 4px; }
+
+/* Add item (list / note / link): 4px more between the type button + Cancel row
+   and the title text (12 + the 40px buttons + 16) */
+:root #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open),
+:root[data-theme] #app .footer.keyboard-open.add-open:not(.search-open):not(.easel-open) { --add-text-top: 68px; }
+
+/* Save to / Move to (Dots themes): the "Name canvas" field 4px further in on
+   each side within the list box (its text and X move in with it) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option.save-to-new-row { padding-left: 24px; padding-right: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option.save-to-new-row::before { inset: 0 8px; }
+
+/* Search (Dots themes, phone): the results card is the clear liquid glass and
+   runs down behind the search bar, which becomes a light grey field inside it
+   (Add item's text field: a 4% wash) — 12px in from the card's sides and
+   bottom. The card is drawn beneath the control bar (footer), so the field
+   stays live on top. */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .save-to-panel.search-panel.visible { overflow: visible; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-card {
+    margin-bottom: calc(-1 * (var(--mbar-h) + 12px + 16px));
+    position: relative;
+    isolation: isolate;
+    background: transparent;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    opacity: 0.7;
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cb-stroke-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    clip-path: inset(0 round 32px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.02));
+    box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.04);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+    animation: gallery-canvas-orbit 8s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+  :root[data-theme="light-dots"] #app .search-panel .save-to-card::before {
+    opacity: 1;
+    background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
+  }
+  :root[data-theme="light-dots"] #app .search-panel .save-to-card::after {
+    background: var(--mbar-chrome);
+    box-shadow: inset var(--glow-x) var(--glow-y) 6px rgba(255, 255, 255, 0.6);
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-header { background: transparent; }
+  /* room under the results for the field */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-scroll { margin-bottom: calc(var(--mbar-h) + 12px); }
+
+  /* The field */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open .add-row .search-stack.open {
+    margin-left: 12px;
+    margin-right: 10px;
+    background: transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+    border: none;
+    border-radius: 24px;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root[data-theme="light-dots"] #app .footer.search-open .add-row .search-stack.open {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open .add-row .search-stack.open::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open .add-row .search-stack.open::after { display: none; }
+}
+
+/* Search (Dots themes, phone), revised: the field is just the light grey of
+   Add item's text field — none of the control bar's glass (fill, ring, shadow,
+   blur) in any state — set 16px in from the card's sides and bottom; results
+   stop 8px above it, fading out over their last 16px */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-card {
+    margin-bottom: calc(-1 * (var(--mbar-h) + 16px + 16px));
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .search-panel .save-to-scroll {
+    margin-bottom: calc(var(--mbar-h) + 16px + 8px);
+    padding-bottom: 16px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open .add-row .search-stack.open {
+    margin-left: 16px !important;
+    margin-right: 14px !important;
+    background: transparent !important;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)) !important;
+    border: none !important;
+    border-radius: 24px !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+  }
+  :root[data-theme="light-dots"] #app .footer.search-open .add-row .search-stack.open {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04)) !important;
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open .add-row .search-stack.open::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open .add-row .search-stack.open::after { display: none !important; }
+  /* the control bar's own glass behind the field, while searching */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open::before,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open::after { display: none !important; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open { background: transparent !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+/* Pinned canvases on the Gallery page wear the easel Gallery card's look (the
+   .pinned-gallery copies of its shell rules): gradient fill, inner glow and
+   stroke in their Easel's colour. The pushpin takes the Easel colour too
+   (Light Dots' yellow: its deeper solid #B0A314); the Easel name stays grey. */
+#app .home-page .pinned-gallery .card-pin-icon :is(path, line),
+:root[data-theme] #app .home-page .pinned-gallery .card-pin-icon :is(path, line) { stroke: var(--accent-base); }
+
+/* Dots themes: a pinned canvas's pushpin centres on the checkbox column and its
+   title / Easel name start on the row labels (3px further in than before) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.home-page, .category-page) .project-card > .card-header:has(.card-pin-icon) { padding-left: 23px; }
+
+/* Pinned canvases on the Gallery: their header (and its three-dot menu) sits
+   above the card's body and foot — they all ride above the glow layers at the
+   same level, so the rows and the add button were painting over the open menu */
+#app .pinned-gallery > .card-header { position: relative; z-index: 5; }
+/* …and the card whose menu is open rises above the cards after it, so a menu
+   that hangs past its card's foot isn't covered by the next card */
+#app .home-page .pinned-canvases > div:has(.card-context-menu.open) { position: relative; z-index: 10; }
+
+/* Pinned canvases on the Gallery (Dots themes): the three-dot button rests in
+   its hover shade (its fill + a 4% wash) and deepens 4% more on hover / press /
+   while its menu is open */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .pinned-gallery .dots-menu-btn::before { background: rgba(255, 255, 255, 0.04); background-image: none; border-radius: 50%; }
+:root[data-theme="light-dots"] #app .home-page .pinned-gallery .dots-menu-btn::before { background: rgba(0, 0, 0, 0.04); }
+@media (hover: hover) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .pinned-gallery .dots-menu-btn:hover::before { background: rgba(255, 255, 255, 0.08); background-image: none; }
+  :root[data-theme="light-dots"] #app .home-page .pinned-gallery .dots-menu-btn:hover::before { background: rgba(0, 0, 0, 0.08); }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .pinned-gallery :is(.dots-menu-btn.is-pressed, .dots-menu-wrap:has(.card-context-menu.open) .dots-menu-btn)::before { background: rgba(255, 255, 255, 0.08); background-image: none; }
+:root[data-theme="light-dots"] #app .home-page .pinned-gallery :is(.dots-menu-btn.is-pressed, .dots-menu-wrap:has(.card-context-menu.open) .dots-menu-btn)::before { background: rgba(0, 0, 0, 0.08); }
+
+/* "@" tag anywhere in the text: the mirror draws all of it in the field's own
+   colour, and only the tag wears the highlight (its 3px pad is a box-shadow, so
+   it doesn't push the mirrored glyphs off the real ones) */
+.cc-overlay-text { background: none !important; }
+.cc-overlay-hit {
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .cc-overlay-hit { border-radius: 999px; }
+
+/* "@" tag menu: canvas names read like an item row's label, the Easel beneath
+   like its sub-label but in the Easel's colour; the Inbox row leads with its
+   tray, 6px before the label */
+#app .cc-menu .cc-option-name { font-size: 16px; font-weight: 500; line-height: 22.4px; }
+#app .cc-menu .cc-option-page { font-size: 14px; font-weight: 500; color: var(--cb-base) !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cc-menu :is(.cc-option-name, .cc-option-page) { font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cc-menu .cc-option-name { line-height: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cc-menu .cc-option-page { line-height: normal; margin-top: 1px; }
+:root[data-theme="light-dots"] #app .cc-menu .cc-menu-item:not(.active) .cc-option-name { color: #292929; }
+:root[data-theme="dark-dots"] #app .cc-menu .cc-menu-item:not(.active) .cc-option-name { color: #E6E6E6; }
+:root[data-theme="paintbrush"] #app .cc-menu .cc-menu-item:not(.active) .cc-option-name { color: #1A1A1A; }
+#app .cc-menu .cc-menu-item.cc-inbox { gap: 6px; }
+#app .cc-menu .cc-inbox-icon { flex-shrink: 0; }
+/* …the highlighted row's canvas name in the text colour too (only its wash
+   and the Easel name carry colour), and every row's contents 4px further in */
+:root[data-theme="light-dots"] #app .cc-menu .cc-menu-item.active .cc-option-name { color: #292929 !important; }
+:root[data-theme="dark-dots"] #app .cc-menu .cc-menu-item.active .cc-option-name { color: #E6E6E6 !important; }
+:root[data-theme="paintbrush"] #app .cc-menu .cc-menu-item.active .cc-option-name { color: #1A1A1A !important; }
+#app .cc-menu .cc-menu-item > :first-child { margin-left: 4px; }

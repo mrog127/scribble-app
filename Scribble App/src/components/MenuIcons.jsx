@@ -140,11 +140,24 @@ export function TrashMenuIcon() {
   )
 }
 
-// Folder — "Move to…"
+// Easel — "Move …" (the name's kept so every Move row picks it up). The
+// Easels menu's easel, drawn like the other menu icons: 1pt, in currentColor.
 export function FolderMenuIcon() {
   return (
     <svg {...base}>
-      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" {...stroke}/>
+      <rect x="4.2" y="3" width="15.6" height="11.4" {...stroke}/>
+      <line x1="12" y1="14.4" x2="12" y2="21" {...stroke}/>
+      <line x1="7.2" y1="14.4" x2="4.2" y2="21" {...stroke}/>
+      <line x1="16.8" y1="14.4" x2="19.8" y2="21" {...stroke}/>
+    </svg>
+  )
+}
+
+// Arrow out to the right — "Go to Canvas"
+export function GoToMenuIcon() {
+  return (
+    <svg {...base}>
+      <path d="M5 12h13M12.5 6l6 6-6 6" {...stroke}/>
     </svg>
   )
 }

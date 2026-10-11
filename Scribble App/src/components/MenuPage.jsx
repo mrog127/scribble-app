@@ -266,6 +266,36 @@ export function useCategoryDragReorder(containerRef, categories, onReorder, opts
 function ThemesCard() {
   const [theme, setThemeState] = useState(getTheme)
   const [open, setOpen] = useState(false)
+  // The menu drops below the field — unless it wouldn't fit there on screen
+  // (or in the scrolling page it sits in), and does fit above: then it opens
+  // above. Measured before it paints, so it never flashes in the wrong place.
+  const [above, setAbove] = useState(false)
+  const btnRef = useRef(null)
+  const ddRef = useRef(null)
+  useLayoutEffect(() => {
+    if (!open) { setAbove(false); return }
+    const btn = btnRef.current, dd = ddRef.current
+    if (!btn || !dd) return
+    const h = dd.getBoundingClientRect().height
+    const b = btn.getBoundingClientRect()
+    const vv = window.visualViewport
+    let top = vv ? vv.offsetTop : 0
+    let bottom = vv ? vv.offsetTop + vv.height : window.innerHeight
+    for (let el = btn.parentElement; el && el !== document.body; el = el.parentElement) {
+      const oy = getComputedStyle(el).overflowY
+      if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') {
+        const r = el.getBoundingClientRect()
+        top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom)
+        break
+      }
+    }
+    const fitsBelow = b.bottom + 4 + h <= bottom - 8
+    const fitsAbove = b.top - 6 - h >= top + 8
+    // Above: the same gap from the field as it has below
+    const gapBelow = Math.max(0, dd.getBoundingClientRect().top - b.bottom)
+    const wrap = btn.parentElement
+    setAbove(!fitsBelow && fitsAbove ? wrap.clientHeight - btn.offsetTop + gapBelow : false)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -294,6 +324,7 @@ function ThemesCard() {
       </div>
       <div style={{ position: 'relative', padding: '4px 16px 14px' }}>
         <button
+          ref={btnRef}
           className="theme-menu-btn"
           onClick={() => setOpen(o => !o)}
           style={{
@@ -310,9 +341,11 @@ function ThemesCard() {
         </button>
         {open && (
           <div
+            ref={ddRef}
             className="cat-menu-dropdown"
             style={{
-              position: 'absolute', left: 16, right: 16, top: 'calc(100% - 10px)', zIndex: 200,
+              position: 'absolute', left: 16, right: 16, zIndex: 200,
+              ...(above !== false ? { bottom: above } : { top: 'calc(100% - 10px)' }),
               background: '#F7F6F3', border: '1px solid #C2C1BF', borderRadius: 8,
               boxShadow: '0 4px 16px rgba(0,0,0,0.15)', overflow: 'hidden',
             }}

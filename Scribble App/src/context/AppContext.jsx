@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { announceNoteIdSwap } from '../noteIdSwap.js'
 import { supabase, functionsUrl, functionsKey } from '../supabaseClient'
 import { useAuth } from './AuthContext'
@@ -24,6 +24,15 @@ const send = (...args) => { mutationSeq++; announceWrite(); return outboxSend(..
 // Items added in this session that the database hasn't answered for yet carry a
 // temporary id (Date.now()); real ids are far smaller numbers or strings
 const isTempId = (id) => typeof id === 'number' && id > 1e12
+
+// The Inbox: where Add item sends things by default. It's stored as an Easel
+// (category) holding one canvas (project), both with fixed per-user ids, so
+// every existing add / move / edit / delete path works on its items unchanged.
+// It never shows as an Easel: it's left out of the categories the app sees,
+// and its items surface only in the Inbox card at the top of the Gallery.
+export const isInboxId = (id) => typeof id === 'string' && id.startsWith('inbox-')
+// Newest first: an Inbox item's sort order is minus the second it arrived
+const inboxStamp = () => -Math.floor(Date.now() / 1000)
 
 export const AppContext = createContext(null)
 
@@ -220,15 +229,16 @@ export function AppProvider({ children }) {
           pinOrder: proj.pin_order ?? null,
           todos: (todos || []).filter(t => t.project_id === proj.id).map(t => ({
             id: t.id, text: t.text, comment: t.comment ?? null, checked: t.checked, activated: t.activated, scheduledDate: t.scheduled_date,
+            sortOrder: t.sort_order ?? null, createdAt: t.created_at ?? null,
             recurrence: t.recurrence ?? null, recurAnchor: t.recur_anchor ?? null,
             homeSortOrder: t.home_sort_order ?? null, catSortOrder: t.cat_sort_order ?? null,
             linkedNoteIds: normalizeIds(t.linked_note_ids), linkedLinkIds: normalizeIds(t.linked_link_ids)
           })),
           notes: (notes || []).filter(n => n.project_id === proj.id).map(n => ({
-            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, homeSortOrder: n.home_sort_order ?? null, catSortOrder: n.cat_sort_order ?? null, editorHTML: n.editor_html, archived: n.archived === true
+            id: n.id, text: n.text, activated: n.activated, scheduledDate: n.scheduled_date, sortOrder: n.sort_order ?? null, createdAt: n.created_at ?? null, homeSortOrder: n.home_sort_order ?? null, catSortOrder: n.cat_sort_order ?? null, editorHTML: n.editor_html, archived: n.archived === true
           })),
           links: (links || []).filter(l => l.project_id === proj.id).map(l => ({
-            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true,
+            id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, sortOrder: l.sort_order ?? null, createdAt: l.created_at ?? null, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true,
             imageUrl: l.image_url ?? null, imageFetchedAt: l.image_fetched_at ?? null, siteName: l.site_name ?? null,
             imageIsIcon: l.image_is_icon === true, imageBg: l.image_bg ?? null,
             imageCornerDark: l.image_corner_dark === true
@@ -273,7 +283,7 @@ export function AppProvider({ children }) {
       // app and went straight to adding an item): its answer predates that, so
       // keep anything still waiting on its real id rather than wiping it from
       // the screen, and load again once the write has had time to land.
-      setCategories(prev => builtCats.map(cat => {
+      setCategories(prev => [...builtCats, ...prev.filter(c => isInboxId(c.id) && !builtCats.some(b => b.id === c.id))].map(cat => {
         const old = prev.find(c => c.id === cat.id)
         if (!old) return cat
         return { ...cat, projects: cat.projects.map(proj => {
@@ -691,8 +701,9 @@ export function AppProvider({ children }) {
     const movedLinks = linkIds.map(id => src.links.find(l => String(l.id) === String(id))).filter(Boolean)
     const movedNoteIdSet = new Set(movedNotes.map(n => n.id))
     const movedLinkIdSet = new Set(movedLinks.map(l => l.id))
-    const movedTodo = moveAttachments ? todo : { ...todo, linkedNoteIds: [], linkedLinkIds: [] }
-    const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.todos.length || 0
+    const movedTodo = moveAttachments ? { ...todo } : { ...todo, linkedNoteIds: [], linkedLinkIds: [] }
+    const sortOrder = isInboxId(toProj) ? inboxStamp() : (categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.todos.length || 0)
+    if (isInboxId(toProj)) movedTodo.sortOrder = sortOrder
     setCategories(prev => prev.map(cat => {
       let projects = cat.projects
       if (cat.id === fromCat) projects = projects.map(p => p.id !== fromProj ? p : {
@@ -721,11 +732,12 @@ export function AppProvider({ children }) {
     if (fromCat === toCat && fromProj === toProj) return
     const note = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)?.notes.find(n => n.id === noteId)
     if (!note) return
-    const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.notes.length || 0
+    const sortOrder = isInboxId(toProj) ? inboxStamp() : (categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.notes.length || 0)
+    const moved = isInboxId(toProj) ? { ...note, sortOrder } : note
     setCategories(prev => prev.map(cat => {
       let projects = cat.projects
       if (cat.id === fromCat) projects = projects.map(p => p.id === fromProj ? { ...p, notes: p.notes.filter(n => n.id !== noteId) } : p)
-      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, notes: [...p.notes, note] } : p)
+      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, notes: [...p.notes, moved] } : p)
       return projects === cat.projects ? cat : { ...cat, projects }
     }))
     db(supabase.from('notes').update({ project_id: toProj, sort_order: sortOrder }).eq('id', noteId))
@@ -735,11 +747,12 @@ export function AppProvider({ children }) {
     if (fromCat === toCat && fromProj === toProj) return
     const link = categoriesRef.current.find(c => c.id === fromCat)?.projects.find(p => p.id === fromProj)?.links.find(l => l.id === linkId)
     if (!link) return
-    const sortOrder = categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.links.length || 0
+    const sortOrder = isInboxId(toProj) ? inboxStamp() : (categoriesRef.current.find(c => c.id === toCat)?.projects.find(p => p.id === toProj)?.links.length || 0)
+    const moved = isInboxId(toProj) ? { ...link, sortOrder } : link
     setCategories(prev => prev.map(cat => {
       let projects = cat.projects
       if (cat.id === fromCat) projects = projects.map(p => p.id === fromProj ? { ...p, links: p.links.filter(l => l.id !== linkId) } : p)
-      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, links: [...p.links, link] } : p)
+      if (cat.id === toCat) projects = projects.map(p => p.id === toProj ? { ...p, links: [...p.links, moved] } : p)
       return projects === cat.projects ? cat : { ...cat, projects }
     }))
     db(supabase.from('links').update({ project_id: toProj, sort_order: sortOrder }).eq('id', linkId))
@@ -1101,6 +1114,87 @@ export function AppProvider({ children }) {
     newOrder.forEach((p, i) => db(supabase.from('projects').update({ pin_order: i }).eq('id', p.projectId)))
   }, [])
 
+  // ---- Inbox ----
+  const inboxIds = useMemo(() => (user ? { categoryId: `inbox-${user.id}`, projectId: `inbox-${user.id}` } : null), [user])
+  // Make sure the Inbox's Easel and canvas exist — locally straight away, and
+  // in the database the first time it's used. The writes go one after another
+  // (the canvas needs its Easel, an item needs its canvas): fired together, the
+  // canvas could land before its Easel and be refused, and every item after it
+  // with it. Returns a promise that settles once they're in.
+  const inboxReadyRef = useRef(null)
+  const ensureInbox = useCallback(() => {
+    if (!inboxIds) return Promise.resolve()
+    const { categoryId, projectId } = inboxIds
+    const cat = categoriesRef.current.find(c => c.id === categoryId)
+    const hasProj = !!cat?.projects.some(p => p.id === projectId)
+    if (!hasProj) {
+      const proj = { id: projectId, name: 'Inbox', archived: false, pinned: false, pinOrder: null, todos: [], notes: [], links: [] }
+      setCategories(prev => {
+        const c = prev.find(x => x.id === categoryId)
+        if (!c) return [...prev, { id: categoryId, name: 'Inbox', sendToHomescreen: false, showGalleryCanvas: false, archived: false, projects: [proj] }]
+        if (c.projects.some(p => p.id === projectId)) return prev
+        return prev.map(x => x.id === categoryId ? { ...x, projects: [...x.projects, proj] } : x)
+      })
+      categoriesRef.current = cat
+        ? categoriesRef.current.map(x => x.id === categoryId ? { ...x, projects: [...x.projects, proj] } : x)
+        : [...categoriesRef.current, { id: categoryId, name: 'Inbox', projects: [proj] }]
+    }
+    // Already in the database (it came back from a load), or already on its way
+    if (inboxReadyRef.current) return inboxReadyRef.current
+    if (hasProj && freshLoadedRef.current) { inboxReadyRef.current = Promise.resolve(); return inboxReadyRef.current }
+    // (Rows that are already there come back as duplicates — harmless.)
+    inboxReadyRef.current = (async () => {
+      await send(supabase.from('categories').insert({ id: categoryId, user_id: user.id, name: 'Inbox', sort_order: -1, send_to_homescreen: false }), 'insert inbox easel')
+      await send(supabase.from('projects').insert({ id: projectId, user_id: user.id, category_id: categoryId, name: 'Inbox', sort_order: 0 }), 'insert inbox canvas')
+    })()
+    return inboxReadyRef.current
+  }, [inboxIds, user])
+
+  // Add a list item / note / link to the Inbox: it goes in at the top
+  // (activated / scheduledDate are kept for when it's filed into a canvas)
+  const addInboxItem = useCallback((type, text, url, opts = {}, onCreated) => {
+    if (!inboxIds) return null
+    const scheduledDate = opts.scheduledDate || null
+    const activated = !!opts.activated && !scheduledDate
+    const { categoryId, projectId } = inboxIds
+    const tempId = Date.now()
+    const sortOrder = inboxStamp()
+    const table = type === 'list' ? 'todos' : type === 'note' ? 'notes' : 'links'
+    const key = table
+    let item, row
+    if (type === 'list') {
+      item = { id: tempId, text, checked: false, activated, scheduledDate, sortOrder, linkedNoteIds: [], linkedLinkIds: [] }
+      row = { user_id: user.id, project_id: projectId, text, checked: false, activated, scheduled_date: scheduledDate, sort_order: sortOrder }
+    } else if (type === 'note') {
+      item = { id: tempId, text, activated, scheduledDate, sortOrder, editorHTML: null }
+      row = { user_id: user.id, project_id: projectId, text, activated, scheduled_date: scheduledDate, editor_html: null, sort_order: sortOrder }
+      tempNoteIdsRef.current.add(tempId)
+    } else {
+      const finalTitle = (text && text.trim()) || url
+      item = { id: tempId, url, title: finalTitle, activated, scheduledDate, sortOrder }
+      row = { user_id: user.id, project_id: projectId, url, title: finalTitle, activated, scheduled_date: scheduledDate, sort_order: sortOrder }
+    }
+    const ready = ensureInbox()
+    updateProject(categoryId, projectId, proj => ({ ...proj, [key]: [item, ...proj[key]] }))
+    ready.then(() => send(supabase.from(table).insert(row).select().single(), `insert ${table}`)).then(({ data }) => {
+      if (data) updateProject(categoryId, projectId, proj => ({
+        ...proj,
+        [key]: proj[key].map(x => x.id === tempId ? { ...x, id: data.id, createdAt: data.created_at ?? null } : x),
+      }))
+      if (data && type === 'note') { flushPendingNoteSave(tempId, data.id); followNoteIdSwap(tempId, data.id) }
+      if (data && onCreated) onCreated(data.id)
+    })
+    return tempId
+  }, [inboxIds, ensureInbox, user, updateProject, flushPendingNoteSave, followNoteIdSwap])
+
+  // Moving something into the Inbox: make sure it's there first
+  // (the move's database write has to wait until the Inbox's canvas is there)
+  const moveIntoInbox = useCallback((fn) => (fromCat, fromProj, toCat, toProj, ...rest) => {
+    if (!isInboxId(toCat)) return fn(fromCat, fromProj, toCat, toProj, ...rest)
+    const ready = ensureInbox()
+    ready.then(() => fn(fromCat, fromProj, toCat, toProj, ...rest))
+  }, [ensureInbox])
+
   // ---- Categories ----
   const addCategory = useCallback((name) => {
     const id = `cat-${Date.now()}`
@@ -1210,7 +1304,8 @@ export function AppProvider({ children }) {
   }, [])
 
   const reorderCategories = useCallback((newOrder) => {
-    setCategories(newOrder)
+    // The Inbox isn't among the Easels being reordered — keep it
+    setCategories(prev => [...newOrder, ...prev.filter(c => isInboxId(c.id) && !newOrder.some(n => n.id === c.id))])
     newOrder.forEach((cat, i) => db(supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)))
   }, [])
 
@@ -1287,12 +1382,28 @@ export function AppProvider({ children }) {
     await supabase.from('projects').delete().eq('id', projectId)
   }, [])
 
+  // Active only — archived easels are hidden from every list in the app, and
+  // the Inbox is never one of the Easels.
+  const visibleCategories = useMemo(() => categories.filter(c => !c.archived && !isInboxId(c.id)), [categories])
+  const inbox = useMemo(() => {
+    const cat = inboxIds && categories.find(c => c.id === inboxIds.categoryId)
+    return cat?.projects.find(p => p.id === inboxIds.projectId) || null
+  }, [categories, inboxIds])
+  const moveTodoAny = useMemo(() => moveIntoInbox(moveProjectTodo), [moveIntoInbox, moveProjectTodo])
+  const moveNoteAny = useMemo(() => moveIntoInbox(moveProjectNote), [moveIntoInbox, moveProjectNote])
+  const moveLinkAny = useMemo(() => moveIntoInbox(moveProjectLink), [moveIntoInbox, moveProjectLink])
+
   return (
     <AppContext.Provider value={{
       // Active only — archived easels are hidden from every list in the app.
-      categories: categories.filter(c => !c.archived),
-      allCategories: categories,
-      archivedCategories: categories.filter(c => c.archived),
+      categories: visibleCategories,
+      allCategories: categories.filter(c => !isInboxId(c.id)),
+      archivedCategories: categories.filter(c => c.archived && !isInboxId(c.id)),
+      // The Inbox canvas (null until something has been put in it) and its ids
+      inbox,
+      inboxIds,
+      isInboxId,
+      addInboxItem,
       archiveCategory,
       unarchiveCategory,
       activeTodos,
@@ -1335,9 +1446,9 @@ export function AppProvider({ children }) {
       reorderTodoLinks,
       ensureLinkImage,
       moveProject,
-      moveProjectTodo,
-      moveProjectNote,
-      moveProjectLink,
+      moveProjectTodo: moveTodoAny,
+      moveProjectNote: moveNoteAny,
+      moveProjectLink: moveLinkAny,
       toggleProjectTodoActivated,
       toggleProjectNoteActivated,
       archiveProjectNote,

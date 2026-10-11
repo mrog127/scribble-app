@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { moveWithAnimation } from '../moveFx.js'
 import { soloItem, DONE_LABEL, openSoloWindow } from '../soloWindow.js'
 import { useAppContext } from '../context/AppContext.jsx'
-import { getCategoryAccent } from '../theme.js'
+import { getCategoryAccent, getInboxAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
@@ -62,7 +62,9 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   const [editUrl, setEditUrl] = useState('')
   const editUrlRef = useRef(null)
   const { categories, updateProjectLink, toggleProjectLinkActivated, setProjectLinkScheduled, moveProjectLink, ensureLinkImage,
-    promptDelete, deleteProjectLink, archiveProjectLink, unarchiveProjectLink } = useAppContext()
+    promptDelete, deleteProjectLink, archiveProjectLink, unarchiveProjectLink, isInboxId } = useAppContext()
+  // An Inbox link's page is a reduced one: Delete is its menu's only option
+  const inInbox = isInboxId(categoryId)
   const [isOpen, setIsOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -77,13 +79,14 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   const pageRef = useRef(null)
 
   const accent = useMemo(() => {
+    if (inInbox) return getInboxAccent()
     const idx = categories.findIndex(c => c.id === categoryId)
     return idx === -1 ? null : getCategoryAccent(idx)
-  }, [categories, categoryId])
+  }, [categories, categoryId, inInbox])
 
   const projectName = useMemo(
-    () => categories.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.name || '',
-    [categories, categoryId, projectId]
+    () => inInbox ? 'Inbox' : (categories.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId)?.name || ''),
+    [categories, categoryId, projectId, inInbox]
   )
 
   useEffect(() => { requestAnimationFrame(() => setIsOpen(true)) }, [])
@@ -156,7 +159,14 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   // this link (e.g. straight from search).
   useEffect(() => { ensureLinkImage(categoryId, projectId, link) }, [link.id, link.imageFetchedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const footerMenuItems = [
+  const footerMenuItems = inInbox ? [
+    {
+      label: 'Delete Link',
+      icon: <TrashMenuIcon/>,
+      danger: true,
+      onSelect: () => promptDelete(() => { deleteProjectLink(categoryId, projectId, link.id); onClose() }),
+    },
+  ] : [
     { label: 'Copy Link', icon: <CopyMenuIcon/>, onSelect: handleCopy },
     {
       label: link.archived ? 'Unarchive Link' : 'Archive Link',
@@ -179,7 +189,7 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${isOpen ? ' open' : ''}`}
+      className={`note-detail-page${isOpen ? ' open' : ''}${inInbox ? ' inbox-page' : ''}`}
       style={accent ? { '--accent-base': accent.base, '--accent-dark': accent.dark, '--accent-light': accent.light, '--accent-base-rgb': accent.baseRgb } : undefined}
     >
       <div className="note-detail-header">
@@ -348,10 +358,11 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
         activated={!!link.activated}
         scheduledDate={link.scheduledDate}
         onToggleActive={() => toggleProjectLinkActivated(categoryId, projectId, link.id)}
-        onSchedule={(date) => setProjectLinkScheduled(categoryId, projectId, link.id, date)}
+        onSchedule={inInbox ? undefined : (date) => setProjectLinkScheduled(categoryId, projectId, link.id, date)}
         onClearSchedule={() => setProjectLinkScheduled(categoryId, projectId, link.id, null)}
         accent={accent}
         projectName={projectName}
+        inbox={inInbox}
         onProjectClick={openMove}
         menuOpen={moveOpen}
         onCopy={handleCopy}

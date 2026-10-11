@@ -1,27 +1,27 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { getCategoryAccent } from '../theme.js'
-import CardTabs from './CardTabs.jsx'
-import AddCanvasRow from './AddCanvasRow.jsx'
+import DestinationPicker, { EaselGlyph } from './DestinationPicker.jsx'
+import { useAppContext } from '../context/AppContext.jsx'
 
-// "Move to..." card — pick a destination project. Nothing applies until Move.
-// Opens centered over a dim scrim. Reuses the .save-to-* styles. Defaults to the
-// tab and project the item is currently in.
-// mode 'projects' (default) picks a destination canvas; mode 'pages' picks a
-// destination category page — used when moving a canvas itself.
+// "Move to..." card. Opens centered over a dim scrim. Reuses the .save-to-* styles.
+// mode 'projects' (default) picks a destination canvas: tapping one (or the
+// Inbox, from the Easel button's menu) moves the item there straight away. It
+// opens on the Easel the item is in.
+// mode 'pages' picks a destination Easel — used when moving a canvas itself;
+// tapping an Easel moves it there straight away.
 export default function MoveToCard({ categories, currentCategoryId, currentProjectId, topPx, onCancel, onSave, mode = 'projects', title = 'Move to...' }) {
   const pagesMode = mode === 'pages'
+  const { inboxIds } = useAppContext()
   const [sel, setSel] = useState({ categoryId: currentCategoryId, projectId: currentProjectId })
-  const [tab, setTab] = useState(currentCategoryId)
+  // The Easel whose canvases are listed: the item's own, or (for an Inbox item)
+  // the first Easel
+  const [tab, setTab] = useState(() => (
+    categories.some(c => c.id === currentCategoryId) ? currentCategoryId : (categories[0]?.id ?? null)
+  ))
   const changed = pagesMode ? sel.categoryId !== currentCategoryId : sel.projectId !== currentProjectId
   const selCatIdx = categories.findIndex(c => c.id === sel.categoryId)
   const selAccent = selCatIdx !== -1 ? getCategoryAccent(selCatIdx) : null
-  const tabCatIdx = categories.findIndex(c => c.id === tab)
-  const tabAccent = tabCatIdx !== -1 ? getCategoryAccent(tabCatIdx) : null
-  // Only active projects are valid destinations; the item's own project is shown
-  // even if archived (so it can be left there), but never any other archived one.
-  const tabProjects = (categories.find(c => c.id === tab)?.projects || [])
-    .filter(p => !p.archived || p.id === currentProjectId)
   const scrollRef = useRef(null)
   const cardRef = useRef(null)
   const [open, setOpen] = useState(false)
@@ -66,14 +66,20 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
   useLayoutEffect(() => {
     const scroller = scrollRef.current
     if (!scroller) return
-    const selectedEl = scroller.querySelector('.save-to-option.selected')
+    const selectedEl = scroller.querySelector('.save-to-option.is-current')
     if (!selectedEl) return
     const sRect = scroller.getBoundingClientRect()
     const eRect = selectedEl.getBoundingClientRect()
     const delta = (eRect.top - sRect.top) - (scroller.clientHeight - eRect.height) / 2
     scroller.scrollTop += delta
     scroller.classList.toggle('scrolled', scroller.scrollTop > 4)
-  }, [tab])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Projects mode: a tap is the decision
+  const pick = (dest) => {
+    if (dest.projectId === currentProjectId) { finish(onCancel); return }
+    finish(() => onSave(dest))
+  }
 
   return createPortal(
     <div className={`move-to-overlay${open ? ' open' : ''}`} onPointerDown={() => finish(onCancel)}>
@@ -87,18 +93,18 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
         <p className="save-to-title">{title}</p>
         <button
           className="save-to-cancel"
-          onMouseDown={e => { e.preventDefault(); changed ? finish(() => onSave(sel)) : finish(onCancel) }}
+          onMouseDown={e => { e.preventDefault(); finish(onCancel) }}
         >
-          {changed ? 'Move' : 'Cancel'}
+          Cancel
         </button>
       </div>
+      {pagesMode ? (
       <div
         className="save-to-scroll"
         ref={scrollRef}
         onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollTop > 4)}
-        style={tabAccent ? { '--cb-base': tabAccent.base, '--cb-dark': tabAccent.dark, '--cb-light': tabAccent.light, '--cb-base-rgb': tabAccent.baseRgb } : undefined}
       >
-        {pagesMode ? (
+        {
           categories.map((cat, i) => {
             const acc = getCategoryAccent(i)
             const on = sel.categoryId === cat.id
@@ -106,40 +112,39 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
               <div key={cat.id}>
                 {i > 0 && <div className="save-to-divider"/>}
                 <button
-                  className={`save-to-option${on ? ' selected' : ''}`}
+                  className={`save-to-option${on ? ' is-current' : ''}`}
                   /* Each row carries its own accent so the selected highlight
                      matches that page, rather than one colour for the list. */
                   style={{ '--cb-base': acc.base, '--cb-dark': acc.dark, '--cb-light': acc.light, '--cb-base-rgb': acc.baseRgb }}
-                  onMouseDown={e => { e.preventDefault(); setSel({ categoryId: cat.id, projectId: currentProjectId }) }}
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    // One tap moves it (tapping its own Easel just closes)
+                    if (cat.id === currentCategoryId) { finish(onCancel); return }
+                    const dest = { categoryId: cat.id, projectId: currentProjectId }
+                    setSel(dest)
+                    finish(() => onSave(dest))
+                  }}
                 >
-                  <div className={`save-to-radio${on ? ' filled' : ''}`}/>
+                  <EaselGlyph accent={acc} className="dest-page-easel"/>
                   <span>{cat.name}</span>
                 </button>
               </div>
             )
           })
-        ) : (
-          <>
-            {tabProjects.map((proj, i) => (
-              <div key={proj.id}>
-                {i > 0 && <div className="save-to-divider"/>}
-                <button
-                  className={`save-to-option${sel.projectId === proj.id ? ' selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); setSel({ categoryId: tab, projectId: proj.id }) }}
-                >
-                  <div className={`save-to-radio${sel.projectId === proj.id ? ' filled' : ''}`}/>
-                  <span>{proj.name}</span>
-                </button>
-              </div>
-            ))}
-            <AddCanvasRow
-              categoryId={tab}
-              onCreated={({ categoryId, projectId }) => setSel({ categoryId, projectId })}
-            />
-          </>
-        )}
+        }
       </div>
-      {!pagesMode && <CardTabs categories={categories} selected={tab} onSelect={setTab} />}
+      ) : (
+        <DestinationPicker
+          categories={categories}
+          selected={{ categoryId: currentCategoryId, projectId: currentProjectId }}
+          browse={tab}
+          onBrowse={setTab}
+          onPick={pick}
+          onPickInbox={() => inboxIds && pick(inboxIds)}
+          keepId={currentProjectId}
+          scrollRef={scrollRef}
+        />
+      )}
     </div>
     </div>,
     document.getElementById('app')

@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { CalendarIcon, RecurringCalendarIcon, isRecurring, formatSchedule, isScheduleReached } from './ScheduleBits.jsx'
 import CalendarPopup from './CalendarPopup.jsx'
+import { InboxIcon } from './DestinationPicker.jsx'
 
 function FolderIcon({ active }) {
   return (
@@ -62,7 +63,7 @@ function ActivateIcon({ activated }) {
   )
 }
 
-export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false, menuItems, allowRecurring = false, recurrence = null }) {
+export default function DetailFooter({ activated, onToggleActive, projectName, onProjectClick, menuOpen, scheduledDate, onSchedule, onClearSchedule, accent, onCopy, copied, completeButton, scrollable, disabledActive = false, menuItems, allowRecurring = false, recurrence = null, inbox = false }) {
   const [calOpen, setCalOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState(null)
   const btnRef = useRef(null)
@@ -129,8 +130,11 @@ export default function DetailFooter({ activated, onToggleActive, projectName, o
             className="detail-footer-project-btn"
             onMouseDown={e => { e.preventDefault(); onProjectClick && onProjectClick() }}
           >
-            <EaselIcon accent={accent}/>
-            <span className="detail-footer-project">{projectName}</span>
+            {/* An Inbox item shows the Inbox's tray where a canvas shows its Easel */}
+            {inbox
+              ? <InboxIcon className="detail-footer-easel-icon" size={18} color={accent?.dark || 'var(--accent-dark)'} strokeWidth={2}/>
+              : <EaselIcon accent={accent}/>}
+            <span className="detail-footer-project">{inbox ? 'Inbox' : projectName}</span>
           </button>
         </div>
         {items.length > 0 ? (

@@ -113,3 +113,16 @@ export function getCategoryAccent(categoryIndex) {
     dot,
   }
 }
+
+// The Inbox isn't an Easel, so it has no Easel colour: it wears the app's
+// neutral text colour instead — the "clear" counterpart to an Easel's accent.
+// (baseRgb, which only ever paints washes, is a paler grey than the text
+// colour, so the Inbox's fills stay as light as the app's grey controls)
+const INBOX_ACCENTS = {
+  paintbrush: { base: '#43535E', dark: '#43535E', light: '#E8EBED', baseRgb: '120,140,152' },
+  'dark-dots': { base: '#E6E6E6', dark: '#E6E6E6', light: '#3A3A3A', baseRgb: '170,170,170' },
+  'light-dots': { base: '#292929', dark: '#292929', light: '#E3E3E3', baseRgb: '150,150,150' },
+}
+export function getInboxAccent() {
+  return INBOX_ACCENTS[getTheme()] || INBOX_ACCENTS.paintbrush
+}

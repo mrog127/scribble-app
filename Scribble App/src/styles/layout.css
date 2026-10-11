@@ -11391,6 +11391,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send {
   width: 40px;
   height: 40px;
@@ -11410,6 +11411,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
     calc(var(--mc-u) * 4px) calc(var(--mc-v) * 4px) 16px rgba(var(--accent-base-rgb), 0.08),
     calc(var(--mc-u) * -4px) calc(var(--mc-v) * -4px) 16px rgba(0, 0, 0, 0.02);
 }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send { position: relative; }
 :root[data-theme="light-dots"] #app .card-rename-wrap .project-send-btn.visible,
 :root[data-theme="light-dots"] #app .new-project-card .project-send-btn.visible,
@@ -11417,6 +11419,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root[data-theme="light-dots"] #app .link-row-editor .project-send-btn.visible,
 :root[data-theme="light-dots"] #app .save-to-new-row .save-to-new-send,
 :root[data-theme="light-dots"] #app .footer .add-row .easel-stack .easel-send-btn,
+:root[data-theme="light-dots"] #app .dest-search-field .dest-search-send,
 :root[data-theme="light-dots"] #app .link-edit-send {
   background:
     radial-gradient(ellipse 20px 12px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
@@ -11434,6 +11437,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn::before,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send::before {
   content: '';
   position: absolute;
@@ -11459,6 +11463,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root[data-theme="light-dots"] #app .link-row-editor .project-send-btn.visible::before,
 :root[data-theme="light-dots"] #app .save-to-new-row .save-to-new-send::before,
 :root[data-theme="light-dots"] #app .footer .add-row .easel-stack .easel-send-btn::before,
+:root[data-theme="light-dots"] #app .dest-search-field .dest-search-send::before,
 :root[data-theme="light-dots"] #app .link-edit-send::before {
   background:
     conic-gradient(from var(--mc-a), rgba(var(--accent-base-rgb), 0.5), rgba(255, 255, 255, 1) 50%, rgba(var(--accent-base-rgb), 0.5)),
@@ -11470,6 +11475,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible::after,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send::after,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn::after,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send::after,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send::after { display: none; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card-rename-wrap .project-send-btn.visible svg,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .new-project-card .project-send-btn.visible svg,
@@ -11477,6 +11483,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible svg,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send svg,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn svg,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send svg,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send svg { position: relative; z-index: 3; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card-rename-wrap .project-send-btn.visible svg path,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .new-project-card .project-send-btn.visible svg path,
@@ -11484,6 +11491,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible svg path,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send svg path,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn svg path,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send svg path,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send svg path {
   stroke: var(--accent-base) !important;
   stroke-width: 2;
@@ -11496,6 +11504,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible:hover,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send:hover,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn:hover,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send:hover,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send:hover {
   background:
     radial-gradient(ellipse 18px 10px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
@@ -11509,6 +11518,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root[data-theme="light-dots"] #app .link-row-editor .project-send-btn.visible:hover,
 :root[data-theme="light-dots"] #app .save-to-new-row .save-to-new-send:hover,
 :root[data-theme="light-dots"] #app .footer .add-row .easel-stack .easel-send-btn:hover,
+:root[data-theme="light-dots"] #app .dest-search-field .dest-search-send:hover,
 :root[data-theme="light-dots"] #app .link-edit-send:hover {
   background:
     radial-gradient(ellipse 20px 12px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
@@ -11523,6 +11533,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible.is-pressed,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send.is-pressed,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn.is-pressed,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send.is-pressed,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send.is-pressed {
   background:
     radial-gradient(ellipse 18px 10px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.04), transparent),
@@ -11536,6 +11547,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root[data-theme="light-dots"] #app .link-row-editor .project-send-btn.visible.is-pressed,
 :root[data-theme="light-dots"] #app .save-to-new-row .save-to-new-send.is-pressed,
 :root[data-theme="light-dots"] #app .footer .add-row .easel-stack .easel-send-btn.is-pressed,
+:root[data-theme="light-dots"] #app .dest-search-field .dest-search-send.is-pressed,
 :root[data-theme="light-dots"] #app .link-edit-send.is-pressed {
   background:
     radial-gradient(ellipse 20px 12px at calc(50% + var(--mc-u) * 50%) calc(50% + var(--mc-v) * 50%), rgba(255, 255, 255, 0.5), transparent),
@@ -11550,6 +11562,7 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-row-editor .project-send-btn.visible,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-new-row .save-to-new-send,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer .add-row .easel-stack .easel-send-btn,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .link-edit-send { animation: none; }
 }
 /* Save to / Move to and the new-Easel field carry their colour as --cb-*, not
@@ -13481,3 +13494,260 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 :root[data-theme="dark-dots"] #app .cc-menu .cc-menu-item.active .cc-option-name { color: #E6E6E6 !important; }
 :root[data-theme="paintbrush"] #app .cc-menu .cc-menu-item.active .cc-option-name { color: #1A1A1A !important; }
 #app .cc-menu .cc-menu-item > :first-child { margin-left: 4px; }
+
+/* --- Save to / Move to, reworked: the list box holds the list and, at its
+   foot, the Easel + Add canvas buttons; beneath the box a grey search pill
+   (the open search module's field) --- */
+#app :is(.save-to-card, .move-to-card) .dest-list-box {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+#app :is(.save-to-card, .move-to-card) .dest-list-box > .save-to-scroll.dest-canvas-list { flex: 1 1 0; min-height: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-list-box {
+  margin: 4px 16px 0;
+  border-radius: 24px;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+}
+:root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+}
+/* (the box carries the grey now, not the list) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"], [data-theme="paintbrush"]) #app :is(.save-to-card, .move-to-card) .dest-list-box > .save-to-scroll.dest-canvas-list {
+  margin: 0;
+  border-radius: 24px;
+  background-image: none;
+  padding: 4px 0;
+}
+/* the buttons, inside the box's foot */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-list-box > .dest-easel-bar {
+  padding: 4px 8px 8px;
+  background: transparent;
+  border-top: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .card-context-menu.mbar-page-menu.dest-easels-menu { left: 8px; }
+:root[data-theme="paintbrush"] #app :is(.save-to-card, .move-to-card) .dest-list-box > .dest-easel-bar { margin-top: 0; }
+
+/* Rows: an icon (the Easel's, or the Inbox's) 6px before the name */
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option.no-radio { display: flex; align-items: center; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-row-icon { flex-shrink: 0; margin-right: 6px; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result .cc-option-text { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result :is(.cc-option-name, .cc-option-page) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result .cc-option-page { font-size: 14px; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result.dest-row-inbox .cc-option-text { justify-content: center; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result:not(.dest-row-inbox) { padding-top: 8px; padding-bottom: 8px; height: auto; min-height: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result :is(.cc-option-name, .cc-option-page) { font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; font-weight: 500; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result .cc-option-name { line-height: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result .cc-option-page { line-height: normal; margin-top: 1px; }
+#app :is(.save-to-card, .move-to-card) .dest-empty {
+  padding: 12px 20px;
+  font: 400 16px 'Open Sans', system-ui, sans-serif;
+  color: #8A8A8A;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-empty { font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; }
+
+/* The search pill */
+#app :is(.save-to-card, .move-to-card) .dest-search-bar { flex-shrink: 0; padding: 8px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-search-bar { padding: 12px 16px 16px; }
+#app :is(.save-to-card, .move-to-card) .dest-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 4px 0 14px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #242424;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-search-field {
+  height: 48px;
+  padding: 0 8px 0 16px;
+  border-radius: 24px;
+  background: transparent;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+  color: #E6E6E6;
+}
+:root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .dest-search-field {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04));
+  color: #242424;
+}
+#app :is(.save-to-card, .move-to-card) .dest-search-field svg { flex-shrink: 0; stroke: currentColor; }
+#app :is(.save-to-card, .move-to-card) .dest-search-field svg * { stroke: currentColor; }
+#app :is(.save-to-card, .move-to-card) .dest-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin-left: 8px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: 400 16px 'Open Sans', system-ui, sans-serif;
+  -webkit-appearance: none;
+  appearance: none;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-search-input { font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; font-weight: 500; }
+#app :is(.save-to-card, .move-to-card) .dest-search-input::placeholder { color: #8A8A8A; opacity: 1; }
+#app :is(.save-to-card, .move-to-card) .dest-search-clear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option.no-radio:is(.dest-easel-row, .dest-canvas-row, .dest-result) { gap: 0; }
+/* Add canvas, on the list box's grey: a deeper wash of it */
+:root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box .dest-add-canvas-btn { background: rgba(0, 0, 0, 0.05); }
+@media (hover: hover) { :root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box .dest-add-canvas-btn:hover { background: rgba(0, 0, 0, 0.09); } }
+:root[data-theme="light-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box .dest-add-canvas-btn:is(.is-pressed, :active) { background: rgba(0, 0, 0, 0.09); }
+:root[data-theme="dark-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box .dest-add-canvas-btn { background: rgba(255, 255, 255, 0.06); }
+@media (hover: hover) { :root[data-theme="dark-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box .dest-add-canvas-btn:hover { background: rgba(255, 255, 255, 0.1); } }
+:root[data-theme="dark-dots"] #app :is(.save-to-card, .move-to-card) .dest-list-box .dest-add-canvas-btn:is(.is-pressed, :active) { background: rgba(255, 255, 255, 0.1); }
+
+/* Save to / Move to: the Easel + Add canvas buttons sit at the foot of the
+   list box, 12px in from its sides and bottom */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-list-box > .dest-easel-bar { padding: 4px 12px 12px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-list-box .card-context-menu.mbar-page-menu.dest-easels-menu { left: 12px; }
+
+/* Inbox: a row lifted by a long-press (or held by a right-click) shows its
+   whole shadow — the rows' clip is let go while it's up */
+#app .inbox-card > .inbox-items:has(.row-lifted, .row-context-held) { overflow: visible; }
+
+/* (see backdropKick.js) */
+#app.bd-kick .footer,
+#app.bd-kick .footer::before,
+#app.bd-kick .footer::after,
+#app.bd-kick .footer *,
+#app.bd-kick .footer *::before,
+#app.bd-kick .footer *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* Search (Dots themes, phone): the whole module — results card and field —
+   sits 16px up off the bottom of the screen */
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .footer.search-open { padding-bottom: 32px !important; }
+}
+
+/* List item comment: paragraphs and bullets in the note body's styles; the
+   first sits right under the title */
+.todo-detail-comment > .note-para:first-child { margin-top: 0 !important; }
+
+/* List item / note / link pages (Dots themes): while being typed in, the title
+   and the list item comment sit in the grey title-field pill, which runs 16px
+   in from the page's sides (16px above and below the text); the text sits 12px
+   in from the pill */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.todo-detail-title, .note-detail-title):focus::before { left: 0; right: 0; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-title:focus { padding-left: 12px; padding-right: 12px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-title:focus {
+  margin-left: 16px;
+  margin-right: 16px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-comment:focus {
+  position: relative;
+  isolation: isolate;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-comment:focus::before {
+  content: '';
+  position: absolute;
+  inset: -16px 0;
+  border-radius: 32px;
+  background: var(--title-field-wash);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Home (phone): the Settings gear centres on the x-height of the date's first
+   line ("Sunday,"), not on its full line box */
+:root[data-theme="paintbrush"] #app .home-page .home-settings-btn { top: 57.5px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .home-page .home-settings-btn { top: 48.5px; }
+
+/* Save to / Move to search: the top result is highlighted (Return or Send files
+   there) in its Easel's colour, and a Send button in that colour sits at the
+   right end of the search pill */
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result.is-highlight { position: relative; isolation: isolate; }
+#app :is(.save-to-card, .move-to-card) .dest-canvas-list .dest-result.is-highlight::before {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  border-radius: 999px;
+  background: rgba(var(--cb-base-rgb), 0.16) !important;
+  pointer-events: none;
+  z-index: -1;
+  display: block !important;
+}
+#app :is(.save-to-card, .move-to-card) .dest-search-field .dest-search-clear.with-send { margin-right: 4px; }
+#app :is(.save-to-card, .move-to-card) .dest-search-send {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(var(--cb-base-rgb), 0.24);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#app :is(.save-to-card, .move-to-card) .dest-search-send svg path { stroke: var(--cb-dark); }
+/* Dots themes: Add item's Send (the glass circle, orbiting outline and glow in
+   the Easel's colour — see the check-button group above), 40px */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .dest-search-field .dest-search-send {
+  --accent-base: var(--cb-base);
+  --accent-dark: var(--cb-dark);
+  --accent-light: var(--cb-light);
+  --accent-base-rgb: var(--cb-base-rgb);
+  position: relative;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-search-field { padding-right: 4px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-comment:focus { padding-left: 16px; }
+
+/* Link tiles: on the clear glass surfaces (a canvas pinned to the Gallery, an
+   Easel's Gallery canvas) the text panel is near-white (and Dark Dots' image
+   area the lighter #292929); on the flat white cards (canvas cards, the
+   Gallery's content cards) the panel is the grey #F0F0F0 (Dark Dots: #212121
+   image area) */
+:root[data-theme="light-dots"] #app .card:not(.pinned-gallery):not(.gallery-canvas) .link-tile-body { background: #F0F0F0; }
+:root[data-theme="light-dots"] #app .card:is(.pinned-gallery, .gallery-canvas) .link-tile-body { background: #FAFAFA; }
+:root[data-theme="dark-dots"] #app .card:not(.pinned-gallery):not(.gallery-canvas) .link-tile-image { background-color: #212121; }
+:root[data-theme="dark-dots"] #app .card:not(.pinned-gallery):not(.gallery-canvas) .link-tile-image.is-phone { background: #212121 !important; }
+:root[data-theme="dark-dots"] #app .card:is(.pinned-gallery, .gallery-canvas) .link-tile-image { background-color: #292929; }
+:root[data-theme="dark-dots"] #app .card:is(.pinned-gallery, .gallery-canvas) .link-tile-image.is-phone { background: #292929 !important; }
+
+/* Desktop Add item: while a canvas is lined up with the Add item box, the
+   Easel page's header is hidden */
+@media (min-width: 1000px) {
+  #app .page.save-fit .page-header { opacity: 0 !important; pointer-events: none; transition: opacity 160ms ease; }
+}
+
+/* Save to / Move to: Easel and canvas rows 2px shorter top and bottom (52 → 48px) */
+:root[data-theme] #app :is(.save-to-card, .move-to-card) .dest-canvas-list .save-to-option:is(.dest-easel-row, .dest-canvas-row) { height: 48px; min-height: 48px; }
+
+/* Save to / Move to: the list stops 8px above the Easel / Add canvas buttons;
+   when it runs on past them it fades out over its last 16px (with the top fade
+   too once it has scrolled) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app :is(.save-to-card, .move-to-card) .dest-list-box > .dest-easel-bar { padding-top: 8px; }
+#app :is(.save-to-card, .move-to-card) .dest-list-box > .save-to-scroll.dest-canvas-list.fade-foot {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+}
+#app :is(.save-to-card, .move-to-card) .dest-list-box > .save-to-scroll.dest-canvas-list.fade-foot.scrolled {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 16px), transparent);
+}

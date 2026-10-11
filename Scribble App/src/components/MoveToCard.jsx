@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { getCategoryAccent } from '../theme.js'
 import DestinationPicker, { EaselGlyph } from './DestinationPicker.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
+import { kickBackdrops } from '../backdropKick.js'
 
 // "Move to..." card. Opens centered over a dim scrim. Reuses the .save-to-* styles.
 // mode 'projects' (default) picks a destination canvas: tapping one (or the
@@ -53,13 +54,35 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
   }, [])
 
   useEffect(() => { requestAnimationFrame(() => setOpen(true)) }, [])
+
+  // With a phone's keyboard up (the search field takes the caret on open), the
+  // card's foot rises to 16px above the keyboard
+  useEffect(() => {
+    const vv = window.visualViewport
+    const app = document.getElementById('app')
+    const card = cardRef.current
+    if (!vv || !app || !card) return
+    const base = card.style.bottom
+    const baseline = parseFloat(base || getComputedStyle(card).bottom) || 0
+    const fit = () => {
+      const appRect = app.getBoundingClientRect()
+      const cover = appRect.bottom - (vv.offsetTop + vv.height)
+      if (cover > 80) {
+        card.style.bottom = Math.max(baseline, cover + 16) + 'px'
+      } else card.style.bottom = base
+    }
+    fit()
+    vv.addEventListener('resize', fit)
+    vv.addEventListener('scroll', fit)
+    return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit) }
+  }, [])
   const finish = (fn) => { setOpen(false); setTimeout(fn, 180) }
 
   // Fade the rest of the screen to 10% while open
   useEffect(() => {
     const app = document.getElementById('app')
     app?.classList.add('dim-bg')
-    return () => app?.classList.remove('dim-bg')
+    return () => { app?.classList.remove('dim-bg'); kickBackdrops() }
   }, [])
 
   // On open, scroll so the currently selected location is centered in the view
@@ -143,6 +166,9 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
           onPickInbox={() => inboxIds && pick(inboxIds)}
           keepId={currentProjectId}
           scrollRef={scrollRef}
+          startLevel={categories.some(c => c.id === currentCategoryId) ? 'canvases' : 'easels'}
+          autoFocus
+          onEscape={() => finish(onCancel)}
         />
       )}
     </div>

@@ -64,12 +64,13 @@ function PbLinkIcon({ color }) {
   )
 }
 
-// The up arrow — the Add item send button's drawing
-function UpArrowIcon() {
+// The pencil — the Edit icon of the menus, at the row button's size
+function EditPencilIcon() {
+  const st = { stroke: 'currentColor', strokeWidth: 1, vectorEffect: 'non-scaling-stroke', strokeLinecap: 'round', strokeLinejoin: 'round' }
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M10 16 L10 4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-      <path d="M4 9 L10 3 L16 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M14.5 4.5l5 5L8 21l-5 1 1-5 10.5-10.5z" {...st}/>
+      <path d="M12.5 6.5l5 5" {...st}/>
     </svg>
   )
 }
@@ -188,7 +189,8 @@ export default function InboxCard() {
   }, [setOpenDetail])
 
   // A clean tap opens the row's page (a drag or scroll doesn't)
-  const onRowPointerDown = useCallback((e, type, id) => {
+  // A tap on the row opens Move to (the pencil button opens the page)
+  const onRowPointerDown = useCallback((e, r) => {
     if (e.target.closest('.inbox-move-btn')) return
     const startX = e.clientX, startY = e.clientY
     let moved = false
@@ -198,11 +200,11 @@ export default function InboxCard() {
       document.removeEventListener('pointerup', onUp)
       document.removeEventListener('pointercancel', cleanup)
     }
-    const onUp = () => { if (!moved && !isRowMenuOpen()) open(type, id); cleanup() }
+    const onUp = () => { if (!moved && !isRowMenuOpen()) setMoveFor({ type: r.type, id: r.id, title: r.title }); cleanup() }
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
     document.addEventListener('pointercancel', cleanup)
-  }, [open])
+  }, [])
 
   // Filed: the row closes up, then the item moves (with the "Moved to …" toast)
   const fileItem = useCallback((target, sel) => {
@@ -326,7 +328,7 @@ export default function InboxCard() {
                       onPointerDown={e => {
                         if (e.target.closest('.inbox-move-btn')) return
                         rowMenu.press(e, buildRowItems(r))
-                        onRowPointerDown(e, r.type, r.id)
+                        onRowPointerDown(e, r)
                       }}
                       onContextMenu={e => rowMenu.context(e, buildRowItems(r))}
                     >
@@ -350,11 +352,11 @@ export default function InboxCard() {
                       <button
                         type="button"
                         className="inbox-move-btn"
-                        aria-label="Move to…"
+                        aria-label="Edit"
                         onPointerDown={e => e.stopPropagation()}
-                        onClick={e => { e.stopPropagation(); setMoveFor({ type: r.type, id: r.id, title: r.title }) }}
+                        onClick={e => { e.stopPropagation(); open(r.type, r.id) }}
                       >
-                        <UpArrowIcon/>
+                        <EditPencilIcon/>
                       </button>
                     </div>
                   </div>

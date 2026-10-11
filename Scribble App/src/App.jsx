@@ -12,6 +12,7 @@ import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
+import { kickBackdrops } from './backdropKick.js'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
 import CalendarPopup from './components/CalendarPopup.jsx'
@@ -845,6 +846,7 @@ function AppInner() {
   const pageAddedRef = useRef(null)                          // { tab, categoryId, projectId } last canvas added to while on this page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
   const saveToScrollRef = useRef(null)                       // the Save to list scroller
+  const saveToSearchRef = useRef(null)                       // the Save to search field
 
   // Whenever the Save-to list is shown (or its page / destination changes),
   // centre the chosen canvas so the panel never opens scrolled away from it.
@@ -1031,6 +1033,76 @@ function AppInner() {
     if (sel) sel.classList.add('save-target')
     return () => { sel?.classList.remove('save-target') }
   }, [inputFocused, footerInputMode, saveToProject, activeTab, categories])
+
+  // Desktop: while adding an item, the canvas it's headed for (when it's on the
+  // page in view) switches to Add item's content type and scrolls so its top is
+  // level with the top of the Add item box — room is made below the last card
+  // when it couldn't otherwise scroll that high (taken away again on close)
+  const saveScrollPadRef = useRef(null)   // { el, pad } — the scroller we padded
+  useEffect(() => {
+    // (the page animates its padding — these changes land at once)
+    const setPad = (el, v) => {
+      const t = el.style.transition
+      el.style.transition = 'none'
+      el.style.paddingBottom = v
+      el.offsetHeight   // eslint-disable-line no-unused-expressions
+      el.style.transition = t
+    }
+    const restore = () => {
+      const r = saveScrollPadRef.current
+      if (r) { setPad(r.el, r.pad); r.el.style.paddingTop = r.padTop; r.el.classList.remove('save-fit'); saveScrollPadRef.current = null }
+    }
+    const on = inputFocused && footerInputMode && saveToProject && !isInboxId(saveToProject.categoryId) && window.innerWidth >= 1000
+    if (!on) { restore(); return }
+    requestProjectFocus({ projectId: saveToProject.projectId, categoryId: saveToProject.categoryId, type: toolbarType })
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => {
+      const card = [...document.querySelectorAll(`.page [data-project-id="${saveToProject.projectId}"]`)].find(el => el.offsetParent && !el.closest('.exiting'))
+      const box = document.querySelector('.footer.add-open')
+      if (!card || !box) return
+      let scroller = card.parentElement
+      while (scroller && scroller !== document.body) {
+        const oy = getComputedStyle(scroller).overflowY
+        if (oy === 'auto' || oy === 'scroll') break
+        scroller = scroller.parentElement
+      }
+      if (!scroller || scroller === document.body) return
+      if (saveScrollPadRef.current && saveScrollPadRef.current.el !== scroller) restore()
+      if (!saveScrollPadRef.current) saveScrollPadRef.current = { el: scroller, pad: scroller.style.paddingBottom, padTop: scroller.style.paddingTop }
+      // (the Easel's header steps out of the way while its canvas is lined up)
+      scroller.classList.add('save-fit')
+      // Its own padding, without any we added earlier
+      setPad(scroller, saveScrollPadRef.current.pad)
+      const basePad = parseFloat(getComputedStyle(scroller).paddingBottom) || 0
+      const sRect = scroller.getBoundingClientRect()
+      const delta = card.getBoundingClientRect().top - box.getBoundingClientRect().top
+      // A canvas already above the box (the first on the page) can't scroll up
+      // to it — room is made above the cards instead. It's added with the scroll
+      // moved by the same amount (so nothing jumps), and the smooth scroll below
+      // then eases the canvas down into place.
+      const ref = saveScrollPadRef.current
+      if (ref.natTop == null) { ref.natTop = parseFloat(getComputedStyle(scroller).paddingTop) || 0; ref.extraTop = 0 }
+      const cardY0 = scroller.scrollTop + delta - ref.extraTop   // the scroll that would line it up, without extra room
+      const extraTop = Math.max(0, -cardY0)
+      const target = Math.max(0, cardY0) + 0
+      if (extraTop !== ref.extraTop) {
+        const t = scroller.style.transition
+        scroller.style.transition = 'none'
+        scroller.style.paddingTop = extraTop ? (ref.natTop + extraTop) + 'px' : ref.padTop
+        scroller.offsetHeight   // eslint-disable-line no-unused-expressions
+        scroller.style.transition = t
+        scroller.scrollTop += extraTop - ref.extraTop
+        ref.extraTop = extraTop
+      }
+      // Where the content ends (in scroll coordinates), and the bottom padding
+      // that lets the scroll reach the target
+      const contentEnd = Math.max(0, ...[...scroller.children].map(c => c.getBoundingClientRect().bottom - sRect.top + scroller.scrollTop))
+      const need = target + scroller.clientHeight - contentEnd
+      if (need > basePad) setPad(scroller, need + 'px')
+      scroller.scrollTo({ top: target, behavior: 'smooth' })
+    }) })
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2) }
+  }, [inputFocused, footerInputMode, saveToProject, activeTab, toolbarType, isInboxId])
 
   // Register the compose handler so a project card's "Add ..." button can open
   // the footer preset to that project + content type (focus synchronously).
@@ -2545,7 +2617,7 @@ function AppInner() {
   const pressInsideAddRef = useRef(0)
   useEffect(() => {
     if (!inputFocused) return
-    const SEL = '.footer .add-row, .input-toolbar, .save-to-panel:not(.search-panel)'
+    const SEL = '.footer.add-open, .footer .add-row, .input-toolbar, .save-to-panel:not(.search-panel)'
     const onDown = (e) => {
       const t = e.target instanceof Element ? e.target : null
       if (!t || !t.closest(SEL)) return
@@ -2646,17 +2718,53 @@ function AppInner() {
   // Folder button: open (or close) the Save to menu over Add item
   const toggleSaveTo = useCallback(() => {
     setTypeMenuOpen(false)
-    if (saveToOpen) { setSaveToOpen(false); return }
-    // Opens on the chosen canvas's Easel (the Inbox keeps whichever is listed)
+    if (saveToOpen) { setSaveToOpen(false); inputRef.current?.focus({ preventScroll: true }); return }
+    // Opens on the list of Easels (an Easel's canvases follow the chosen canvas's)
     if (saveToProject && !isInboxId(saveToProject.categoryId)) setSaveToTab(saveToProject.categoryId)
-    setSaveToOpen(true)
+    // Its search field takes the caret straight away, inside the tap, so a
+    // phone keeps its keyboard up for it
+    flushSync(() => setSaveToOpen(true))
+    saveToSearchRef.current?.focus({ preventScroll: true })
   }, [saveToOpen, saveToProject, isInboxId])
+  // Once the Save to menu has closed, rebuild the control bar's glass
+  const saveToWasOpenRef = useRef(false)
+  useEffect(() => {
+    const shown = saveToOpen && inputFocused
+    if (saveToWasOpenRef.current && !shown) kickBackdrops()
+    saveToWasOpenRef.current = shown
+  }, [saveToOpen, inputFocused])
+  // Closing the Save to menu hands the caret back to Add item's title
+  const closeSaveTo = useCallback(() => {
+    setSaveToOpen(false)
+    inputRef.current?.focus({ preventScroll: true })
+  }, [])
+  // The Save to search field losing focus: a press inside Add item or the menu
+  // keeps Add item open (the menu just takes the caret out of the field);
+  // anywhere else closes Add item, as the title field's blur does
+  const handleSaveToSearchBlur = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (!inputFocusedRef.current) return
+      if (Date.now() - pressInsideAddRef.current < 800) return
+      const ae = document.activeElement
+      if (ae && ae !== document.body && ae.closest && ae.closest('.footer .add-row, .input-toolbar, .save-to-panel')) return
+      if (document.querySelector('.cal-overlay')) return
+      if (!document.hasFocus()) return
+      setSaveToOpen(false)
+      setInputFocused(false)
+      setInputValue('')
+      setLinkUrlValue('')
+      setToolbarType('list')
+      setCcActive(false)
+      setCcPick(null)
+    })
+  }, [])
   // Picking a destination (a canvas, or the Inbox) takes effect at once
   const pickSaveTo = useCallback((dest) => {
     if (!dest) return
     setSaveToProject(dest)
     if (!isInboxId(dest.categoryId)) setSaveToTab(dest.categoryId)
     setSaveToOpen(false)
+    inputRef.current?.focus({ preventScroll: true })
   }, [isInboxId])
 
   // The Save to menu sits exactly over the Add item box
@@ -2959,7 +3067,7 @@ function AppInner() {
                 <p className="save-to-title">Save to...</p>
                 <button
                   className="save-to-cancel"
-                  onMouseDown={e => { e.preventDefault(); setSaveToOpen(false) }}
+                  onMouseDown={e => { e.preventDefault(); closeSaveTo() }}
                 >Cancel</button>
               </div>
               <DestinationPicker
@@ -2972,6 +3080,13 @@ function AppInner() {
                 scrollRef={saveToScrollRef}
                 addCanvasActive={inputFocused && saveToOpen}
                 onAddCanvasDone={() => inputRef.current?.focus({ preventScroll: true })}
+                open={inputFocused && saveToOpen}
+                /* Opens on the destination Easel's canvases — on the list of
+                   Easels only from the Gallery page, or with the Inbox chosen */
+                startLevel={activeTab === 'star' || !saveToProject || isInboxId(saveToProject.categoryId) ? 'easels' : 'canvases'}
+                searchRef={saveToSearchRef}
+                onSearchBlur={handleSaveToSearchBlur}
+                onEscape={closeSaveTo}
               />
             </div>
           </div>

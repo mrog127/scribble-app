@@ -22,6 +22,7 @@ import { isRecurring, useActivatePress, CalendarIcon, formatSchedule } from './S
 import CalendarPopup from './CalendarPopup.jsx'
 import { useScrollable } from '../useScrollable.js'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
+import { fillComment, serializeComment, caretToEnd, commentKeyDown, commentInput, useBulletSwipe } from '../commentParas.js'
 
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
@@ -728,7 +729,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   // Seed the editable title once (uncontrolled so the caret behaves)
   useEffect(() => {
     if (titleRef.current) titleRef.current.textContent = todo.text
-    if (commentRef.current) commentRef.current.textContent = todo.comment || ''
+    fillComment(commentRef.current, todo.comment || '')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todo.id])
 
@@ -767,9 +768,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   }, [categoryId, projectId, todo.id, todo.text, updateProjectTodoText])
 
   const saveComment = useCallback(() => {
-    const text = (commentRef.current?.textContent || '').trim()
-    // contentEditable leaves a stray <br> behind — clear it so :empty (the placeholder) works
-    if (!text && commentRef.current) commentRef.current.innerHTML = ''
+    const text = serializeComment(commentRef.current)
+    // An emptied comment leaves stray paragraphs behind — clear them so :empty (the placeholder) works
+    if (!text.trim() && commentRef.current) commentRef.current.innerHTML = ''
     if (text !== (todo.comment || '')) updateProjectTodoComment(categoryId, projectId, todo.id, text)
   }, [categoryId, projectId, todo.id, todo.comment, updateProjectTodoComment])
 
@@ -802,12 +803,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     const el = commentRef.current
     if (!el) return
     el.focus()
-    const range = document.createRange()
-    range.selectNodeContents(el)
-    range.collapse(false)
-    const sel = window.getSelection()
-    sel.removeAllRanges()
-    sel.addRange(range)
+    caretToEnd(el)
   }, [])
 
   // Tapping the underline or the gap beneath it opens the comment with the caret in it
@@ -836,16 +832,13 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     focusComment()
   }
 
-  // Comments are a single body-copy paragraph — Return saves and leaves edit mode
-  const handleCommentKeyDown = (e) => {
-    if (e.key !== 'Enter') return
-    e.preventDefault()
-    commentRef.current?.blur()
-    saveComment()
-    window.getSelection()?.removeAllRanges()
-    setEditingTitle(false)
-    setEditingComment(false)
-  }
+  // Comments are paragraphs and bullets, edited as in a note: Return starts a
+  // new line, "- " makes a bullet, Tab / a sideways swipe indents it
+  const handleCommentKeyDown = (e) => { commentKeyDown(e, commentRef.current) }
+  const handleCommentInput = (e) => { commentInput(e, commentRef.current) }
+  const editingCommentRef = useRef(false)
+  editingCommentRef.current = editingComment
+  useBulletSwipe(commentRef, scrollRef, editingCommentRef)
 
   // Keep pasted content plain — no styles inside a comment
   const handleCommentPaste = (e) => {
@@ -1136,8 +1129,14 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             suppressContentEditableWarning
             autoCapitalize="sentences"
             data-placeholder={'Press "Return" to add a comment'}
-            onFocus={() => setEditingComment(true)}
+            onFocus={() => {
+              setEditingComment(true)
+              // Something to type into: an empty comment gets its first paragraph
+              const el = commentRef.current
+              if (el && !el.querySelector('.note-para')) caretToEnd(el)
+            }}
             onKeyDown={handleCommentKeyDown}
+            onInput={handleCommentInput}
             onPaste={handleCommentPaste}
             onBlur={saveComment}
           />

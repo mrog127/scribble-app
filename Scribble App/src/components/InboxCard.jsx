@@ -5,7 +5,7 @@ import { getInboxAccent } from '../theme.js'
 import { useTheme } from '../useTheme.js'
 import { moveWithAnimation } from '../moveFx.js'
 import { isRowMenuOpen, useRowMenu, RowActionMenu } from './RowMenu.jsx'
-import { FolderMenuIcon, TrashMenuIcon } from './MenuIcons.jsx'
+import { FolderMenuIcon, TrashMenuIcon, EditIcon } from './MenuIcons.jsx'
 import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon } from './FeatherIcons.jsx'
 import { InboxIcon } from './DestinationPicker.jsx'
 import MoveToCard from './MoveToCard.jsx'
@@ -60,16 +60,6 @@ function PbLinkIcon({ color }) {
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" style={s} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" style={s} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-
-// The link tiles' Edit icon (a pencil over a square)
-function EditPencilIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -261,6 +251,7 @@ export default function InboxCard() {
     })
   }, [inboxIds, promptDelete, deleteProjectTodo, deleteProjectNote, deleteProjectLink])
   const buildRowItems = (r) => () => ([
+    { label: `Edit ${NOUN[r.type]}`, icon: <EditIcon/>, onSelect: () => open(r.type, r.id) },
     { label: `Move ${NOUN[r.type]}`, icon: <FolderMenuIcon/>, onSelect: () => setMoveFor({ type: r.type, id: r.id, title: r.title }) },
     { label: `Delete ${NOUN[r.type]}`, icon: <TrashMenuIcon/>, danger: true, onSelect: () => deleteItem({ type: r.type, id: r.id }) },
   ])
@@ -348,15 +339,6 @@ export default function InboxCard() {
                           {!!r.url && <span className="note-preview-text">{displayUrl(r.url)}</span>}
                         </div>
                       )}
-                      <button
-                        type="button"
-                        className="inbox-move-btn"
-                        aria-label="Edit"
-                        onPointerDown={e => e.stopPropagation()}
-                        onClick={e => { e.stopPropagation(); open(r.type, r.id) }}
-                      >
-                        <EditPencilIcon/>
-                      </button>
                     </div>
                   </div>
                 </div>

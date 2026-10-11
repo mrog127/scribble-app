@@ -13773,3 +13773,10 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   :root[data-theme="dark-dots"] #app .inbox-card .inbox-move-btn:hover { background: #333333; background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)); }
   :root[data-theme="light-dots"] #app .inbox-card .inbox-move-btn:hover { background: #E3E3E3; }
 }
+
+/* Notes (Dots themes): a bullet sits on the regular line spacing under the
+   line above it — only under an H1 does it keep its 12px gap */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-para:not(.style-heading) + .note-para.style-bullet { margin-top: 0; }
+
+/* Notes (Dots themes): 32px above an H1 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-para.style-heading { margin-top: 32px; }

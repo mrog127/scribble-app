@@ -1022,15 +1022,13 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       t = null
     }
 
-    content.addEventListener('pointerdown', onPointerDown)
-    content.addEventListener('wheel', onWheel, { passive: false })
+    // Desktop indents and outdents with Tab / Shift+Tab only — a mouse drag (as
+    // when selecting text) or a trackpad swipe no longer moves a bullet
     surface.addEventListener('touchstart', onTouchStart, { passive: false })
     surface.addEventListener('touchmove', onTouchMove, { passive: false })
     surface.addEventListener('touchend', onTouchEnd)
     surface.addEventListener('touchcancel', onTouchEnd)
     return () => {
-      content.removeEventListener('pointerdown', onPointerDown)
-      content.removeEventListener('wheel', onWheel)
       surface.removeEventListener('touchstart', onTouchStart)
       surface.removeEventListener('touchmove', onTouchMove)
       surface.removeEventListener('touchend', onTouchEnd)

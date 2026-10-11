@@ -13751,3 +13751,25 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   -webkit-mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 16px), transparent);
   mask-image: linear-gradient(to bottom, transparent 0px, #000 12px, #000 calc(100% - 16px), transparent);
 }
+
+/* Inbox rows (Dots themes): the Edit button is the link tiles' — a 40px circle
+   (#E3E3E3 in Light Dots, #333333 in Dark Dots) with their pencil-and-square
+   icon at 2px, with 2px clear above and below */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .inbox-card .inbox-move-btn {
+  width: 40px;
+  height: 40px;
+  margin: 2px -8px 2px 8px;
+  border-radius: 50%;
+  background: #333333;
+}
+:root[data-theme="light-dots"] #app .inbox-card .inbox-move-btn { background: #E3E3E3; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .inbox-card .inbox-move-btn svg path {
+  stroke: #E6E6E6;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+:root[data-theme="light-dots"] #app .inbox-card .inbox-move-btn svg path { stroke: #292929; }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] #app .inbox-card .inbox-move-btn:hover { background: #333333; background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)); }
+  :root[data-theme="light-dots"] #app .inbox-card .inbox-move-btn:hover { background: #E3E3E3; }
+}

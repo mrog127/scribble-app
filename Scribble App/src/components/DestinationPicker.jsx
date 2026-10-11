@@ -102,21 +102,58 @@ export default function DestinationPicker({
     if (autoFocus) inputRef.current?.focus({ preventScroll: true })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A press anywhere in the menu outside the search field takes the caret out
-  // of it (the menu's own handlers would otherwise keep focus where it was)
+  // Desktop: a press anywhere in the menu outside the search field takes the
+  // caret out of it (the menu's own handlers would otherwise keep focus where
+  // it was). Phone: the field keeps the caret, and the keyboard stays up, for as
+  // long as the menu is open — presses on everything else in the menu (the
+  // Easels list and menu, the buttons, the canvases) still work but don't take
+  // focus; only another text field (naming a new canvas) can.
+  const isPhone = () => window.innerWidth < 1000
+  const pressInsideRef = useRef(0)
   useEffect(() => {
     if (!open) return
+    const inCard = (t) => {
+      const card = fieldRef.current?.closest('.save-to-card, .move-to-card')
+      return !!(card && t && card.contains(t))
+    }
     const onDown = (e) => {
+      const t = e.target instanceof Element ? e.target : null
+      if (!t) return
+      if (isPhone()) {
+        if (!inCard(t)) return
+        pressInsideRef.current = Date.now()
+        if (e.type === 'mousedown' && !t.closest('input, textarea, [contenteditable="true"]')) e.preventDefault()
+        return
+      }
+      if (e.type !== 'pointerdown') return
       const input = inputRef.current
       if (!input || document.activeElement !== input) return
-      const t = e.target instanceof Element ? e.target : null
-      if (!t || t.closest('.dest-search-field')) return
-      const card = fieldRef.current?.closest('.save-to-card, .move-to-card')
-      if (card && card.contains(t)) input.blur()
+      if (t.closest('.dest-search-field')) return
+      if (inCard(t)) input.blur()
     }
     document.addEventListener('pointerdown', onDown, true)
-    return () => document.removeEventListener('pointerdown', onDown, true)
+    document.addEventListener('mousedown', onDown, true)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('mousedown', onDown, true)
+    }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Phone: if a press inside the menu still knocked the caret out of the field
+  // (and it didn't go to another text field), put it straight back
+  const handleSearchBlur = (e) => {
+    if (open && isPhone() && Date.now() - pressInsideRef.current < 800) {
+      setTimeout(() => {
+        const input = inputRef.current
+        const ae = document.activeElement
+        if (!input || !input.isConnected) return
+        if (ae && ae !== document.body && ae.matches?.('input, textarea, [contenteditable="true"]')) return
+        input.focus({ preventScroll: true })
+      }, 0)
+      return
+    }
+    onSearchBlur?.(e)
+  }
 
   // Search results, as in the @ tag menu
   const results = []
@@ -347,7 +384,7 @@ export default function DestinationPicker({
           active={addCanvasActive}
           categoryId={browse}
           onCreated={pick => onPick(pick)}
-          onDone={onAddCanvasDone}
+          onDone={() => { if (open && isPhone()) inputRef.current?.focus({ preventScroll: true }); else onAddCanvasDone?.() }}
           openSignal={addSignal}
           hideTrigger
         />
@@ -448,7 +485,7 @@ export default function DestinationPicker({
             placeholder="Search"
             value={query}
             onChange={e => { setQuery(e.target.value); setMenuOpen(false) }}
-            onBlur={onSearchBlur}
+            onBlur={handleSearchBlur}
             onKeyDown={e => {
               if (e.key === 'Enter') { e.preventDefault(); if (searching) pickResult(results[0]) }
               else if (e.key === 'Escape') { e.preventDefault(); onEscape?.() }

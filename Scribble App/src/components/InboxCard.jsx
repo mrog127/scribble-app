@@ -64,13 +64,12 @@ function PbLinkIcon({ color }) {
   )
 }
 
-// The pencil — the Edit icon of the menus, at the row button's size
+// The link tiles' Edit icon (a pencil over a square)
 function EditPencilIcon() {
-  const st = { stroke: 'currentColor', strokeWidth: 1, vectorEffect: 'non-scaling-stroke', strokeLinecap: 'round', strokeLinejoin: 'round' }
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M14.5 4.5l5 5L8 21l-5 1 1-5 10.5-10.5z" {...st}/>
-      <path d="M12.5 6.5l5 5" {...st}/>
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#242424" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }

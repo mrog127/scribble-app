@@ -17,6 +17,7 @@ import LinkDetailPage from './LinkDetailPage.jsx'
 import { LinkGridCard, useGridDragReorder } from './ProjectCard.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { runCheckOff } from '../checkGhost.js'
+import { useCardHostsDetail } from '../detailLock.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -666,7 +667,7 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
         ))}
       </div>
 
-      {openTodo && openTodoProj && createPortal(
+      {useCardHostsDetail() && openTodo && openTodoProj && createPortal(
         <TodoDetailPage
           todo={openTodo}
           categoryId={category.id}
@@ -917,7 +918,7 @@ export function CollapsedNotesCard({ category, bare = false, onlyActivated = fal
         ))}
       </div>
 
-      {openNote && openNoteProj && createPortal(
+      {useCardHostsDetail() && openNote && openNoteProj && createPortal(
         <NoteDetailPage
           note={{ ...openNote, categoryId: category.id }}
           onClose={() => setOpenNoteId(null)}
@@ -1142,7 +1143,7 @@ export function CollapsedLinksCard({ category, bare = false, onlyActivated = fal
         ))}
       </div>
 
-      {openLink && openLinkProj && createPortal(
+      {useCardHostsDetail() && openLink && openLinkProj && createPortal(
         <LinkDetailPage
           link={openLink}
           categoryId={category.id}

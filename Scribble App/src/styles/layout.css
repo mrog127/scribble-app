@@ -875,6 +875,8 @@ html, body, #root {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;   /* the end of the list never scrolls what's behind */
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 8px;
 }
@@ -9328,12 +9330,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack::before,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-stroke,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-canvas > .gallery-canvas-glow,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after,
-:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-stroke::after,
-:root[data-theme="light-dots"] .gallery-canvas > .gallery-canvas-glow::after {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after {
   animation: none !important;
   --cb-stroke-angle: 135deg !important;
   --glow-x: -8px !important;
@@ -9348,12 +9346,8 @@ body.resizing-detail .phone { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .cal-card::before,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .footer .add-row .search-stack::before,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-stroke,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .pinned-gallery > .gallery-canvas-glow,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::before,
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after,
-:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-stroke::after,
-:root[data-theme="light-dots"] .pinned-gallery > .gallery-canvas-glow::after {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .card.inbox-card::after {
   animation: none !important;
   --cb-stroke-angle: 135deg !important;
   --glow-x: -8px !important;
@@ -13780,3 +13774,140 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 
 /* Notes (Dots themes): 32px above an H1 */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-para.style-heading { margin-top: 32px; }
+
+/* ============================================================
+   SPLIT-MOBILE (narrow desktop, 1000–1240px, detail page open)
+   The sidebar is hidden, so the left column gets the phone's
+   floating control bar (via the .split-m copies of the phone
+   rules — splitMobileCss.js). The column itself is unchanged;
+   the bar is just confined to it, beside the detail panel.
+   Deliberately not inside a min-width media query: the plugin
+   keeps desktop-query rules off the bar in this mode, and
+   .split-m is only ever set at 1000–1240px anyway.
+   ============================================================ */
+.phone.split-m {
+  /* The phone rules' 100vw → the left column's width */
+  --split-vw: calc(100vw - var(--detail-w) - var(--split-panel-inset, 0px));
+}
+.phone.split-m > .footer {
+  margin-right: calc(var(--detail-w) + var(--split-panel-inset, 0px));
+}
+/* Dots themes stand the panel 32px off the window's right edge */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .phone.split-m { --split-panel-inset: 32px; }
+/* As on the phone, the column's contents run on behind the bar and fade out
+   into it (fade starts 8px above the bar's top, gone by its midline), and can
+   scroll clear of it — the last item ends 24px above the bar. */
+.phone.split-m > .page {
+  margin-bottom: calc(-1 * (var(--mbar-h) + var(--mbar-bottom)));
+  -webkit-mask-image: linear-gradient(to bottom,
+    black 0px,
+    black calc(100% - var(--mbar-h) - var(--mbar-bottom) + 4px - var(--fade-lift, 0px)),
+    transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 28px - var(--fade-lift, 0px)));
+  mask-image: linear-gradient(to bottom,
+    black 0px,
+    black calc(100% - var(--mbar-h) - var(--mbar-bottom) + 4px - var(--fade-lift, 0px)),
+    transparent calc(100% - var(--mbar-bottom) - var(--mbar-h) / 2 + 28px - var(--fade-lift, 0px)));
+}
+.phone.split-m.toast-open > .page {
+  --fade-lift: calc(var(--mbar-h) / 2 + 16px + var(--add-toast-h) / 2);
+}
+.phone.split-m > .page .cards-area {
+  padding-bottom: calc(var(--mbar-h) + var(--mbar-bottom) + 24px);
+}
+/* The Gallery gets the phone's page header (the date title + settings), lined
+   up with the cards below the way it is on the phone — 8px in from the cards'
+   edges (the column keeps its desktop side padding: 48px right, 28px left,
+   48px left on the Dots themes). */
+#app.split-m .home-page > .page-header {
+  padding-left: calc(var(--split-cards-l, 28px) + 8px);
+  padding-right: 56px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.split-m { --split-cards-l: 48px; }
+#app.split-m .home-page > .page-header .home-settings-btn { right: 56px; }
+/* …and, as on the phone, the first card sits right under it */
+#app.split-m .home-page > .cards-area { padding-top: 0; }
+
+/* ============================================================
+   LOCKED PAGE (desktop)
+   The lock button (where "open in a new window" used to be) pins
+   a page as the right-hand panel; the next page opens beside it,
+   to its left (#app.dual). See detailLock.jsx.
+   ============================================================ */
+/* Desktop layout only */
+@media (max-width: 999.98px) {
+  .detail-popout-btn.detail-lock-btn { display: none; }
+}
+/* Locked: a black lock at a true 2px (white on Dark Dots' dark button) */
+#app .detail-lock-btn.locked { color: #000; }
+:root[data-theme="dark-dots"] #app .detail-lock-btn.locked { color: #FFF; }
+
+#app { --panel-inset: 0px; }
+/* Dots themes stand the panel 32px off the window's right edge */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app { --panel-inset: 32px; }
+
+@media (min-width: 1000px) {
+  /* A locked page has no Done (it comes back when it's unlocked) */
+  .locked-page .note-detail-done.lock-hidden { display: none; }
+  .locked-page .detail-lock-btn { margin-right: 0; }
+
+  /* Two pages: the second sits just left of the locked one, --dual-gap apart
+     (with their 16px insets, a 64px gutter between their contents — the same
+     as the cards' 48px right padding + a page's 16px inset) */
+  #app.dual { --dual-gap: 32px; }
+  #app.dual .note-detail-page.pinned-page { width: var(--dual-p3); }
+  #app.dual .note-detail-page:not(.pinned-page) {
+    right: calc(var(--dual-p3) + var(--dual-gap) + var(--panel-inset));
+  }
+  #app.dual .detail-resize-handle { display: none; }
+
+  /* The gutter between the two pages resizes them (only them) */
+  #app.dual .detail-resize-handle.dual-b {
+    display: block;
+    right: calc(var(--dual-p3) + var(--panel-inset) + var(--dual-gap) / 2);
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.dual .detail-resize-handle.dual-b {
+    right: calc(var(--dual-p3) + var(--panel-inset) + var(--dual-gap) / 2 - 24px);
+  }
+}
+
+/* Narrow window (two columns): the second page covers the cards column, so
+   it's the two pages side by side until one of them is closed. Even halves by
+   default; dragging the gutter sets --dual2-p3-set (the locked page's width). */
+@media (min-width: 1000px) and (max-width: 1240px) {
+  #app.dual {
+    --dual-p3: var(--dual2-p3-set, calc((100vw - var(--panel-inset) - var(--dual-gap)) / 2));
+    --detail-w: var(--dual-p3);
+  }
+  #app.dual .note-detail-page:not(.pinned-page) {
+    left: 0;
+    width: auto;
+    border-left: none;
+  }
+}
+
+/* Wide window (three columns): the sidebar gives way — cards (with the control
+   bar) | second page | locked page. By default the three columns' contents are
+   equal widths, with equal 64px gutters between them. Dragging a gutter sets
+   --dual-p2-set / --dual-p3-set (the two pages' widths) on :root.
+   --detail-w becomes the two pages together, so everything that makes room for
+   "the panel" makes room for both. */
+@media (min-width: 1241px) {
+  #app.dual {
+    --cards-lpad: 28px;
+    --dual-c: calc((100vw - var(--panel-inset) - var(--cards-lpad) - 48px - 64px - var(--dual-gap)) / 3);
+    --dual-p2: var(--dual-p2-set, calc(var(--dual-c) + 32px));
+    --dual-p3: var(--dual-p3-set, calc(var(--dual-c) + 32px));
+    --detail-w: calc(var(--dual-p2) + var(--dual-gap) + var(--dual-p3));
+  }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.dual { --cards-lpad: 48px; }
+  #app.dual .note-detail-page:not(.pinned-page) { width: var(--dual-p2); }
+  #app.dual .sidebar-date { display: none; }
+  #app.dual .page { padding-left: 0; }
+  #app.dual :is(.cards-area, .category-page .page-header) { max-width: 100%; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.dual :is(.cards-area, .category-page .page-header) { padding-left: var(--cards-lpad); }
+
+  /* …and the cards | pages gutter resizes too */
+  #app.dual .detail-resize-handle { display: block; }
+}
+/* The second handle only exists with two pages up */
+#app .detail-resize-handle.dual-b { display: none; }

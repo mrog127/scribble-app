@@ -21,6 +21,7 @@ import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as F
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { runCheckOff } from '../checkGhost.js'
 import { moveWithAnimation } from '../moveFx.js'
+import { useCardHostsDetail } from '../detailLock.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
 function openUrl(url) {
@@ -2535,7 +2536,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
         )}
       </div>
 
-      {openNote && createPortal(
+      {useCardHostsDetail() && openNote && createPortal(
         <NoteDetailPage
           note={{ ...openNote, categoryId: openNoteCat }}
           onClose={() => setOpenNoteId(null)}
@@ -2552,7 +2553,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
         document.getElementById('app')
       )}
 
-      {openTodo && createPortal(
+      {useCardHostsDetail() && openTodo && createPortal(
         <TodoDetailPage
           todo={openTodo}
           categoryId={openTodoCat}
@@ -2565,7 +2566,7 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
         document.getElementById('app')
       )}
 
-      {openLink && createPortal(
+      {useCardHostsDetail() && openLink && createPortal(
         <LinkDetailPage
           link={openLink}
           categoryId={openLinkCat}

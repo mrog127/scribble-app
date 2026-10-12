@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } fr
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { swappedFrom } from '../noteIdSwap.js'
 import { moveWithAnimation } from '../moveFx.js'
-import { soloItem, DONE_LABEL, openSoloWindow } from '../soloWindow.js'
+import { soloItem, DONE_LABEL } from '../soloWindow.js'
 import { createPortal } from 'react-dom'
 import underlineUrl from '../assets/Underline.svg?url'
 import { useAppContext } from '../context/AppContext.jsx'
@@ -15,6 +15,8 @@ import { useTheme } from '../useTheme.js'
 import { FileIcon as FeatherFileIcon } from './FeatherIcons.jsx'
 import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
+import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
+import { useCardHostsDetail } from '../detailLock.jsx'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -207,7 +209,7 @@ function StarIcon() {
   )
 }
 
-function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false }) {
+function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSchedule, onClearSchedule, projectName, categoryId, projectId, archived = false, instantOpen = false }) {
   const darkDots = ['dark-dots', 'light-dots'].includes(useTheme())
   const darkDotsRef = useRef(darkDots)
   darkDotsRef.current = darkDots
@@ -238,7 +240,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const skipButtonClickRef = useRef(false)
   const editingRef = useRef(false)
   const [currentStyle, setCurrentStyle] = useState('body')
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(instantOpen)
+  const lock = useDetailLock(projectId ? 'note' : 'local-note', note.id)
   const [copied, setCopied] = useState(false)
   const contentRef = useRef(null)
   const styleBarRef = useRef(null)
@@ -1622,7 +1625,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}${hasFooter ? ' has-footer' : ''}${inInbox ? ' inbox-page' : ''}`}
+      className={`note-detail-page${editing ? ' editing' : ''}${isOpen ? ' open' : ''}${hasFooter ? ' has-footer' : ''}${inInbox ? ' inbox-page' : ''}${lockPageClass(lock)}`}
       style={{
         '--underline-url': `url(${underlineUrl})`,
         ...(noteAccent ? {
@@ -1646,28 +1649,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         )}
         {archived && <span className="detail-archived-label">Archived</span>}
         <span ref={scrollTitleRef} className="note-scroll-title" />
-        {!soloItem && (
-          <button
-            className="detail-popout-btn"
-            aria-label="Open in a new window"
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => {
-              // It now lives in that window: save what's here and close this copy
-              flushAutosave()
-              if (editingTitleRef.current) saveTitleEdit()
-              openSoloWindow(projectId ? 'note' : 'local-note', note.id)
-              setIsOpen(false)
-              setTimeout(onClose, 360)
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              <polyline points="15 3 21 3 21 9"/>
-              <line x1="10" y1="14" x2="21" y2="3"/>
-            </svg>
-          </button>
-        )}
-        <button className={`note-detail-done${editingTitle ? ' is-saving' : ''}`} onMouseDown={handleTopButtonDown} onClick={handleButtonClick}>
+        {!soloItem && <DetailLockButton lock={lock} beforeLock={() => { flushAutosave(); if (editingTitleRef.current) saveTitleEdit() }} />}
+        <button className={`note-detail-done${editingTitle ? ' is-saving' : ''}${lock.locked && !(editing || editingTitle) ? ' lock-hidden' : ''}`} onMouseDown={handleTopButtonDown} onClick={handleButtonClick}>
           {(editing || editingTitle) ? 'Save' : DONE_LABEL}
         </button>
       </div>
@@ -1937,7 +1920,7 @@ export default function NoteCard({ notes, onDelete, onUpdateNote, onReorder }) {
         </div>
       </div>
 
-      {openNote && createPortal(
+      {useCardHostsDetail() && openNote && createPortal(
         <NoteDetailPage
           note={openNote}
           onClose={() => setOpenNoteId(null)}

@@ -7,6 +7,12 @@ import { isRecurring, nextRecurrence } from '../components/ScheduleBits.jsx'
 import { readCache, readCacheSync, writeCache } from '../localCache.js'
 import { send as outboxSend, flush, pendingCount } from '../outbox.js'
 
+// Two { type, id } page refs point at the same page (a note on the Gallery is
+// 'local-note' or 'note' depending on where it was opened from)
+const NOTE_TYPES = ['note', 'local-note']
+export const sameDetail = (a, b) => !!a && !!b && String(a.id) === String(b.id) &&
+  (a.type === b.type || (NOTE_TYPES.includes(a.type) && NOTE_TYPES.includes(b.type)))
+
 // Every write bumps this, so a full reload that was already in flight when
 // something was added or changed knows its answer may be missing that change
 let mutationSeq = 0
@@ -72,7 +78,39 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(() => !initialSnap)
   // Single source of truth for which detail page is open, so only one row is
   // highlighted at a time across all cards. Shape: { type, id } | null
-  const [openDetail, setOpenDetail] = useState(null)
+  const [openDetail, setOpenDetailRaw] = useState(null)
+  // Desktop: one page can be locked open as the right-hand panel; any other page
+  // then opens beside it (to its left) instead of replacing it. Unlocked, the
+  // pinned page gets its Done button back and stays until it's closed.
+  // Shape: { type, id } | null — rendered by App (PinnedDetailHost).
+  const [pinnedDetail, setPinnedDetail] = useState(null)
+  const [pinLocked, setPinLocked] = useState(false)
+  const pinRef = useRef({ pinned: null, locked: false })
+  pinRef.current = { pinned: pinnedDetail, locked: pinLocked }
+  // Every "open this page" goes through here. The pinned page is already open,
+  // so asking for it again does nothing; and an unlocked pinned page on its own
+  // is just "the" open page, so the next one replaces it.
+  // A page opened beside a pinned one is flagged `central`: App renders it
+  // (not the card its row is in), so switching easels doesn't close it.
+  const setOpenDetail = useCallback((v) => {
+    setOpenDetailRaw(prev => {
+      let next = typeof v === 'function' ? v(prev) : v
+      const { pinned, locked } = pinRef.current
+      if (next && pinned) {
+        if (sameDetail(next, pinned)) return prev
+        if (!locked && !prev) queueMicrotask(() => { setPinnedDetail(null); setPinLocked(false) })
+        else if (next !== prev) next = { ...next, central: true }
+      }
+      return next
+    })
+  }, [])
+  // Lock the open page: it becomes the pinned (right-hand) panel
+  const lockDetail = useCallback((page) => {
+    setPinnedDetail({ type: page.type, id: page.id })
+    setPinLocked(true)
+    setOpenDetailRaw(prev => sameDetail(prev, page) ? null : prev)
+  }, [])
+  const unpinDetail = useCallback(() => { setPinnedDetail(null); setPinLocked(false) }, [])
   // Id of a freshly-created note that should auto-enter edit mode when its page opens.
   const [autoEditNoteId, setAutoEditNoteId] = useState(null)
   // A new note's temporary id was just replaced by its real one: keep the open
@@ -91,7 +129,8 @@ export function AppProvider({ children }) {
     db(supabase.from('notes').update({ editor_html: pending.editorHTML, ...(pending.text ? { text: pending.text } : {}) }).eq('id', realId))
   }, [])
   const followNoteIdSwap = useCallback((tempId, realId) => {
-    setOpenDetail(prev => (prev && prev.id === tempId) ? { ...prev, id: realId } : prev)
+    setOpenDetailRaw(prev => (prev && prev.id === tempId) ? { ...prev, id: realId } : prev)
+    setPinnedDetail(prev => (prev && prev.id === tempId) ? { ...prev, id: realId } : prev)
     setAutoEditNoteId(prev => prev === tempId ? realId : prev)
     announceNoteIdSwap(tempId, realId)
   }, [])
@@ -1411,6 +1450,11 @@ export function AppProvider({ children }) {
       loading,
       openDetail,
       setOpenDetail,
+      pinnedDetail,
+      pinLocked,
+      setPinLocked,
+      lockDetail,
+      unpinDetail,
       autoEditNoteId,
       setAutoEditNoteId,
       refresh: loadAll,

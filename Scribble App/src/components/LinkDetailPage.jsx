@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { moveWithAnimation } from '../moveFx.js'
-import { soloItem, DONE_LABEL, openSoloWindow } from '../soloWindow.js'
+import { soloItem, DONE_LABEL } from '../soloWindow.js'
 import { useAppContext } from '../context/AppContext.jsx'
 import { getCategoryAccent, getInboxAccent } from '../theme.js'
 import DetailFooter from './DetailFooter.jsx'
 import MoveToCard from './MoveToCard.jsx'
 import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import UnderlineSvg from '../assets/Underline.svg?react'
+import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
 
 export function openUrl(url) {
   if (!url) return
@@ -56,7 +57,7 @@ function LinkPageIcon() {
   )
 }
 
-export default function LinkDetailPage({ link, categoryId, projectId, onClose }) {
+export default function LinkDetailPage({ link, categoryId, projectId, onClose, instantOpen = false }) {
   const [editOpen, setEditOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editUrl, setEditUrl] = useState('')
@@ -65,7 +66,8 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
     promptDelete, deleteProjectLink, archiveProjectLink, unarchiveProjectLink, isInboxId } = useAppContext()
   // An Inbox link's page is a reduced one: Delete is its menu's only option
   const inInbox = isInboxId(categoryId)
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(instantOpen)
+  const lock = useDetailLock('link', link.id)
   const [editingTitle, setEditingTitle] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [moveTop, setMoveTop] = useState(null)
@@ -189,27 +191,14 @@ export default function LinkDetailPage({ link, categoryId, projectId, onClose })
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${isOpen ? ' open' : ''}${inInbox ? ' inbox-page' : ''}`}
+      className={`note-detail-page${isOpen ? ' open' : ''}${inInbox ? ' inbox-page' : ''}${lockPageClass(lock)}`}
       style={accent ? { '--accent-base': accent.base, '--accent-dark': accent.dark, '--accent-light': accent.light, '--accent-base-rgb': accent.baseRgb } : undefined}
     >
       <div className="note-detail-header">
         <LinkPageIcon/>
         <span className="note-scroll-title" ref={scrollTitleRef} />
-        {!soloItem && (
-          <button
-            className="detail-popout-btn"
-            aria-label="Open in a new window"
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => { openSoloWindow('link', link.id); handleDone() /* it now lives in that window */ }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              <polyline points="15 3 21 3 21 9"/>
-              <line x1="10" y1="14" x2="21" y2="3"/>
-            </svg>
-          </button>
-        )}
-        <button className={`note-detail-done${editingTitle ? ' is-saving' : ''}`} onMouseDown={handleTopButton}>{editingTitle ? 'Save' : DONE_LABEL}</button>
+        {!soloItem && <DetailLockButton lock={lock} beforeLock={() => saveTitle()} />}
+        <button className={`note-detail-done${editingTitle ? ' is-saving' : ''}${lock.locked && !editingTitle ? ' lock-hidden' : ''}`} onMouseDown={handleTopButton}>{editingTitle ? 'Save' : DONE_LABEL}</button>
       </div>
 
       <div className="todo-detail-scroll link-detail-scroll" ref={scrollRef}>

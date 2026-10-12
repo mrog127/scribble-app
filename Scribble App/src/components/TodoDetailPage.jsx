@@ -14,7 +14,7 @@ import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon } from './Feat
 import MoveToCard from './MoveToCard.jsx'
 import { keepKeyboardAlive } from '../keyboardKeeper.js'
 import { pasteInto } from '../clipboard.js'
-import { soloItem, DONE_LABEL, openSoloWindow } from '../soloWindow.js'
+import { soloItem, DONE_LABEL } from '../soloWindow.js'
 import { moveWithAnimation } from '../moveFx.js'
 import { TrashMenuIcon } from './MenuIcons.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
@@ -23,6 +23,7 @@ import CalendarPopup from './CalendarPopup.jsx'
 import { useScrollable } from '../useScrollable.js'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { fillComment, serializeComment, caretToEnd, commentKeyDown, commentInput, useBulletSwipe } from '../commentParas.js'
+import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
 
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
@@ -541,7 +542,7 @@ function useAttachDrag(containerRef, items, onReorder) {
   return { onDragPointerDown }
 }
 
-export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose, archived = false }) {
+export default function TodoDetailPage({ todo, categoryId, projectId, projectNotes, projectLinks, onClose, archived = false, instantOpen = false }) {
   useTheme()
   const {
     categories,
@@ -575,7 +576,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     [categories, categoryId, projectId, inInbox]
   )
 
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(instantOpen)
+  const lock = useDetailLock('todo', todo.id)
   const [noteAttachOpen, setNoteAttachOpen] = useState(false)
   const [noteComposerOpen, setNoteComposerOpen] = useState(false)
   const [linkComposerOpen, setLinkComposerOpen] = useState(false)
@@ -1075,7 +1077,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   return (
     <div
       ref={pageRef}
-      className={`note-detail-page${isOpen ? ' open' : ''}${archived ? ' archived' : ''}${inInbox ? ' inbox-page' : ''}`}
+      className={`note-detail-page${isOpen ? ' open' : ''}${archived ? ' archived' : ''}${inInbox ? ' inbox-page' : ''}${lockPageClass(lock)}`}
       style={accent ? {
         '--accent-base': accent.base,
         '--accent-dark': accent.dark,
@@ -1088,21 +1090,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
         <NoteListIcon/>
         {archived && <span className="detail-archived-label">Archived</span>}
         <span className="note-scroll-title" ref={scrollTitleRef} />
-        {!soloItem && (
-          <button
-            className="detail-popout-btn"
-            aria-label="Open in a new window"
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => { openSoloWindow('todo', todo.id); handleDone() /* it now lives in that window */ }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              <polyline points="15 3 21 3 21 9"/>
-              <line x1="10" y1="14" x2="21" y2="3"/>
-            </svg>
-          </button>
-        )}
-        <button className={`note-detail-done${(editingTitle || editingComment) ? ' is-saving' : ''}`} onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : DONE_LABEL}</button>
+        {!soloItem && <DetailLockButton lock={lock} beforeLock={() => { saveTitle(); saveComment() }} />}
+        <button className={`note-detail-done${(editingTitle || editingComment) ? ' is-saving' : ''}${lock.locked && !(editingTitle || editingComment) ? ' lock-hidden' : ''}`} onMouseDown={handleTopButton}>{(editingTitle || editingComment) ? 'Save' : DONE_LABEL}</button>
       </div>
 
       <div className="todo-detail-scroll" ref={scrollRef}>

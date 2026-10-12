@@ -6,6 +6,7 @@ import './styles/cards.css'
 // Mirrors the desktop hover styles onto .is-pressed for touch — must come last
 // so it can override the hover rules it was generated from.
 import './styles/touch-press.css'
+import './menuScrollLock.js'
 import { installPressState } from './pressState.js'
 import { installOutbox, inFlight } from './outbox.js'
 import { installPushSync } from './push.js'

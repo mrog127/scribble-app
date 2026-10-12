@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import { ArchiveMenuIcon, RetrieveMenuIcon, TrashMenuIcon } from './MenuIcons.jsx'
 import { CalendarIcon } from './ScheduleBits.jsx'
+import { isPhoneLayout } from '../layoutMode'
 
 /* Gallery (museum) glyph — same drawing as the home tab in TabBar, restyled to
    inherit the menu item's colour. */
@@ -256,7 +257,7 @@ export function RowActionMenu({ state, onClose }) {
     if (!app) return
     const appRect = app.getBoundingClientRect()
     // On mobile the floating bar's fade starts 8px above the bar itself
-    const bar = window.innerWidth < 1000 ? document.querySelector('.footer .add-row') : null
+    const bar = isPhoneLayout() ? document.querySelector('.footer .add-row') : null
     const limit = bar ? bar.getBoundingClientRect().top - 8 : Math.min(appRect.bottom, window.innerHeight) - EDGE_GAP
     const fitsBelow = appRect.top + state.top + r.height <= limit
     setPressPos({

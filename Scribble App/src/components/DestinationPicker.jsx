@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { getCategoryAccent, getInboxAccent } from '../theme.js'
 import AddCanvasRow from './AddCanvasRow.jsx'
+import { isPhoneLayout } from '../layoutMode'
 
 // Inbox tray — the Inbox's glyph wherever an Easel would show its easel
 export function InboxIcon({ size = 18, color = 'currentColor', strokeWidth = 1, className }) {
@@ -108,7 +109,7 @@ export default function DestinationPicker({
   // long as the menu is open — presses on everything else in the menu (the
   // Easels list and menu, the buttons, the canvases) still work but don't take
   // focus; only another text field (naming a new canvas) can.
-  const isPhone = () => window.innerWidth < 1000
+  const isPhone = isPhoneLayout
   const pressInsideRef = useRef(0)
   useEffect(() => {
     if (!open) return

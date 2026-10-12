@@ -13,6 +13,7 @@ import TodoDetailPage from './TodoDetailPage.jsx'
 import { NoteDetailPage } from './NoteCard.jsx'
 import LinkDetailPage from './LinkDetailPage.jsx'
 import { NoteRowContent } from './ProjectCard.jsx'
+import { useCardHostsDetail } from '../detailLock.jsx'
 
 // The Inbox card: locked to the top of the Gallery, shown only while the Inbox
 // has something in it. List items, notes and links share one list, newest at
@@ -365,7 +366,7 @@ export default function InboxCard() {
         />
       )}
 
-      {openTodo && createPortal(
+      {useCardHostsDetail() && openTodo && createPortal(
         <TodoDetailPage
           todo={openTodo}
           categoryId={categoryId}
@@ -377,7 +378,7 @@ export default function InboxCard() {
         document.getElementById('app')
       )}
 
-      {openNote && createPortal(
+      {useCardHostsDetail() && openNote && createPortal(
         <NoteDetailPage
           note={{ ...openNote, categoryId, projectId, projectName: 'Inbox' }}
           onClose={() => setOpenDetail(null)}
@@ -391,7 +392,7 @@ export default function InboxCard() {
         document.getElementById('app')
       )}
 
-      {openLink && createPortal(
+      {useCardHostsDetail() && openLink && createPortal(
         <LinkDetailPage
           link={openLink}
           categoryId={categoryId}

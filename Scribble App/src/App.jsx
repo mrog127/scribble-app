@@ -18,7 +18,8 @@ import { useActivatePress, CalendarIcon, formatSchedule } from './components/Sch
 import CalendarPopup from './components/CalendarPopup.jsx'
 import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
 import { setMoveHandler } from './moveFx.js'
-import { soloItem, subscribeSolo, onSoloClosed, focusSoloWindow } from './soloWindow.js'
+import { soloItem } from './soloWindow.js'
+import PinnedDetailHost, { CentralMainDetailHost } from './components/PinnedDetailHost.jsx'
 import { inFlight } from './outbox.js'
 
 // ---- Where you were, kept across reloads ----
@@ -78,6 +79,7 @@ import { useScrollable } from './useScrollable.js'
 import GalleryDecoration from './assets/gallery-page-decoration.svg?react'
 import { isTileDragging } from './components/ProjectCard.jsx'
 import { isCardDragging } from './components/useCardDragReorder.js'
+import { isPhoneLayout, SPLIT_MOBILE_QUERY } from './layoutMode'
 
 // Pull-to-refresh, iOS style: pulling down at the top of the active page drags
 // the whole page down with rubber-band resistance, revealing the spinner in the
@@ -172,7 +174,9 @@ function usePullToRefresh(onRefresh) {
 
     const onStart = (e) => {
       if (s.refreshing || s.pull > 0) return
-      if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
+      // Only a drag on the page itself — never one inside a menu or popup over it
+      // (Move to, Save to, Schedule…), which scrolls its own list instead
+      if (!e.target.closest('.page') || e.target.closest('.note-detail-page, .footer, .save-to-panel')) return
       const page = pageFor(e.target)
       if (!page || scrolledAbove(e.target, page)) return
       s.page = page; s.target = e.target; s.startY = e.touches[0].clientY; s.active = true; s.fingerDown = true
@@ -209,7 +213,7 @@ function usePullToRefresh(onRefresh) {
     }
     const onWheel = (e) => {
       if (s.refreshing || s.active) return
-      if (e.target.closest('.note-detail-page') || e.target.closest('.footer') || e.target.closest('.save-to-panel')) return
+      if (!e.target.closest('.page') || e.target.closest('.note-detail-page, .footer, .save-to-panel')) return
       const page = pageFor(e.target)
       if (!page) return
       wheelPage = page; wheelTarget = e.target
@@ -255,6 +259,62 @@ function usePullToRefresh(onRefresh) {
   return spinnerRef
 }
 
+// Two pages up (one locked): drag a gutter to resize.
+//   'a' — three columns, cards | pages: the two pages grow/shrink together,
+//         keeping their proportions; once one is at its minimum the other keeps
+//         going until both are. The cards column takes up the difference.
+//   'b' — between the two pages: they trade width; nothing else moves.
+// Widths live on :root for the session: --dual-p2-set / --dual-p3-set (three
+// columns), --dual2-p3-set (two columns, the locked page's width).
+// Returns false when not in that layout (the single-panel handle then applies).
+const DUAL_MIN_PAGE = 320, DUAL_MIN_CARDS = 360
+function startDualResize(e, which) {
+  const app = document.getElementById('app')
+  if (!app || !app.classList.contains('dual') || window.innerWidth < 1000) return false
+  const sec = app.querySelector('.note-detail-page.open:not(.pinned-page)')
+  const pin = app.querySelector('.note-detail-page.pinned-page')
+  if (!sec || !pin) return false
+  const wide = window.innerWidth > 1240
+  if (!wide && which === 'a') return false
+  const p2 = sec.getBoundingClientRect().width
+  const p3 = pin.getBoundingClientRect().width
+  const cards = sec.getBoundingClientRect().left
+  const startX = e.clientX
+  const root = document.documentElement.style
+  const px = (v) => Math.round(v) + 'px'
+  const onMove = (e2) => {
+    const dx = e2.clientX - startX
+    if (!wide) {
+      // Two columns: only the locked page's width is stored; the other page fills the rest
+      const d = Math.max(DUAL_MIN_PAGE - p3, Math.min(p2 - DUAL_MIN_PAGE, -dx))
+      root.setProperty('--dual2-p3-set', px(p3 + d))
+      return
+    }
+    if (which === 'a') {
+      const total = p2 + p3
+      const next = Math.max(2 * DUAL_MIN_PAGE, Math.min(total + cards - DUAL_MIN_CARDS, total - dx))
+      let n2 = p2 * next / total, n3 = next - n2
+      if (n2 < DUAL_MIN_PAGE) { n2 = DUAL_MIN_PAGE; n3 = next - n2 }
+      if (n3 < DUAL_MIN_PAGE) { n3 = DUAL_MIN_PAGE; n2 = next - n3 }
+      root.setProperty('--dual-p2-set', px(n2))
+      root.setProperty('--dual-p3-set', px(n3))
+    } else {
+      const d = Math.max(DUAL_MIN_PAGE - p2, Math.min(p3 - DUAL_MIN_PAGE, dx))
+      root.setProperty('--dual-p2-set', px(p2 + d))
+      root.setProperty('--dual-p3-set', px(p3 - d))
+    }
+  }
+  const onUp = () => {
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    document.body.classList.remove('resizing-detail')
+  }
+  document.body.classList.add('resizing-detail')
+  document.addEventListener('pointermove', onMove)
+  document.addEventListener('pointerup', onUp)
+  return true
+}
+
 function AppInner() {
   const {
     categories, activeTodos, activeNotes, loading,
@@ -263,7 +323,7 @@ function AppInner() {
     setOpenDetail, setAutoEditNoteId, refresh,
     registerComposeHandler, addCategory, reorderCategories,
     openDetail, updateProjectNote, toggleProjectNoteActivated, setProjectNoteScheduled,
-    inboxIds, isInboxId, addInboxItem,
+    inboxIds, isInboxId, addInboxItem, pinnedDetail, pinLocked,
   } = useAppContext()
   // Is this Add item destination the Inbox?
   const isInboxTarget = (t) => !!t && isInboxId(t.categoryId)
@@ -291,10 +351,10 @@ function AppInner() {
   // from the Gallery or Settings), App opens it itself so it never silently fails.
   const [orphanNoteId, setOrphanNoteId] = useState(null)
   useEffect(() => {
-    if (openDetail?.type !== 'note') { setOrphanNoteId(null); return }
+    if (openDetail?.type !== 'note' || openDetail.central) { setOrphanNoteId(null); return }
     const id = openDetail.id
     const t = setTimeout(() => {
-      if (!document.querySelector('#app > .note-detail-page')) setOrphanNoteId(id)
+      if (!document.querySelector('#app > .note-detail-page:not(.pinned-page)')) setOrphanNoteId(id)
     }, 150)
     return () => clearTimeout(t)
   }, [openDetail])
@@ -303,7 +363,7 @@ function AppInner() {
   useEffect(() => {
     if (orphanNoteId == null) return
     const iv = setInterval(() => {
-      if (document.querySelectorAll('#app > .note-detail-page').length > 1) setOrphanNoteId(null)
+      if (document.querySelectorAll('#app > .note-detail-page:not(.pinned-page)').length > 1) setOrphanNoteId(null)
     }, 200)
     return () => clearInterval(iv)
   }, [orphanNoteId])
@@ -335,15 +395,35 @@ function AppInner() {
   inputFocusedRef.current = inputFocused
   const [toolbarFadedIn, setToolbarFadedIn] = useState(false)
   // Mobile = below the 1000px desktop breakpoint. Drives the floating action bar.
-  const [isMobileView, setIsMobileView] = useState(
+  const [isPhoneWidth, setIsPhoneWidth] = useState(
     () => typeof window !== 'undefined' && !window.matchMedia('(min-width: 1000px)').matches
   )
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1000px)')
-    const onChange = () => setIsMobileView(!mq.matches)
+    const onChange = () => setIsPhoneWidth(!mq.matches)
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])
+  // Narrow desktop (1000–1240px) with a detail page open: the window splits into
+  // two columns and the left one runs the phone layout (header + floating bar).
+  // `.split-m` on #app switches the CSS over (see splitMobileCss.js).
+  const [isNarrowDesktop, setIsNarrowDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(SPLIT_MOBILE_QUERY).matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(SPLIT_MOBILE_QUERY)
+    const onChange = () => setIsNarrowDesktop(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  // A locked page plus a second one beside it: on a wide window the sidebar
+  // gives way to three columns (cards | second page | locked page), and the
+  // cards column gets the control bar the same way.
+  const dualDetail = !!openDetail && !!pinnedDetail
+  const pinnedRef = useRef(null)
+  pinnedRef.current = pinnedDetail
+  const splitMobile = !isPhoneWidth && (dualDetail || (isNarrowDesktop && (!!openDetail || !!pinnedDetail)))
+  const isMobileView = isPhoneWidth || splitMobile
 
   // Search — the control bar's trailing circle expands the pill into a search field
   const [searchOpen, setSearchOpen] = useState(false)
@@ -556,107 +636,49 @@ function AppInner() {
           (d.type === 'link' && p.links.some(l => l.id === d.id))))
     if (exists) setOpenDetail({ type: d.type, id: d.id })
   }, [openDetail]) // eslint-disable-line react-hooks/exhaustive-deps
-  // ---- Pages out in their own windows (main window) ----
-  // Their rows, wherever they show (Gallery, Easel pages, attachment cards,
-  // link tiles), carry the open-in-window mark at their right end in place of
-  // their usual trailing markers; a tap on one brings its window forward; and
-  // the moment a window closes, this one reloads to show what changed there.
+  // ---- The locked page's row ----
+  // Wherever its row shows (Gallery, Easel pages, attachment cards, link
+  // tiles), it carries a lock at its right end in place of its usual trailing
+  // markers. (Tapping it does nothing — the page is already open, pinned.)
   useEffect(() => {
     if (soloItem) return
     const style = document.createElement('style')
-    style.id = 'solo-open-marks'
+    style.id = 'locked-page-marks'
     document.head.appendChild(style)
-    const icon = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E\")"
-    const unsub = subscribeSolo(keys => {
+    if (pinnedDetail && pinLocked) {
+      const id = CSS.escape(String(pinnedDetail.id))
+      const type = pinnedDetail.type
       const rowSels = [], cellSels = []
-      keys.forEach(key => {
-        const i = key.indexOf(':')
-        const type = key.slice(0, i)
-        const id = CSS.escape(key.slice(i + 1))
-        if (type === 'todo') rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.todo-row)`)
-        if (type === 'note' || type === 'local-note') {
-          rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.note-row:not(.link-row))`)
-          rowSels.push(`.todo-attach-row-wrap[data-attach-id="${id}"] .todo-swipe-row`)
-        }
-        if (type === 'link') {
-          rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.link-row)`)
-          cellSels.push(`.link-grid-cell[data-swipe-id="${id}"]`)
-        }
-      })
+      if (type === 'todo') rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.todo-row)`)
+      if (type === 'note' || type === 'local-note') {
+        rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.note-row:not(.link-row))`)
+        rowSels.push(`.todo-attach-row-wrap[data-attach-id="${id}"] .todo-swipe-row`)
+      }
+      if (type === 'link') {
+        rowSels.push(`.swipe-row[data-swipe-id="${id}"]:has(.link-row)`)
+        cellSels.push(`.link-grid-cell[data-swipe-id="${id}"]`)
+      }
       const all = [...rowSels, ...cellSels]
-      if (!all.length) { style.textContent = ''; return }
-      // A 20px icon drawn at a true 2px (its 24-unit art shown at 20px ≈ 1.67,
-      // so the mask art carries 2.4)
-      const art = icon.replace("stroke-width='2'", "stroke-width='2.4'")
+      // A 20px lock drawn at a true 2px (its 24-unit art shown at 20px, so the
+      // mask art carries 2.4), in black
+      const art = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E\")"
       style.textContent = `
         ${all.join(',\n')} { position: relative; }
         ${all.map(x => x + '::after').join(',\n')} {
           content: ''; position: absolute; right: 26px; top: 50%; width: 20px; height: 20px;
-          transform: translateY(-50%); background: var(--accent-base, #7A7A7A); pointer-events: none; z-index: 3;
+          transform: translateY(-50%); background: #000; pointer-events: none; z-index: 3;
           -webkit-mask: ${art} center / 20px 20px no-repeat; mask: ${art} center / 20px 20px no-repeat;
         }
+        :root[data-theme="dark-dots"] :is(${all.join(', ')})::after { background: #FFF; }
         ${cellSels.length ? cellSels.map(x => x + '::after').join(',\n') + ' { top: auto; bottom: 23px; transform: none; }' : ''}
         :is(${all.join(', ')}) :is(.row-schedule-indicator, .todo-attach-indicator, .link-outlink-btn, .attach-row-unattach-btn, .link-tile-edit) { display: none !important; }
-        /* Text stops 16px short of the mark (26px in + 20px icon + 16px):
-           the primary label wraps there, the secondary label truncates */
+        /* Text stops 16px short of the mark (26px in + 20px icon + 16px) */
         ${rowSels.length ? `:is(${rowSels.join(', ')}) :is(.todo-row, .note-row) { padding-right: 62px !important; }` : ''}
         ${cellSels.length ? `:is(${cellSels.join(', ')}) .link-tile-text { padding-right: 46px !important; }` : ''}
       `
-    })
-    // A tap (not a drag or long-press) on one of those rows: to its window
-    let down = null
-    const keyFor = (el) => {
-      const cell = el.closest('.link-grid-cell[data-swipe-id]')
-      if (cell) return { type: 'link', id: cell.dataset.swipeId }
-      const att = el.closest('.todo-attach-row-wrap[data-attach-id]')
-      if (att) return { type: 'note', id: att.dataset.attachId }
-      const row = el.closest('.swipe-row[data-swipe-id]')
-      if (!row) return null
-      const id = row.dataset.swipeId
-      if (row.querySelector('.todo-row')) return { type: 'todo', id }
-      if (row.querySelector('.link-row')) return { type: 'link', id }
-      if (row.querySelector('.note-row')) return { type: 'note', id }
-      return null
     }
-    const isOut = (k) => !!k &&
-      [k.type, k.type === 'note' ? 'local-note' : null].filter(Boolean).some(t => subscribeSoloKeys.has(`${t}:${k.id}`))
-    const subscribeSoloKeys = new Set()
-    const unsubKeys = subscribeSolo(keys => { subscribeSoloKeys.clear(); keys.forEach(k => subscribeSoloKeys.add(k)) })
-    // The row's own press handling (open, drag, long-press menu) never starts
-    // for these rows — the press belongs to the window
-    const onDown = (e) => {
-      // Only a plain (primary-button) click goes to the window — a right-click
-      // (or Ctrl-click) still opens the row's menu
-      if (e.button !== 0 || e.ctrlKey) { down = null; return }
-      const t = e.target instanceof Element ? e.target : null
-      const k = t && keyFor(t)
-      down = isOut(k) ? { k, x: e.clientX, y: e.clientY } : null
-      if (down) { e.preventDefault(); e.stopPropagation() }
-    }
-    const onUp = (e) => {
-      if (!down) return
-      const d = down
-      down = null
-      e.preventDefault()
-      e.stopPropagation()
-      if (Math.abs(e.clientX - d.x) > 8 || Math.abs(e.clientY - d.y) > 8) return
-      const t = [d.k.type, 'local-note'].find(tp => subscribeSoloKeys.has(`${tp}:${d.k.id}`)) || d.k.type
-      focusSoloWindow(t, d.k.id)
-      // …and swallow the click that follows (link tiles open their site on click)
-      const eat = (ev) => { ev.preventDefault(); ev.stopPropagation() }
-      document.addEventListener('click', eat, true)
-      setTimeout(() => document.removeEventListener('click', eat, true), 400)
-    }
-    document.addEventListener('pointerdown', onDown, true)
-    document.addEventListener('pointerup', onUp, true)
-    const unClosed = onSoloClosed(() => refresh())
-    return () => {
-      unsub(); unsubKeys(); unClosed()
-      style.remove()
-      document.removeEventListener('pointerdown', onDown, true)
-      document.removeEventListener('pointerup', onUp, true)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    return () => style.remove()
+  }, [pinnedDetail, pinLocked])
 
   // A page in its own window: Close shuts the window at once — no slide-down.
   // Anything not yet saved is saved first (the note's autosave flushes on
@@ -1052,7 +1074,7 @@ function AppInner() {
       const r = saveScrollPadRef.current
       if (r) { setPad(r.el, r.pad); r.el.style.paddingTop = r.padTop; r.el.classList.remove('save-fit'); saveScrollPadRef.current = null }
     }
-    const on = inputFocused && footerInputMode && saveToProject && !isInboxId(saveToProject.categoryId) && window.innerWidth >= 1000
+    const on = inputFocused && footerInputMode && saveToProject && !isInboxId(saveToProject.categoryId) && !isPhoneLayout()
     if (!on) { restore(); return }
     requestProjectFocus({ projectId: saveToProject.projectId, categoryId: saveToProject.categoryId, type: toolbarType })
     let raf2 = 0
@@ -1184,7 +1206,7 @@ function AppInner() {
   const easelWasOpenRef = useRef(false)
   useLayoutEffect(() => {
     const row = addRowRef.current
-    if (!row || window.innerWidth >= 1000) return
+    if (!row || !isPhoneLayout()) return
     const wrap = row.querySelector(':scope > .mbar-easel-wrap')
     const gal = row.querySelector(':scope > .mbar-gallery-wrap')
     const others = [...row.querySelectorAll(':scope > .link-input-stack:not(.easel-stack):not(.search-stack), :scope > .mbar-search')]
@@ -1262,7 +1284,9 @@ function AppInner() {
 
   const handleTabChange = useCallback((newTab) => {
     if (newTab === activeTab) return
-    setOpenDetail(null)   // close any open detail when navigating
+    // Close any open detail when navigating — except a page open beside a
+    // pinned one, which stays until its Done (or another page replaces it)
+    setOpenDetail(prev => (prev?.central && pinnedRef.current) ? prev : null)
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
     const tabs = ['star', ...categoryIds, 'menu']
     const currentIdx = tabs.indexOf(activeTab)
@@ -1350,7 +1374,7 @@ function AppInner() {
   // the bar has a close X.)
   useEffect(() => {
     if (!searchOpen) return
-    if (!window.matchMedia('(min-width: 1000px)').matches) return
+    if (isPhoneLayout()) return
     const onDown = (e) => {
       if (e.target.closest('.search-stack') || e.target.closest('.search-panel')) return
       closeSearch()
@@ -1623,7 +1647,7 @@ function AppInner() {
         if (willCommit) {
           // Old pages unmount (carrying their inline vars); the incoming page keeps
           // its instance and simply becomes active — a seamless handoff.
-          setOpenDetail(null)
+          setOpenDetail(prev => (prev?.central && pinnedRef.current) ? prev : null)
           setHeaderOpacity(1)
           setHeaderTranslate(0)
           setActiveTab(toTab)
@@ -1802,7 +1826,7 @@ function AppInner() {
       if (!bar) return
       const bR = bar.getBoundingClientRect()
       const tR = selected.getBoundingClientRect()
-      const vertical = window.matchMedia('(min-width: 1000px)').matches
+      const vertical = !isPhoneLayout()
       const scroller = bar.querySelector('.tabs-scroll')
       // Settings sits outside the scroller and paints its own highlight; moving
       // the indicator down to it stretched the scroll area and jumped the list.
@@ -1931,7 +1955,7 @@ function AppInner() {
     requestAnimationFrame(() => {
       // Desktop: the indicator sits inside .tabs-scroll and scrolls with it
       // natively, so nothing to do here.
-      if (window.matchMedia('(min-width: 1000px)').matches) return
+      if (!isPhoneLayout()) return
       const bar = document.querySelector('.tab-bar')
       if (!bar) return
       const bR = bar.getBoundingClientRect()
@@ -2955,7 +2979,7 @@ function AppInner() {
   return (
     <div className="app-wrap">
       <div
-        className={`phone${inputFocused && footerInputMode ? ' save-panel-open' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}${addToast && !addToastLeaving ? ' toast-open' : ''}`}
+        className={`phone${splitMobile ? ' split-m' : ''}${pinnedDetail ? ' has-pinned' : ''}${dualDetail ? ' dual' : ''}${inputFocused && footerInputMode ? ' save-panel-open' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}${addToast && !addToastLeaving ? ' toast-open' : ''}`}
         id="app"
         style={{
           '--accent-base': activeAccent.base,
@@ -3850,6 +3874,9 @@ function AppInner() {
 
         </div>
 
+        <PinnedDetailHost />
+        <CentralMainDetailHost />
+
         {orphanNote && createPortal(
           <NoteDetailPage
             note={orphanNote.note}
@@ -3893,6 +3920,7 @@ function AppInner() {
           onPointerDown={e => {
             if (e.button !== 0) return
             e.preventDefault()
+            if (startDualResize(e, 'a')) return
             const panel = document.querySelector('.note-detail-page')
             const startW = panel ? panel.getBoundingClientRect().width : 500
             const startX = e.clientX
@@ -3908,6 +3936,16 @@ function AppInner() {
             document.body.classList.add('resizing-detail')
             document.addEventListener('pointermove', onMove)
             document.addEventListener('pointerup', onUp)
+          }}
+        />
+        {/* Three columns (a page open beside a locked one): the gutter between
+            the two pages resizes too */}
+        <div
+          className="detail-resize-handle dual-b"
+          onPointerDown={e => {
+            if (e.button !== 0) return
+            e.preventDefault()
+            startDualResize(e, 'b')
           }}
         />
 

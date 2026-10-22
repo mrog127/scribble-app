@@ -267,7 +267,11 @@ function usePullToRefresh(onRefresh) {
 // Widths live on :root for the session: --dual-p2-set / --dual-p3-set (three
 // columns), --dual2-p3-set (two columns, the locked page's width).
 // Returns false when not in that layout (the single-panel handle then applies).
-const DUAL_MIN_PAGE = 320, DUAL_MIN_CARDS = 360
+const DUAL_MIN_PAGE = 320
+// The cards column (its box, padding included) keeps its cards at least 384px
+// wide: 384 + its left padding (28px; 48px on the Dots themes) + 48px right
+const dualMinCards = () =>
+  384 + 48 + (['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme) ? 48 : 28)
 function startDualResize(e, which) {
   const app = document.getElementById('app')
   if (!app || !app.classList.contains('dual') || window.innerWidth < 1000) return false
@@ -292,7 +296,7 @@ function startDualResize(e, which) {
     }
     if (which === 'a') {
       const total = p2 + p3
-      const next = Math.max(2 * DUAL_MIN_PAGE, Math.min(total + cards - DUAL_MIN_CARDS, total - dx))
+      const next = Math.max(2 * DUAL_MIN_PAGE, Math.min(total + cards - dualMinCards(), total - dx))
       let n2 = p2 * next / total, n3 = next - n2
       if (n2 < DUAL_MIN_PAGE) { n2 = DUAL_MIN_PAGE; n3 = next - n2 }
       if (n3 < DUAL_MIN_PAGE) { n3 = DUAL_MIN_PAGE; n2 = next - n3 }
@@ -492,7 +496,10 @@ function AppInner() {
     // Paintbrush's cream box
     const darkDots = ['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)
     const cardBg = darkDots ? getComputedStyle(row.closest('.card') || row).backgroundColor : null
-    const cloneBg = darkDots ? (cardBg && cardBg !== 'rgba(0, 0, 0, 0)' ? cardBg : '#2B2B2B') : '#F7F6F3'
+    // A card with no fill of its own (a pinned canvas on the Gallery) falls back
+    // to the theme's card colour — light in Light Dots, not Dark Dots' grey
+    const dotsCardBg = document.documentElement.dataset.theme === 'light-dots' ? '#FAFAFA' : '#2B2B2B'
+    const cloneBg = darkDots ? (cardBg && cardBg !== 'rgba(0, 0, 0, 0)' ? cardBg : dotsCardBg) : '#F7F6F3'
 
     const clone = document.createElement('div')
     clone.style.cssText = [
@@ -867,6 +874,11 @@ function AppInner() {
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
   const pageAddedRef = useRef(null)                          // { tab, categoryId, projectId } last canvas added to while on this page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
+  // A list item page's Notes / Links plus opens Add item over the page: what's
+  // sent to that canvas as a note / link goes through the page's own onAdd
+  // (which attaches it to the item)
+  const composeAttachRef = useRef(null)                      // { categoryId, projectId, onAdd }
+  const [composeOverDetail, setComposeOverDetail] = useState(false)
   const saveToScrollRef = useRef(null)                       // the Save to list scroller
   const saveToSearchRef = useRef(null)                       // the Save to search field
 
@@ -984,11 +996,14 @@ function AppInner() {
   useEffect(() => {
     if (inputFocused && footerInputMode && !prevInputFocused.current) {
       if (pendingComposeRef.current) {
-        const { categoryId, projectId } = pendingComposeRef.current
+        const { categoryId, projectId, onAdd } = pendingComposeRef.current
         pendingComposeRef.current = null
+        composeAttachRef.current = onAdd ? { categoryId, projectId, onAdd } : null
         setSaveToTab(categoryId)
         setSaveToProject({ categoryId, projectId })
       } else {
+        composeAttachRef.current = null
+        setComposeOverDetail(false)
         // every fresh open starts on the list type — unless it was opened from
         // one of the resting pill's type buttons
         setToolbarType(pendingTypeRef.current || 'list')
@@ -1131,7 +1146,8 @@ function AppInner() {
   useEffect(() => {
     registerComposeHandler((target) => {
       if (!target) return
-      pendingComposeRef.current = { categoryId: target.categoryId, projectId: target.projectId }
+      pendingComposeRef.current = { categoryId: target.categoryId, projectId: target.projectId, onAdd: target.onAdd }
+      setComposeOverDetail(!!target.onAdd)
       setToolbarType(target.type)
       inputRef.current?.focus()
     })
@@ -1666,7 +1682,18 @@ function AppInner() {
       // A gesture may start while the previous tab animation is still settling —
       // onMove holds it un-engaged until that lands, so consecutive swipes don't
       // have to wait out the full transition.
-      if (dragRef.current) return
+      // A gesture still on record when a new press lands has ended without its
+      // release reaching us (the element under the finger went away, or a handler
+      // swallowed the pointerup). Left in place it would block every swipe after
+      // it until the app was restarted — so it's dropped. Only a second finger
+      // during a live drag is ignored.
+      const prev = dragRef.current
+      if (prev) {
+        if (prev.wheel) return
+        if (prev.engaged && prev.id !== e.pointerId && performance.now() - prev.lastT < 1000) return
+        if (prev.engaged) finalize(false)
+        dragRef.current = null
+      }
       if (e.pointerType === 'mouse' && e.button !== 0) return
       const t = e.target
       // Rows used to own the horizontal gesture (swipe-to-reveal), so they were
@@ -1791,16 +1818,17 @@ function AppInner() {
 
     app.addEventListener('pointerdown', onDown)
     app.addEventListener('pointermove', onMove)
-    app.addEventListener('pointerup', onUp)
-    app.addEventListener('pointercancel', onCancel)
+    // Releases are heard on the window, before anything can stop them
+    window.addEventListener('pointerup', onUp, true)
+    window.addEventListener('pointercancel', onCancel, true)
     app.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       dragFrameRef.current = null
       clearTimeout(wheelEndTimer)
       app.removeEventListener('pointerdown', onDown)
       app.removeEventListener('pointermove', onMove)
-      app.removeEventListener('pointerup', onUp)
-      app.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener('pointerup', onUp, true)
+      window.removeEventListener('pointercancel', onCancel, true)
       app.removeEventListener('wheel', onWheel)
     }
   }, []) // eslint-disable-line
@@ -2462,6 +2490,28 @@ function AppInner() {
   const addItem = useCallback(() => {
     pressInsideAddRef.current = 0   // sending closes Add item on purpose
 
+    // Opened from a list item page's Notes / Links plus: a note or link still
+    // headed for that item's canvas is added through the page (attached to the
+    // item). Anything else — a list item, or another canvas — goes in as usual.
+    const attach = composeAttachRef.current
+    if (attach && footerInputMode && (toolbarType === 'note' || toolbarType === 'link') &&
+        saveToProject?.categoryId === attach.categoryId && saveToProject?.projectId === attach.projectId) {
+      const isLink = toolbarType === 'link'
+      const url = linkUrlValue.trim()
+      const text = isLink ? inputValue.trim() : (inputValue.trim() || 'Untitled note')
+      if (isLink && !url) return
+      attach.onAdd({ type: toolbarType, text, url, active: addAsActiveFlag, schedule: addScheduleDate })
+      composeAttachRef.current = null
+      if (toolbarType === 'note') keepKeyboardAlive()
+      setInputValue('')
+      setLinkUrlValue('')
+      setToolbarType('list')
+      linkUrlRef.current?.blur()
+      inputRef.current?.blur()
+      setInputFocused(false)
+      return
+    }
+
     // The Inbox: the item goes in at the top of the Inbox card on the Gallery
     // (Display / a date are kept, and take effect once it's filed). On the Gallery its row flashes as it lands; anywhere
     // else the toast points to it. A new note opens straight away, from there.
@@ -2979,7 +3029,7 @@ function AppInner() {
   return (
     <div className="app-wrap">
       <div
-        className={`phone${splitMobile ? ' split-m' : ''}${pinnedDetail ? ' has-pinned' : ''}${dualDetail ? ' dual' : ''}${inputFocused && footerInputMode ? ' save-panel-open' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}${addToast && !addToastLeaving ? ' toast-open' : ''}`}
+        className={`phone${splitMobile ? ' split-m' : ''}${pinnedDetail ? ' has-pinned' : ''}${dualDetail ? ' dual' : ''}${inputFocused && footerInputMode ? ' save-panel-open' : ''}${inputFocused && footerInputMode && composeOverDetail ? ' compose-over-detail' : ''}${searchOpen ? ' save-panel-open search-panel-open' : ''}${pageMenuOpen ? ' page-menu-open' : ''}${addToast && !addToastLeaving ? ' toast-open' : ''}`}
         id="app"
         style={{
           '--accent-base': activeAccent.base,
@@ -3926,7 +3976,7 @@ function AppInner() {
             const startX = e.clientX
             const onMove = (e2) => {
               const w = Math.max(400, Math.min(Math.max(750, window.innerWidth - 340 - 400), startW - (e2.clientX - startX)))
-              document.documentElement.style.setProperty('--detail-w', w + 'px')
+              document.documentElement.style.setProperty('--detail-w-set', w + 'px')   // CSS holds it to the cards' 384px minimum
             }
             const onUp = () => {
               document.removeEventListener('pointermove', onMove)

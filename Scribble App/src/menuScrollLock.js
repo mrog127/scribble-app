@@ -12,6 +12,27 @@ const MENUS = '.save-to-panel, .move-to-overlay, .cal-overlay, .card-context-men
 
 let drag = null
 
+// The Easels menu in Save to / Move to rises out past the card it sits in, over
+// the canvas list and the page. iOS hands a drag there to one of the scrollers
+// underneath instead of the menu, so the menu never scrolls. Its scrolling is
+// driven here from the touches instead (with a flick's momentum), and iOS's own
+// scroll is stopped for the whole drag.
+const MANUAL = '.dest-easels-menu'
+let fling = 0
+const stopFling = () => { if (fling) { cancelAnimationFrame(fling); fling = 0 } }
+const startFling = (el, v) => {   // v in px per ms, positive = content moves down
+  let last = performance.now()
+  const step = (now) => {
+    const dt = Math.min(32, now - last)
+    last = now
+    el.scrollTop -= v * dt
+    v *= Math.pow(0.95, dt / 16)
+    const atEnd = el.scrollTop <= 0 || el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+    fling = Math.abs(v) > 0.02 && !atEnd ? requestAnimationFrame(step) : 0
+  }
+  fling = requestAnimationFrame(step)
+}
+
 const scrollerFor = (el, stop) => {
   for (; el && el !== stop; el = el.parentElement) {
     const oy = getComputedStyle(el).overflowY
@@ -22,6 +43,7 @@ const scrollerFor = (el, stop) => {
 
 document.addEventListener('touchstart', (e) => {
   drag = null
+  stopFling()
   const t = e.target instanceof Element ? e.target : null
   if (!t || e.touches.length !== 1) return
   const menu = t.closest(MENUS)
@@ -31,6 +53,8 @@ document.addEventListener('touchstart', (e) => {
     x: e.touches[0].clientX, y: e.touches[0].clientY,
     scroller: scrollerFor(t, menu.parentElement),
     axis: null,
+    manual: t.closest(MANUAL),
+    v: 0, time: e.timeStamp,
   }
 }, { passive: true, capture: true })
 
@@ -42,6 +66,14 @@ document.addEventListener('touchmove', (e) => {
   if (!drag.axis) drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
   if (drag.axis !== 'y') return
   drag.x = x; drag.y = y
+  if (drag.manual) {
+    if (e.cancelable) e.preventDefault()
+    drag.manual.scrollTop -= dy
+    const dt = Math.max(1, e.timeStamp - drag.time)
+    drag.v = 0.8 * (dy / dt) + 0.2 * drag.v
+    drag.time = e.timeStamp
+    return
+  }
   const sc = drag.scroller
   const stop = !sc ||
     (dy > 0 && sc.scrollTop <= 0) ||                                   // pulling down at the top
@@ -49,5 +81,11 @@ document.addEventListener('touchmove', (e) => {
   if (stop && e.cancelable) e.preventDefault()
 }, { passive: false, capture: true })
 
-document.addEventListener('touchend', () => { drag = null }, { capture: true })
+document.addEventListener('touchend', (e) => {
+  // A flick carries on; a drag that stopped before lifting doesn't
+  if (drag?.manual && drag.axis === 'y' && e.timeStamp - drag.time < 80 && Math.abs(drag.v) > 0.1) {
+    startFling(drag.manual, drag.v)
+  }
+  drag = null
+}, { capture: true })
 document.addEventListener('touchcancel', () => { drag = null }, { capture: true })

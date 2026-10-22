@@ -17,9 +17,30 @@ import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from '
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
 import { useCardHostsDetail } from '../detailLock.jsx'
+import { uploadNoteImage, deviceHasCamera } from '../noteImages.js'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+// A note's HTML as it's saved: a photo still uploading (its src a local blob:
+// URL) is left out until its upload lands and swaps in the real URL
+function serializeNote(content) {
+  if (!content.querySelector('img[data-pending]')) return content.innerHTML
+  const copy = content.cloneNode(true)
+  copy.querySelectorAll('img[data-pending]').forEach(img => (img.closest('.note-para') || img).remove())
+  return copy.innerHTML
+}
+
+// The media button's icon: a photo frame, 2pt
+function MediaIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21 15 16 10 5 21"/>
+    </svg>
+  )
 }
 
 function buildNoteContent(note) {
@@ -357,7 +378,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const content = contentRef.current || autosaveElRef.current
     const id = autosaveIdRef.current
     if (!content || id == null) return
-    const html = content.innerHTML
+    const html = serializeNote(content)
     if (html === savedHtmlRef.current) return
     savedHtmlRef.current = html
     const firstPara = content.querySelector('.note-para')
@@ -391,7 +412,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       // Heal notes saved with stray lines (see enforceTitlePara) as they open
       if (enforceTitlePara()) {
         const firstPara = contentRef.current.querySelector('.note-para')
-        onSave(note.id, contentRef.current.innerHTML, firstPara ? firstPara.textContent.trim() : note.text)
+        onSave(note.id, serializeNote(contentRef.current), firstPara ? firstPara.textContent.trim() : note.text)
       }
       savedHtmlRef.current = contentRef.current.innerHTML
     }
@@ -715,7 +736,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const first = content.querySelector('.note-para')
     // A selection across several lines: every one of them takes the style
     // (all but the title, whose style is fixed)
-    const selected = getSelectedParas().filter(p => p !== first)
+    const selected = getSelectedParas().filter(p => p !== first && !p.classList.contains('style-image'))
     if (selected.length > 1 || (selected.length === 1 && getSelectedParas().length > 1)) {
       selected.forEach(p => { if (!/style-/.test(p.className) || !p.classList.contains('style-' + style)) p.className = 'note-para style-' + style })
       setCurrentStyle(style)
@@ -725,12 +746,130 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
     const target = getCursorPara() || lastCursorParaRef.current || content.querySelector('.note-para:last-of-type')
     // The title line's style is fixed — the tap does nothing at all.
-    if (target && target === first) return
+    if (target && (target === first || target.classList.contains('style-image'))) return
     setCurrentStyle(style)
     updateStyleIndicator(style)
     if (target && content.contains(target)) target.className = 'note-para style-' + style
     scheduleAutosave()
   }, [getCursorPara, getSelectedParas, updateStyleIndicator, scheduleAutosave])
+
+  // ---- Photos: the media button beside the style bar opens a menu (Camera on
+  // a phone or tablet, and Photo Library); the picked photo goes in at the
+  // cursor as its own line, the full width of the text ----
+  const [mediaMenuOpen, setMediaMenuOpen] = useState(false)
+  const mediaRangeRef = useRef(null)     // the caret when the button was pressed
+  const cameraInputRef = useRef(null)
+  const libraryInputRef = useRef(null)
+  const hasCamera = useMemo(() => deviceHasCamera(), [])
+  const rememberCaret = useCallback(() => {
+    const content = contentRef.current
+    const sel = window.getSelection()
+    if (content && sel && sel.rangeCount && content.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
+  }, [])
+  useEffect(() => {
+    if (!mediaMenuOpen) return
+    const close = (e) => { if (!e.target.closest?.('.note-media-wrap')) setMediaMenuOpen(false) }
+    document.addEventListener('pointerdown', close, true)
+    return () => document.removeEventListener('pointerdown', close, true)
+  }, [mediaMenuOpen])
+  useEffect(() => { if (!editing) setMediaMenuOpen(false) }, [editing])
+
+  const insertImage = useCallback((file) => {
+    const content = contentRef.current
+    if (!content || !file) return
+    const paraOf = (node) => {
+      let n = node
+      while (n && n !== content && !(n.nodeType === 1 && n.classList?.contains('note-para'))) n = n.parentNode
+      return n && n !== content ? n : null
+    }
+    const first = content.querySelector('.note-para')
+    const range = mediaRangeRef.current
+    mediaRangeRef.current = null
+    let cur = range && content.contains(range.startContainer) ? paraOf(range.startContainer) : null
+    if (!cur && lastCursorParaRef.current && content.contains(lastCursorParaRef.current)) cur = lastCursorParaRef.current
+    if (!cur) cur = [...content.querySelectorAll('.note-para')].pop() || null
+
+    const blobUrl = URL.createObjectURL(file)
+    const photo = document.createElement('div')
+    photo.className = 'note-para style-image'
+    photo.contentEditable = 'false'
+    const img = document.createElement('img')
+    img.alt = ''
+    img.src = blobUrl
+    img.dataset.pending = '1'
+    photo.appendChild(img)
+
+    // The line the caret lands on, after the photo
+    let after
+    let addedLine = null   // an empty line made just to hold the caret
+    const bodyLine = () => { const p = document.createElement('div'); p.className = 'note-para style-body'; p.innerHTML = '<br>'; addedLine = p; return p }
+    if (!cur) {
+      content.appendChild(photo)
+      after = bodyLine(); photo.after(after)
+    } else if (cur === first || !range || cur.classList.contains('style-image')) {
+      // On the title (or with no caret): the photo goes on the next line
+      cur.after(photo)
+      after = photo.nextElementSibling?.classList.contains('note-para') && !photo.nextElementSibling.classList.contains('style-image')
+        ? photo.nextElementSibling : null
+      if (!after) { after = bodyLine(); photo.after(after) }
+    } else {
+      // Mid-line: split the line at the caret, like Enter, with the photo between
+      const tail = document.createRange()
+      tail.setStart(range.startContainer, range.startOffset)
+      tail.setEnd(cur, cur.childNodes.length)
+      const head = document.createRange()
+      head.setStart(cur, 0)
+      head.setEnd(range.startContainer, range.startOffset)
+      if (!head.toString().trim()) {
+        // At the start of the line: the photo goes above it
+        cur.before(photo)
+        after = cur
+      } else {
+        const frag = tail.extractContents()
+        after = document.createElement('div')
+        after.className = cur.className
+        if (frag.textContent) after.appendChild(frag)
+        else after.innerHTML = '<br>'
+        if (!cur.textContent && !cur.querySelector('br')) cur.innerHTML = '<br>'
+        cur.after(photo)
+        photo.after(after)
+      }
+    }
+    const sel = window.getSelection()
+    const r = document.createRange()
+    r.setStart(after, 0)
+    r.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(r)
+    lastCursorParaRef.current = after
+    requestAnimationFrame(() => photo.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+
+    uploadNoteImage(file).then(url => {
+      const done = () => {
+        img.src = url
+        delete img.dataset.pending
+        URL.revokeObjectURL(blobUrl)
+        if (img.isConnected) flushAutosave()
+      }
+      // Swap once the uploaded copy has loaded, so the photo doesn't blink
+      const pre = new Image()
+      pre.onload = done
+      pre.onerror = done
+      pre.src = url
+    }).catch(err => {
+      console.error('[note image] upload failed', err)
+      photo.remove()
+      if (addedLine && addedLine.isConnected && !addedLine.textContent.trim()) addedLine.remove()
+      URL.revokeObjectURL(blobUrl)
+      window.alert("Couldn't add that photo. Please try again.")
+    })
+  }, [flushAutosave])
+
+  const pickMedia = (which) => {
+    setMediaMenuOpen(false)
+    const input = (which === 'camera' ? cameraInputRef : libraryInputRef).current
+    if (input) { input.value = ''; input.click() }
+  }
 
   const enterEdit = useCallback((savedRange) => {
     editingRef.current = true
@@ -863,7 +1002,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     // Not in edit mode, so nothing else will commit this — save it now
     if (!editingRef.current) {
       const firstPara = content.querySelector('.note-para')
-      onSave(note.id, content.innerHTML, firstPara ? firstPara.textContent.trim() : note.text)
+      onSave(note.id, serializeNote(content), firstPara ? firstPara.textContent.trim() : note.text)
     } else {
       scheduleAutosave()
     }
@@ -1050,7 +1189,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         editingRef.current = false
         const firstPara = content.querySelector('.note-para')
         const text = firstPara ? firstPara.textContent.trim() : note.text
-        onSave(note.id, content.innerHTML, text)
+        onSave(note.id, serializeNote(content), text)
         if (styleBarRef.current) styleBarRef.current.classList.remove('visible')
       }
       setEditing(false)
@@ -1101,6 +1240,12 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       const prev = para.previousElementSibling
       if (!prev || !prev.classList?.contains('note-para')) return
       e.preventDefault()
+      // A photo just above: Backspace deletes it, the way it would a character
+      if (prev.classList.contains('style-image')) {
+        prev.remove()
+        scheduleAutosave()
+        return
+      }
       if (prev.innerHTML.trim() === '<br>') prev.innerHTML = ''
       // Cursor lands at the junction (end of prev's original content).
       const junction = document.createRange()
@@ -1116,6 +1261,24 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       setCurrentStyle(ps)
       updateStyleIndicator(ps)
       return
+    }
+
+    // ---- Delete at the very end of a paragraph with a photo just below: the
+    // photo goes ----
+    if (e.key === 'Delete' && range.collapsed) {
+      const para = findPara(range.startContainer, range.startOffset)
+      const next = para?.nextElementSibling
+      if (para && next?.classList?.contains('style-image')) {
+        const probe = document.createRange()
+        probe.selectNodeContents(para)
+        probe.setStart(range.startContainer, range.startOffset)
+        if (probe.toString().length === 0) {
+          e.preventDefault()
+          next.remove()
+          scheduleAutosave()
+          return
+        }
+      }
     }
 
     if (e.key !== 'Enter') return
@@ -1189,7 +1352,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         editor.scrollTop += paraRect.bottom - visibleBottom
       }
     })
-  }, [updateStyleIndicator])
+  }, [updateStyleIndicator, scheduleAutosave])
 
   // Auto-capitalize the first letter of each line/paragraph as it's typed.
   // (iOS contenteditable autocapitalize doesn't reliably fire after a newline.)
@@ -1260,7 +1423,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (!content) return
     const firstPara = content.querySelector('.note-para')
     const text = firstPara ? firstPara.textContent.trim() : note.text
-    onSave(note.id, content.innerHTML, text)
+    onSave(note.id, serializeNote(content), text)
   }, [note, onSave])
 
   const handleTitleFocus = useCallback(() => {
@@ -1706,6 +1869,33 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
             <span>{s === 'heading' ? 'H1' : s === 'bold' ? 'H2' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
           </button>
         ))}
+      </div>
+
+      <div className={`note-media-wrap${editing ? ' visible' : ''}`}>
+        <button
+          type="button"
+          className={`note-media-btn${mediaMenuOpen ? ' open' : ''}`}
+          aria-label="Add a photo"
+          onMouseDown={e => { e.preventDefault(); rememberCaret() }}
+          onTouchStart={() => rememberCaret()}
+          onClick={() => setMediaMenuOpen(v => !v)}
+        >
+          <MediaIcon/>
+        </button>
+        <div className={`card-context-menu note-media-menu${mediaMenuOpen ? ' open' : ''}`}>
+          {hasCamera && (
+            <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()} onClick={() => pickMedia('camera')}>
+              <span>Camera</span>
+            </button>
+          )}
+          <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()} onClick={() => pickMedia('library')}>
+            <span>Photo Library</span>
+          </button>
+        </div>
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden
+          onChange={e => { const f = e.target.files?.[0]; if (f) insertImage(f) }}/>
+        <input ref={libraryInputRef} type="file" accept="image/*" hidden
+          onChange={e => { const f = e.target.files?.[0]; if (f) insertImage(f) }}/>
       </div>
 
       {hasFooter && !editing && moveOpen && (

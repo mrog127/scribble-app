@@ -414,7 +414,7 @@ export default function DestinationPicker({
               type="button"
               className={`dest-easel-btn${menuOpen ? ' open' : ''}`}
               style={accentVars(accent, 'cb')}
-              onMouseDown={e => { e.preventDefault(); setMenuOpen(v => !v) }}
+              onMouseDown={e => { e.preventDefault(); setMenuOpen(false); setLevel('easels') }}
             >
               <EaselGlyph accent={accent}/>
               <span className="dest-easel-label">{cat?.name || 'Choose easel'}</span>
@@ -435,40 +435,6 @@ export default function DestinationPicker({
               <span className="dest-easel-label">Add canvas</span>
             </button>
 
-            <div ref={menuRef} className={`card-context-menu mbar-page-menu dest-easels-menu${menuOpen ? ' open' : ''}`}>
-              <div className="mbar-page-menu-list">
-                {onPickInbox && (
-                  <div>
-                    <button
-                      className="card-context-item dest-inbox-item"
-                      onMouseDown={e => { e.preventDefault(); setMenuOpen(false); onPickInbox() }}
-                    >
-                      <InboxIcon color={inboxAccent.dark} strokeWidth={2}/>
-                      <span className="mbar-page-menu-label" style={{ color: inboxAccent.dark }}>Inbox</span>
-                    </button>
-                  </div>
-                )}
-                {categories.map((c, idx) => {
-                  const acc = getCategoryAccent(idx)
-                  return (
-                    <div key={c.id}>
-                      <button
-                        className="card-context-item"
-                        onMouseDown={e => { e.preventDefault(); setMenuOpen(false); onBrowse(c.id) }}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark, marginRight: 2 }}>
-                          <rect x="3.5" y="2.5" width="13" height="9.5" fill={acc.base} fillOpacity="0.16" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                          <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                          <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                          <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
-                        </svg>
-                        <span className="mbar-page-menu-label" style={{ color: acc.dark }}>{c.name}</span>
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
           </div>
         )}
       </div>

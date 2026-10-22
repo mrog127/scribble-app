@@ -1054,18 +1054,21 @@ export default function ActivePage({
   // Stable sort by the cross-project home order. Items without a value (freshly
   // activated, never manually ordered) fall back to the aggregation order (end).
   const byHomeOrder = (a, b) => (a.homeSortOrder ?? Infinity) - (b.homeSortOrder ?? Infinity)
+  // A canvas pinned to the Gallery shows its own active items in its card at the
+  // top, so they're left out of the cards below (they return once it's unpinned)
+  const listsOnGallery = (proj) => !proj.archived && !proj.pinned
   const allActivatedTodos = homescreenCats.flatMap(cat =>
-    cat.projects.filter(proj => !proj.archived).flatMap(proj =>
+    cat.projects.filter(listsOnGallery).flatMap(proj =>
       proj.todos.filter(t => t.activated).map(t => ({ ...t, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   ).sort(byHomeOrder)
   const allActivatedNotes = homescreenCats.flatMap(cat =>
-    cat.projects.filter(proj => !proj.archived).flatMap(proj =>
+    cat.projects.filter(listsOnGallery).flatMap(proj =>
       proj.notes.filter(n => n.activated).map(n => ({ ...n, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   ).sort(byHomeOrder)
   const allActivatedLinks = homescreenCats.flatMap(cat =>
-    cat.projects.filter(proj => !proj.archived).flatMap(proj =>
+    cat.projects.filter(listsOnGallery).flatMap(proj =>
       proj.links.filter(l => l.activated).map(l => ({ ...l, categoryId: cat.id, projectId: proj.id, projectName: proj.name }))
     )
   ).sort(byHomeOrder)

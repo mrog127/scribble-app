@@ -127,7 +127,7 @@ function SendIcon() {
 }
 
 // Row icons matching the project card note/link rows
-function NoteRowIcon({ activated }) {
+export function NoteRowIcon({ activated }) {
   const stroke = activated ? 'var(--accent-dark)' : '#7A7A7A'
   if (['dark-dots', 'light-dots'].includes(getTheme())) {
     return <FeatherFileIcon size={20} strokeWidth={2} color={activated ? 'var(--accent-base)' : '#7A7A7A'}/>
@@ -557,6 +557,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     attachNoteToTodo, detachNoteFromTodo,
     attachLinkToTodo, detachLinkFromTodo,
     addTodoNote, addTodoLink,
+    requestCompose,
     reorderTodoNotes, reorderTodoLinks,
     moveProjectTodo,
     promptMoveAttachments,
@@ -939,7 +940,19 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   type="button"
                   className="project-add-btn"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setLinkComposerOpen(false); if (noteSection.expand()) { keepKeyboardAlive(); setTimeout(() => setNoteComposerOpen(true), 260) } else setNoteComposerOpen(v => !v) }}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => {
+                    setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false)
+                    // Add item opens over the page, set to this item's canvas; a note
+                    // sent from it is attached to the item and opens, as before
+                    requestCompose({ categoryId, projectId, type: 'note', onAdd: ({ type, text, url, active, schedule }) => {
+                      noteSection.expand()
+                      if (type === 'link') { addTodoLink(categoryId, projectId, todo.id, text, url, active, schedule); return }
+                      const holder = { id: null }
+                      holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId }, schedule)
+                      setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenNoteId(holder.id) } }, 650)
+                    } })
+                  }}
                 >
                   <PlusIcon/>
                 </button>
@@ -1017,7 +1030,19 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
                 <button
                   type="button"
                   className="project-add-btn"
-                  onMouseDown={e => { e.preventDefault(); setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(false); if (linkSection.expand()) { keepKeyboardAlive(); setTimeout(() => setLinkComposerOpen(true), 260) } else setLinkComposerOpen(v => !v) }}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => {
+                    setNoteAttachOpen(false); setLinkAttachOpen(false); setNoteComposerOpen(false); setLinkComposerOpen(false)
+                    // Add item opens over the page, set to this item's canvas; a link
+                    // sent from it is attached to the item
+                    requestCompose({ categoryId, projectId, type: 'link', onAdd: ({ type, text, url, active, schedule }) => {
+                      linkSection.expand()
+                      if (type === 'link') { addTodoLink(categoryId, projectId, todo.id, text, url, active, schedule); return }
+                      const holder = { id: null }
+                      holder.id = addTodoNote(categoryId, projectId, todo.id, text, active, (realId) => { holder.id = realId }, schedule)
+                      setTimeout(() => { if (holder.id != null) { setAutoEditNoteId(holder.id); setOpenNoteId(holder.id) } }, 650)
+                    } })
+                  }}
                 >
                   <PlusIcon/>
                 </button>

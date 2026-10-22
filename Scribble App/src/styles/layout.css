@@ -1248,8 +1248,14 @@ div:has(> .save-to-option.selected) + div > .save-to-divider { display: none; }
   /* ---- Cards column (everything right of the sidebar) ---- */
   /* Detail panel width — overridden inline on :root by the resize handle, so a
      size set once holds for every panel opened this session. */
-  :root { --detail-w: calc((100vw - 340px) / 2); }   /* cards column and panel split the space beside the sidebar */
-  @media (max-width: 1240px) { :root { --detail-w: min(500px, 50vw); } }
+  /* Cards column and panel split the space beside the sidebar. The panel never
+     squeezes the cards below 384px wide: the cards column is the window less
+     the 340px sidebar, the panel, and its own 28px + 48px side padding (so the
+     panel is at most 100vw - 800px). A width dragged with the resize handle is
+     --detail-w-set (on :root), held to the same limit. */
+  :root { --detail-w: min(var(--detail-w-set, calc((100vw - 340px) / 2)), calc(100vw - 800px)); }
+  /* Narrow (no sidebar beside an open panel): window less the cards' padding */
+  @media (max-width: 1240px) { :root { --detail-w: min(var(--detail-w-set, min(500px, 50vw)), calc(100vw - 460px)); } }
   /* Left gutter that centres the app when nothing is pinned to the right edge */
   .phone { --gutter: 0px; }
 
@@ -4516,14 +4522,14 @@ body.resizing-detail .phone { transition: none !important; }
 
 /* --- Note rows (Figma: Easel 384:6522, the Kids canvas) ---
    Title in the same 16/25 as a list item, preview a 12px grey subline. */
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .note-text {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, .archive-modal-notes) .note-text {
   font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 25px;
   color: #E6E6E6;
 }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page) .note-preview-text {
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .category-page, .archive-modal-notes) .note-preview-text {
   font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
   font-size: 12px;
   font-weight: 500;
@@ -6576,10 +6582,10 @@ body.resizing-detail .phone { transition: none !important; }
 :root[data-theme="light-dots"] :is(.save-to-panel:not(.search-panel) .save-to-card, .move-to-card) .card-tab {
   color: #292929;
 }
-:root[data-theme="light-dots"] :is(.home-page, .category-page) .note-text {
+:root[data-theme="light-dots"] :is(.home-page, .category-page, .archive-modal-notes) .note-text {
   color: #292929;
 }
-:root[data-theme="light-dots"] :is(.home-page, .category-page) .note-preview-text {
+:root[data-theme="light-dots"] :is(.home-page, .category-page, .archive-modal-notes) .note-preview-text {
   color: #969696;
 }
 :root[data-theme="light-dots"] :is(.home-page, .category-page) .note-row.archived .note-text,
@@ -11947,10 +11953,12 @@ html.row-dragging #app .page { overflow: hidden !important; touch-action: none; 
    - Narrow desktop (sidebar hidden): canvas card = 100vw - 128px - page width.
    Dragging the page's edge overrides this (inline on :root) until a reload. */
 @media (min-width: 1000px) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: calc((100vw - 444px) / 2); }
+  /* (cards ≥ 384px: sidebar 340 + 20 gutter, 32 panel inset, cards' 36 + 48 padding) */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: min(var(--detail-w-set, calc((100vw - 444px) / 2)), calc(100vw - 860px)); }
 }
 @media (min-width: 1000px) and (max-width: 1240px) {
-  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: calc((100vw - 96px) / 2); }
+  /* (cards ≥ 384px: 32 panel inset, cards' 48 + 48 padding) */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) { --detail-w: min(var(--detail-w-set, calc((100vw - 96px) / 2)), calc(100vw - 512px)); }
 }
 
 /* Dots themes: Save to's Cancel sits 16px in from the menu's right edge */
@@ -13445,6 +13453,9 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 /* …and the card whose menu is open rises above the cards after it, so a menu
    that hangs past its card's foot isn't covered by the next card */
 #app .home-page .pinned-canvases > div:has(.card-context-menu.open) { position: relative; z-index: 10; }
+/* Pinned canvases' drop shadows fall over the Gallery's own cards below them
+   (those cards' intro transform would otherwise paint them on top) */
+#app .home-page .pinned-canvases { position: relative; z-index: 1; }
 
 /* Pinned canvases on the Gallery (Dots themes): the three-dot button rests in
    its hover shade (its fill + a 4% wash) and deepens 4% more on hover / press /
@@ -13895,8 +13906,12 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   #app.dual {
     --cards-lpad: 28px;
     --dual-c: calc((100vw - var(--panel-inset) - var(--cards-lpad) - 48px - 64px - var(--dual-gap)) / 3);
-    --dual-p2: var(--dual-p2-set, calc(var(--dual-c) + 32px));
-    --dual-p3: var(--dual-p3-set, calc(var(--dual-c) + 32px));
+    /* …but the cards are never under 384px wide: on a window too narrow for
+       three equal columns, the pages split what's left */
+    --dual-p-default: min(calc(var(--dual-c) + 32px),
+      calc((100vw - var(--panel-inset) - var(--cards-lpad) - 384px - 48px - var(--dual-gap)) / 2));
+    --dual-p2: var(--dual-p2-set, var(--dual-p-default));
+    --dual-p3: var(--dual-p3-set, var(--dual-p-default));
     --detail-w: calc(var(--dual-p2) + var(--dual-gap) + var(--dual-p3));
   }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app.dual { --cards-lpad: 48px; }
@@ -13911,3 +13926,138 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 }
 /* The second handle only exists with two pages up */
 #app .detail-resize-handle.dual-b { display: none; }
+
+/* Add item opened from a list item page's Notes / Links plus: it sits over the
+   page (which fades back, like the cards do) rather than under it */
+.phone.compose-over-detail > .footer { z-index: 60; }
+.phone.compose-over-detail > .note-detail-page {
+  opacity: 0.2;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+@media (min-width: 1000px) and (max-width: 1240px) {
+  .phone.compose-over-detail:has(.note-detail-page.open) .footer,
+  .phone.compose-over-detail:has(.note-detail-page.open) .save-to-panel { display: flex; }
+}
+
+/* Archive attached notes modal: the notes, as their canvas rows, nested in a
+   light grey box above the buttons */
+.archive-modal-notes {
+  margin: -6px 0 18px;
+  padding: 4px 0;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.04);
+}
+.archive-modal-notes::-webkit-scrollbar { display: none; }
+.archive-modal-notes .note-row { padding-left: 12px; padding-right: 12px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal-notes {
+  margin: 0 0 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+}
+:root[data-theme="light-dots"] .archive-modal-notes { background: rgba(0, 0, 0, 0.04); }
+
+/* --- Note editor: the media button, to the right of the style bar ---
+   A circle the bar's height, 8px from it; the bar gives up that room. It opens a
+   small menu (Camera / Photo Library) rising from it. */
+.note-detail-page .note-style-bar { right: 80px; }   /* 16 + 56 + 8 */
+.note-media-wrap {
+  position: absolute;
+  right: 16px;
+  bottom: calc(20px + var(--kbh, 0px));
+  width: 56px;
+  height: 56px;
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 150ms ease, visibility 150ms ease;
+}
+.note-media-wrap.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+.note-media-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border-radius: 50%;
+  background: #F7F6F3;
+  border: 1px solid #DBDAD8;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.note-media-btn svg { flex-shrink: 0; position: relative; z-index: 1; }
+.note-media-menu.card-context-menu {
+  top: auto;
+  bottom: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  min-width: 180px;
+  transform: translateY(8px);
+}
+.note-media-menu.card-context-menu.open { transform: translateY(0); }
+.note-media-menu .card-context-item { padding-right: 16px; }
+
+/* Dots themes: the bar is 48px, so the circle is too; clear liquid glass like
+   the control bar's circles */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-style-bar { right: 72px; }   /* 16 + 48 + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-media-wrap { width: 48px; height: 48px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-media-btn {
+  background: var(--glass-fill);
+  border: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-media-btn {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-media-btn::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .note-media-btn {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
+}
+:root[data-theme="light-dots"] .note-media-btn::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
+  opacity: 1;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-media-menu.card-context-menu { border-radius: 24px; }
+
+/* A photo in a note: its own line, the full width of the text, 24px corners.
+   The cursor deletes it like a character (NoteCard.jsx). */
+.note-para.style-image {
+  padding: 8px 0;
+  line-height: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.note-para.style-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+}
+.note-para.style-image img[data-pending] { opacity: 0.6; }
+/* Dark Dots: the media icon reads light on the dark glass */
+:root[data-theme="dark-dots"] .note-media-btn svg * { stroke: #E6E6E6; }

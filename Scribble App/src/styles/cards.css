@@ -1140,7 +1140,7 @@
 .note-para.style-bold { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; line-height: 26px; color: #3D3D3D; margin-top: 8px; }
 .note-para.style-body { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; }
 .note-para.style-italic { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; font-style: italic; line-height: 26px; color: #575757; }
-.note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; padding-left: 20px; position: relative; }
+.note-para.style-bullet { font-family: 'Open Sans', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 26px; color: #575757; padding-left: 14px; position: relative; }
 .note-para.style-bullet::before { content: "•"; position: absolute; left: 0; }
 
 /* Swipe a bullet sideways to indent it — three levels, 20px apart. Margin (not
@@ -3350,4 +3350,27 @@
   width: 55%;
   height: 55%;
   object-fit: contain;
+}
+
+/* Gallery page, expanded: an Easel card's rows read like the Gallery canvas's —
+   the canvas each item came from on its own subline under the item text */
+.easel-card .item-content,
+.easel-card .link-row .item-content {
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.easel-card .item-text,
+.easel-card .note-text {
+  width: 100%;
+  display: block;
+}
+.easel-card .item-content > :not(.source-label) {
+  align-self: stretch;
+  max-width: 100%;
+}
+.easel-card .todo-row,
+.easel-card .note-row {
+  min-height: unset;
+  align-items: flex-start;
 }

@@ -17,7 +17,7 @@ import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from '
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
 import { useCardHostsDetail } from '../detailLock.jsx'
-import { uploadNoteImage, deviceHasCamera } from '../noteImages.js'
+import { uploadNoteImage } from '../noteImages.js'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -26,11 +26,15 @@ function escapeHtml(str) {
 // A note's HTML as it's saved: a photo still uploading (its src a local blob:
 // URL) is left out until its upload lands and swaps in the real URL
 function serializeNote(content) {
-  if (!content.querySelector('img[data-pending]')) return content.innerHTML
+  if (!content.querySelector('img[data-pending], .note-photo-trash')) return content.innerHTML
   const copy = content.cloneNode(true)
   copy.querySelectorAll('img[data-pending]').forEach(img => (img.closest('.note-para') || img).remove())
+  copy.querySelectorAll('.note-photo-trash').forEach(b => b.remove())
+  copy.querySelectorAll('.style-image.show-trash').forEach(p => p.classList.remove('show-trash'))
   return copy.innerHTML
 }
+
+const TRASH_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
 
 // The media button's icon: a photo frame, 2pt
 function MediaIcon() {
@@ -39,6 +43,16 @@ function MediaIcon() {
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
       <circle cx="8.5" cy="8.5" r="1.5"/>
       <polyline points="21 15 16 10 5 21"/>
+    </svg>
+  )
+}
+
+// The highlight button's icon: a highlighter, 2pt
+function HighlightIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m9 11-6 6v3h9l3-3"/>
+      <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
     </svg>
   )
 }
@@ -753,26 +767,17 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     scheduleAutosave()
   }, [getCursorPara, getSelectedParas, updateStyleIndicator, scheduleAutosave])
 
-  // ---- Photos: the media button beside the style bar opens a menu (Camera on
-  // a phone or tablet, and Photo Library); the picked photo goes in at the
-  // cursor as its own line, the full width of the text ----
-  const [mediaMenuOpen, setMediaMenuOpen] = useState(false)
+  // ---- Photos: the media button beside the style bar opens the device's own
+  // picker (on iOS its Photo Library / Take Photo / Choose File menu; on a
+  // computer the file browser); the picked photo goes in at the cursor as its
+  // own line, the full width of the text ----
   const mediaRangeRef = useRef(null)     // the caret when the button was pressed
-  const cameraInputRef = useRef(null)
   const libraryInputRef = useRef(null)
-  const hasCamera = useMemo(() => deviceHasCamera(), [])
   const rememberCaret = useCallback(() => {
     const content = contentRef.current
     const sel = window.getSelection()
     if (content && sel && sel.rangeCount && content.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
   }, [])
-  useEffect(() => {
-    if (!mediaMenuOpen) return
-    const close = (e) => { if (!e.target.closest?.('.note-media-wrap')) setMediaMenuOpen(false) }
-    document.addEventListener('pointerdown', close, true)
-    return () => document.removeEventListener('pointerdown', close, true)
-  }, [mediaMenuOpen])
-  useEffect(() => { if (!editing) setMediaMenuOpen(false) }, [editing])
 
   const insertImage = useCallback((file) => {
     const content = contentRef.current
@@ -865,9 +870,273 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     })
   }, [flushAutosave])
 
-  const pickMedia = (which) => {
-    setMediaMenuOpen(false)
-    const input = (which === 'camera' ? cameraInputRef : libraryInputRef).current
+  // A photo shows a trash button in its top-right corner while it's hovered
+  // (mouse) or after it's tapped (touch) — the only way to delete it
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+    let shown = null
+    const hide = () => {
+      if (!shown) return
+      shown.querySelector('.note-photo-trash')?.remove()
+      shown.classList.remove('show-trash')
+      shown = null
+    }
+    const show = (photo) => {
+      if (shown === photo) return
+      hide()
+      if (photo.querySelector('img[data-pending]')) return
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'note-photo-trash'
+      btn.setAttribute('aria-label', 'Remove photo')
+      btn.contentEditable = 'false'
+      btn.innerHTML = TRASH_SVG
+      btn.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation() })
+      btn.addEventListener('pointerdown', e => e.stopPropagation())
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const p = shown
+        shown = null
+        p?.remove()
+        flushAutosave()
+      })
+      photo.appendChild(btn)
+      photo.classList.add('show-trash')
+      shown = photo
+    }
+    const photoOf = (t) => (t instanceof Element ? t.closest('.note-para.style-image') : null)
+    const onOver = (e) => { if (e.pointerType === 'mouse') { const p = photoOf(e.target); if (p) show(p) } }
+    const onOut = (e) => {
+      if (e.pointerType !== 'mouse' || !shown) return
+      const to = e.relatedTarget
+      if (!(to instanceof Node) || !shown.contains(to)) hide()
+    }
+    // Touch: one tap on a photo turns its pressed state (overlay + trash) on;
+    // the next tap — on the photo or anywhere else — turns it off
+    const onDown = (e) => {
+      if (e.pointerType === 'mouse') return
+      if (e.target.closest?.('.note-photo-trash')) return
+      const p = photoOf(e.target)
+      if (p && p !== shown) show(p)
+      else hide()
+    }
+    // ---- Press and hold a photo to move it: it shrinks to a 72x72 thumbnail
+    // (50%, light shadow) under the finger / pointer, and a light grey line
+    // between the lines of text shows where it will land ----
+    let drag = null          // { photo, ghost, line, target: { before } }
+    let holdTimer = null
+    let press = null         // { x, y, id, photo }
+    const preventScroll = (e) => { if (drag) e.preventDefault() }
+    const candidates = (photo) => [...content.querySelectorAll('.note-para')]
+      .filter(p => p !== photo && !p.querySelector('.note-para') && p.offsetParent !== null)
+    const place = (x, y) => {
+      drag.ghost.style.left = (x - 36) + 'px'
+      drag.ghost.style.top = (y - 36) + 'px'
+      // Keep the editor scrolling when the finger nears its top or bottom edge
+      const ed = editorRef.current
+      if (ed) {
+        const er = ed.getBoundingClientRect()
+        if (y < er.top + 56) ed.scrollTop -= 10
+        else if (y > er.bottom - 120) ed.scrollTop += 10
+      }
+      // The landing spot: before the first line whose middle is below the
+      // pointer — never above the title
+      const paras = candidates(drag.photo)
+      const title = paras[0]
+      let before = null
+      for (const p of paras) {
+        if (p === title) continue
+        const r = p.getBoundingClientRect()
+        if (y < r.top + r.height / 2) { before = p; break }
+      }
+      drag.target = { before }
+      // The line sits midway in the gap above that line (or under the last one)
+      const cr = content.getBoundingClientRect()
+      const cs = getComputedStyle(content)
+      const left = cr.left + parseFloat(cs.paddingLeft)
+      const width = cr.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      let lineY
+      if (before) {
+        const prev = paras[paras.indexOf(before) - 1]
+        const br = before.getBoundingClientRect()
+        lineY = prev ? (prev.getBoundingClientRect().bottom + br.top) / 2 : br.top - 4
+      } else {
+        const last = paras[paras.length - 1]
+        lineY = (last ? last.getBoundingClientRect().bottom : cr.top) + 6
+      }
+      drag.line.style.left = left + 'px'
+      drag.line.style.width = width + 'px'
+      drag.line.style.top = Math.round(lineY) + 'px'
+    }
+    const begin = () => {
+      const { photo, x, y } = press
+      hide()
+      lockRowDrag()
+      const img = photo.querySelector('img')
+      const ghost = document.createElement('div')
+      ghost.className = 'note-photo-ghost'
+      if (img) { const g = document.createElement('img'); g.src = img.src; g.alt = ''; ghost.appendChild(g) }
+      const line = document.createElement('div')
+      line.className = 'note-photo-drop-line'
+      document.body.appendChild(ghost)
+      document.body.appendChild(line)
+      photo.classList.add('dragging-away')   // the photo leaves its spot while it's carried
+      drag = { photo, ghost, line, target: null }
+      window.getSelection()?.removeAllRanges()
+      place(x, y)
+    }
+    const finish = (drop) => {
+      clearTimeout(holdTimer); holdTimer = null
+      press = null
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
+      if (!drag) return
+      const { photo, ghost, line, target } = drag
+      drag = null
+      ghost.remove()
+      line.remove()
+      photo.classList.remove('dragging-away')
+      unlockRowDrag()
+      if (drop && target) {
+        if (target.before) { if (target.before !== photo.nextElementSibling) target.before.before(photo) }
+        else content.appendChild(photo)
+        // A photo always has a line under it to type on
+        if (!photo.nextElementSibling) {
+          const p = document.createElement('div'); p.className = 'note-para style-body'; p.innerHTML = '<br>'
+          photo.after(p)
+        }
+        flushAutosave()
+      }
+      // The release mustn't also count as a tap (toggling the X, or a click
+      // that opens editing)
+      const eat = (ev) => { ev.preventDefault(); ev.stopPropagation() }
+      document.addEventListener('click', eat, true)
+      setTimeout(() => document.removeEventListener('click', eat, true), 350)
+    }
+    const onMove = (e) => {
+      if (!press || e.pointerId !== press.id) return
+      if (!drag) {
+        // Moving before the hold completes is a scroll, not a drag
+        if (Math.abs(e.clientX - press.x) > 8 || Math.abs(e.clientY - press.y) > 8) finish(false)
+        return
+      }
+      e.preventDefault()
+      place(e.clientX, e.clientY)
+    }
+    const onUp = (e) => { if (press && e.pointerId === press.id) finish(true) }
+    const onCancel = (e) => { if (press && e.pointerId === press.id) finish(false) }
+    const onPress = (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      if (e.target.closest?.('.note-photo-trash')) return
+      const photo = photoOf(e.target)
+      if (!photo || photo.querySelector('img[data-pending]')) return
+      if (e.pointerType === 'mouse') e.preventDefault()   // no native image drag / text selection
+      press = { x: e.clientX, y: e.clientY, id: e.pointerId, photo }
+      document.addEventListener('pointermove', onMove)
+      document.addEventListener('pointerup', onUp)
+      document.addEventListener('pointercancel', onCancel)
+      holdTimer = setTimeout(() => { holdTimer = null; if (press) begin() }, 400)
+    }
+
+    // A held photo mustn't open the long-press menu (Android / desktop)
+    const onContext = (e) => { if (photoOf(e.target)) e.preventDefault() }
+    content.addEventListener('contextmenu', onContext)
+    content.addEventListener('pointerover', onOver)
+    content.addEventListener('pointerout', onOut)
+    content.addEventListener('pointerdown', onPress)
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+    return () => {
+      finish(false)
+      hide()
+      content.removeEventListener('pointerover', onOver)
+      content.removeEventListener('pointerout', onOut)
+      content.removeEventListener('pointerdown', onPress)
+      content.removeEventListener('contextmenu', onContext)
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('touchmove', preventScroll)
+    }
+  }, [flushAutosave])
+
+  // ---- Highlight: the button right of the photo button puts a 24% easel-colour
+  // highlight behind the text of the line the cursor is in (or every selected
+  // line), and takes it off again. The line's words are wrapped in a
+  // span.hl-text, so it's saved with the note and text typed on the end of it
+  // carries on highlighted. ----
+  const [hlOn, setHlOn] = useState(false)
+  const highlightable = (p) => p && !p.classList.contains('style-title') && !p.classList.contains('style-image')
+  const isHl = (p) => !!p?.querySelector('.hl-text')
+  const toggleHighlight = useCallback(() => {
+    const content = contentRef.current
+    if (!content || !editingRef.current) return
+    let paras = getSelectedParas().filter(highlightable)
+    if (!paras.length) {
+      const p = getCursorPara() || lastCursorParaRef.current
+      if (p && content.contains(p) && highlightable(p)) paras = [p]
+    }
+    if (!paras.length) return
+    const on = !paras.every(isHl)
+    // Moving the text in or out of the span would drop the caret / selection,
+    // so it's noted as text offsets in the editor and put back after
+    const sel = window.getSelection()
+    const offsetOf = (node, off) => {
+      const r = document.createRange(); r.selectNodeContents(content); r.setEnd(node, off); return r.toString().length
+    }
+    let saved = null
+    if (sel && sel.rangeCount && content.contains(sel.anchorNode)) {
+      const r = sel.getRangeAt(0)
+      saved = { start: offsetOf(r.startContainer, r.startOffset), end: offsetOf(r.endContainer, r.endOffset) }
+    }
+    paras.forEach(p => {
+      // Off first (also clears any partial spans), then wrap everything but a
+      // trailing <br> in one span
+      p.querySelectorAll('.hl-text').forEach(sp => { while (sp.firstChild) sp.before(sp.firstChild); sp.remove() })
+      p.normalize()
+      if (!on) return
+      const kids = [...p.childNodes].filter(n => !(n.nodeType === 1 && n.tagName === 'BR'))
+      if (!kids.some(n => n.textContent.length)) return   // an empty line has nothing to highlight
+      const span = document.createElement('span')
+      span.className = 'hl-text'
+      kids[0].before(span)
+      kids.forEach(n => span.appendChild(n))
+    })
+    if (saved) {
+      const find = (target) => {
+        const w = document.createTreeWalker(content, NodeFilter.SHOW_TEXT)
+        let n, seen = 0, last = null
+        while ((n = w.nextNode())) {
+          last = n
+          if (seen + n.length >= target) return [n, target - seen]
+          seen += n.length
+        }
+        return last ? [last, last.length] : [content, 0]
+      }
+      try {
+        const r = document.createRange()
+        r.setStart(...find(saved.start))
+        r.setEnd(...find(saved.end))
+        sel.removeAllRanges(); sel.addRange(r)
+      } catch { /* leave the caret where it fell */ }
+    }
+    setHlOn(on)
+    scheduleAutosave()
+  }, [getSelectedParas, getCursorPara, scheduleAutosave])
+  // The button shows whether the cursor's line is highlighted
+  useEffect(() => {
+    if (!editing) { setHlOn(false); return }
+    const onSel = () => {
+      const p = getCursorPara()
+      if (p) setHlOn(isHl(p))
+    }
+    document.addEventListener('selectionchange', onSel)
+    return () => document.removeEventListener('selectionchange', onSel)
+  }, [editing, getCursorPara])
+
+  const pickMedia = () => {
+    const input = libraryInputRef.current
     if (input) { input.value = ''; input.click() }
   }
 
@@ -1240,10 +1509,22 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       const prev = para.previousElementSibling
       if (!prev || !prev.classList?.contains('note-para')) return
       e.preventDefault()
-      // A photo just above: Backspace deletes it, the way it would a character
+      // A photo just above: Backspace never deletes it (only its trash button
+      // does) — the cursor just steps over it, to the end of the line above
       if (prev.classList.contains('style-image')) {
-        prev.remove()
-        scheduleAutosave()
+        let above = prev
+        while (above && above.classList?.contains('style-image')) above = above.previousElementSibling
+        if (above && above.classList?.contains('note-para')) {
+          const r = document.createRange()
+          r.selectNodeContents(above)
+          r.collapse(false)
+          sel.removeAllRanges()
+          sel.addRange(r)
+          lastCursorParaRef.current = above
+          const st = styleOf(above)
+          setCurrentStyle(st)
+          updateStyleIndicator(st)
+        }
         return
       }
       if (prev.innerHTML.trim() === '<br>') prev.innerHTML = ''
@@ -1264,7 +1545,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
 
     // ---- Delete at the very end of a paragraph with a photo just below: the
-    // photo goes ----
+    // cursor steps over the photo to the start of the line beneath it ----
     if (e.key === 'Delete' && range.collapsed) {
       const para = findPara(range.startContainer, range.startOffset)
       const next = para?.nextElementSibling
@@ -1274,8 +1555,16 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         probe.setStart(range.startContainer, range.startOffset)
         if (probe.toString().length === 0) {
           e.preventDefault()
-          next.remove()
-          scheduleAutosave()
+          let below = next
+          while (below && below.classList?.contains('style-image')) below = below.nextElementSibling
+          if (below && below.classList?.contains('note-para')) {
+            const r = document.createRange()
+            r.setStart(below, 0)
+            r.collapse(true)
+            sel.removeAllRanges()
+            sel.addRange(r)
+            lastCursorParaRef.current = below
+          }
           return
         }
       }
@@ -1871,29 +2160,28 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         ))}
       </div>
 
-      <div className={`note-media-wrap${editing ? ' visible' : ''}`}>
+      {/* Highlight and Add photo share one pill to the right of the style bar */}
+      <div className={`note-tools${editing ? ' visible' : ''}`}>
         <button
           type="button"
-          className={`note-media-btn${mediaMenuOpen ? ' open' : ''}`}
+          className={`note-tool-btn note-highlight-btn${hlOn ? ' on' : ''}`}
+          aria-label="Highlight"
+          aria-pressed={hlOn}
+          onTouchStart={e => { e.preventDefault(); toggleHighlight() }}
+          onMouseDown={e => { e.preventDefault(); toggleHighlight() }}
+        >
+          <HighlightIcon/>
+        </button>
+        <button
+          type="button"
+          className="note-tool-btn"
           aria-label="Add a photo"
           onMouseDown={e => { e.preventDefault(); rememberCaret() }}
           onTouchStart={() => rememberCaret()}
-          onClick={() => setMediaMenuOpen(v => !v)}
+          onClick={pickMedia}
         >
           <MediaIcon/>
         </button>
-        <div className={`card-context-menu note-media-menu${mediaMenuOpen ? ' open' : ''}`}>
-          {hasCamera && (
-            <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()} onClick={() => pickMedia('camera')}>
-              <span>Camera</span>
-            </button>
-          )}
-          <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()} onClick={() => pickMedia('library')}>
-            <span>Photo Library</span>
-          </button>
-        </div>
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden
-          onChange={e => { const f = e.target.files?.[0]; if (f) insertImage(f) }}/>
         <input ref={libraryInputRef} type="file" accept="image/*" hidden
           onChange={e => { const f = e.target.files?.[0]; if (f) insertImage(f) }}/>
       </div>

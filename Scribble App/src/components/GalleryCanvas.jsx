@@ -69,10 +69,14 @@ function LinkIcon({ size = 24, color }) {
   )
 }
 
-export default function GalleryCanvas({ category }) {
+// easelCard: the same card on the Gallery page's expanded view — one per
+// Easel, titled with the Easel's name and drawn as a regular canvas card (no
+// Gallery glass or icon). Its rows keep their canvas as the secondary label.
+export default function GalleryCanvas({ category, easelCard = false }) {
+  const collapseKey = easelCard ? `collapsed-easelcard-${category.id}` : `collapsed-gallery-${category.id}`
   const [activeTab, setActiveTab] = useState('list')
   const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(`collapsed-gallery-${category.id}`) === 'true' } catch { return false }
+    try { return localStorage.getItem(collapseKey) === 'true' } catch { return false }
   })
 
   const cardRef = useRef(null)
@@ -341,8 +345,8 @@ export default function GalleryCanvas({ category }) {
 
   const applyCollapsed = useCallback((next) => {
     setCollapsed(next)
-    try { localStorage.setItem(`collapsed-gallery-${category.id}`, next ? 'true' : 'false') } catch {}
-  }, [category.id])
+    try { localStorage.setItem(collapseKey, next ? 'true' : 'false') } catch {}
+  }, [collapseKey])
 
   const handleHeaderClick = useCallback((e) => {
     if (suppressHeaderToggleRef.current) { suppressHeaderToggleRef.current = false; return }
@@ -401,15 +405,15 @@ export default function GalleryCanvas({ category }) {
   )
 
   return (
-    <div className="card project-card gallery-canvas card-intro" ref={cardRef}>
-      <span className="gallery-canvas-stroke" aria-hidden="true"/>
-      <span className="gallery-canvas-glow" aria-hidden="true"/>
+    <div className={`card project-card ${easelCard ? 'easel-card' : 'gallery-canvas'} card-intro`} ref={cardRef}>
+      {!easelCard && <span className="gallery-canvas-stroke" aria-hidden="true"/>}
+      {!easelCard && <span className="gallery-canvas-glow" aria-hidden="true"/>}
 
       <div className={`card-header${collapsed ? ' collapsed' : ''}`} onClick={handleHeaderClick}>
         <div className="card-title-wrap">
           <div className="card-title-row">
-            <GalleryTitleIcon/>
-            <span className="card-title">Gallery</span>
+            {!easelCard && <GalleryTitleIcon/>}
+            <span className="card-title">{easelCard ? category.name : 'Gallery'}</span>
           </div>
         </div>
         {showTabs && !tabsAtBottom && tabRow}

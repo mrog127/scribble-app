@@ -15,7 +15,7 @@ import { MinimizeIcon, MaximizeIcon, PlusSquareIcon } from './FeatherIcons.jsx'
 
 // Diagonal two-arrow toggle: arrows point inward (Expanded → collapse) or
 // outward to the corners (Collapsed → expand). The two glyphs crossfade.
-function CollapseToggleIcon({ collapsed }) {
+export function CollapseToggleIcon({ collapsed }) {
   const common = { stroke: '#242424', strokeWidth: 1, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' }
   const layer = (show) => ({
     position: 'absolute', inset: 0,

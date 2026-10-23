@@ -14061,3 +14061,253 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 .note-para.style-image img[data-pending] { opacity: 0.6; }
 /* Dark Dots: the media icon reads light on the dark glass */
 :root[data-theme="dark-dots"] .note-media-btn svg * { stroke: #E6E6E6; }
+
+/* A photo's trash button: top-right corner, shown on hover / after a tap */
+.note-para.style-image { position: relative; }
+.note-photo-trash {
+  position: absolute;
+  top: 20px;      /* the photo's 8px line padding + 12px */
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  color: #242424;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  line-height: normal;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: note-photo-trash-in 120ms ease;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .note-photo-trash {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+@keyframes note-photo-trash-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+:root[data-theme="dark-dots"] .note-photo-trash { background: rgba(43, 43, 43, 0.85); color: #E6E6E6; }
+/* Hovered / pressed photo: a 6% black wash over it (under the trash button) */
+.note-para.style-image.show-trash::after {
+  content: '';
+  position: absolute;
+  inset: 8px 0;    /* the photo itself, inside the line's padding */
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+}
+.note-photo-trash { z-index: 1; }
+
+/* --- Note editor: the highlight button, right of the photo button ---
+   It takes the photo button's old place at the edge; the photo button and the
+   style bar each move one circle (+ 8px) in. */
+.note-detail-page .note-style-bar { right: 144px; }          /* 16 + 56 + 8 + 56 + 8 */
+.note-media-wrap:not(.note-highlight-wrap) { right: 80px; }  /* 16 + 56 + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-style-bar { right: 128px; }          /* 16 + 48 + 8 + 48 + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-media-wrap:not(.note-highlight-wrap) { right: 72px; }  /* 16 + 48 + 8 */
+:root[data-theme="dark-dots"] .note-highlight-btn svg * { stroke: #E6E6E6; }
+
+/* Highlighted text: 24% of the easel colour behind the words only (each
+   wrapped line gets its own rounded piece) */
+.hl-text {
+  background: rgba(var(--accent-base-rgb), 0.24);
+  border-radius: 4px;
+  padding: 1px 2px;
+  margin: 0 -2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* --- Moving a photo: press and hold, then drag --- */
+.note-para.style-image img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+.note-para.style-image.dragging-away { display: none; }
+.note-photo-ghost {
+  position: fixed;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  overflow: hidden;
+  opacity: 0.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  z-index: 100001;
+  animation: note-photo-ghost-in 140ms ease;
+}
+.note-photo-ghost img { display: block; width: 100%; height: 100%; object-fit: cover; }
+@keyframes note-photo-ghost-in { from { transform: scale(1.4); } to { transform: scale(1); } }
+.note-photo-drop-line {
+  position: fixed;
+  height: 1px;
+  background: #DBDAD8;
+  pointer-events: none;
+  z-index: 100000;
+}
+:root[data-theme="dark-dots"] .note-photo-drop-line { background: rgba(255, 255, 255, 0.16); }
+
+/* --- Note editor: Add photo + Highlight in one pill, right of the style bar ---
+   16px in from each end and 16px between the two icons. Replaces the two
+   separate circles (.note-media-wrap, now unused). */
+.note-detail-page .note-style-bar { right: 120px; }   /* 16 + the 96px pill + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-style-bar { right: 120px; }
+.note-tools {
+  position: absolute;
+  right: 16px;
+  bottom: calc(20px + var(--kbh, 0px));
+  height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #F7F6F3;
+  border: 1px solid #DBDAD8;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 150ms ease, visibility 150ms ease;
+}
+.note-tools.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+.note-tool-btn {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* A bigger target than the icon */
+.note-tool-btn::after { content: ''; position: absolute; inset: -10px -8px; }
+.note-tool-btn svg { position: relative; z-index: 1; flex-shrink: 0; }
+/* Highlight on (the cursor's line is highlighted): a disc of the easel colour */
+.note-highlight-btn.on::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+
+/* Dots themes: 48px, clear liquid glass like the style bar's neighbours */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-tools {
+  height: 50px;   /* the style bar's 48px plus its 1px border, so the two line up */
+  background: var(--glass-fill);
+  border: none;
+  border-radius: 32px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 4px rgba(255, 255, 255, 0.04);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-tools {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-tools::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+:root[data-theme="light-dots"] .note-tools {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -6px -6px 6px rgba(255, 255, 255, 0.6);
+}
+:root[data-theme="light-dots"] .note-tools::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
+  opacity: 1;
+}
+:root[data-theme="dark-dots"] .note-tool-btn svg * { stroke: #E6E6E6; }
+
+/* Tools pill: the Highlight "on" circle (38px: the 24px icon + 7px each side)
+   sits the same distance from the pill's top, bottom and left edge; the right
+   end mirrors the left */
+.note-tools { padding: 0 15px; }   /* 56px pill, 1px border: (54 - 38) / 2 = 8px gap → 8 + 7 */
+.note-detail-page .note-style-bar { right: 118px; }   /* 16 + 94px pill + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-tools { padding: 0 13px; }   /* 50px pill: (50 - 38) / 2 = 6px gap → 6 + 7 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-style-bar { right: 114px; }   /* 16 + 90px pill + 8 */
+/* 4px more room to the right of the photo icon */
+.note-tools { padding-right: 19px; }
+.note-detail-page .note-style-bar { right: 122px; }   /* 16 + 98px pill + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-tools { padding-right: 17px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-detail-page .note-style-bar { right: 118px; }   /* 16 + 94px pill + 8 */
+
+/* --- Gallery: the expand / collapse button, just left of the gear ---
+   Same button as the gear (40px in the Dots themes, 36px otherwise), one
+   button + 8px further in. Shown on desktop too, where there's no gear. */
+.home-page .home-expand-btn { right: 60px; }   /* 16 + 36 + 8 */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .home-expand-btn { right: 64px; }   /* 16 + 40 + 8 */
+@media (min-width: 1000px) {
+  .home-page .home-expand-btn { display: flex; right: 16px; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .home-expand-btn { right: 16px; }
+}
+
+/* --- Gallery page, desktop: an Easel-page header ("Gallery" + icon, and the
+   expand / collapse button). The wrapper carries .category-page so the Easel
+   header's own rules lay it out; it's the sticky part here. --- */
+.home-page > .gallery-desk-head { display: none; }
+@media (min-width: 1000px) {
+  .home-page > .gallery-desk-head {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .home-page > .gallery-desk-head > .page-header { position: relative; }
+  .gallery-desk-head .gallery-desk-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 8px;
+    color: #242424;
+  }
+  .gallery-desk-head .gallery-desk-icon svg * { stroke-width: 1; vector-effect: non-scaling-stroke; }
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .gallery-desk-head .gallery-desk-icon svg * { stroke-width: 2; }
+  :root[data-theme="dark-dots"] .gallery-desk-head .gallery-desk-icon { color: #E6E6E6; }
+  :root[data-theme="light-dots"] .gallery-desk-head .gallery-desk-icon { color: #292929; }
+  /* The title sits right of the icon, not 8px in from the edge */
+  .gallery-desk-head .gallery-desk-icon + .active-title { margin-left: 12px; }
+}
+@media (min-width: 1000px) {
+  /* With the header above them, the cards start right under it, as on an Easel page */
+  :root .home-page > .gallery-desk-head ~ .cards-area,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page > .gallery-desk-head ~ .cards-area { padding-top: 0; }
+  .gallery-desk-head .gallery-desk-icon { align-self: center; }
+}
+
+/* --- Desktop: the Gallery's title has no easel dot --- */
+@media (min-width: 1000px) {
+  /* The Gallery's title has no easel dot */
+  .gallery-desk-head .active-title::after { display: none !important; }
+}
+
+/* Dots themes, every width: header buttons end where the cards' three-dot
+   buttons do (card edge - 16px) — on Easel pages and the Gallery */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-actions { margin-right: 16px; }
+@media (max-width: 999.98px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page > .page-header .home-settings-btn { right: 32px; }                 /* 16 + 16 */
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page > .page-header .home-settings-btn.home-expand-btn { right: 80px; } /* 32 + 40 + 8 */
+}

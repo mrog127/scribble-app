@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { EaselNameIcon, easelIconKey } from '../easelIcons.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import { ACCENT_COLORS, getCategoryAccent, getHomeAccent } from '../theme.js'
 
@@ -39,12 +40,20 @@ export default function TabBar({ activeTab, onSelectTab, inputFocused, onTabsScr
               box instead of cross-fading per tab. Colours come from the page
               accent vars, so they change exactly when the box does. */}
           <div className="tab-indicator" id="tabIndicator">
+            {/* The selected Easel's own icon (picked from its name), or the easel glyph */}
+            {(() => {
+              const name = categories.find(c => c.id === activeTab)?.name
+              return easelIconKey(name)
+                ? <EaselNameIcon name={name} color="var(--accent-dark)" className="tab-indicator-easel"/>
+                : (
             <svg className="tab-indicator-easel" width="18" height="18" viewBox="0 0 20 20" fill="none">
               <rect x="3.5" y="2.5" width="13" height="9.5" style={{ fill: 'var(--accent-base)', fillOpacity: 0.16 }} stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
               <line x1="10" y1="12" x2="10" y2="17.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
               <line x1="6" y1="12" x2="3.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
               <line x1="14" y1="12" x2="16.5" y2="17.5" stroke="var(--accent-dark)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
             </svg>
+                )
+            })()}
           </div>
           {categories.map((cat, idx) => {
             const acc = getCategoryAccent(idx)

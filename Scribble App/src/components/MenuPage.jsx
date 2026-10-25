@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
+import { EaselNameIcon, easelIconKey } from '../easelIcons.jsx'
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -636,7 +637,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
               >
                 {/* Tab decoration: underline rotated 90°, row-height, colored by this tab's accent */}
                 <span
-                  className="cat-row-decoration"
+                  className={`cat-row-decoration${easelIconKey(cat.name) ? ' has-easel-icon' : ''}`}
                   style={{
                     flexShrink: 0, width: 14, height: 52, marginRight: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -645,7 +646,11 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                     transition: 'color 200ms ease',
                   }}
                 >
-                  <UnderlineSvg style={{ flexShrink: 0, width: 28, height: 'auto', transform: 'rotate(270deg)', display: 'block' }} />
+                  {/* The Easel's icon (picked from its name) in its colour, when
+                      the name gives one — otherwise the usual mark */}
+                  {easelIconKey(cat.name)
+                    ? <EaselNameIcon name={cat.name} color={getCategoryAccent(index).dark}/>
+                    : <UnderlineSvg style={{ flexShrink: 0, width: 28, height: 'auto', transform: 'rotate(270deg)', display: 'block' }} />}
                 </span>
 
                 {/* Name or rename input */}

@@ -281,9 +281,9 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               }}
               onBlur={commitRename}
             />
-          ) : (
+          ) : (<>
             <p ref={titleRef} className="active-title" style={{ marginBottom: '0' }}>{titleText}</p>
-          )}
+          </>)}
           <div className="category-header-actions">
           {renaming ? (
             <button

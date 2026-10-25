@@ -1228,6 +1228,12 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
   const showTabs = typesWithItems.length > 1 ||
     ((collapsed || cardsDragging) && typesWithItems.length === 1)
   const displayType = typesWithItems.length > 1 ? activeTab : (typesWithItems[0] || 'list')
+  const displayTypeRef = useRef(displayType)
+  displayTypeRef.current = displayType
+  // Switching tabs: the old contents slide a little toward the side they're
+  // leaving for and fade (100ms), then the new ones come in from the other side
+  // (160ms) while the body eases to its new height
+  const tabSlideRef = useRef({ dir: 0, out: null })
   // Nothing reads as selected while the canvas is collapsed.
   // …nor while cards are being rearranged, when every card reads as collapsed.
   const selectedTab = (collapsed || cardsDragging) ? null : displayType
@@ -1340,6 +1346,20 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
     const fallback = setTimeout(done, 320)
   }, [displayType])
 
+  // …and the new tab's contents come in
+  useLayoutEffect(() => {
+    const el = itemsRef.current
+    const slide = tabSlideRef.current
+    if (!el || !slide.out) return
+    const dir = slide.dir
+    slide.out.cancel()
+    slide.out = null
+    el.animate(
+      [{ opacity: 0, transform: `translateX(${dir * 12}px)` }, { opacity: 1, transform: 'translateX(0)' }],
+      { duration: 160, easing: 'ease-out' }
+    )
+  }, [displayType])
+
   // ---- Collapse / expand the card body when the header is tapped ----
   useLayoutEffect(() => {
     const el = itemsRef.current
@@ -1400,6 +1420,26 @@ export default function ProjectCard({ categoryId, project, sourceLabel }) {
   // Capture the current items height before switching tabs so the height
   // animation starts from the right place (even if content changed in between).
   const switchTab = useCallback((type) => {
+    const ORDER = ['list', 'note', 'link']
+    const from = displayTypeRef.current
+    const el = itemsRef.current
+    const slide = tabSlideRef.current
+    if (!collapsedRef.current && el && type !== from && !slide.out && typeof el.animate === 'function') {
+      const dir = ORDER.indexOf(type) > ORDER.indexOf(from) ? 1 : -1
+      slide.dir = dir
+      slide.out = el.animate(
+        [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: `translateX(${-dir * 12}px)` }],
+        { duration: 100, easing: 'ease-in', fill: 'forwards' }
+      )
+      const out = slide.out
+      out.onfinish = () => {
+        itemsHeightRef.current = el.scrollHeight
+        setActiveTab(type)
+        // If the switch didn't change what's shown, never leave it faded out
+        setTimeout(() => { if (slide.out === out) { out.cancel(); slide.out = null } }, 200)
+      }
+      return
+    }
     // Set the tab first so the card expands straight onto it.
     setActiveTab(type)
     if (collapsedRef.current) {

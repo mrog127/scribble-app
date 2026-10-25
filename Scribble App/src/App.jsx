@@ -12,6 +12,7 @@ import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
+import { EaselNameIcon, easelIconKey } from './easelIcons.jsx'
 import { kickBackdrops } from './backdropKick.js'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
@@ -3529,12 +3530,17 @@ function AppInner() {
                             document.addEventListener('pointerup', onUp)
                           }}
                         >
+                          {/* The Easel's own icon, picked from its name — or the easel glyph */}
+                          {easelIconKey(cat.name) ? (
+                            <EaselNameIcon name={cat.name} color={acc.dark} style={{ marginRight: 2 }}/>
+                          ) : (
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark, marginRight: 2 }}>
                             <rect x="3.5" y="2.5" width="13" height="9.5" fill={acc.base} fillOpacity="0.16" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
                             <line x1="10" y1="12" x2="10" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                             <line x1="6" y1="12" x2="3.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                             <line x1="14" y1="12" x2="16.5" y2="17.5" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
                           </svg>
+                          )}
                           <span className="mbar-page-menu-label" style={{ color: acc.dark }}>{cat.name}</span>
                         </button>
                       </div>

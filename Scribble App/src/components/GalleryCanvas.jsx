@@ -132,6 +132,12 @@ export default function GalleryCanvas({ category, easelCard = false }) {
   const showTabs = typesWithItems.length > 1 ||
     ((collapsed || cardsDragging) && typesWithItems.length === 1)
   const displayType = typesWithItems.length > 1 ? activeTab : (typesWithItems[0] || 'list')
+  const displayTypeRef = useRef(displayType)
+  displayTypeRef.current = displayType
+  // Switching tabs (as on a canvas card): the old contents slide a little
+  // toward the side they're leaving for and fade (100ms), then the new ones come
+  // in from the other side (160ms)
+  const tabSlideRef = useRef({ dir: 0, out: null })
   const selectedTab = collapsed ? null : displayType
 
   // Badges count outstanding work only — completed items drop out.
@@ -238,6 +244,20 @@ export default function GalleryCanvas({ category, easelCard = false }) {
     el.addEventListener('transitionend', done)
     return () => el.removeEventListener('transitionend', done)
   }, [displayType, contentKey])
+
+  // …and the new tab's contents come in
+  useLayoutEffect(() => {
+    const el = itemsRef.current
+    const slide = tabSlideRef.current
+    if (!el || !slide.out) return
+    const dir = slide.dir
+    slide.out.cancel()
+    slide.out = null
+    el.animate(
+      [{ opacity: 0, transform: `translateX(${dir * 12}px)` }, { opacity: 1, transform: 'translateX(0)' }],
+      { duration: 160, easing: 'ease-out' }
+    )
+  }, [displayType])
 
   // ---- Leave when the last item goes; come back if one returns ----
   useLayoutEffect(() => {
@@ -355,6 +375,25 @@ export default function GalleryCanvas({ category, easelCard = false }) {
   }, [applyCollapsed])
 
   const switchTab = useCallback((type) => {
+    const ORDER = ['list', 'note', 'link']
+    const from = displayTypeRef.current
+    const el = itemsRef.current
+    const slide = tabSlideRef.current
+    if (!collapsedRef.current && el && type !== from && !slide.out && typeof el.animate === 'function') {
+      const dir = ORDER.indexOf(type) > ORDER.indexOf(from) ? 1 : -1
+      slide.dir = dir
+      const out = el.animate(
+        [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: `translateX(${-dir * 12}px)` }],
+        { duration: 100, easing: 'ease-in', fill: 'forwards' }
+      )
+      slide.out = out
+      out.onfinish = () => {
+        setActiveTab(type)
+        // If the switch didn't change what's shown, never leave it faded out
+        setTimeout(() => { if (slide.out === out) { out.cancel(); slide.out = null } }, 200)
+      }
+      return
+    }
     setActiveTab(type)
     if (collapsedRef.current) {
       itemsHeightRef.current = null

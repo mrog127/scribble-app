@@ -14510,3 +14510,21 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   line-height: 42px;
   letter-spacing: -1.6px;
 }
+
+
+/* Easel icons picked from the name (easelIcons.jsx): 2px lines at any size,
+   like the easel glyph they replace */
+.easel-name-icon * { vector-effect: non-scaling-stroke; }
+/* Settings › Easels: a row whose Easel has an icon shows it in place of the
+   dot (Dots themes) / painted mark — 18px, with the same gap to the name */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon { width: 18px !important; margin-left: -3px; margin-right: 9px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon::before { content: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon > svg.easel-name-icon { display: block !important; }
+
+/* Floating cards (the Inbox card, canvases pinned to the Gallery, an Easel
+   page's Gallery card) sit a level above the flat cards — canvas cards, the
+   Gallery's Lists / Notes / Links cards, Easel cards — so their drop shadows fall
+   over them rather than under */
+#app .inbox-card-wrap { position: relative; z-index: 1; }
+#app .home-page .pinned-canvases { position: relative; z-index: 1; }
+#app .card.gallery-canvas { position: relative; z-index: 1; }

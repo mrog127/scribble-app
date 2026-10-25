@@ -14351,3 +14351,162 @@ html.solo-window #app .note-detail-page { transition: none !important; }
    wide as its label plus the same share of the spare room — so the selected
    pill is longer for "• Bullet" than for "H1" */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-style-bar .note-style-btn { flex: 1 1 auto; }
+
+/* Light Dots, a canvas pinned to the Gallery and an Easel page's Gallery card: the tabs' track reads as a hole
+   punched through the glass card — the page's own grey, sunk in with an inner
+   shadow along its top and a white lip along its bottom — and the selected
+   tab's pill is clear liquid glass (the control bar circles' treatment) */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar {
+  position: relative;
+  background: #F0F0F0;
+  /* the card's own drop shadow (0 6px 24px, 20%), seen falling into the hole */
+  box-shadow: inset 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+/* …and the card's stroke highlight running round the hole's rim (same
+   gradient, same slow orbit) */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(var(--cb-stroke-angle), rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.04));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: cb-stroke-orbit 8s linear infinite;
+  pointer-events: none;
+}
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator {
+  background: var(--glass-fill);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14), inset -4px -4px 4px rgba(255, 255, 255, 0.6);
+  overflow: visible;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.08));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+/* The selector sits at the card's own height inside the hole: it casts the
+   card's shadow (0 6px 24px, 20%) onto the page in the hole, and that shadow
+   stops at the hole's rim — under the card — so the hole clips everything in
+   it (the rim highlight moves just inside the edge so it isn't clipped) */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar { overflow: hidden; }
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar::before { inset: 0; z-index: 2; }
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), inset -4px -4px 4px rgba(255, 255, 255, 0.6);
+}
+/* (the Easel page's Gallery card's selected icon and count go black too, as on
+   the pinned canvases) */
+:root[data-theme="light-dots"] .card.gallery-canvas > .project-bottom-bar { --tab-icon-on: #292929; }
+:root[data-theme="light-dots"] .card.gallery-canvas > .project-bottom-bar .project-tab-btn.selected .project-tab-count { color: #292929; }
+:root[data-theme="light-dots"] .card.gallery-canvas > .project-bottom-bar .project-tab-btn svg { width: 20px; height: 20px; }
+:root[data-theme="light-dots"] .card.gallery-canvas > .project-bottom-bar .project-tab-bar { gap: 4px; }
+/* No stroke highlight round the punched-out track after all */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar::before { content: none; }
+/* Trying instead: no punch-out — the track is the flat grey of the card's
+   three-dot button (#F0F0F0), with no shadow falling into it */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar {
+  background: #F0F0F0;
+  box-shadow: none;
+}
+/* The glass selector keeps its inner glow but casts no drop shadow */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator {
+  box-shadow: inset -4px -4px 4px rgba(255, 255, 255, 0.6);
+}
+/* …matched exactly: on these cards the three-dot button rests at its #F0F0F0
+   plus a 4% black wash, so the track wears the same */
+:root[data-theme="light-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar {
+  background: linear-gradient(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.04)), #F0F0F0;
+}
+
+/* Dark Dots: the same tabs on a canvas pinned to the Gallery and an Easel
+   page's Gallery card — the track the three-dot button's resting grey there
+   (#333 + a 4% white wash), the selected tab a clear liquid glass pill (no drop
+   shadow), its icon and count light, 4px between tabs, icons one size */
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar {
+  position: relative;
+  overflow: hidden;
+  gap: 4px;
+  background: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), #333333;
+  box-shadow: none;
+}
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator {
+  background: var(--glass-fill);
+  box-shadow: inset -4px -4px 4px rgba(255, 255, 255, 0.04);
+  overflow: visible;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator {
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+  }
+}
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-indicator::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  opacity: 0.7;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.16));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar { --tab-icon-on: #E6E6E6; }
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-btn.selected .project-tab-count { color: #E6E6E6; }
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-btn svg { width: 20px; height: 20px; }
+/* …but the track is the plain #333 of a regular canvas's, no wash */
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas) > .project-bottom-bar .project-tab-bar { background: #333333; }
+/* Dark Dots: a pinned canvas's three-dot button is plain #333 too, like a
+   regular canvas's — no resting wash; 4% on hover / press / with its menu open */
+:root[data-theme="dark-dots"] #app .home-page .pinned-gallery .dots-menu-btn::before { background: transparent; }
+@media (hover: hover) {
+  :root[data-theme="dark-dots"] #app .home-page .pinned-gallery .dots-menu-btn:hover::before { background: rgba(255, 255, 255, 0.04); }
+}
+:root[data-theme="dark-dots"] #app .home-page .pinned-gallery :is(.dots-menu-btn.is-pressed, .dots-menu-wrap:has(.card-context-menu.open) .dots-menu-btn)::before { background: rgba(255, 255, 255, 0.04); }
+
+/* Dots themes: every card title (canvases, the Gallery's cards, list item page
+   sections…) is 18px — same weight, the same 24px line so headers keep their
+   height, letter-spacing kept in proportion */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card .card-title {
+  font-size: 18px;
+  line-height: 24px;
+  letter-spacing: -0.4px;
+}
+
+/* Dots themes: Easel page titles (and the desktop Gallery header's) are 28px —
+   the same 36px line so the header keeps its height, letter-spacing in
+   proportion */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .category-page .active-title {
+  font-size: 28px;
+  line-height: 36px;
+  letter-spacing: -0.56px;
+}
+
+/* Dots themes: the Gallery's day / date ("Sunday," / "October 25") is 40px —
+   on the phone header and in the desktop sidebar — with its line and
+   letter-spacing scaled to match (50 → 42, -1.92 → -1.6) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(.home-page, .sidebar-date) :is(.active-day-name, .active-month-date) {
+  font-size: 40px;
+  line-height: 42px;
+  letter-spacing: -1.6px;
+}

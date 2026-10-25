@@ -800,6 +800,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     photo.contentEditable = 'false'
     const img = document.createElement('img')
     img.alt = ''
+    img.decoding = 'async'   // decoded off the main thread, and only when scrolled near
+    img.loading = 'lazy'
     img.src = blobUrl
     img.dataset.pending = '1'
     photo.appendChild(img)
@@ -1067,6 +1069,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // span.hl-text, so it's saved with the note and text typed on the end of it
   // carries on highlighted. ----
   const [hlOn, setHlOn] = useState(false)
+  const hlTouchRef = useRef(0)
   const highlightable = (p) => p && !p.classList.contains('style-title') && !p.classList.contains('style-image')
   const isHl = (p) => !!p?.querySelector('.hl-text')
   const toggleHighlight = useCallback(() => {
@@ -2155,7 +2158,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
             onTouchStart={e => { e.preventDefault(); selectStyle(s) }}
             onMouseDown={e => { e.preventDefault(); selectStyle(s) }}
           >
-            <span>{s === 'heading' ? 'H1' : s === 'bold' ? 'H2' : s === 'bullet' ? '• Bullet' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
+            <span>{s === 'heading' ? 'H1' : s === 'bold' ? 'H2' : s === 'bullet' ? '• List' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
           </button>
         ))}
       </div>
@@ -2167,8 +2170,12 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           className={`note-tool-btn note-highlight-btn${hlOn ? ' on' : ''}`}
           aria-label="Highlight"
           aria-pressed={hlOn}
-          onTouchStart={e => { e.preventDefault(); toggleHighlight() }}
-          onMouseDown={e => { e.preventDefault(); toggleHighlight() }}
+          // A tap fires touchstart and then (React's touch listeners being
+          // passive, so preventDefault can't stop it) an emulated mousedown —
+          // toggling twice, so the line ended up as it started. The mousedown
+          // that follows a touch is ignored.
+          onTouchStart={() => { hlTouchRef.current = Date.now(); toggleHighlight() }}
+          onMouseDown={e => { e.preventDefault(); if (Date.now() - hlTouchRef.current < 1000) return; toggleHighlight() }}
         >
           <HighlightIcon/>
         </button>

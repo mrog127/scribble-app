@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react'
+import { parseInert } from '../inertHtml.js'
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { createPortal } from 'react-dom'
 import UnderlineSvg from '../assets/Underline.svg?react'
@@ -44,8 +45,7 @@ function displayUrl(url) {
 function extractNotePreview(editorHTML) {
   if (!editorHTML) return null
   try {
-    const tmp = document.createElement('div')
-    tmp.innerHTML = editorHTML
+    const tmp = parseInert(editorHTML)   // never loads the note's photos
     const paras = [...tmp.querySelectorAll('.note-para')]
     if (paras.length <= 1) return null
     const text = paras.slice(1).map(p => p.textContent).join(' ').replace(/\s+/g, ' ').trim()
@@ -926,7 +926,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           <div className={`card-header${noteSection.collapsed ? ' collapsed' : ''}`} onClick={noteSection.onHeaderClick}>
             <span className="card-title">Notes</span>
             <div className="project-header-actions">
-              {!archived && !noteComposerOpen && (
+              {/* Paperclip only when there's a note in the canvas left to attach */}
+              {!archived && !noteComposerOpen && attachableNotes.length > 0 && (
                 <button
                   className={`todo-attach-btn section-attach-btn${noteAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a note"
@@ -1016,7 +1017,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           <div className={`card-header${linkSection.collapsed ? ' collapsed' : ''}`} onClick={linkSection.onHeaderClick}>
             <span className="card-title">Links</span>
             <div className="project-header-actions">
-              {!archived && !linkComposerOpen && (
+              {/* Paperclip only when there's a link in the canvas left to attach */}
+              {!archived && !linkComposerOpen && attachableLinks.length > 0 && (
                 <button
                   className={`todo-attach-btn section-attach-btn${linkAttachOpen ? ' active' : ''}`}
                   aria-label="Attach a link"

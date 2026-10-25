@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, useId } from 'react'
+import { parseInert } from '../inertHtml.js'
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { createPortal } from 'react-dom'
 import { useAppContext } from '../context/AppContext.jsx'
@@ -568,8 +569,7 @@ function LinkRowEditor({ link, onSave, onCancel }) {
 function extractNotePreview(editorHTML) {
   if (!editorHTML) return null
   try {
-    const tmp = document.createElement('div')
-    tmp.innerHTML = editorHTML
+    const tmp = parseInert(editorHTML)   // never loads the note's photos
     const paras = [...tmp.querySelectorAll('.note-para')]
     if (paras.length <= 1) return null
     const text = paras.slice(1)

@@ -1,11 +1,12 @@
-// Photos placed in a note. Each one is scaled down (longest side 2000px, JPEG)
+// Photos placed in a note. Each one is scaled down (longest side 1600px, JPEG —
+// sharp at a note's width on a phone or desktop, and a third of the memory of 2000px)
 // and uploaded to the public "note-images" Storage bucket under the user's own
 // folder; the note keeps only the image's URL, so the notes table, the offline
 // cache and the outbox stay small.
 import { supabase } from './supabaseClient.js'
 
 export const NOTE_IMAGE_BUCKET = 'note-images'
-const MAX_SIDE = 2000
+const MAX_SIDE = 1600
 
 async function shrink(file) {
   let source

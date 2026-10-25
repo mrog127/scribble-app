@@ -14311,3 +14311,43 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page > .page-header .home-settings-btn { right: 32px; }                 /* 16 + 16 */
   :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page > .page-header .home-settings-btn.home-expand-btn { right: 80px; } /* 32 + 40 + 8 */
 }
+
+/* TRY (Light Dots): canvas card content-type tabs — the full-width light grey
+   track as before, but the selected tab's pill is the card's own colour, its
+   icon (and count) black, and icons stay one size whether selected or not */
+:root[data-theme="light-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-indicator { background: #FAFAFA; }
+:root[data-theme="light-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar { --tab-icon-on: #292929; }
+:root[data-theme="light-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-btn.selected .project-tab-count { color: #292929; }
+:root[data-theme="light-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-btn svg { width: 20px; height: 20px; }
+/* TRY, continued: 4px between tabs, so a hovered tab's highlight never touches
+   the selected pill */
+:root[data-theme="light-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-bar { gap: 4px; }
+
+/* Dark Dots: the same canvas tab treatment as Light Dots above — the full-width
+   #333 track, the selected tab's pill in the card's own colour (#2B2B2B), its
+   icon and count light, 4px between tabs, and icons one size whether selected
+   or not */
+:root[data-theme="dark-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-indicator { background: #2B2B2B; }
+:root[data-theme="dark-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar { --tab-icon-on: #E6E6E6; }
+:root[data-theme="dark-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-btn.selected .project-tab-count { color: #E6E6E6; }
+:root[data-theme="dark-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-btn svg { width: 20px; height: 20px; }
+:root[data-theme="dark-dots"] .project-card:not(.gallery-canvas) > .project-bottom-bar .project-tab-bar { gap: 4px; }
+
+/* Dots themes: a single-type canvas of link tiles (no tabs) — the plus button
+   can't ride up beside the last row the way it does on a list, or it covers the
+   tiles. It keeps the same strip under the tiles a tabbed card has, sitting at
+   the right of it. */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-card:has(> .project-items .link-grid) > .project-bottom-bar.no-tabs {
+  margin-top: 0;
+  padding: 12px 16px 8px;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .project-card:has(> .project-items .link-grid):has(> .project-bottom-bar.no-tabs) { padding-bottom: 8px; }
+
+/* Dots themes: a collapsed canvas card has the same space under its header row
+   as above it (16px) — the header's 4px + the card's 8px left it 4px short */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .card.project-card > .card-header.collapsed { padding-bottom: 8px; }
+
+/* Dots themes: the note style tabs still fill the bar together, but each is as
+   wide as its label plus the same share of the spare room — so the selected
+   pill is longer for "• Bullet" than for "H1" */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .note-style-bar .note-style-btn { flex: 1 1 auto; }

@@ -1189,7 +1189,8 @@ export default function ActivePage({
           sit inside a .category-page wrapper so the same rules apply) —
           "Gallery" with its icon, and the expand / collapse button */}
       <div className="category-page gallery-desk-head">
-        <div className="page-header">
+        {/* Moves and fades with the scroll, as an Easel page's header does */}
+        <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
           <div className="category-header-row">
             <span className="gallery-desk-icon" aria-hidden="true">
               <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">

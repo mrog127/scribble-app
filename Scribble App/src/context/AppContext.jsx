@@ -257,6 +257,8 @@ export function AppProvider({ children }) {
       // Only meaningful when sendToHomescreen is false: whether the Easel shows
       // its own active items in a pinned Gallery canvas.
       showGalleryCanvas: cat.show_gallery_canvas !== false,
+      // The icon picked in Settings (a Feather icon name); none → picked from the name
+      icon: cat.icon || null,
       archived: cat.archived === true,
       projects: (projs || [])
         .filter(p => p.category_id === cat.id)
@@ -1266,6 +1268,12 @@ export function AppProvider({ children }) {
     dbw(supabase.from('categories').update({ show_gallery_canvas: newVal }).eq('id', id), 'toggleGalleryCanvas')
   }, [])
 
+  // The Easel's icon, picked in Settings (null goes back to the one its name picks)
+  const setCategoryIcon = useCallback((id, icon) => {
+    setCategories(prev => prev.map(c => c.id !== id ? c : { ...c, icon: icon || null }))
+    dbw(supabase.from('categories').update({ icon: icon || null }).eq('id', id), 'setCategoryIcon')
+  }, [])
+
   const deleteCategory = useCallback(async (id) => {
     const cat = categoriesRef.current.find(c => c.id === id)
     setCategories(prev => prev.filter(c => c.id !== id))
@@ -1464,6 +1472,7 @@ export function AppProvider({ children }) {
       reorderCategories,
       toggleCategoryHomescreen,
       toggleCategoryGalleryCanvas,
+      setCategoryIcon,
       addProject,
       addActiveTodo,
       addActiveNote,

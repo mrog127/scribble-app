@@ -149,8 +149,8 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
                     finish(() => onSave(dest))
                   }}
                 >
-                  {easelIconKey(cat.name)
-                    ? <EaselNameIcon name={cat.name} color={acc.dark} className="dest-page-easel"/>
+                  {easelIconKey(cat.name, cat.icon)
+                    ? <EaselNameIcon name={cat.name} icon={cat.icon} color={acc.dark} className="dest-page-easel"/>
                     : <EaselGlyph accent={acc} className="dest-page-easel"/>}
                   <span>{cat.name}</span>
                 </button>

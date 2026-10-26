@@ -41,6 +41,15 @@ export function buildDragCloneShell(srcRowEl, cloneInner, fallbackBg = '#F7F6F3'
     : ''
   pageScope.style.cssText = 'padding:0;margin:0;border:none;background:none;box-shadow:none;position:static;inset:auto;width:auto;height:auto;transform:none;opacity:1;overflow:visible;-webkit-mask-image:none;mask-image:none;display:block;'
   pageScope.appendChild(scope)
+  // The Easel's colours: a card inside a page of another accent (an Easel card
+  // in the expanded Gallery) sets its own on an ancestor the copy doesn't carry
+  if (srcRowEl) {
+    const rs = getComputedStyle(srcRowEl)
+    ;['--accent-base', '--accent-dark', '--accent-light', '--accent-base-rgb'].forEach(v => {
+      const val = rs.getPropertyValue(v)
+      if (val) pageScope.style.setProperty(v, val.trim())
+    })
+  }
 
   // Dots themes: the clear liquid glass — no hairline border, the gradient
   // outline drawn by a stroke layer instead (see .drag-glass-stroke in

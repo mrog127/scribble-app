@@ -14528,3 +14528,35 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 #app .inbox-card-wrap { position: relative; z-index: 1; }
 #app .home-page .pinned-canvases { position: relative; z-index: 1; }
 #app .card.gallery-canvas { position: relative; z-index: 1; }
+
+/* Change icon card (Settings → an Easel's menu): Move to's card, with a grid of
+   every icon in the grey box */
+#app .move-to-card.icon-picker-card .dest-list-box > .save-to-scroll.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  grid-auto-rows: 52px;
+  align-content: start;
+  gap: 4px;
+  padding: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#app .icon-picker-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) { #app .icon-picker-cell:hover { background: rgba(0, 0, 0, 0.04); } }
+#app .icon-picker-cell:active { background: rgba(0, 0, 0, 0.06); }
+#app .icon-picker-cell.is-current { background: rgba(0, 0, 0, 0.06); }
+:root[data-theme="dark-dots"] #app .icon-picker-cell:active,
+:root[data-theme="dark-dots"] #app .icon-picker-cell.is-current { background: rgba(255, 255, 255, 0.08); }
+@media (hover: hover) { :root[data-theme="dark-dots"] #app .icon-picker-cell:hover { background: rgba(255, 255, 255, 0.05); } }
+#app .icon-picker-cell .easel-name-icon * { vector-effect: non-scaling-stroke; }
+#app .icon-picker-grid .icon-picker-empty { grid-column: 1 / -1; }

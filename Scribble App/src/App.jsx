@@ -3531,8 +3531,8 @@ function AppInner() {
                           }}
                         >
                           {/* The Easel's own icon, picked from its name — or the easel glyph */}
-                          {easelIconKey(cat.name) ? (
-                            <EaselNameIcon name={cat.name} color={acc.dark} style={{ marginRight: 2 }}/>
+                          {easelIconKey(cat.name, cat.icon) ? (
+                            <EaselNameIcon name={cat.name} icon={cat.icon} color={acc.dark} style={{ marginRight: 2 }}/>
                           ) : (
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark, marginRight: 2 }}>
                             <rect x="3.5" y="2.5" width="13" height="9.5" fill={acc.base} fillOpacity="0.16" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />

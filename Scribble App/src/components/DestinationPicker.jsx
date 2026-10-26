@@ -355,8 +355,8 @@ export default function DestinationPicker({
                 style={accentVars(acc, 'cb')}
                 {...tapProps('e-' + c.id, () => openEasel(c.id))}
               >
-                {easelIconKey(c.name)
-                  ? <EaselNameIcon name={c.name} color={acc.dark} className="dest-row-icon"/>
+                {easelIconKey(c.name, c.icon)
+                  ? <EaselNameIcon name={c.name} icon={c.icon} color={acc.dark} className="dest-row-icon"/>
                   : <EaselGlyph accent={acc} className="dest-row-icon"/>}
                 <span>{c.name}</span>
               </button>

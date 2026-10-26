@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
 import { EaselNameIcon, easelIconKey } from '../easelIcons.jsx'
+import IconPickerCard from './IconPickerCard.jsx'
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { useAppContext } from '../context/AppContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -504,7 +505,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
   const {
     categories, archivedCategories, archiveCategory, unarchiveCategory,
     reorderCategories, renameCategory, deleteCategory, addCategory,
-    toggleCategoryHomescreen, promptDelete,
+    toggleCategoryHomescreen, promptDelete, setCategoryIcon,
   } = useAppContext()
   const [showArchivedCats, setShowArchivedCats] = useState(false)
   const { user, signOut } = useAuth()
@@ -536,6 +537,8 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
 
   const [openMenuId, setOpenMenuId] = useState(null)
   const [renamingId, setRenamingId] = useState(null)
+  // The Easel whose icon is being changed (the Change icon card is open)
+  const [iconPickId, setIconPickId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [addValue, setAddValue] = useState('')
@@ -637,7 +640,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
               >
                 {/* Tab decoration: underline rotated 90°, row-height, colored by this tab's accent */}
                 <span
-                  className={`cat-row-decoration${easelIconKey(cat.name) ? ' has-easel-icon' : ''}`}
+                  className={`cat-row-decoration${easelIconKey(cat.name, cat.icon) ? ' has-easel-icon' : ''}`}
                   style={{
                     flexShrink: 0, width: 14, height: 52, marginRight: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -648,8 +651,8 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                 >
                   {/* The Easel's icon (picked from its name) in its colour, when
                       the name gives one — otherwise the usual mark */}
-                  {easelIconKey(cat.name)
-                    ? <EaselNameIcon name={cat.name} color={getCategoryAccent(index).dark}/>
+                  {easelIconKey(cat.name, cat.icon)
+                    ? <EaselNameIcon name={cat.name} icon={cat.icon} color={getCategoryAccent(index).dark}/>
                     : <UnderlineSvg style={{ flexShrink: 0, width: 28, height: 'auto', transform: 'rotate(270deg)', display: 'block' }} />}
                 </span>
 
@@ -768,6 +771,19 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                       </button>
                       <button
                         className="settings-dd-item"
+                        onClick={() => { setOpenMenuId(null); setIconPickId(cat.id) }}
+                        style={{
+                          display: 'block', width: '100%', padding: '12px 16px',
+                          background: 'none', border: 'none', borderBottom: '1px solid #DBDAD8',
+                          textAlign: 'left', cursor: 'pointer',
+                          fontFamily: "'Open Sans', sans-serif",
+                          fontSize: 16, fontWeight: 400, color: '#242424',
+                        }}
+                      >
+                        Change icon
+                      </button>
+                      <button
+                        className="settings-dd-item"
                         onClick={() => { setOpenMenuId(null); archiveCategory(cat.id) }}
                         style={{
                           display: 'block', width: '100%', padding: '12px 16px',
@@ -812,6 +828,20 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
             </div>
           ))}
           </div>
+
+          {/* Change icon card for the Easel picked in its menu */}
+          {(() => {
+            const idx = categories.findIndex(c => c.id === iconPickId)
+            if (idx < 0) return null
+            return (
+              <IconPickerCard
+                category={categories[idx]}
+                color={getCategoryAccent(idx).dark}
+                onPick={icon => { setCategoryIcon(iconPickId, icon); setIconPickId(null) }}
+                onCancel={() => setIconPickId(null)}
+              />
+            )
+          })()}
 
           {/* ---- Archived easels ---- */}
           {archivedCategories.length > 0 && (

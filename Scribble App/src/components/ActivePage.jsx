@@ -1141,7 +1141,7 @@ export default function ActivePage({
       const idx = categories.findIndex(c => c.id === cid)
       const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
       const cat = idx >= 0 ? categories[idx] : null
-      return { id: cid, name: cat?.name || '', icon: cat?.icon, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
+      return { id: cid, name: cat?.name || '', icon: cat?.icon, rgb: acc.baseRgb, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
     })
 
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
@@ -1186,7 +1186,11 @@ export default function ActivePage({
           <div className={`active-dots${DATE_ROW_ICONS ? ' with-icons' : ''}`}>
             {activeDots.map(d => (
               DATE_ROW_ICONS
-                ? <EaselNameIcon key={d.id} name={d.name} icon={d.icon} color={d.color} size={18} className="active-dot-icon" />
+                ? (
+                  <span key={d.id} className="active-dot-icon-circle" style={{ background: `rgba(${d.rgb}, 0.24)` }}>
+                    <EaselNameIcon name={d.name} icon={d.icon} color={d.color} size={16} className="active-dot-icon" />
+                  </span>
+                )
                 : <span key={d.id} className="active-dot" style={{ background: d.color }} />
             ))}
           </div>

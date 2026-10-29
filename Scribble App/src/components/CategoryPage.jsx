@@ -232,7 +232,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
       const next = parts.map((w, i) => {
         if (!w || /^\s+$/.test(w)) return w
         // The last word carries the easel dot (6px gap + 12px dot)
-        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord && !TITLE_ICON ? 18 : 0)
+        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord ? (TITLE_ICON ? 34 : 18) : 0)
         return width > avail ? hyphenateSync(w) : w
       }).join('')
       setTitleText(next)
@@ -287,12 +287,12 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               onBlur={commitRename}
             />
           ) : (<>
-            {TITLE_ICON && (
-              <span className="easel-title-icon" aria-hidden="true">
+            {/* The icon follows the name, kept on its last line by a word joiner */}
+            <p ref={titleRef} className={`active-title${TITLE_ICON ? ' has-title-icon' : ''}`} style={{ marginBottom: '0' }}>{titleText}{TITLE_ICON && (
+              <span className="easel-title-icon" aria-hidden="true">{'\u2060'}<span className="easel-title-icon-circle">
                 <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={16}/>
-              </span>
-            )}
-            <p ref={titleRef} className="active-title" style={{ marginBottom: '0' }}>{titleText}</p>
+              </span></span>
+            )}</p>
           </>)}
           <div className="category-header-actions">
           {renaming ? (

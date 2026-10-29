@@ -289,7 +289,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
           ) : (<>
             {TITLE_ICON && (
               <span className="easel-title-icon" aria-hidden="true">
-                <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={28}/>
+                <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={16}/>
               </span>
             )}
             <p ref={titleRef} className="active-title" style={{ marginBottom: '0' }}>{titleText}</p>

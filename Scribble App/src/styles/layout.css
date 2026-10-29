@@ -14566,7 +14566,7 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 /* Gallery date row: 18px icons, 8px apart */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .active-dots.with-icons,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots.with-icons { gap: 8px; }
-/* Easel page titles: the icon (28px) leads, 8px in and 12px before the title;
+/* Easel page titles: the icon (16px) leads, 8px in and 12px before the title;
    no dot after the name */
 .category-page .category-header-row > .easel-title-icon {
   display: flex;
@@ -14577,3 +14577,12 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 }
 .category-page .category-header-row > .easel-title-icon + .active-title { margin-left: 12px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row > .easel-title-icon + .active-title::after { display: none !important; }
+/* …sitting in a 24% Easel-colour circle (28px) */
+.category-page .category-header-row > .easel-title-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  justify-content: center;
+  background: rgba(var(--accent-base-rgb), 0.24);
+}
+.category-page .category-header-row > .easel-title-icon + .active-title { margin-left: 10px; }

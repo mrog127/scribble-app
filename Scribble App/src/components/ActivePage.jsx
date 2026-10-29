@@ -26,6 +26,11 @@ import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { runCheckOff } from '../checkGhost.js'
 import { useCardHostsDetail } from '../detailLock.jsx'
 import GalleryCanvas from './GalleryCanvas.jsx'
+import { EaselNameIcon } from '../easelIcons.jsx'
+
+// The row under the Gallery date shows each Easel's icon; false brings back
+// the coloured dots
+const DATE_ROW_ICONS = true
 import { CollapseToggleIcon } from './CategoryPage.jsx'
 import { MinimizeIcon, MaximizeIcon } from './FeatherIcons.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -1135,7 +1140,8 @@ export default function ActivePage({
     .map(([cid]) => {
       const idx = categories.findIndex(c => c.id === cid)
       const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
-      return { id: cid, color: acc.dot ?? acc.base }
+      const cat = idx >= 0 ? categories[idx] : null
+      return { id: cid, name: cat?.name || '', icon: cat?.icon, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
     })
 
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
@@ -1177,9 +1183,11 @@ export default function ActivePage({
         <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
         <p className="active-month-date">{monthDate}</p>
         {activeDots.length > 0 && (
-          <div className="active-dots">
+          <div className={`active-dots${DATE_ROW_ICONS ? ' with-icons' : ''}`}>
             {activeDots.map(d => (
-              <span key={d.id} className="active-dot" style={{ background: d.color }} />
+              DATE_ROW_ICONS
+                ? <EaselNameIcon key={d.id} name={d.name} icon={d.icon} color={d.color} size={18} className="active-dot-icon" />
+                : <span key={d.id} className="active-dot" style={{ background: d.color }} />
             ))}
           </div>
         )}

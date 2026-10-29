@@ -14560,3 +14560,20 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 @media (hover: hover) { :root[data-theme="dark-dots"] #app .icon-picker-cell:hover { background: rgba(255, 255, 255, 0.05); } }
 #app .icon-picker-cell .easel-name-icon * { vector-effect: non-scaling-stroke; }
 #app .icon-picker-grid .icon-picker-empty { grid-column: 1 / -1; }
+
+/* Easel icons in place of dots (see DATE_ROW_ICONS in ActivePage.jsx and
+   TITLE_ICON in CategoryPage.jsx) ---------------------------------------- */
+/* Gallery date row: 18px icons, 8px apart */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .active-dots.with-icons,
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots.with-icons { gap: 8px; }
+/* Easel page titles: the icon (28px) leads, 8px in and 12px before the title;
+   no dot after the name */
+.category-page .category-header-row > .easel-title-icon {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.category-page .category-header-row > .easel-title-icon + .active-title { margin-left: 12px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row > .easel-title-icon + .active-title::after { display: none !important; }

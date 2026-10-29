@@ -10,6 +10,11 @@ import { getCategoryAccent } from '../theme.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { useCardDragReorder } from './useCardDragReorder.js'
 import { useTheme } from '../useTheme.js'
+import { EaselNameIcon } from '../easelIcons.jsx'
+
+// Easel page titles lead with the Easel's icon in place of the dot after the
+// name. false brings the dot back (the CSS keys off .easel-title-icon).
+const TITLE_ICON = true
 import { hyphenateSync } from 'hyphen/en'
 import { MinimizeIcon, MaximizeIcon, PlusSquareIcon } from './FeatherIcons.jsx'
 
@@ -227,7 +232,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
       const next = parts.map((w, i) => {
         if (!w || /^\s+$/.test(w)) return w
         // The last word carries the easel dot (6px gap + 12px dot)
-        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord ? 18 : 0)
+        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord && !TITLE_ICON ? 18 : 0)
         return width > avail ? hyphenateSync(w) : w
       }).join('')
       setTitleText(next)
@@ -282,6 +287,11 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
               onBlur={commitRename}
             />
           ) : (<>
+            {TITLE_ICON && (
+              <span className="easel-title-icon" aria-hidden="true">
+                <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={28}/>
+              </span>
+            )}
             <p ref={titleRef} className="active-title" style={{ marginBottom: '0' }}>{titleText}</p>
           </>)}
           <div className="category-header-actions">

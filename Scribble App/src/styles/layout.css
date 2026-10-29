@@ -14563,7 +14563,7 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 
 /* Easel icons in place of dots (see DATE_ROW_ICONS in ActivePage.jsx and
    TITLE_ICON in CategoryPage.jsx) ---------------------------------------- */
-/* Gallery date row: each icon (16px) in a 26px circle of its Easel's colour
+/* Gallery date row: each icon (13.5px) in a 26px circle (a list row's checkbox + 2px radius) of its Easel's colour
    at 24%, as on Easel page titles; 4px apart */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .active-dots.with-icons,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots.with-icons { gap: 4px; }
@@ -14576,7 +14576,7 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   border-radius: 50%;
   flex-shrink: 0;
 }
-/* Easel page titles: the icon (16px) in a 26px circle of the Easel's colour
+/* Easel page titles: the icon (13.5px) in a 26px circle (a list row's checkbox + 2px radius) of the Easel's colour
    at 24%, 8px after the name, in place of the dot */
 .category-page .active-title .easel-title-icon { white-space: nowrap; }
 .category-page .active-title .easel-title-icon-circle {

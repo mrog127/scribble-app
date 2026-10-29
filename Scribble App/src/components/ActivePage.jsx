@@ -1188,7 +1188,7 @@ export default function ActivePage({
               DATE_ROW_ICONS
                 ? (
                   <span key={d.id} className="active-dot-icon-circle" style={{ background: `rgba(${d.rgb}, 0.24)` }}>
-                    <EaselNameIcon name={d.name} icon={d.icon} color={d.color} size={16} className="active-dot-icon" />
+                    <EaselNameIcon name={d.name} icon={d.icon} color={d.color} size={13.5} className="active-dot-icon" />
                   </span>
                 )
                 : <span key={d.id} className="active-dot" style={{ background: d.color }} />

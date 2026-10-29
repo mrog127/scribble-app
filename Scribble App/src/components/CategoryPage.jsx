@@ -290,7 +290,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
             {/* The icon follows the name, kept on its last line by a word joiner */}
             <p ref={titleRef} className={`active-title${TITLE_ICON ? ' has-title-icon' : ''}`} style={{ marginBottom: '0' }}>{titleText}{TITLE_ICON && (
               <span className="easel-title-icon" aria-hidden="true">{'\u2060'}<span className="easel-title-icon-circle">
-                <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={16}/>
+                <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={13.5}/>
               </span></span>
             )}</p>
           </>)}

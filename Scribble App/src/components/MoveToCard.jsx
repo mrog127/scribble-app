@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { EaselNameIcon, easelIconKey } from '../easelIcons.jsx'
+import { EaselBadge, easelIconKey } from '../easelIcons.jsx'
 import { createPortal } from 'react-dom'
 import { getCategoryAccent } from '../theme.js'
 import DestinationPicker, { EaselGlyph } from './DestinationPicker.jsx'
@@ -150,7 +150,7 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
                   }}
                 >
                   {easelIconKey(cat.name, cat.icon)
-                    ? <EaselNameIcon name={cat.name} icon={cat.icon} color={acc.dark} className="dest-page-easel"/>
+                    ? <EaselBadge name={cat.name} icon={cat.icon} accent={acc} className="dest-page-easel"/>
                     : <EaselGlyph accent={acc} className="dest-page-easel"/>}
                   <span>{cat.name}</span>
                 </button>

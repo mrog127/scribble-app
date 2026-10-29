@@ -148,3 +148,18 @@ export function EaselNameIcon({ name, icon, color, size = 18, className, style }
       dangerouslySetInnerHTML={{ __html: (FEATHER[key] || FEATHER.folder)[0] }}/>
   )
 }
+
+// The Easel's badge: its icon on a disc of its colour. One component for every
+// place an Easel is badged (Gallery date row, Easel page titles, the Easels
+// menu, Save to / Move to), so they always match; the sizes live in CSS
+// (--easel-badge-size / --easel-badge-icon, per theme). `accent` is the Easel's
+// accent ({ dark, baseRgb }); without it, the page's accent variables.
+export function EaselBadge({ name, icon, accent, className, style }) {
+  const rgb = accent?.baseRgb || 'var(--accent-base-rgb)'
+  return (
+    <span className={`easel-badge${className ? ' ' + className : ''}`} aria-hidden="true"
+      style={{ background: `rgba(${rgb}, 0.24)`, ...style }}>
+      <EaselNameIcon name={name} icon={icon} color={accent?.dark || 'var(--accent-dark)'}/>
+    </span>
+  )
+}

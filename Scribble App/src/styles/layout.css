@@ -14567,30 +14567,57 @@ html.solo-window #app .note-detail-page { transition: none !important; }
    at 24%, as on Easel page titles; 4px apart */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .active-dots.with-icons,
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots.with-icons { gap: 4px; }
-.active-dots .active-dot-icon-circle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+
 /* Easel page titles: the icon (13.5px) in a 26px circle (a list row's checkbox + 2px radius) of the Easel's colour
    at 24%, 8px after the name, in place of the dot */
 .category-page .active-title .easel-title-icon { white-space: nowrap; }
 .category-page .active-title .easel-title-icon-circle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
   margin-left: 8px;
-  border-radius: 50%;
   vertical-align: middle;
   /* middle sits on the x-height's centre; lift to the capitals' centre */
   position: relative;
   top: -0.096em;
-  background: rgba(var(--accent-base-rgb), 0.24);
 }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .category-page .category-header-row > .active-title.has-title-icon::after { display: none !important; }
+
+/* Easel badge (EaselBadge in easelIcons.jsx): an Easel's icon on a 24% disc of
+   its colour. Every badge everywhere takes its sizes from these two variables —
+   override them per theme to change them all at once. */
+:root { --easel-badge-size: 26px; --easel-badge-icon: 14px; }
+.easel-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--easel-badge-size);
+  height: var(--easel-badge-size);
+  min-width: var(--easel-badge-size);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.easel-badge > .easel-name-icon {
+  width: var(--easel-badge-icon) !important;
+  height: var(--easel-badge-icon) !important;
+}
+/* the Easel's colour (inline on the svg) beats the menus' own icon colours */
+.easel-badge > .easel-name-icon * { stroke: inherit !important; fill: none !important; vector-effect: non-scaling-stroke; stroke-width: 2 !important; }
+/* Gallery date row with icons: 16px under the date (was 24) */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .home-page .active-dots.with-icons { margin-top: 16px; }
+@media (min-width: 1000px) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .sidebar-date .active-dots.with-icons { margin-top: 16px; }
+}
+
+/* Add item opening (addMorph.js): while the stand-in grows from the pill, the
+   real box shows only its contents — its own skin returns when the stand-in,
+   now exactly over it, is removed */
+#app .footer[data-morph] {
+  background: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-color: transparent !important;
+}
+#app .footer[data-morph]::before,
+#app .footer[data-morph]::after { display: none !important; }
+
+/* (the closing copy of the box keeps its contents, not its skin) */
+#app .add-morph-content > * { pointer-events: none; }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { EaselNameIcon, easelIconKey } from '../easelIcons.jsx'
+import { EaselBadge, easelIconKey } from '../easelIcons.jsx'
 import { getCategoryAccent, getInboxAccent } from '../theme.js'
 import AddCanvasRow from './AddCanvasRow.jsx'
 import { isPhoneLayout } from '../layoutMode'
@@ -356,7 +356,7 @@ export default function DestinationPicker({
                 {...tapProps('e-' + c.id, () => openEasel(c.id))}
               >
                 {easelIconKey(c.name, c.icon)
-                  ? <EaselNameIcon name={c.name} icon={c.icon} color={acc.dark} className="dest-row-icon"/>
+                  ? <EaselBadge name={c.name} icon={c.icon} accent={acc} className="dest-row-icon"/>
                   : <EaselGlyph accent={acc} className="dest-row-icon"/>}
                 <span>{c.name}</span>
               </button>

@@ -26,7 +26,7 @@ import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { runCheckOff } from '../checkGhost.js'
 import { useCardHostsDetail } from '../detailLock.jsx'
 import GalleryCanvas from './GalleryCanvas.jsx'
-import { EaselNameIcon } from '../easelIcons.jsx'
+import { EaselBadge } from '../easelIcons.jsx'
 
 // The row under the Gallery date shows each Easel's icon; false brings back
 // the coloured dots
@@ -1141,7 +1141,7 @@ export default function ActivePage({
       const idx = categories.findIndex(c => c.id === cid)
       const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
       const cat = idx >= 0 ? categories[idx] : null
-      return { id: cid, name: cat?.name || '', icon: cat?.icon, rgb: acc.baseRgb, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
+      return { id: cid, name: cat?.name || '', icon: cat?.icon, accent: acc, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
     })
 
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
@@ -1186,11 +1186,7 @@ export default function ActivePage({
           <div className={`active-dots${DATE_ROW_ICONS ? ' with-icons' : ''}`}>
             {activeDots.map(d => (
               DATE_ROW_ICONS
-                ? (
-                  <span key={d.id} className="active-dot-icon-circle" style={{ background: `rgba(${d.rgb}, 0.24)` }}>
-                    <EaselNameIcon name={d.name} icon={d.icon} color={d.color} size={13.5} className="active-dot-icon" />
-                  </span>
-                )
+                ? <EaselBadge key={d.id} name={d.name} icon={d.icon} accent={d.accent} />
                 : <span key={d.id} className="active-dot" style={{ background: d.color }} />
             ))}
           </div>

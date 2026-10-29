@@ -10,7 +10,7 @@ import { getCategoryAccent } from '../theme.js'
 import { subscribeProjectFocus } from '../searchFocus.js'
 import { useCardDragReorder } from './useCardDragReorder.js'
 import { useTheme } from '../useTheme.js'
-import { EaselNameIcon } from '../easelIcons.jsx'
+import { EaselBadge } from '../easelIcons.jsx'
 
 // Easel page titles lead with the Easel's icon in place of the dot after the
 // name. false brings the dot back (the CSS keys off .easel-title-icon).
@@ -232,7 +232,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
       const next = parts.map((w, i) => {
         if (!w || /^\s+$/.test(w)) return w
         // The last word carries the easel dot (6px gap + 12px dot)
-        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord ? (TITLE_ICON ? 34 : 18) : 0)
+        const width = canvas.measureText(w).width + ls * w.length + (i === lastWord ? (TITLE_ICON ? 34 : 18) /* 8px gap + the 26px badge */ : 0)
         return width > avail ? hyphenateSync(w) : w
       }).join('')
       setTitleText(next)
@@ -289,9 +289,7 @@ export default function CategoryPage({ categoryId, collapsed = false, onToggleCo
           ) : (<>
             {/* The icon follows the name, kept on its last line by a word joiner */}
             <p ref={titleRef} className={`active-title${TITLE_ICON ? ' has-title-icon' : ''}`} style={{ marginBottom: '0' }}>{titleText}{TITLE_ICON && (
-              <span className="easel-title-icon" aria-hidden="true">{'\u2060'}<span className="easel-title-icon-circle">
-                <EaselNameIcon name={category.name} icon={category.icon} color="var(--accent-dark)" size={13.5}/>
-              </span></span>
+              <span className="easel-title-icon" aria-hidden="true">{'\u2060'}<EaselBadge name={category.name} icon={category.icon} className="easel-title-icon-circle"/></span>
             )}</p>
           </>)}
           <div className="category-header-actions">

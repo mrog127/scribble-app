@@ -12,7 +12,8 @@ import ArchiveAttachmentsModal from './components/ArchiveAttachmentsModal.jsx'
 import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
-import { EaselNameIcon, easelIconKey } from './easelIcons.jsx'
+import { EaselBadge, easelIconKey } from './easelIcons.jsx'
+import { startAddMorph, startAddMorphClose, startSendToRow, startSendToToast, KB_PREDICT } from './addMorph.js'
 import { kickBackdrops } from './backdropKick.js'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
@@ -1177,20 +1178,31 @@ function AppInner() {
     const phone = document.getElementById('app')
     if (!vv || !phone) return
     const update = () => {
-      phone.style.setProperty('--ivh', vv.height + 'px')
+      // While Add item is opening, until the keyboard's own resize arrives, the
+      // phone already takes the height it'll have above the keyboard (the last
+      // keyboard's height) — so the opening box is never under the keys
+      let h = vv.height
+      const kb = window.innerHeight - vv.height
+      if (kb > 150) KB_PREDICT.save(kb)
+      else if (inputFocused && KB_PREDICT.active()) h = window.innerHeight - KB_PREDICT.height()
+      phone.style.setProperty('--ivh', h + 'px')
       phone.style.transform = vv.offsetTop > 0 ? `translateY(${vv.offsetTop}px)` : ''
     }
     // Search raises the keyboard too, so it needs the same viewport tracking —
     // otherwise .phone stays full height and the search bar sits under the keys.
+    let settle = 0
     if (inputFocused || searchOpen) {
       vv.addEventListener('resize', update)
       vv.addEventListener('scroll', update)
       update()
+      // No keyboard after all (a hardware one): back to the real height
+      settle = setTimeout(update, KB_PREDICT.WINDOW + 50)
     } else {
       phone.style.removeProperty('--ivh')
       phone.style.transform = ''
     }
     return () => {
+      clearTimeout(settle)
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
     }
@@ -2305,6 +2317,10 @@ function AppInner() {
     setAddToastLeaving(false)
     addToastHover.current = false
     addToastPending.current = false
+    // Sent from Add item: the box pours straight into the toast, so it comes
+    // at once rather than after the add view has closed
+    const sendingBox = document.querySelector('.footer.add-open')
+    const fx = sendingBox ? startSendToToast(sendingBox) : null
     addToastDelay.current = setTimeout(() => {
       setAddToast({ key: Date.now(), holder, categoryId, projectId, type, title, canvasName, accent, verb })
       addToastTimer.current = setTimeout(() => {
@@ -2312,7 +2328,7 @@ function AppInner() {
         if (addToastHover.current) { addToastPending.current = true; return }
         beginToastExit()
       }, 5000)
-    }, 500)
+    }, fx ? 0 : 500)
   }, [categories, beginToastExit, isInboxId])
 
   // A row you just added gets the same treatment as a search result: scrolled
@@ -2324,6 +2340,15 @@ function AppInner() {
     const findRow = () => (holder.id == null
       ? null
       : document.querySelector(`.page:not(.page-exiting) [data-swipe-id="${holder.id}"]`))
+    // Sent from Add item: the box pours into the row itself (the page scrolled
+    // to it first) — no flash needed
+    const sendingBox = document.querySelector('.footer.add-open')
+    if (sendingBox && startSendToRow(sendingBox, findRow, focusReq ? () => requestProjectFocus(focusReq) : null)) {
+      // (and not the older flight from the field to the card)
+      if (pendingProjectAnimRef.current?.holder === holder) pendingProjectAnimRef.current = null
+      holder.flying = false
+      return
+    }
     const flash = (row) => {
       row.classList.remove('search-flash')
       void row.offsetWidth
@@ -2669,9 +2694,13 @@ function AppInner() {
       ? { left: addRowRect.left, top: inputRect.top, width: addRowRect.width, height: inputRect.height }
       : inputRect
 
+    // The box pours into the new row (see addMorph.js); the flight from the
+    // field is the fallback
+    const sendingBox = document.querySelector('.footer.add-open')
     if (toolbarType === 'list') {
       const newId = addActiveTodo(text)
-      if (animRect && appRect) pendingAnimRef.current = { id: newId, type: 'list', text, inputRect: animRect, appRect }
+      const fx = sendingBox && startSendToRow(sendingBox, () => document.querySelector(`.page:not(.page-exiting) .todo-row[data-id="${newId}"]`))
+      if (!fx && animRect && appRect) pendingAnimRef.current = { id: newId, type: 'list', text, inputRect: animRect, appRect }
     } else if (toolbarType === 'note') {
       const holder = { id: null }
       const newId = addActiveNote(text, (rid) => { holder.id = rid })
@@ -3532,7 +3561,7 @@ function AppInner() {
                         >
                           {/* The Easel's own icon, picked from its name — or the easel glyph */}
                           {easelIconKey(cat.name, cat.icon) ? (
-                            <EaselNameIcon name={cat.name} icon={cat.icon} color={acc.dark} style={{ marginRight: 2 }}/>
+                            <EaselBadge name={cat.name} icon={cat.icon} accent={acc} style={{ marginRight: 2 }}/>
                           ) : (
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ stroke: acc.dark, marginRight: 2 }}>
                             <rect x="3.5" y="2.5" width="13" height="9.5" fill={acc.base} fillOpacity="0.16" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
@@ -3609,6 +3638,7 @@ function AppInner() {
                 if (!t || t.id !== e.pointerId) return
                 // Moved too far — that was a swipe, not a tap
                 if (Math.abs(e.clientX - t.x) > 10 || Math.abs(e.clientY - t.y) > 10) return
+                if (!inputFocused) startAddMorph(e.currentTarget)
                 inputRef.current?.focus({ preventScroll: true })
               }}
               onPointerCancel={() => { addTapRef.current = null }}
@@ -3655,6 +3685,7 @@ function AppInner() {
                         typePickDownRef.current = null
                         if (!began) return
                         pendingTypeRef.current = type
+                        startAddMorph(e.currentTarget.closest('.add-stack'))
                         flushSync(() => setToolbarType(type))
                         inputRef.current?.focus({ preventScroll: true })
                       }}
@@ -3706,6 +3737,8 @@ function AppInner() {
                     className="add-head-cancel"
                     onMouseDown={e => {
                       e.preventDefault()
+                      // The box shrinks back into the pill as it closes
+                      startAddMorphClose(e.currentTarget.closest('.footer'))
                       // Cancel discards the draft — the bar returns to its resting state empty
                       setInputValue('')
                       setLinkUrlValue('')

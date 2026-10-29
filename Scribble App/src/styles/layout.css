@@ -14621,3 +14621,10 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 
 /* (the closing copy of the box keeps its contents, not its skin) */
 #app .add-morph-content > * { pointer-events: none; }
+/* …and its foot (Display, the destination, Send) is there from the start, so it
+   grows with the box like the rest, rather than fading in on its own after */
+#app .footer[data-morph] .input-toolbar.visible {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}

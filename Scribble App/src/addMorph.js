@@ -1,3 +1,4 @@
+import { buildDragCloneShell } from './dragClone.js'
 // Add item opening and closing: the resting pill in the control bar morphs into
 // the open Add item box, and (on Cancel) back.
 //
@@ -18,10 +19,10 @@
 // rest, so the shape pours out of the pill (and back into it) with a pinched,
 // curving waist. Contents are clipped to that shape.
 
-// The motion: 0.4s end to end (each row's move, plus the genie's stagger),
+// The motion: 0.5s end to end (each row's move, plus the genie's stagger),
 // starting fast and slowing into place on an ease-out curve (quartic — no
-// overshoot). LAG_SHARE is how much of the 0.4s is the stagger.
-const TOTAL_MS = 400
+// overshoot). LAG_SHARE is how much of the 0.5s is the stagger.
+const TOTAL_MS = 500
 const LAG_SHARE = 1 / 3
 const DURATION = TOTAL_MS * (1 - LAG_SHARE)
 const springAt = (t) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t / DURATION)), 4)
@@ -68,6 +69,19 @@ function keyboardEdge(opening) {
   const easeOut = (x) => 1 - Math.pow(1 - clamp01(x), 3)
   return (now) => lerp(top0, top1, easeOut((now - t0) / KB_MOVE))
 }
+// Squeeze a genie shape's width about its middle by k (1 = untouched) — for a
+// shape travelling between two things of the same width, so it visibly morphs
+function squish(genie, k) {
+  if (k === 1) return genie
+  const cx = (genie.box.left + genie.box.right) / 2
+  const sx = (x) => cx + (x - cx) * k
+  const box = { ...genie.box, left: sx(genie.box.left), right: sx(genie.box.right), width: genie.box.width * k }
+  return { box, pts: genie.pts.map(([x, y]) => [sx(x), y]), foot: { ...genie.foot, left: sx(genie.foot.left), right: sx(genie.foot.right) } }
+}
+// …to SQUISH of its width halfway through, and back out by the end
+const SQUISH = 2 / 3
+const squishAt = (f) => 1 - (1 - SQUISH) * Math.sin(Math.PI * clamp01(f))
+
 // Lift a genie shape so it sits at least 8px above the keyboard's edge
 function riseAbove(genie, edgeY) {
   if (edgeY == null) return genie
@@ -139,12 +153,22 @@ function makeGlass(sample, z) {
     const lg = document.createElementNS(NS, 'linearGradient')
     lg.setAttribute('id', id)
     lg.setAttribute('x1', '0'); lg.setAttribute('y1', '0'); lg.setAttribute('x2', '1'); lg.setAttribute('y2', '1')
-    stroke.forEach((c, i) => {
+    // The ring's gradient blends in premultiplied colour (as CSS gradients do);
+    // an SVG gradient blends colour and alpha apart, which turned the middle of
+    // white → faint black into a solid grey line. So it's laid out in steps.
+    const parse = (c) => { const [r, g, b, a = 1] = (c.match(/[\d.]+/g) || [0, 0, 0]).map(Number); return { r, g, b, a } }
+    const c0 = parse(stroke[0]), c1 = parse(stroke[1])
+    const STEPS = 12
+    for (let i = 0; i <= STEPS; i++) {
+      const u = i / STEPS
+      const a = c0.a * (1 - u) + c1.a * u
+      const ch = (k) => a ? Math.round((c0[k] * c0.a * (1 - u) + c1[k] * c1.a * u) / a) : 0
       const st = document.createElementNS(NS, 'stop')
-      st.setAttribute('offset', String(i))
-      st.setAttribute('stop-color', c)
+      st.setAttribute('offset', String(u))
+      st.setAttribute('stop-color', `rgb(${ch('r')}, ${ch('g')}, ${ch('b')})`)
+      st.setAttribute('stop-opacity', String(a))
       lg.appendChild(st)
-    })
+    }
     defs.appendChild(lg)
     svg.appendChild(defs)
     outline = document.createElementNS(NS, 'polygon')
@@ -286,6 +310,14 @@ export function genieShape(a, ra, b, rb, t, pillAt) {
   const bottomRow = edge(1)
   return { box, pts, foot: { left: bottomRow[0], right: bottomRow[1], bottom } }
 }
+// The outline pulled in by px all round (about its middle) — the contents are
+// cut a hair inside the glass, so their cut edge never lies on the glass's
+const inset = (pts, box, px) => {
+  const cx = box.left + box.width / 2, cy = box.top + box.height / 2
+  const kx = box.width > 2 * px ? 1 - (2 * px) / box.width : 1
+  const ky = box.height > 2 * px ? 1 - (2 * px) / box.height : 1
+  return pts.map(([x, y]) => [cx + (x - cx) * kx, cy + (y - cy) * ky])
+}
 // The outline as a clip-path, in the coordinates of an element laid on `box`
 // at its own size `own` (scaled to fit the box)
 const clipFor = (pts, box, own) => {
@@ -345,7 +377,7 @@ export function startAddMorph(pillEl) {
     if (open) {
       footer.style.transformOrigin = '0 0'
       footer.style.transform = fit(to, box)
-      footer.style.clipPath = clipFor(pts, box, to)
+      footer.style.clipPath = clipFor(inset(pts, box, 2), box, to)
     }
     // The pill's icons stay with the shape's foot, centred
     if (icons && pr) {
@@ -448,14 +480,19 @@ function morphOut(footer, dest) {
         if (page) { glass.backdrop(page); glass.backdropOpacity(0) }
       }
     }
-    const t = t0 ? now - t0 : 0
+    // A destination revealed by a short fade fits the move and the fade
+    // together into the same 0.5s
+    const span = dest.reveal ? TOTAL - LAND_FADE : TOTAL
+    const t = t0 ? (now - t0) * (TOTAL / span) : 0
     const to = target ? dest.rect(target) : from
     const toR = target ? dest.radius(target, to) : fromR
-    const genie = riseAbove(genieShape(from, fromR, to, toR, t, 'b'), kbEdge?.(now))
+    let shape = genieShape(from, fromR, to, toR, t, 'b')
+    if (dest.squish && target) shape = squish(shape, squishAt(t / TOTAL))
+    const genie = riseAbove(shape, kbEdge?.(now))
     const { box, pts } = genie
     glass.draw(genie)
     content.style.transform = fit(from, box)
-    content.style.clipPath = clipFor(pts, box, from)
+    content.style.clipPath = clipFor(inset(pts, box, 2), box, from)
     const f = t / TOTAL
     dest.frame?.(target, genie, f)
 
@@ -473,7 +510,8 @@ function morphOut(footer, dest) {
       if (!dest.reveal) { finish(); return }
       // Landed: the destination shows, and the glass fades off it
       if (!landedAt) { landedAt = now; dest.show(target); content.style.opacity = '0' }
-      const k = (now - landedAt) / LAND_FADE
+      // (held a moment first, for a destination that asks — the row)
+      const k = (now - landedAt - (dest.hold || 0)) / LAND_FADE
       skin.style.opacity = String(1 - ease(k))
       if (k >= 1) { finish(); return }
     }
@@ -487,6 +525,7 @@ function morphOut(footer, dest) {
     skin.remove()
     content.remove()
     if (target) dest.show(target)
+    dest.done?.()
     if (page) { page.style.opacity = ''; page.style.transition = '' }
     running = null
   }
@@ -517,6 +556,32 @@ export function startAddMorphClose(footer) {
     radius: (pill, r) => parseFloat(getComputedStyle(pill).borderTopLeftRadius) || r.height / 2,
     frame: (pill, { box, foot }, f) => {
       if (!icons || !pr) return
+      // The pill is still settling (its width eases as the bar comes back), so
+      // the icons take its current width and place every frame
+      const pr2 = pill.getBoundingClientRect()
+      const ir = pill.querySelector('.mbar-type-picks, .mbar-placeholder')?.getBoundingClientRect()
+      const picks = pill.querySelector('.mbar-type-picks, .mbar-placeholder')
+      if (ir) {
+        pr = { width: ir.width, fromBottom: pr2.bottom - ir.top }
+        icons.style.width = ir.width + 'px'
+        icons.style.height = ir.height + 'px'
+        // each icon exactly where the pill's own is (the copy, outside the bar,
+        // doesn't get the bar's own layout for them)
+        const real = picks ? [...picks.children] : []
+        const copies = [...icons.children]
+        real.forEach((el, i) => {
+          const c = copies[i]
+          if (!c) return
+          const r = el.getBoundingClientRect()
+          c.style.position = 'absolute'
+          c.style.margin = '0'
+          c.style.flex = 'none'
+          c.style.left = (r.left - ir.left) + 'px'
+          c.style.top = (r.top - ir.top) + 'px'
+          c.style.width = r.width + 'px'
+          c.style.height = r.height + 'px'
+        })
+      }
       icons.style.left = ((foot.left + foot.right) / 2 - box.left - pr.width / 2) + 'px'
       icons.style.top = (foot.bottom - box.top - pr.fromBottom) + 'px'
       // they fade in as the pill forms, riding down with it
@@ -533,6 +598,8 @@ export function startAddMorphClose(footer) {
 // near its middle as it can go, then fades in around it.
 export function startSendToRow(footer, getRow, seek) {
   let lastSeek = 0
+  let copy = null
+  let rowEl = null
   return morphOut(footer, {
     find: (page) => {
       if (!page) return null
@@ -543,11 +610,54 @@ export function startSendToRow(footer, getRow, seek) {
       centreInScroller(row)
       return row
     },
-    found: (row) => { row.style.opacity = '0' },
-    rect: (row) => row.getBoundingClientRect(),
-    radius: (row, r) => Math.max(radiusOf(row, r), Math.min(16, r.height / 2)),
+    // The row's contents ride in the glass, exactly where they'll sit, fading in
+    // so they're fully there as the shape lands
+    found: (row, glass) => {
+      const inner = row.cloneNode(true)
+      const { content } = buildDragCloneShell(row, inner)
+      const r = row.getBoundingClientRect()
+      inner.style.marginLeft = '0'
+      inner.style.width = r.width + 'px'
+      inner.style.background = 'transparent'
+      // (above the glass, not in it — the glass's shadow would fall on it)
+      copy = document.createElement('div')
+      copy.style.cssText = `position:absolute;margin:0;pointer-events:none;z-index:6;opacity:0;`
+      copy.appendChild(content)
+      footer.parentElement.appendChild(copy)
+      row.style.opacity = '0'
+      // the real row can't take a hover (the pointer's still there from Send)
+      // while it shows through the fading glass
+      row.style.pointerEvents = 'none'
+      rowEl = row
+    },
+    // The shape it lands as: the row as it looks long-pressed — a fully rounded
+    // pill, 8px in from the row at each side and 4px out above and below
+    rect: (row) => {
+      const r = row.getBoundingClientRect()
+      return { left: r.left + 8, right: r.right - 8, top: r.top - 4, bottom: r.bottom + 4, width: r.width - 16, height: r.height + 8 }
+    },
+    radius: (row, r) => r.height / 2,
+    frame: (row, genie, f) => {
+      if (!copy) return
+      place(copy, row.getBoundingClientRect())
+      copy.style.opacity = String(ease((f - 0.3) / 0.7))
+    },
     show: (row) => { row.style.opacity = '' },
+    // a quarter second in the long-pressed form before the glass goes
+    hold: 250,
+    // the copy stays over the row until the glass has faded off it
+    done: () => {
+      copy?.remove(); copy = null
+      // hover returns only once the pointer next moves
+      if (rowEl) {
+        const el = rowEl
+        const back = () => { el.style.pointerEvents = ''; window.removeEventListener('pointermove', back, true) }
+        window.addEventListener('pointermove', back, true)
+        setTimeout(back, 4000)
+      }
+    },
     reveal: true,
+    squish: true,
   })
 }
 
@@ -564,6 +674,7 @@ export function startSendToToast(footer) {
     radius: (toast, r) => radiusOf(toast, r),
     show: (toast) => { toast.style.opacity = '' },
     reveal: true,
+    squish: true,
   })
 }
 

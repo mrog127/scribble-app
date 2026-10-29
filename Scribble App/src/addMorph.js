@@ -18,17 +18,13 @@
 // rest, so the shape pours out of the pill (and back into it) with a pinched,
 // curving waist. Contents are clipped to that shape.
 
-// A gently under-damped spring: ~3% overshoot. SPEED scales the whole thing:
-// at 3.36 it takes 0.25s end to end, the genie's stagger included
-const SPEED = 3.36
-const ZETA = 0.75
-const OMEGA = 10.7
-const DURATION = 560 / SPEED
-const springAt = (t) => {
-  const s = (t * SPEED) / 1000
-  const wd = OMEGA * Math.sqrt(1 - ZETA * ZETA)
-  return 1 - Math.exp(-ZETA * OMEGA * s) * (Math.cos(wd * s) + (ZETA * OMEGA / wd) * Math.sin(wd * s))
-}
+// The motion: 0.4s end to end (each row's move, plus the genie's stagger),
+// starting fast and slowing into place on an ease-out curve (quartic — no
+// overshoot). LAG_SHARE is how much of the 0.4s is the stagger.
+const TOTAL_MS = 400
+const LAG_SHARE = 1 / 3
+const DURATION = TOTAL_MS * (1 - LAG_SHARE)
+const springAt = (t) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t / DURATION)), 4)
 const lerp = (a, b, p) => a + (b - a) * p
 const clamp01 = (x) => Math.max(0, Math.min(1, x))
 // Fades run on time, eased, not on the spring
@@ -252,7 +248,7 @@ function pageSnapshot(footer) {
 }
 
 // The genie: rows away from the pill lead, rows at the pill lag by up to LAG ms
-const LAG = 280 / SPEED
+const LAG = TOTAL_MS * LAG_SHARE
 const TOTAL = DURATION + LAG
 // The shape at time t, between rect `a` (radius ra) and rect `b` (radius rb).
 // `pillAt` is 'a' when the shape grows out of the pill (a = pill) or 'b' when it

@@ -351,12 +351,13 @@ export function rectShape(a, ra, b, rb, t, total = TOTAL, waist = 0) {
   corner(box.left + r, box.bottom - r, Math.PI / 2)
   side(box.left, box.bottom - r, box.top + r)
   corner(box.left + r, box.top + r, Math.PI)
-  // A waist: pinched in at its middle by `waist` of its width (an hourglass)
+  // Squeezed in at its top and bottom by `waist` of its width (a barrel),
+  // full width through the middle
   if (waist > 0) {
     const cx = (box.left + box.right) / 2
     for (const q of pts) {
       const v = (q[1] - box.top) / box.height
-      q[0] = cx + (q[0] - cx) * (1 - waist * Math.sin(Math.PI * clamp01(v)))
+      q[0] = cx + (q[0] - cx) * (1 - waist * (1 - Math.sin(Math.PI * clamp01(v))))
     }
   }
   return { box, pts, foot: { left: box.left, right: box.right, bottom: box.bottom } }
@@ -1110,7 +1111,7 @@ export function morphPageIn(page, row) {
     setClip(page, '')
     const to = page.getBoundingClientRect()
     // 32px corners all the way out (the page is square once it has landed)
-    // …pinched 20% in at its middle (an hourglass) halfway through
+    // …squeezed 20% in at its top and bottom halfway through
     const genie = rectShape(from, fromR, to, 32, t, PAGE_TOTAL, 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)

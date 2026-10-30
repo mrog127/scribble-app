@@ -1146,15 +1146,45 @@ export default function ActivePage({
     if (listCatCounts[cid] > domCatMax) { domCatMax = listCatCounts[cid]; domCatId = cid }
   }
   // Dark Dots header: one dot per easel with unchecked active list items, in the
-  // easel's colour, most items first. listCatCounts is already that count.
+  // easel's colour. Expanded (a card per easel) they run in the easel pages'
+  // order; collapsed (one consolidated list), most items first.
+  const easelOrder = (cid) => { const i = categories.findIndex(c => c.id === cid); return i < 0 ? Infinity : i }
   const activeDots = Object.entries(listCatCounts)
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => galleryExpanded ? easelOrder(a[0]) - easelOrder(b[0]) : b[1] - a[1])
     .map(([cid]) => {
       const idx = categories.findIndex(c => c.id === cid)
       const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
       const cat = idx >= 0 ? categories[idx] : null
       return { id: cid, name: cat?.name || '', icon: cat?.icon, accent: acc, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
     })
+
+  // When the order changes, the icons glide to their new places (FLIP)
+  const dotsRef = useRef(null)
+  const dotRectsRef = useRef(new Map())
+  const dotOrderKey = activeDots.map(d => d.id).join(',')
+  useLayoutEffect(() => {
+    const row = dotsRef.current
+    const prev = dotRectsRef.current
+    const next = new Map()
+    if (!row) { dotRectsRef.current = next; return }
+    const btns = [...row.querySelectorAll('[data-dot-id]')]
+    btns.forEach(b => {
+      b.style.transition = 'none'
+      b.style.transform = ''
+    })
+    btns.forEach(b => next.set(b.dataset.dotId, b.getBoundingClientRect().left))
+    dotRectsRef.current = next
+    const moved = btns.filter(b => prev.has(b.dataset.dotId) && Math.abs(prev.get(b.dataset.dotId) - next.get(b.dataset.dotId)) > 0.5)
+    if (!moved.length) { btns.forEach(b => { b.style.transition = '' }); return }
+    moved.forEach(b => { b.style.transform = `translateX(${prev.get(b.dataset.dotId) - next.get(b.dataset.dotId)}px)` })
+    void row.offsetWidth
+    moved.forEach(b => {
+      b.style.transition = 'transform 400ms cubic-bezier(0.22, 0.61, 0.36, 1)'
+      b.style.transform = ''
+    })
+    const t = setTimeout(() => btns.forEach(b => { b.style.transition = '' }), 450)
+    return () => clearTimeout(t)
+  }, [dotOrderKey])
 
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
   const decorationColor = domCatIdx >= 0 ? getCategoryAccent(domCatIdx).base : getHomeAccent().base
@@ -1195,12 +1225,13 @@ export default function ActivePage({
         <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
         <p className="active-month-date">{monthDate}</p>
         {activeDots.length > 0 && (
-          <div className={`active-dots${DATE_ROW_ICONS ? ' with-icons' : ''}`}>
+          <div ref={dotsRef} className={`active-dots${DATE_ROW_ICONS ? ' with-icons' : ''}`}>
             {activeDots.map(d => (
               DATE_ROW_ICONS
                 ? (
                   <button
                     key={d.id}
+                    data-dot-id={d.id}
                     type="button"
                     className="active-dot-btn"
                     aria-label={`Go to ${d.name}`}

@@ -1094,8 +1094,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     window.visualViewport?.addEventListener('resize', fit)
     return () => window.visualViewport?.removeEventListener('resize', fit)
   }, [attachMenu])
-  const attachableNotes = (project?.notes || []).filter(n => !n.archived && String(n.id) !== String(note?.id))
-  const attachableLinks = (project?.links || []).filter(l => !l.archived)
+  // Anything already in the note isn't offered again
+  const inNote = useMemo(() => {
+    const out = { note: new Set(), links: new Set() }
+    embeds.forEach(e => e.ids.forEach(id => out[e.type === 'note' ? 'note' : 'links'].add(String(id))))
+    return out
+  }, [embeds])
+  const attachableNotes = (project?.notes || []).filter(n => !n.archived && String(n.id) !== String(note?.id) && !inNote.note.has(String(n.id)))
+  const attachableLinks = (project?.links || []).filter(l => !l.archived && !inNote.links.has(String(l.id)))
 
   // A photo shows a trash button in its top-right corner while it's hovered
   // (mouse) or after it's tapped (touch) — the only way to delete it
@@ -2438,7 +2444,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
             </button>
           </>)}
           {attachMenu === 'note' && (attachableNotes.length === 0
-            ? <div className="todo-attach-empty">No other notes in this canvas</div>
+            ? <div className="todo-attach-empty">No other notes to attach</div>
             : attachableNotes.map(n => {
               const preview = notePreviewOf(n.editorHTML)
               return (
@@ -2450,7 +2456,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
               )
             }))}
           {attachMenu === 'link' && (attachableLinks.length === 0
-            ? <div className="todo-attach-empty">No links in this canvas</div>
+            ? <div className="todo-attach-empty">No other links to attach</div>
             : attachableLinks.map(l => (
               <button key={l.id} type="button" className="todo-attach-item" onMouseDown={e => e.preventDefault()}
                 onClick={() => { setAttachMenu(null); insertEmbed('link', l.id) }}>

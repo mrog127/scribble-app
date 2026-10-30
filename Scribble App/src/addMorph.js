@@ -1092,13 +1092,16 @@ export function morphPageIn(page, row) {
     page.style.transform = fit(to, box)
     setClip(page, clipFor(inset(pts, box, 2), box, to))
     const f = t / TOTAL
-    // the row's contents stretch with the shape as they go
-    const sx = box.width / from.width, sy = box.height / from.height
-    face.style.transform = `translate(${(faceRect.left - from.left) * sx}px, ${(faceRect.top - from.top) * sy}px) scale(${sx}, ${sy})`
-    face.style.opacity = String(1 - ease(f / 0.35))
+    // the row's contents stay where they are (unstretched) and fade over the
+    // first third
+    face.style.transform = `translate(${faceRect.left - box.left}px, ${faceRect.top - box.top}px)`
+    face.style.opacity = String(1 - ease(f * 3))
     // the page's contents come in over the last third
     kids.forEach(k => { k.style.opacity = String(ease((f - 2 / 3) * 3)) })
-    glass.solid(clamp01((f - 2 / 3) * 3))
+    const k = clamp01((f - 2 / 3) * 3)
+    glass.solid(k)
+    // a drop shadow under the growing pill, gone by the end
+    glass.el.style.filter = `drop-shadow(0 6px 24px rgba(0, 0, 0, ${(0.2 * (1 - k)).toFixed(3)}))`
     if (t >= TOTAL) { finish(); return }
     raf = requestAnimationFrame(frame)
   }
@@ -1171,14 +1174,17 @@ export function morphPageOut(page, row) {
     copy.style.transform = fit(from, box)
     setClip(copy, clipFor(inset(pts, box, 2), box, from))
     const f = t / TOTAL
-    const sx = box.width / to.width, sy = box.height / to.height
     const rr = row.getBoundingClientRect()
-    face.style.transform = `translate(${(rr.left - to.left) * sx}px, ${(rr.top - to.top) * sy}px) scale(${sx}, ${sy})`
-    // the page's solid background gives way to glass over the first third
-    glass.solid(1 - clamp01(f * 3))
+    face.style.transform = `translate(${rr.left - box.left}px, ${rr.top - box.top}px)`
+    // the page's solid background gives way to glass (and its shadow) over the
+    // first third
+    const k = 1 - clamp01(f * 3)
+    glass.solid(k)
+    glass.el.style.filter = `drop-shadow(0 6px 24px rgba(0, 0, 0, ${(0.2 * (1 - k)).toFixed(3)}))`
     // and go over the first third
     kids.forEach(k => { k.style.opacity = String(1 - ease(f * 3)) })
-    face.style.opacity = String(ease((f - 0.4) / 0.5))
+    // the row's contents, in place, fade back in over the last third
+    face.style.opacity = String(ease((f - 2 / 3) * 3))
     if (t >= TOTAL) { finish(); return }
     raf = requestAnimationFrame(frame)
   }

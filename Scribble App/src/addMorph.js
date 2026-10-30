@@ -1078,7 +1078,7 @@ export function morphPageIn(page, row) {
   const fromR = from.height / 2
   const kids = [...page.children]
   kids.forEach(k => { k.style.opacity = '0' })
-  // the page behind fades away by two thirds of the way
+  // the page behind fades away in the first quarter
   const phoneEl = page.closest('.phone') || document.getElementById('app')
   const behind = phoneEl ? findPage(phoneEl) : null
   if (behind) behind.style.transition = 'none'
@@ -1105,7 +1105,7 @@ export function morphPageIn(page, row) {
     // first third
     face.style.transform = `translate(${faceRect.left - box.left}px, ${faceRect.top - box.top}px)`
     face.style.opacity = String(1 - ease(f * 3))
-    if (behind) behind.style.opacity = String(1 - clamp01(f * 1.5))
+    if (behind) behind.style.opacity = String(1 - clamp01(f * 4))
     // the page's contents come in over the second half
     kids.forEach(k => { k.style.opacity = String(ease((f - 0.5) * 2)) })
     const k = clamp01((f - 2 / 3) * 3)
@@ -1171,7 +1171,7 @@ export function morphPageOut(page, row) {
   face.style.opacity = '0'
   glass.el.appendChild(face)
   const kids = [...copy.children]
-  // the page behind comes back over the last two thirds
+  // the page behind comes back over the last quarter
   const phoneEl = home.closest('.phone') || home
   const behind = findPage(phoneEl)
   if (behind) { behind.style.transition = 'none'; behind.style.opacity = '0' }
@@ -1198,7 +1198,7 @@ export function morphPageOut(page, row) {
     glass.el.style.filter = `drop-shadow(0 6px 24px rgba(0, 0, 0, ${(0.2 * (1 - k)).toFixed(3)}))`
     // and go over the first half
     kids.forEach(k => { k.style.opacity = String(1 - ease(f * 2)) })
-    if (behind) behind.style.opacity = String(clamp01((f - 1 / 3) * 1.5))
+    if (behind) behind.style.opacity = String(clamp01((f - 0.75) * 4))
     // the row's contents, in place, fade back in over the last third
     face.style.opacity = String(ease((f - 2 / 3) * 3))
     if (t >= TOTAL) { finish(); return }

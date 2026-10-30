@@ -1036,6 +1036,18 @@ export default function ActivePage({
       .then(({ error }) => { if (error) console.error('[gallery] saving expanded/collapsed failed', error) })
   }, [])
 
+  // A date-row icon scrolls to its Easel's card (the cards are the expanded
+  // Gallery's, so a collapsed Gallery expands first)
+  const scrollToEaselCard = useCallback((id) => {
+    const go = (tries = 0) => {
+      const el = document.querySelector(`.home-page .easel-card-wrap[data-easel-id="${CSS.escape(String(id))}"]`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      else if (tries < 20) setTimeout(() => go(tries + 1), 30)
+    }
+    if (!galleryExpandedRef.current) { toggleGalleryExpanded(); setTimeout(go, 30) }
+    else go()
+  }, [toggleGalleryExpanded])
+
   const { categories, inbox, toggleProjectTodo, deleteProjectTodo, deleteProjectNote, deleteProjectLink, toggleProjectTodoActivated, toggleProjectNoteActivated, toggleProjectLinkActivated, reorderPinnedProjects } = useAppContext()
   const inboxCount = inbox ? inbox.todos.length + inbox.notes.length + inbox.links.length : 0
 
@@ -1186,7 +1198,18 @@ export default function ActivePage({
           <div className={`active-dots${DATE_ROW_ICONS ? ' with-icons' : ''}`}>
             {activeDots.map(d => (
               DATE_ROW_ICONS
-                ? <EaselBadge key={d.id} name={d.name} icon={d.icon} accent={d.accent} />
+                ? (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className="active-dot-btn"
+                    aria-label={`Go to ${d.name}`}
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => scrollToEaselCard(d.id)}
+                  >
+                    <EaselBadge name={d.name} icon={d.icon} accent={d.accent} />
+                  </button>
+                )
                 : <span key={d.id} className="active-dot" style={{ background: d.color }} />
             ))}
           </div>
@@ -1280,6 +1303,7 @@ export default function ActivePage({
           <div
             key={cat.id}
             className="easel-card-wrap"
+            data-easel-id={cat.id}
             style={{ '--accent-base': accent.base, '--accent-dark': accent.dark, '--accent-light': accent.light, '--accent-base-rgb': accent.baseRgb }}
           >
             <GalleryCanvas category={cat} easelCard />

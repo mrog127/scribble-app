@@ -14820,3 +14820,19 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head :is(.todo-detail-title, .todo-detail-comment):focus::before { display: none; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head.editing .todo-detail-title { padding-left: 16px; padding-right: 16px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head.editing .todo-detail-comment { padding-left: 20px; padding-right: 16px; }
+
+/* Gallery date row: each Easel icon is a button that scrolls to that Easel's
+   card, landing 16px below the top of the screen */
+.active-dots .active-dot-btn {
+  display: inline-flex;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease;
+}
+.active-dots .active-dot-btn:active { transform: scale(0.9); }
+.home-page .easel-card-wrap { scroll-margin-top: calc(env(safe-area-inset-top) + 16px); }

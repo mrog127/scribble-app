@@ -453,7 +453,18 @@ function cardFace(card, r) {
   scope.appendChild(c)
   return scope
 }
-const faceOf = (el, r) => (el.matches?.('.card') ? cardFace(el, r) : buttonFace(el, r))
+// The add item pill's face is just its row of icons (its other children — the
+// field, the press highlight — drew a stray box over them when copied)
+function pillFace(pill, r) {
+  const icons = pillIcons(pill, r)
+  if (!icons) return null
+  const wrap = document.createElement('div')
+  wrap.style.cssText = `position:absolute;left:0;top:0;width:${r.width}px;height:${r.height}px;margin:0;pointer-events:none;opacity:1;z-index:2;`
+  wrap.appendChild(icons)
+  return wrap
+}
+const faceOf = (el, r) => (el.matches?.('.card') ? cardFace(el, r)
+  : (el.matches?.('.add-stack') && pillFace(el, r)) || buttonFace(el, r))
 
 export function startAddMorph(fromEl, footerEl) {
   if (!fromEl) return

@@ -433,6 +433,28 @@ function buttonFace(btn, r) {
   return face
 }
 
+// A canvas card's face: a copy of the whole card (its contents in its own
+// layout), with the page's classes and its colours around it so it looks as it
+// does in place
+function cardFace(card, r) {
+  const scope = document.createElement('div')
+  const srcPage = card.closest('.page, .note-detail-page')
+  scope.className = srcPage ? [...srcPage.classList].filter(c => c === 'home-page' || c === 'category-page' || c === 'note-detail-page').join(' ') : ''
+  scope.style.cssText = `position:absolute;left:0;top:0;width:${r.width}px;height:${r.height}px;margin:0;padding:0;border:none;background:none;box-shadow:none;pointer-events:none;z-index:2;overflow:hidden;transform:none;opacity:1;inset:auto;display:block;-webkit-mask-image:none;mask-image:none;`
+  const cs = getComputedStyle(card)
+  ;['--accent-base', '--accent-dark', '--accent-light', '--accent-base-rgb'].forEach(v => {
+    const val = cs.getPropertyValue(v)
+    if (val) scope.style.setProperty(v, val.trim())
+  })
+  const c = card.cloneNode(true)
+  c.removeAttribute('id')
+  c.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'))
+  c.style.cssText += ';position:relative;margin:0;width:100%;height:100%;box-shadow:none;transform:none;animation:none;transition:none;opacity:1;'
+  scope.appendChild(c)
+  return scope
+}
+const faceOf = (el, r) => (el.matches?.('.card') ? cardFace(el, r) : buttonFace(el, r))
+
 export function startAddMorph(fromEl, footerEl) {
   if (!fromEl) return
   const footer = footerEl || fromEl.closest('.footer')
@@ -456,7 +478,7 @@ export function startAddMorph(fromEl, footerEl) {
   let icons = pillIcons(pillEl, from)
   // A plain button: its own face fades out instead of the pill's icons
   if (!icons) {
-    icons = buttonFace(pillEl, from)
+    icons = faceOf(pillEl, from)
     pr = from
   }
   if (icons) ghost.appendChild(icons)
@@ -666,7 +688,7 @@ const radiusOf = (el, r) => Math.min(parseFloat(getComputedStyle(el).borderTopLe
 // Cancel: call just before Add item closes. The box pours back into the pill,
 // whose icons fade in riding down with it.
 export function startAddMorphClose(footer) {
-  // Opened from a card's plus: back into that button, its face fading in
+  // Opened from a card's plus: back into that card, its face fading in
   const btn = origin
   origin = null
   if (btn && btn.isConnected && btn.getBoundingClientRect().width) {
@@ -675,7 +697,7 @@ export function startAddMorphClose(footer) {
       find: () => (btn.isConnected ? btn : null),
       found: (b, glass) => {
         const r = b.getBoundingClientRect()
-        face = buttonFace(b, r)
+        face = faceOf(b, r)
         face.style.opacity = '0'
         glass.el.appendChild(face)
         // the glass takes on the button's own colours as it arrives
@@ -883,7 +905,7 @@ const originRect = (o) => (o.el && o.el.isConnected ? o.el.getBoundingClientRect
 const originRadius = (o, r) => (o.el && o.el.isConnected ? cornerOf(o.el, r) : (o.radius || Math.min(r.height / 2, 16)))
 const panels = new WeakMap()
 
-export function morphPanelIn(panel, origin) {
+export function morphPanelIn(panel, origin, { squeeze = 0 } = {}) {
   if (!panel || !origin || reducedMotion()) return
   panels.get(panel)?.finish()
   const parent = panel.parentElement
@@ -898,7 +920,7 @@ export function morphPanelIn(panel, origin) {
   let face = null
   if (origin.el && origin.el.isConnected) {
     const r = origin.el.getBoundingClientRect()
-    face = buttonFace(origin.el, r)
+    face = faceOf(origin.el, r)
     glass.el.appendChild(face)
   }
   const kids = [...panel.children]
@@ -921,7 +943,9 @@ export function morphPanelIn(panel, origin) {
     setClip(panel, '')
     const to = panel.getBoundingClientRect()
     const toR = cornerOf(panel, to)
-    const genie = genieShape(from, fromR, to, toR, t, 'a')
+    let genie = genieShape(from, fromR, to, toR, t, 'a')
+    // (narrowed about its middle by `squeeze` halfway through, then back out)
+    if (squeeze) genie = squish(genie, 1 - squeeze * Math.sin(Math.PI * clamp01(t / TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
     panel.style.transformOrigin = '0 0'
@@ -961,7 +985,7 @@ export function morphPanelIn(panel, origin) {
 // Close `panel` back into its origin. Call just before it closes; the real one
 // is hidden at once (`keepClass` is the class that holds it open, kept on the
 // copy). `host` is where the copy lives (it must outlast the panel).
-export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) {
+export function morphPanelOut(panel, origin, { keepClass = 'open', host, squeeze = 0 } = {}) {
   if (!panel || !origin || reducedMotion()) return false
   panels.get(panel)?.finish()
   const from = panel.getBoundingClientRect()
@@ -987,7 +1011,7 @@ export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) 
   let face = null
   if (origin.el && origin.el.isConnected) {
     const r = origin.el.getBoundingClientRect()
-    face = buttonFace(origin.el, r)
+    face = faceOf(origin.el, r)
     face.style.opacity = '0'
     glass.el.appendChild(face)
   }
@@ -1001,7 +1025,8 @@ export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) 
     const t = now - t0
     const to = originRect(origin)
     const toR = originRadius(origin, to)
-    const genie = genieShape(from, fromR, to, toR, t, 'b')
+    let genie = genieShape(from, fromR, to, toR, t, 'b')
+    if (squeeze) genie = squish(genie, 1 - squeeze * Math.sin(Math.PI * clamp01(t / TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
     copy.style.transform = fit(from, box)

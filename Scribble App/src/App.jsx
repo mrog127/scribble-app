@@ -583,11 +583,22 @@ function AppInner() {
   useLayoutEffect(() => {
     if (pageMenuOpen === pageMenuWasOpen.current) return
     pageMenuWasOpen.current = pageMenuOpen
+    // The menu grows out of the bar's add item pill (and folds back into it),
+    // while the easel button itself becomes the "Add new easel" pill, with a
+    // 10% squeeze through the middle of the move
     const menu = document.querySelector('.card-context-menu.mbar-page-menu')
     const btn = document.querySelector('.mbar-circle.mbar-gallery')
-    if (!menu || !btn || !btn.getBoundingClientRect().width) return
-    if (pageMenuOpen) morphPanelIn(menu, { el: btn })
-    else morphPanelOut(menu, { el: btn })
+    const pill = document.querySelector('.footer .add-row > .link-input-stack.add-stack') || document.querySelector('.add-stack')
+    const easelPill = document.querySelector('.mbar-easel-wrap .easel-stack')
+    const from = pill && pill.getBoundingClientRect().width ? pill : btn
+    if (menu && from && from.getBoundingClientRect().width) {
+      if (pageMenuOpen) morphPanelIn(menu, { el: from })
+      else morphPanelOut(menu, { el: from })
+    }
+    if (isPhoneLayout() && easelPill && btn && btn.getBoundingClientRect().width) {
+      if (pageMenuOpen) morphPanelIn(easelPill, { el: btn }, { squeeze: 0.1 })
+      else morphPanelOut(easelPill, { el: btn }, { squeeze: 0.1, host: document.getElementById('app') })
+    }
   }, [pageMenuOpen])
   // "Add new easel" row at the foot of the page menu
   const [addEaselOpen, setAddEaselOpen] = useState(false)
@@ -1166,9 +1177,10 @@ function AppInner() {
       setToolbarType(target.type)
       // Add item grows out of the plus that was pressed (and Cancel pours back
       // into it)
+      // (out of the whole card the plus sits in, not the button)
       const btn = recentlyPressed()
       const bar = document.querySelector('.add-stack')?.closest('.footer')
-      if (btn && bar && !bar.classList.contains('add-open')) startAddMorph(btn, bar)
+      if (btn && bar && !bar.classList.contains('add-open')) startAddMorph(btn.closest('.card') || btn, bar)
       inputRef.current?.focus()
     })
   }, [registerComposeHandler])

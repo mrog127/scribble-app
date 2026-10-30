@@ -1051,7 +1051,7 @@ function pageGlass(page, z) {
   // on the open add-item box and the menus
   const glass = makeGlass(sample, z, { stroke: ['rgba(255, 255, 255, 0.3)', 'rgba(0, 0, 0, 0.16)'] })
   glass.tintTo(page)
-  const behind = phone ? findPage(phone) : null
+  const behind = pageBehind(phone)
   if (behind) glass.backdrop(behind)
   const stroke = glass.el.querySelector('svg')
   // 0 = all glass, 1 = all page
@@ -1062,6 +1062,8 @@ function pageGlass(page, z) {
   return { ...glass, solid }
 }
 const pageMorphs = new WeakMap()
+// The page under the item page: the active one
+const pageBehind = (phone) => phone ? (phone.querySelector('.page.active:not(.drag-incoming)') || findPage(phone)) : null
 
 export function morphPageIn(page, row) {
   if (!page || !row || !row.isConnected || reducedMotion()) return false
@@ -1080,7 +1082,7 @@ export function morphPageIn(page, row) {
   kids.forEach(k => { k.style.opacity = '0' })
   // the page behind fades away in the first quarter
   const phoneEl = page.closest('.phone') || document.getElementById('app')
-  const behind = phoneEl ? findPage(phoneEl) : null
+  const behind = pageBehind(phoneEl)
   if (behind) behind.style.transition = 'none'
   const t0 = performance.now()
   let raf = 0, done = false
@@ -1105,7 +1107,9 @@ export function morphPageIn(page, row) {
     // first third
     face.style.transform = `translate(${faceRect.left - box.left}px, ${faceRect.top - box.top}px)`
     face.style.opacity = String(1 - ease(f * 3))
+    // (and the blurred copy of it the glass shows, with it)
     if (behind) behind.style.opacity = String(1 - clamp01(f * 4))
+    glass.backdropOpacity(1 - clamp01(f * 4))
     // the page's contents come in over the second half
     kids.forEach(k => { k.style.opacity = String(ease((f - 0.5) * 2)) })
     const k = clamp01((f - 2 / 3) * 3)
@@ -1173,7 +1177,7 @@ export function morphPageOut(page, row) {
   const kids = [...copy.children]
   // the page behind comes back over the last quarter
   const phoneEl = home.closest('.phone') || home
-  const behind = findPage(phoneEl)
+  const behind = pageBehind(phoneEl)
   if (behind) { behind.style.transition = 'none'; behind.style.opacity = '0' }
   const t0 = performance.now()
   let raf = 0, done = false
@@ -1199,6 +1203,7 @@ export function morphPageOut(page, row) {
     // and go over the first half
     kids.forEach(k => { k.style.opacity = String(1 - ease(f * 2)) })
     if (behind) behind.style.opacity = String(clamp01((f - 0.75) * 4))
+    glass.backdropOpacity(clamp01((f - 0.75) * 4))
     // the row's contents, in place, fade back in over the last third
     face.style.opacity = String(ease((f - 2 / 3) * 3))
     if (t >= TOTAL) { finish(); return }

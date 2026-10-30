@@ -12,12 +12,15 @@ import { useScrollable } from '../useScrollable.js'
 import MoveToCard from './MoveToCard.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
 import { useTheme } from '../useTheme.js'
-import { FileIcon as FeatherFileIcon } from './FeatherIcons.jsx'
+import { FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon } from './FeatherIcons.jsx'
+import { LinkGridCard, NoteRowContent } from './ProjectCard.jsx'
+import { NoteRowIcon } from './TodoDetailPage.jsx'
 import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
 import { useCardHostsDetail } from '../detailLock.jsx'
 import { uploadNoteImage } from '../noteImages.js'
+import { functionsUrl, functionsKey } from '../supabaseClient'
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -26,8 +29,11 @@ function escapeHtml(str) {
 // A note's HTML as it's saved: a photo still uploading (its src a local blob:
 // URL) is left out until its upload lands and swaps in the real URL
 function serializeNote(content) {
-  if (!content.querySelector('img[data-pending], .note-photo-trash')) return content.innerHTML
+  if (!content.querySelector('img[data-pending], .note-photo-trash, .style-embed')) return content.innerHTML
   const copy = content.cloneNode(true)
+  // An attached note or link block is saved as just its shell (which item(s));
+  // what it shows is drawn from the live note / link each time
+  copy.querySelectorAll('.note-para.style-embed').forEach(b => { b.innerHTML = ''; b.classList.remove('show-x') })
   copy.querySelectorAll('img[data-pending]').forEach(img => (img.closest('.note-para') || img).remove())
   copy.querySelectorAll('.note-photo-trash').forEach(b => b.remove())
   copy.querySelectorAll('.style-image.show-trash').forEach(p => p.classList.remove('show-trash'))
@@ -36,14 +42,87 @@ function serializeNote(content) {
 
 const TRASH_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
 
-// The media button's icon: a photo frame, 2pt
+// The attach button's icon: a paperclip, 2pt
 function MediaIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    </svg>
+  )
+}
+// The Photo row's icon in the attach menu: a photo frame
+function PhotoIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
       <circle cx="8.5" cy="8.5" r="1.5"/>
       <polyline points="21 15 16 10 5 21"/>
     </svg>
+  )
+}
+const EMBED_X_SVG = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+)
+
+// A note's text, for the note picker: everything after its title, flattened
+function notePreviewOf(html) {
+  if (!html) return ''
+  const d = document.implementation.createHTMLDocument('').createElement('div')
+  d.innerHTML = html
+  const paras = [...d.querySelectorAll('.note-para')].slice(1)
+  return paras.map(p => p.textContent.trim()).filter(Boolean).join(' ').slice(0, 120)
+}
+
+// An attached note or link(s) inside a note (drawn into its block, which is
+// part of the editable text): a note shows as its row on a light grey card;
+// links as link tiles, in columns as in a canvas card. Editing, a hover or tap
+// shows the photo's X, which takes it out; otherwise it opens like any row or
+// tile does.
+function NoteEmbedBlock({ type, ids, project, categoryId, projectId, editing, onRemove, onOpenNote, onOpenLink }) {
+  const [xFor, setXFor] = useState(null)   // touch: the item whose X is showing
+  useEffect(() => { if (!editing) setXFor(null) }, [editing])
+  const item = (id, children, extraClass) => (
+    <div
+      key={id}
+      className={`note-embed-item${extraClass ? ' ' + extraClass : ''}${xFor === id ? ' show-x' : ''}`}
+      // Editing, a tap shows its X (a second one hides it) and opens nothing
+      onClickCapture={e => {
+        if (!editing) return
+        if (e.target.closest?.('.note-embed-x')) return
+        e.preventDefault(); e.stopPropagation()
+        setXFor(v => (v === id ? null : id))
+      }}
+    >
+      {children}
+      {editing && (
+        <button
+          type="button"
+          className="note-photo-trash note-embed-x"
+          aria-label="Remove"
+          onMouseDown={e => e.preventDefault()}
+          onClick={e => { e.stopPropagation(); setXFor(null); onRemove(id) }}
+        >{EMBED_X_SVG}</button>
+      )}
+    </div>
+  )
+  if (type === 'note') {
+    const n = project?.notes.find(x => String(x.id) === String(ids[0]))
+    if (!n) return null
+    return item(ids[0], (
+      <div className="note-row note-embed-note" onClick={() => onOpenNote(n.id)}>
+        <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}><NoteRowIcon activated={n.activated}/></div>
+        <div className="item-content"><NoteRowContent note={n}/></div>
+      </div>
+    ))
+  }
+  const links = ids.map(id => project?.links.find(l => String(l.id) === String(id))).filter(Boolean)
+  if (!links.length) return null
+  return (
+    <div className="link-grid note-embed-links">
+      {links.map(l => item(l.id, (
+        <LinkGridCard link={l} categoryId={categoryId} projectId={projectId} onOpenPage={() => onOpenLink(l.id)}/>
+      ), 'link-grid-cell'))}
+    </div>
   )
 }
 
@@ -253,7 +332,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // Archived notes (or notes in an archived canvas) are read-only: no editing, no footer.
   const hasFooter = !!projectName && typeof onToggleActive === 'function' && !archived
   const { categories, moveProjectNote, autoEditNoteId, setAutoEditNoteId,
-    promptDelete, deleteProjectNote, archiveProjectNote, unarchiveProjectNote, isInboxId } = useAppContext()
+    promptDelete, deleteProjectNote, archiveProjectNote, unarchiveProjectNote, isInboxId, setOpenDetail,
+    addProjectLink, updateProjectLink } = useAppContext()
   // An Inbox note's page is a reduced one: Delete is its menu's only option
   const inInbox = isInboxId(categoryId)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -750,7 +830,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const first = content.querySelector('.note-para')
     // A selection across several lines: every one of them takes the style
     // (all but the title, whose style is fixed)
-    const selected = getSelectedParas().filter(p => p !== first && !p.classList.contains('style-image'))
+    const selected = getSelectedParas().filter(p => p !== first && !p.classList.contains('style-image') && !p.classList.contains('style-embed'))
     if (selected.length > 1 || (selected.length === 1 && getSelectedParas().length > 1)) {
       selected.forEach(p => { if (!/style-/.test(p.className) || !p.classList.contains('style-' + style)) p.className = 'note-para style-' + style })
       setCurrentStyle(style)
@@ -760,7 +840,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
     const target = getCursorPara() || lastCursorParaRef.current || content.querySelector('.note-para:last-of-type')
     // The title line's style is fixed — the tap does nothing at all.
-    if (target && (target === first || target.classList.contains('style-image'))) return
+    if (target && (target === first || target.classList.contains('style-image') || target.classList.contains('style-embed'))) return
     setCurrentStyle(style)
     updateStyleIndicator(style)
     if (target && content.contains(target)) target.className = 'note-para style-' + style
@@ -779,9 +859,11 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (content && sel && sel.rangeCount && content.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
   }, [])
 
-  const insertImage = useCallback((file) => {
+  // Put a block (a photo, an attached note or links) in at the caret as its own
+  // line. Returns the line the caret moves to after it, and any empty line made
+  // just to hold the caret.
+  const placeBlock = useCallback((photo) => {
     const content = contentRef.current
-    if (!content || !file) return
     const paraOf = (node) => {
       let n = node
       while (n && n !== content && !(n.nodeType === 1 && n.classList?.contains('note-para'))) n = n.parentNode
@@ -793,18 +875,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     let cur = range && content.contains(range.startContainer) ? paraOf(range.startContainer) : null
     if (!cur && lastCursorParaRef.current && content.contains(lastCursorParaRef.current)) cur = lastCursorParaRef.current
     if (!cur) cur = [...content.querySelectorAll('.note-para')].pop() || null
-
-    const blobUrl = URL.createObjectURL(file)
-    const photo = document.createElement('div')
-    photo.className = 'note-para style-image'
-    photo.contentEditable = 'false'
-    const img = document.createElement('img')
-    img.alt = ''
-    img.decoding = 'async'   // decoded off the main thread, and only when scrolled near
-    img.loading = 'lazy'
-    img.src = blobUrl
-    img.dataset.pending = '1'
-    photo.appendChild(img)
+    const isBlock = (p) => p.classList.contains('style-image') || p.classList.contains('style-embed')
 
     // The line the caret lands on, after the photo
     let after
@@ -813,10 +884,10 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (!cur) {
       content.appendChild(photo)
       after = bodyLine(); photo.after(after)
-    } else if (cur === first || !range || cur.classList.contains('style-image')) {
+    } else if (cur === first || !range || isBlock(cur)) {
       // On the title (or with no caret): the photo goes on the next line
       cur.after(photo)
-      after = photo.nextElementSibling?.classList.contains('note-para') && !photo.nextElementSibling.classList.contains('style-image')
+      after = photo.nextElementSibling?.classList.contains('note-para') && !isBlock(photo.nextElementSibling)
         ? photo.nextElementSibling : null
       if (!after) { after = bodyLine(); photo.after(after) }
     } else {
@@ -850,6 +921,24 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     sel.addRange(r)
     lastCursorParaRef.current = after
     requestAnimationFrame(() => photo.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+    return { after, addedLine }
+  }, [])
+
+  const insertImage = useCallback((file) => {
+    const content = contentRef.current
+    if (!content || !file) return
+    const blobUrl = URL.createObjectURL(file)
+    const photo = document.createElement('div')
+    photo.className = 'note-para style-image'
+    photo.contentEditable = 'false'
+    const img = document.createElement('img')
+    img.alt = ''
+    img.decoding = 'async'   // decoded off the main thread, and only when scrolled near
+    img.loading = 'lazy'
+    img.src = blobUrl
+    img.dataset.pending = '1'
+    photo.appendChild(img)
+    const { addedLine } = placeBlock(photo)
 
     uploadNoteImage(file).then(url => {
       const done = () => {
@@ -870,7 +959,124 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       URL.revokeObjectURL(blobUrl)
       window.alert("Couldn't add that photo. Please try again.")
     })
+  }, [flushAutosave, placeBlock])
+
+  // ---- Attachments: a note or a link from this note's canvas, put in like a
+  // photo. Links put in one after another (no line between) share one block,
+  // laid out in columns as in a canvas card. ----
+  const project = useMemo(() => (
+    categories.find(c => c.id === categoryId)?.projects.find(p => p.id === projectId) || null
+  ), [categories, categoryId, projectId])
+  const idsOf = (el) => (el?.dataset.ids || '').split(',').filter(Boolean)
+  const [embeds, setEmbeds] = useState([])
+  const embedSigRef = useRef('')
+  const rescanEmbeds = useCallback(() => {
+    const content = contentRef.current
+    const list = content ? [...content.querySelectorAll('.note-para.style-embed[data-embed]')] : []
+    const sig = list.map(el => el.dataset.embed + ':' + el.dataset.ids).join('|')
+    // (the same blocks as before — nothing to redraw)
+    if (sig === embedSigRef.current && list.every(el => embeds.some(e => e.el === el))) return
+    embedSigRef.current = sig
+    setEmbeds(list.map((el, i) => ({ el, key: i + ':' + el.dataset.embed, type: el.dataset.embed, ids: idsOf(el) })))
+  }, [embeds])
+  const rescanRef = useRef(rescanEmbeds)
+  rescanRef.current = rescanEmbeds
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+    rescanRef.current()
+    const isEmbed = (n) => n.nodeType === 1 && (n.classList?.contains('style-embed') || n.querySelector?.('.style-embed'))
+    const mo = new MutationObserver(muts => {
+      if (muts.some(m => m.type === 'attributes' || [...m.addedNodes, ...m.removedNodes].some(isEmbed))) rescanRef.current()
+    })
+    mo.observe(content, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ids'] })
+    return () => mo.disconnect()
+  }, [note?.id])
+
+  const insertEmbed = useCallback((type, id) => {
+    const content = contentRef.current
+    if (!content || id == null) return
+    const block = document.createElement('div')
+    block.className = 'note-para style-embed'
+    block.contentEditable = 'false'
+    block.dataset.embed = type === 'link' ? 'links' : 'note'
+    block.dataset.ids = String(id)
+    placeBlock(block)
+    // A link right after (or before) a block of links joins it
+    if (type === 'link') {
+      const prev = block.previousElementSibling
+      const next = block.nextElementSibling
+      if (prev?.dataset?.embed === 'links') { prev.dataset.ids = [...idsOf(prev), String(id)].join(','); block.remove() }
+      else if (next?.dataset?.embed === 'links') { next.dataset.ids = [String(id), ...idsOf(next)].join(','); block.remove() }
+    }
+    rescanRef.current()
+    flushAutosave()
+  }, [placeBlock, flushAutosave])
+
+  const removeEmbed = useCallback((el, id) => {
+    const left = idsOf(el).filter(x => x !== String(id))
+    if (left.length) el.dataset.ids = left.join(',')
+    else el.remove()
+    rescanRef.current()
+    flushAutosave()
   }, [flushAutosave])
+
+  // A pasted link (just a link, nothing else) becomes a link in this canvas and
+  // goes in on its own line as its tile — titled, once the page is looked up,
+  // with that page's own title
+  const pasteLink = useCallback((raw) => {
+    if (!project) return false
+    const url = /^www\./i.test(raw) ? 'https://' + raw : raw
+    const sel = window.getSelection()
+    const content = contentRef.current
+    if (sel && sel.rangeCount && content?.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
+    const holder = { realId: null, title: null }
+    // (renamed once both the saved link and the page's title are in)
+    const finishTitle = () => {
+      if (holder.realId != null && holder.title) updateProjectLink(categoryId, projectId, holder.realId, holder.title, url)
+    }
+    const tempId = addProjectLink(categoryId, projectId, url, url, false, null, (realId) => {
+      // the block names the link by its temporary id until the save comes back
+      const c = contentRef.current || autosaveElRef.current
+      c?.querySelectorAll('.note-para.style-embed[data-embed="links"]').forEach(b => {
+        const ids = idsOf(b)
+        if (ids.includes(String(tempId))) b.dataset.ids = ids.map(x => (x === String(tempId) ? String(realId) : x)).join(',')
+      })
+      holder.realId = realId
+      flushAutosave()
+      finishTitle()
+    })
+    insertEmbed('link', tempId)
+    fetch(`${functionsUrl}/link-preview?url=${encodeURIComponent(url)}`, { headers: { apikey: functionsKey } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        const t = data && typeof data.title === 'string' ? data.title.trim() : ''
+        if (!t) return
+        holder.title = t
+        finishTitle()
+      })
+      .catch(() => {})
+    return true
+  }, [project, categoryId, projectId, addProjectLink, updateProjectLink, insertEmbed, flushAutosave])
+
+  const pasteLinkRef = useRef(pasteLink)
+  pasteLinkRef.current = pasteLink
+
+  // The attach menu: Photo, Link, Note — Link / Note turn it into the list of
+  // this canvas's links / other notes to pick from
+  const [attachMenu, setAttachMenu] = useState(null)   // null | 'root' | 'link' | 'note'
+  useEffect(() => {
+    if (!attachMenu) return
+    const onDown = (e) => {
+      if (e.target instanceof Element && e.target.closest('.note-attach-menu, .note-attach-btn')) return
+      setAttachMenu(null)
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [attachMenu])
+  useEffect(() => { if (!editing) setAttachMenu(null) }, [editing])
+  const attachableNotes = (project?.notes || []).filter(n => !n.archived && String(n.id) !== String(note?.id))
+  const attachableLinks = (project?.links || []).filter(l => !l.archived)
 
   // A photo shows a trash button in its top-right corner while it's hovered
   // (mouse) or after it's tapped (touch) — the only way to delete it
@@ -1070,7 +1276,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   // carries on highlighted. ----
   const [hlOn, setHlOn] = useState(false)
   const hlTouchRef = useRef(0)
-  const highlightable = (p) => p && !p.classList.contains('style-title') && !p.classList.contains('style-image')
+  const highlightable = (p) => p && !p.classList.contains('style-title') && !p.classList.contains('style-image') && !p.classList.contains('style-embed')
   const isHl = (p) => !!p?.querySelector('.hl-text')
   const toggleHighlight = useCallback(() => {
     const content = contentRef.current
@@ -1514,9 +1720,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       e.preventDefault()
       // A photo just above: Backspace never deletes it (only its trash button
       // does) — the cursor just steps over it, to the end of the line above
-      if (prev.classList.contains('style-image')) {
+      if (prev.matches('.style-image, .style-embed')) {
         let above = prev
-        while (above && above.classList?.contains('style-image')) above = above.previousElementSibling
+        while (above && above.matches?.('.style-image, .style-embed')) above = above.previousElementSibling
         if (above && above.classList?.contains('note-para')) {
           const r = document.createRange()
           r.selectNodeContents(above)
@@ -1552,14 +1758,14 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (e.key === 'Delete' && range.collapsed) {
       const para = findPara(range.startContainer, range.startOffset)
       const next = para?.nextElementSibling
-      if (para && next?.classList?.contains('style-image')) {
+      if (para && next?.matches?.('.style-image, .style-embed')) {
         const probe = document.createRange()
         probe.selectNodeContents(para)
         probe.setStart(range.startContainer, range.startOffset)
         if (probe.toString().length === 0) {
           e.preventDefault()
           let below = next
-          while (below && below.classList?.contains('style-image')) below = below.nextElementSibling
+          while (below && below.matches?.('.style-image, .style-embed')) below = below.nextElementSibling
           if (below && below.classList?.contains('note-para')) {
             const r = document.createRange()
             r.setStart(below, 0)
@@ -1918,6 +2124,9 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     e.preventDefault()
     const html = dt.getData('text/html')
     const plain = dt.getData('text/plain') || ''
+    // Just a link: it goes in as a link tile on its own line
+    const only = plain.trim()
+    if (/^(https?:\/\/|www\.)[^\s]+$/i.test(only) && pasteLinkRef.current?.(only)) return
     let blocks = (html && blocksFromNoteHtml(html)) ||
       (lastNoteCopy && normClip(plain) === lastNoteCopy.text ? lastNoteCopy.lines.map(l => ({ ...l })) : null) ||
       (html ? blocksFromHtml(html) : [])
@@ -2181,17 +2390,74 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         </button>
         <button
           type="button"
-          className="note-tool-btn"
-          aria-label="Add a photo"
+          className={`note-tool-btn note-attach-btn${attachMenu ? ' open' : ''}`}
+          aria-label="Attach"
           onMouseDown={e => { e.preventDefault(); rememberCaret() }}
           onTouchStart={() => rememberCaret()}
-          onClick={pickMedia}
+          onClick={() => setAttachMenu(m => (m ? null : 'root'))}
         >
           <MediaIcon/>
         </button>
         <input ref={libraryInputRef} type="file" accept="image/*" hidden
           onChange={e => { const f = e.target.files?.[0]; if (f) insertImage(f) }}/>
+
+        {/* Attach: Photo (the device's own camera / library menu), Link or
+            Note — those two turn the menu into this canvas's links / notes */}
+        <div className={`card-context-menu note-media-menu note-attach-menu${attachMenu ? ' open' : ''}${attachMenu && attachMenu !== 'root' ? ' picking' : ''}`}>
+          {attachMenu === 'root' && (<>
+            <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()}
+              onClick={() => { setAttachMenu(null); pickMedia() }}>
+              <PhotoIcon/>Photo
+            </button>
+            <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()}
+              onClick={() => setAttachMenu('link')}>
+              <FeatherLinkIcon size={20} color="currentColor" strokeWidth={2}/>Link
+            </button>
+            <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()}
+              onClick={() => setAttachMenu('note')}>
+              <FeatherFileIcon size={20} color="currentColor" strokeWidth={2}/>Note
+            </button>
+          </>)}
+          {attachMenu === 'note' && (attachableNotes.length === 0
+            ? <div className="todo-attach-empty">No other notes in this canvas</div>
+            : attachableNotes.map(n => {
+              const preview = notePreviewOf(n.editorHTML)
+              return (
+                <button key={n.id} type="button" className="todo-attach-item" onMouseDown={e => e.preventDefault()}
+                  onClick={() => { setAttachMenu(null); insertEmbed('note', n.id) }}>
+                  <span className="note-text">{n.text}</span>
+                  {preview && <span className="note-preview-text">{preview}</span>}
+                </button>
+              )
+            }))}
+          {attachMenu === 'link' && (attachableLinks.length === 0
+            ? <div className="todo-attach-empty">No links in this canvas</div>
+            : attachableLinks.map(l => (
+              <button key={l.id} type="button" className="todo-attach-item" onMouseDown={e => e.preventDefault()}
+                onClick={() => { setAttachMenu(null); insertEmbed('link', l.id) }}>
+                <span className="note-text">{l.title || l.url}</span>
+                <span className="note-preview-text">{(l.url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>
+              </button>
+            )))}
+        </div>
       </div>
+
+      {/* Attached notes and links, drawn into their blocks in the text */}
+      {embeds.filter(e => e.el.isConnected).map(e => createPortal(
+        <NoteEmbedBlock
+          type={e.type}
+          ids={e.ids}
+          project={project}
+          categoryId={categoryId}
+          projectId={projectId}
+          editing={editing}
+          onRemove={(id) => removeEmbed(e.el, id)}
+          onOpenNote={(id) => setOpenDetail({ type: 'note', id })}
+          onOpenLink={(id) => setOpenDetail({ type: 'link', id })}
+        />,
+        e.el,
+        e.key,
+      ))}
 
       {hasFooter && !editing && moveOpen && (
         <MoveToCard

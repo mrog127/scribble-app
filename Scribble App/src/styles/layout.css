@@ -14689,3 +14689,55 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon { width: var(--easel-badge-size) !important; margin-left: -6px; margin-right: 10px !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon > .easel-badge { display: inline-flex !important; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon > .easel-badge > svg.easel-name-icon { display: block !important; }
+
+/* ---- Attachments in a note (NoteCard.jsx): a note or link(s) from the canvas,
+   each its own line like a photo ---- */
+.note-para.style-embed {
+  position: relative;
+  padding: 8px 0;
+  line-height: normal;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+.note-embed-item { position: relative; }
+/* An attached note: its row, on the grey of a link tile's foot, 24px corners */
+.note-embed-note.note-row {
+  border-radius: 24px;
+  padding: 12px 16px;
+  min-height: 40px;
+  align-items: center;
+  background: #F0F0F0;
+  cursor: pointer;
+}
+:root[data-theme="dark-dots"] .note-embed-note.note-row { background: #333333; }
+:root[data-theme="paintbrush"] .note-embed-note.note-row { background: #EFEDE8; }
+/* Attached links: tiles in the canvas card's columns, flush to the text */
+.note-para.style-embed .link-grid.note-embed-links { padding: 0; }
+/* The X — the photo's — top-right, on hover (mouse) or after a tap */
+.note-embed-item .note-embed-x { top: 12px; right: 12px; display: none; z-index: 3; }
+.note-embed-item.show-x .note-embed-x { display: flex; }
+@media (hover: hover) { .note-embed-item:hover .note-embed-x { display: flex; } }
+/* …with the photo's 6% wash over the item while it shows */
+.note-embed-item.show-x::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+  z-index: 2;
+}
+.note-embed-links .note-embed-item.show-x::after { border-radius: inherit; }
+
+/* The attach menu (paperclip): Photo / Link / Note, then the picker list */
+.note-attach-menu.card-context-menu { min-width: 180px; }
+.note-attach-menu.card-context-menu.picking {
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(360px, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0;
+}
+.note-attach-menu .card-context-item svg { flex-shrink: 0; }
+:root[data-theme="dark-dots"] .note-attach-btn svg * { stroke: #E6E6E6; }

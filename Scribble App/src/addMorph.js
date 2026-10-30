@@ -46,24 +46,25 @@ export const KB_PREDICT = {
   save(h) { try { localStorage.setItem(KB_KEY, String(Math.round(h))) } catch { /* private mode */ } },
 }
 
-// Set (or clear, with '') an element's clip, prefixed too: Safari can keep a
-// stale clip after it's removed (the Easels menu stayed cut to an old, offset
-// shape), so a cleared clip is set to none and then dropped a frame later.
+// Set (or clear, with '') an element's clip, prefixed too.
+// Safari can keep showing an old clip after clip-path is removed (the Easels
+// menu stayed cut to a smaller, mid-animation shape). So a clip is never just
+// removed: it's first changed to one that clips nothing — whatever Safari then
+// holds on to is harmless — and only dropped some time later.
+const NO_CLIP = 'inset(-100vmax round 0px)'
 function setClip(el, v) {
-  if (v) {
-    el.style.clipPath = v
-    el.style.webkitClipPath = v
-    return
-  }
-  el.style.clipPath = 'none'
-  el.style.webkitClipPath = 'none'
+  const val = v || NO_CLIP
+  el.style.clipPath = val
+  el.style.webkitClipPath = val
 }
 function dropClip(el) {
   setClip(el, '')
-  void el.offsetWidth
-  const clear = () => { if (el.style.clipPath === 'none') { el.style.clipPath = ''; el.style.webkitClipPath = '' } }
-  requestAnimationFrame(() => requestAnimationFrame(clear))
-  setTimeout(clear, 120)
+  setTimeout(() => {
+    if (el.style.clipPath && el.style.clipPath.startsWith('inset(-100vmax')) {
+      el.style.clipPath = ''
+      el.style.webkitClipPath = ''
+    }
+  }, 400)
 }
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches

@@ -17,7 +17,10 @@ let drag = null
 // underneath instead of the menu, so the menu never scrolls. Its scrolling is
 // driven here from the touches instead (with a flick's momentum), and iOS's own
 // scroll is stopped for the whole drag.
-const MANUAL = '.dest-easels-menu'
+// The same goes for the Easel list that Save to now shows in place of its
+// canvases (Easel button → the list of Easels): iOS sent drags there to the
+// page behind.
+const MANUAL = '.dest-easels-menu, .save-to-panel .dest-view-easels .dest-canvas-list, .move-to-overlay .dest-view-easels .dest-canvas-list'
 let fling = 0
 const stopFling = () => { if (fling) { cancelAnimationFrame(fling); fling = 0 } }
 const startFling = (el, v) => {   // v in px per ms, positive = content moves down

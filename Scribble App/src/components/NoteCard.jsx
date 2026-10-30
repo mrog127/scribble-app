@@ -1075,6 +1075,25 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     return () => document.removeEventListener('pointerdown', onDown, true)
   }, [attachMenu])
   useEffect(() => { if (!editing) setAttachMenu(null) }, [editing])
+  // The menu never runs up past the page's header: it's capped to the room
+  // between the header and the tools (less with the keyboard up), scrolling
+  // inside that
+  const attachMenuRef = useRef(null)
+  useLayoutEffect(() => {
+    const menu = attachMenuRef.current
+    if (!menu) return
+    if (!attachMenu) { menu.style.maxHeight = ''; return }
+    const fit = () => {
+      const tools = menu.parentElement?.getBoundingClientRect()
+      const page = pageRef.current
+      const header = page?.querySelector('.note-detail-header')
+      const top = Math.max(header ? header.getBoundingClientRect().bottom : 0, window.visualViewport?.offsetTop || 0) + 12
+      if (tools) menu.style.maxHeight = Math.max(120, tools.top - 8 - top) + 'px'
+    }
+    fit()
+    window.visualViewport?.addEventListener('resize', fit)
+    return () => window.visualViewport?.removeEventListener('resize', fit)
+  }, [attachMenu])
   const attachableNotes = (project?.notes || []).filter(n => !n.archived && String(n.id) !== String(note?.id))
   const attachableLinks = (project?.links || []).filter(l => !l.archived)
 
@@ -2403,7 +2422,7 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
         {/* Attach: Photo (the device's own camera / library menu), Link or
             Note — those two turn the menu into this canvas's links / notes */}
-        <div className={`card-context-menu note-media-menu note-attach-menu${attachMenu ? ' open' : ''}${attachMenu && attachMenu !== 'root' ? ' picking' : ''}`}>
+        <div ref={attachMenuRef} className={`card-context-menu note-media-menu note-attach-menu${attachMenu ? ' open' : ''}${attachMenu && attachMenu !== 'root' ? ' picking' : ''}`}>
           {attachMenu === 'root' && (<>
             <button type="button" className="card-context-item" onMouseDown={e => e.preventDefault()}
               onClick={() => { setAttachMenu(null); pickMedia() }}>

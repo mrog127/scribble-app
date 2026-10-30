@@ -14739,5 +14739,18 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   overscroll-behavior: contain;
   padding: 4px 0;
 }
+/* While the attach menu is open the tools (and the menu with them) sit above
+   the note's header */
+.note-detail-page .note-tools:has(.note-attach-menu.open) { z-index: 200; }
 .note-attach-menu .card-context-item svg { flex-shrink: 0; }
 :root[data-theme="dark-dots"] .note-attach-btn svg * { stroke: #E6E6E6; }
+/* The attach menu sits inside the tools pill, whose own glass cuts the menu's
+   blur off from the page — so the page showed through it sharp. It gets a
+   solid face instead. */
+#app .note-tools .note-attach-menu.card-context-menu {
+  background: #FAFAFA;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-theme="dark-dots"] #app .note-tools .note-attach-menu.card-context-menu { background: #2B2B2B; }
+:root[data-theme="paintbrush"] #app .note-tools .note-attach-menu.card-context-menu { background: #F7F6F3; }

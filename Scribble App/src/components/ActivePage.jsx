@@ -27,6 +27,7 @@ import { runCheckOff } from '../checkGhost.js'
 import { useCardHostsDetail } from '../detailLock.jsx'
 import GalleryCanvas from './GalleryCanvas.jsx'
 import { EaselBadge } from '../easelIcons.jsx'
+import { useFlipRow, GALLERY_EXPANDED_EVENT } from '../flipRow.js'
 
 // The row under the Gallery date shows each Easel's icon; false brings back
 // the coloured dots
@@ -1032,6 +1033,7 @@ export default function ActivePage({
     const next = !galleryExpandedRef.current
     setGalleryExpanded(next)
     try { localStorage.setItem('gallery-expanded', String(next)) } catch {}
+    window.dispatchEvent(new CustomEvent(GALLERY_EXPANDED_EVENT, { detail: next }))
     supabase.auth.updateUser({ data: { galleryExpanded: next } })
       .then(({ error }) => { if (error) console.error('[gallery] saving expanded/collapsed failed', error) })
   }, [])
@@ -1158,33 +1160,8 @@ export default function ActivePage({
       return { id: cid, name: cat?.name || '', icon: cat?.icon, accent: acc, color: DATE_ROW_ICONS ? acc.base : (acc.dot ?? acc.base) }
     })
 
-  // When the order changes, the icons glide to their new places (FLIP)
-  const dotsRef = useRef(null)
-  const dotRectsRef = useRef(new Map())
-  const dotOrderKey = activeDots.map(d => d.id).join(',')
-  useLayoutEffect(() => {
-    const row = dotsRef.current
-    const prev = dotRectsRef.current
-    const next = new Map()
-    if (!row) { dotRectsRef.current = next; return }
-    const btns = [...row.querySelectorAll('[data-dot-id]')]
-    btns.forEach(b => {
-      b.style.transition = 'none'
-      b.style.transform = ''
-    })
-    btns.forEach(b => next.set(b.dataset.dotId, b.getBoundingClientRect().left))
-    dotRectsRef.current = next
-    const moved = btns.filter(b => prev.has(b.dataset.dotId) && Math.abs(prev.get(b.dataset.dotId) - next.get(b.dataset.dotId)) > 0.5)
-    if (!moved.length) { btns.forEach(b => { b.style.transition = '' }); return }
-    moved.forEach(b => { b.style.transform = `translateX(${prev.get(b.dataset.dotId) - next.get(b.dataset.dotId)}px)` })
-    void row.offsetWidth
-    moved.forEach(b => {
-      b.style.transition = 'transform 400ms cubic-bezier(0.22, 0.61, 0.36, 1)'
-      b.style.transform = ''
-    })
-    const t = setTimeout(() => btns.forEach(b => { b.style.transition = '' }), 450)
-    return () => clearTimeout(t)
-  }, [dotOrderKey])
+  // When the order changes, the icons glide to their new places
+  const dotsRef = useFlipRow(activeDots.map(d => d.id).join(','))
 
   const domCatIdx = domCatId ? categories.findIndex(c => c.id === domCatId) : -1
   const decorationColor = domCatIdx >= 0 ? getCategoryAccent(domCatIdx).base : getHomeAccent().base
@@ -1231,7 +1208,7 @@ export default function ActivePage({
                 ? (
                   <button
                     key={d.id}
-                    data-dot-id={d.id}
+                    data-flip-id={d.id}
                     type="button"
                     className="active-dot-btn"
                     aria-label={`Go to ${d.name}`}

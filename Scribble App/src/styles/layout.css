@@ -14836,3 +14836,6 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 }
 .active-dots .active-dot-btn:active { transform: scale(0.9); }
 .home-page .easel-card-wrap { scroll-margin-top: calc(env(safe-area-inset-top) + 16px); }
+/* (the desktop sidebar's icons just show — they aren't buttons) */
+.sidebar-date .active-dots .active-dot-btn { cursor: default; }
+.sidebar-date .active-dots .active-dot-btn:active { transform: none; }

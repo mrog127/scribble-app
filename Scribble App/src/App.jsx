@@ -13,6 +13,7 @@ import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
 import { EaselBadge, easelIconKey } from './easelIcons.jsx'
+import { useFlipRow, GALLERY_EXPANDED_EVENT } from './flipRow.js'
 import { startAddMorph, startAddMorphClose, startSendToRow, startSendToToast, recentlyPressed, morphPanelIn, morphPanelOut, morphPageIn, morphPageOut, KB_PREDICT } from './addMorph.js'
 import { kickBackdrops } from './backdropKick.js'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
@@ -3023,8 +3024,27 @@ function AppInner() {
     return idx >= 0 ? getCategoryAccent(idx).base : getHomeAccent().base
   }, [categories, activeTab])
 
-  // Desktop sidebar (Dots themes): one dot per easel with unchecked active list
-  // items, in the easel's colour, most items first — the Gallery header's dots.
+  // The Gallery's expanded / collapsed view (kept by the Gallery page), which
+  // the sidebar's icons follow
+  const { user: authUser } = useAuth() || {}
+  const [galleryExpanded, setGalleryExpanded] = useState(() => {
+    const m = authUser?.user_metadata?.galleryExpanded
+    if (typeof m === 'boolean') return m
+    try { return localStorage.getItem('gallery-expanded') === 'true' } catch { return false }
+  })
+  useEffect(() => {
+    const m = authUser?.user_metadata?.galleryExpanded
+    if (typeof m === 'boolean') setGalleryExpanded(m)
+  }, [authUser?.user_metadata?.galleryExpanded])
+  useEffect(() => {
+    const on = (e) => setGalleryExpanded(!!e.detail)
+    window.addEventListener(GALLERY_EXPANDED_EVENT, on)
+    return () => window.removeEventListener(GALLERY_EXPANDED_EVENT, on)
+  }, [])
+
+  // Desktop sidebar (Dots themes): one icon per easel with unchecked active
+  // list items — the Gallery header's icons, in the same order: the easel
+  // pages' order when the Gallery is expanded, most items first when collapsed
   const sidebarDots = useMemo(() => {
     const counts = {}
     categories.filter(cat => cat.sendToHomescreen !== false).forEach(cat => {
@@ -3033,14 +3053,17 @@ function AppInner() {
       })
     })
     ;(activeTodos || []).forEach(t => { if (t.categoryId) counts[t.categoryId] = (counts[t.categoryId] || 0) + 1 })
+    const order = (cid) => { const i = categories.findIndex(c => c.id === cid); return i < 0 ? Infinity : i }
     return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => galleryExpanded ? order(a[0]) - order(b[0]) : b[1] - a[1])
       .map(([cid]) => {
         const idx = categories.findIndex(c => c.id === cid)
         const acc = idx >= 0 ? getCategoryAccent(idx) : getHomeAccent()
-        return { id: cid, color: acc.dot ?? acc.base }
+        const cat = idx >= 0 ? categories[idx] : null
+        return { id: cid, color: acc.dot ?? acc.base, name: cat?.name || '', icon: cat?.icon, accent: acc }
       })
-  }, [categories, activeTodos])
+  }, [categories, activeTodos, galleryExpanded])
+  const sidebarDotsRef = useFlipRow(sidebarDots.map(d => d.id).join(','))
 
   const activeAccent = useMemo(() => {
     if (activeTab === 'star' || activeTab === 'menu') return getHomeAccent()
@@ -3174,9 +3197,11 @@ function AppInner() {
           <GalleryDecoration className="active-date-decoration" style={{ color: decorationColor }} />
           <p className="active-month-date">{monthDate}</p>
           {sidebarDots.length > 0 && (
-            <div className="active-dots">
+            <div ref={sidebarDotsRef} className="active-dots with-icons">
               {sidebarDots.map(d => (
-                <span key={d.id} className="active-dot" style={{ background: d.color }} />
+                <span key={d.id} data-flip-id={d.id} className="active-dot-btn">
+                  <EaselBadge name={d.name} icon={d.icon} accent={d.accent} />
+                </span>
               ))}
             </div>
           )}

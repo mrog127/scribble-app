@@ -335,8 +335,8 @@ export function genieShape(a, ra, b, rb, t, pillAt) {
 }
 // The plain version: every edge leaves at once and lands at once (each moving
 // as fast as its distance needs), over the whole TOTAL — no genie lag
-export function rectShape(a, ra, b, rb, t) {
-  const p = 1 - Math.pow(1 - clamp01(t / TOTAL), 4)
+export function rectShape(a, ra, b, rb, t, total = TOTAL) {
+  const p = 1 - Math.pow(1 - clamp01(t / total), 4)
   const box = { left: lerp(a.left, b.left, p), top: lerp(a.top, b.top, p), right: lerp(a.right, b.right, p), bottom: lerp(a.bottom, b.bottom, p) }
   box.width = Math.max(1, box.right - box.left); box.height = Math.max(1, box.bottom - box.top)
   const r = Math.max(0, Math.min(lerp(ra, rb, p), box.width / 2, box.height / 2))
@@ -1062,6 +1062,8 @@ function pageGlass(page, z) {
   return { ...glass, solid }
 }
 const pageMorphs = new WeakMap()
+// The page morph runs quicker than the others
+const PAGE_TOTAL = 200
 // The page under the item page: the active one
 const pageBehind = (phone) => phone ? (phone.querySelector('.page.active:not(.drag-incoming)') || findPage(phone)) : null
 
@@ -1096,13 +1098,14 @@ export function morphPageIn(page, row) {
     setClip(page, '')
     const to = page.getBoundingClientRect()
     // 32px corners all the way out (the page is square once it has landed)
-    const genie = rectShape(from, fromR, to, 32, t)
+    // …squeezed 20% narrower about its middle halfway through
+    const genie = squish(rectShape(from, fromR, to, 32, t, PAGE_TOTAL), 1 - 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
     page.style.transformOrigin = '0 0'
     page.style.transform = fit(to, box)
     setClip(page, clipFor(inset(pts, box, 2), box, to))
-    const f = t / TOTAL
+    const f = t / PAGE_TOTAL
     // the row's contents stay where they are (unstretched) and fade over the
     // first third
     face.style.transform = `translate(${faceRect.left - box.left}px, ${faceRect.top - box.top}px)`
@@ -1116,7 +1119,7 @@ export function morphPageIn(page, row) {
     glass.solid(k)
     // a drop shadow under the growing pill, gone by the end
     glass.el.style.filter = `drop-shadow(0 6px 24px rgba(0, 0, 0, ${(0.2 * (1 - k)).toFixed(3)}))`
-    if (t >= TOTAL) { finish(); return }
+    if (t >= PAGE_TOTAL) { finish(); return }
     raf = requestAnimationFrame(frame)
   }
   const finish = () => {
@@ -1135,7 +1138,7 @@ export function morphPageIn(page, row) {
     pageMorphs.delete(page)
   }
   pageMorphs.set(page, { finish })
-  setTimeout(() => finish(), TOTAL + 600)
+  setTimeout(() => finish(), PAGE_TOTAL + 600)
   frame(t0)
   return true
 }
@@ -1187,12 +1190,12 @@ export function morphPageOut(page, row) {
     const t = now - t0
     const to = row.isConnected ? rowPill(row) : null
     if (!to) { finish(); return }
-    const genie = rectShape(from, 32, to, to.height / 2, t)
+    const genie = squish(rectShape(from, 32, to, to.height / 2, t, PAGE_TOTAL), 1 - 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
     copy.style.transform = fit(from, box)
     setClip(copy, clipFor(inset(pts, box, 2), box, from))
-    const f = t / TOTAL
+    const f = t / PAGE_TOTAL
     const rr = row.getBoundingClientRect()
     face.style.transform = `translate(${rr.left - box.left}px, ${rr.top - box.top}px)`
     // the page's solid background gives way to glass (and its shadow) over the
@@ -1206,7 +1209,7 @@ export function morphPageOut(page, row) {
     glass.backdropOpacity(clamp01((f - 0.75) * 4))
     // the row's contents, in place, fade back in over the last third
     face.style.opacity = String(ease((f - 2 / 3) * 3))
-    if (t >= TOTAL) { finish(); return }
+    if (t >= PAGE_TOTAL) { finish(); return }
     raf = requestAnimationFrame(frame)
   }
   const finish = () => {
@@ -1219,7 +1222,7 @@ export function morphPageOut(page, row) {
     if (behind) { behind.style.opacity = ''; behind.style.transition = '' }
     setTimeout(() => { page.style.opacity = ''; page.style.transition = '' }, 50)
   }
-  setTimeout(() => finish(), TOTAL + 600)
+  setTimeout(() => finish(), PAGE_TOTAL + 600)
   frame(t0)
   return true
 }

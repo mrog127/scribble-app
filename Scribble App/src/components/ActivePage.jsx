@@ -1234,7 +1234,7 @@ export default function ActivePage({
             {/* The Gallery's icon on a white disc after the title, as an
                 Easel page's badge follows its name */}
             <p className="active-title has-title-icon" style={{ marginBottom: '0' }}>Gallery<span className="easel-title-icon" aria-hidden="true">{'\u2060'}<span className="easel-badge easel-title-icon-circle gallery-title-badge">
-              <svg className="easel-name-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="easel-name-icon" width="14" height="14" viewBox="2.6 2.4 14.8 14.8" fill="none" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3,6.8 10,2.6 17,6.8"/>
                 <line x1="5" y1="7.6" x2="5" y2="14"/>
                 <line x1="8.33" y1="7.6" x2="8.33" y2="14"/>

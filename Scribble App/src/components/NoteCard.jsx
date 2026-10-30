@@ -158,6 +158,21 @@ function NoteEmbedBlock({ type, ids, project, categoryId, projectId, editing, on
               <span className="note-preview-text">{hostOf(l.url)}</span>
             </div>
           </div>
+          {/* Opens the link's own page (out of edit mode; editing, the X sits here) */}
+          {!editing && (
+            <button
+              type="button"
+              className="note-embed-edit-btn"
+              aria-label="Edit link"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onOpenLink(l.id) }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
         </div>
       )))}
     </div>

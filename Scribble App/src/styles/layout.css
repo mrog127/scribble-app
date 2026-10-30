@@ -14723,6 +14723,30 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 .note-embed-links { display: flex; flex-direction: column; gap: 8px; }
 /* Attachments one after another sit 8px apart */
 .note-para.style-embed + .note-para.style-embed { margin-top: -8px; }
+/* An attached link's edit button: the easel header's round grey button */
+.note-embed-link.note-row { padding-right: 12px; }
+.note-embed-edit-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-left: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: #E3E3E3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.note-embed-edit-btn svg * { stroke: #292929; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.note-embed-edit-btn:active { box-shadow: inset 0 0 0 40px rgba(0, 0, 0, 0.04); }
+@media (hover: hover) { .note-embed-edit-btn:hover { box-shadow: inset 0 0 0 40px rgba(0, 0, 0, 0.04); } }
+:root[data-theme="dark-dots"] .note-embed-edit-btn { background: #3D3D3D; }
+:root[data-theme="dark-dots"] .note-embed-edit-btn svg * { stroke: #E6E6E6; }
+:root[data-theme="dark-dots"] .note-embed-edit-btn:active { box-shadow: inset 0 0 0 40px rgba(255, 255, 255, 0.04); }
+@media (hover: hover) { :root[data-theme="dark-dots"] .note-embed-edit-btn:hover { box-shadow: inset 0 0 0 40px rgba(255, 255, 255, 0.04); } }
 .note-embed-favicon { width: 20px; height: 20px; border-radius: 4px; object-fit: contain; display: block; }
 /* The X — the photo's — top-right, on hover (mouse) or after a tap */
 .note-embed-item .note-embed-x { top: 12px; right: 12px; display: none; z-index: 3; }

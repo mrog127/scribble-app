@@ -23,3 +23,9 @@ export function requestProjectFocus(req) {
 let openInCanvasFn = null
 export function setOpenInCanvas(fn) { openInCanvasFn = fn }
 export function openInCanvas(req) { if (openInCanvasFn) openInCanvasFn(req) }
+
+// An Easel card's title (expanded Gallery) goes to that Easel's page. App owns
+// the tab change; it registers it here.
+let openEaselFn = null
+export function setOpenEasel(fn) { openEaselFn = fn }
+export function openEasel(categoryId) { if (openEaselFn) openEaselFn(categoryId) }

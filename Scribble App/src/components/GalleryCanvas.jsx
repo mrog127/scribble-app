@@ -1,3 +1,4 @@
+import { openEasel } from '../searchFocus.js'
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
 import {
   CollapsedTodosCard,
@@ -452,7 +453,17 @@ export default function GalleryCanvas({ category, easelCard = false }) {
         <div className="card-title-wrap">
           <div className="card-title-row">
             {!easelCard && <GalleryTitleIcon/>}
-            <span className="card-title">{easelCard ? category.name : 'Gallery'}</span>
+            {easelCard ? (
+              /* The Easel's name goes to its page (a pill lights behind it on
+                 hover, as a canvas name in a row); the rest of the header
+                 still folds the card */
+              <span
+                className="card-title easel-card-title-link"
+                role="link"
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); openEasel(category.id) }}
+              >{category.name}</span>
+            ) : <span className="card-title">Gallery</span>}
           </div>
         </div>
         {showTabs && !tabsAtBottom && tabRow}

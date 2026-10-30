@@ -5,6 +5,7 @@ import { getCategoryAccent } from '../theme.js'
 import DestinationPicker, { EaselGlyph } from './DestinationPicker.jsx'
 import { useAppContext } from '../context/AppContext.jsx'
 import { kickBackdrops } from '../backdropKick.js'
+import { recentOrigin, morphPanelIn, morphPanelOut } from '../addMorph.js'
 
 // "Move to..." card. Opens centered over a dim scrim. Reuses the .save-to-* styles.
 // mode 'projects' (default) picks a destination canvas: tapping one (or the
@@ -28,30 +29,16 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
   const cardRef = useRef(null)
   const [open, setOpen] = useState(false)
 
-  // Dark Dots, phone layout, opened from a list item / note / link page: the
-  // card runs from 16px below the page title down to 16px above the footer's
-  // folder (canvas) button, and the page behind dims to 50% except that button.
+  // (Opened from a list item / note / link page, the card sits where it does
+  // everywhere else — over the page — rather than squeezed between the page's
+  // title and the footer's folder button.)
+
+  // The card grows out of the button (or menu row) that opened it, and folds
+  // back into it as it closes
+  const originRef = useRef(null)
   useLayoutEffect(() => {
-    if (!['dark-dots', 'light-dots'].includes(document.documentElement.dataset.theme)) return
-    if (window.innerWidth >= 1000) return
-    const app = document.getElementById('app')
-    const card = cardRef.current
-    const pages = [...document.querySelectorAll('.note-detail-page.open')]
-    const page = pages[pages.length - 1]
-    const folder = page?.querySelector('.detail-footer-project-btn')
-    if (!app || !card || !page || !folder) return
-    const appRect = app.getBoundingClientRect()
-    const fRect = folder.getBoundingClientRect()
-    // The title may have scrolled up under the header — then the header's edge
-    const title = page.querySelector('.todo-detail-title, .note-detail-title')
-    const header = page.querySelector('.note-detail-header')
-    const tRect = title?.getBoundingClientRect()
-    const hRect = header?.getBoundingClientRect()
-    const titleBottom = Math.max(tRect && tRect.height ? tRect.bottom : 0, hRect ? hRect.bottom : 0)
-    card.style.top = (titleBottom - appRect.top + 16) + 'px'
-    card.style.bottom = (appRect.bottom - fRect.top + 16) + 'px'
-    app.classList.add('move-from-detail')
-    return () => app.classList.remove('move-from-detail')
+    originRef.current = recentOrigin()
+    if (originRef.current && cardRef.current) morphPanelIn(cardRef.current, originRef.current)
   }, [])
 
   useEffect(() => { requestAnimationFrame(() => setOpen(true)) }, [])
@@ -77,7 +64,11 @@ export default function MoveToCard({ categories, currentCategoryId, currentProje
     vv.addEventListener('scroll', fit)
     return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit) }
   }, [])
-  const finish = (fn) => { setOpen(false); setTimeout(fn, 180) }
+  const finish = (fn) => {
+    if (originRef.current && cardRef.current) morphPanelOut(cardRef.current, originRef.current, { host: document.getElementById('app') })
+    setOpen(false)
+    setTimeout(fn, 180)
+  }
 
   // Fade the rest of the screen to 10% while open
   useEffect(() => {

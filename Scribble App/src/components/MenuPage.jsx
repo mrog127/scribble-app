@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useLayoutEffect, useEffect } from 'react'
-import { EaselNameIcon, easelIconKey } from '../easelIcons.jsx'
+import { EaselNameIcon, EaselBadge, easelIconKey } from '../easelIcons.jsx'
 import IconPickerCard from './IconPickerCard.jsx'
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { useAppContext } from '../context/AppContext.jsx'
@@ -652,7 +652,7 @@ export default function MenuPage({ pageAnimClass = '', isExiting = false, onSele
                   {/* The Easel's icon (picked from its name) in its colour, when
                       the name gives one — otherwise the usual mark */}
                   {easelIconKey(cat.name, cat.icon)
-                    ? <EaselNameIcon name={cat.name} icon={cat.icon} color={getCategoryAccent(index).dark}/>
+                    ? <EaselBadge name={cat.name} icon={cat.icon} accent={getCategoryAccent(index)}/>
                     : <UnderlineSvg style={{ flexShrink: 0, width: 28, height: 'auto', transform: 'rotate(270deg)', display: 'block' }} />}
                 </span>
 

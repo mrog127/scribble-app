@@ -326,25 +326,90 @@ const clipFor = (pts, box, own) => {
   return 'polygon(' + pts.map(([x, y]) => `${((x - box.left) * sx).toFixed(2)}px ${((y - box.top) * sy).toFixed(2)}px`).join(',') + ')'
 }
 
-export function startAddMorph(pillEl) {
-  if (!pillEl) return
-  const footer = pillEl.closest('.footer')
+// A button's corner radius in px ("50%" is a circle)
+const cornerOf = (el, r) => {
+  const v = getComputedStyle(el).borderTopLeftRadius
+  return /%/.test(v) ? Math.min(r.width, r.height) * parseFloat(v) / 100 : (parseFloat(v) || r.height / 2)
+}
+// What a Cancel pours back into when Add item was opened from somewhere other
+// than the bar's pill (a card's plus button)
+let origin = null
+// The button pressed last, and when — Add item opened from a card's plus is
+// handed no element, so it looks here for where it came from
+let lastPress = { el: null, at: 0, rect: null, radius: 0, face: null }
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', (e) => {
+    const el = e.target instanceof Element ? e.target.closest('button, [role="button"]') : null
+    // its shape and face are kept too: a menu row is gone by the time the
+    // thing it opened is up
+    const rect = el?.getBoundingClientRect() || null
+    lastPress = { el, at: performance.now(), rect, radius: el && rect ? cornerOfPress(el, rect) : 0, face: null }
+  }, true)
+}
+function cornerOfPress(el, r) {
+  const v = getComputedStyle(el).borderTopLeftRadius
+  return /%/.test(v) ? Math.min(r.width, r.height) * parseFloat(v) / 100 : (parseFloat(v) || 0)
+}
+// Where a panel opened just now came from: { el (if still there), rect, radius }
+export function recentOrigin(within = 1200) {
+  if (!lastPress.rect || performance.now() - lastPress.at > within) return null
+  return { el: lastPress.el?.isConnected ? lastPress.el : null, rect: lastPress.rect, radius: lastPress.radius }
+}
+export const recentlyPressed = (within = 1000) =>
+  (lastPress.el && lastPress.el.isConnected && performance.now() - lastPress.at < within) ? lastPress.el : null
+
+// Open Add item out of `fromEl`: the bar's pill, or (with the bar's `footer`
+// given) any button — a card's plus
+// A copy of a button's face — its icon and label, not its chrome (a button's
+// own fill and border depend on where it sits, so a copy out of place could
+// come out in the wrong colours) — laid over the whole button
+function buttonFace(btn, r) {
+  const c = getComputedStyle(btn)
+  const face = document.createElement('div')
+  face.style.cssText = `position:absolute;left:0;top:0;width:${r.width}px;height:${r.height}px;margin:0;pointer-events:none;opacity:1;z-index:2;display:flex;align-items:center;justify-content:${c.justifyContent === 'normal' ? 'center' : c.justifyContent};gap:${c.gap === 'normal' ? '0px' : c.gap};padding:${c.padding};box-sizing:border-box;color:${c.color};font:${c.font};letter-spacing:${c.letterSpacing};white-space:nowrap;overflow:hidden;`
+  ;[...btn.childNodes].forEach(n => {
+    const k = n.cloneNode(true)
+    if (k.nodeType === 1) {
+      k.removeAttribute('id')
+      // keep each piece's own computed look
+      const src = getComputedStyle(n)
+      k.style.color = src.color
+      k.style.font = src.font
+    }
+    face.appendChild(k)
+  })
+  return face
+}
+
+export function startAddMorph(fromEl, footerEl) {
+  if (!fromEl) return
+  const footer = footerEl || fromEl.closest('.footer')
   if (!footer || !footer.parentElement) return
   if (running) running.finish()
   KB_PREDICT.arm()
+  origin = footer.contains(fromEl) ? null : fromEl
   if (reducedMotion()) return
 
+  const pillEl = fromEl
   const from = pillEl.getBoundingClientRect()
   if (!from.width || !from.height) return
-  const fromR = parseFloat(getComputedStyle(pillEl).borderTopLeftRadius) || from.height / 2
+  const fromR = cornerOf(pillEl, from)
 
-  const glass = makeGlass(pillEl, 2)
+  // the glass is always the bar's own
+  const glass = makeGlass(footer.querySelector('.add-stack') || pillEl, 2)
   const ghost = glass.el
   footer.after(ghost)
   const picks = pillEl.querySelector('.mbar-type-picks, .mbar-placeholder')
-  const pr = picks?.getBoundingClientRect()
-  const icons = pillIcons(pillEl, from)
+  let pr = picks?.getBoundingClientRect()
+  let icons = pillIcons(pillEl, from)
+  // A plain button: its own face fades out instead of the pill's icons
+  if (!icons) {
+    icons = buttonFace(pillEl, from)
+    pr = from
+  }
   if (icons) ghost.appendChild(icons)
+  // Out of a plus button: the glass starts in the button's colours
+  if (origin) { glass.tintTo(pillEl); glass.tintOpacity(1) }
 
   const shot = pageSnapshot(footer)
   const snap = shot?.snap
@@ -387,6 +452,7 @@ export function startAddMorph(pillEl) {
 
     const f = t / TOTAL
     if (icons) icons.style.opacity = String(1 - ease(f / 0.3))
+    glass.tintOpacity(1 - ease(f / 0.6))
     const inOp = ease((f - 0.15) / 0.5)
     kids.forEach(k => { k.style.opacity = String(inOp) })
     const pageOp = 1 - clamp01(f / FADE_PAGE_BY)
@@ -431,6 +497,7 @@ function morphOut(footer, dest) {
   if (!footer || !footer.parentElement || !footer.classList.contains('add-open')) return null
   if (running) running.finish()
   if (reducedMotion()) return null
+  origin = null
 
   footer.style.transform = ''
   const from = footer.getBoundingClientRect()
@@ -539,6 +606,36 @@ const radiusOf = (el, r) => Math.min(parseFloat(getComputedStyle(el).borderTopLe
 // Cancel: call just before Add item closes. The box pours back into the pill,
 // whose icons fade in riding down with it.
 export function startAddMorphClose(footer) {
+  // Opened from a card's plus: back into that button, its face fading in
+  const btn = origin
+  origin = null
+  if (btn && btn.isConnected && btn.getBoundingClientRect().width) {
+    let face = null
+    morphOut(footer, {
+      find: () => (btn.isConnected ? btn : null),
+      found: (b, glass) => {
+        const r = b.getBoundingClientRect()
+        face = buttonFace(b, r)
+        face.style.opacity = '0'
+        glass.el.appendChild(face)
+        // the glass takes on the button's own colours as it arrives
+        glass.tintTo(b)
+        b.style.opacity = '0'
+      },
+      rect: (b) => b.getBoundingClientRect(),
+      radius: (b, r) => cornerOf(b, r),
+      frame: (b, { box }, f) => {
+        if (!face) return
+        const r = b.getBoundingClientRect()
+        face.style.left = (r.left - box.left) + 'px'
+        face.style.top = (r.top - box.top) + 'px'
+        face.style.opacity = String(ease((f - 0.3) / 0.55))
+      },
+      show: (b) => { b.style.opacity = '' },
+      reveal: false,
+    })
+    return
+  }
   let icons = null, pr = null
   morphOut(footer, {
     find: () => footer.querySelector('.add-stack'),
@@ -599,7 +696,25 @@ export function startAddMorphClose(footer) {
 export function startSendToRow(footer, getRow, seek) {
   let lastSeek = 0
   let copy = null
-  let rowEl = null
+  let cur = null        // the row, as it is now
+  let lastRect = null
+  // The row is re-made once the save comes back (its temporary id swapped for
+  // the real one), which leaves the element we found detached — measuring that
+  // sent the shape flying off to the screen's corner. Follow the new one.
+  const hide = (el) => { el.style.opacity = '0'; el.style.pointerEvents = 'none' }
+  const live = () => {
+    if (cur && !cur.isConnected) {
+      const n = getRow()
+      if (n && n.isConnected) { cur = n; hide(n) }
+    }
+    return cur
+  }
+  const rowRect = () => {
+    const el = live()
+    const r = el?.isConnected ? el.getBoundingClientRect() : null
+    if (r && r.height) lastRect = r
+    return lastRect
+  }
   return morphOut(footer, {
     find: (page) => {
       if (!page) return null
@@ -610,12 +725,14 @@ export function startSendToRow(footer, getRow, seek) {
       centreInScroller(row)
       return row
     },
-    // The row's contents ride in the glass, exactly where they'll sit, fading in
-    // so they're fully there as the shape lands
-    found: (row, glass) => {
+    // The row's contents ride above the glass, exactly where they'll sit,
+    // fading in so they're fully there as the shape lands
+    found: (row) => {
+      cur = row
       const inner = row.cloneNode(true)
       const { content } = buildDragCloneShell(row, inner)
       const r = row.getBoundingClientRect()
+      lastRect = r
       inner.style.marginLeft = '0'
       inner.style.width = r.width + 'px'
       inner.style.background = 'transparent'
@@ -624,33 +741,31 @@ export function startSendToRow(footer, getRow, seek) {
       copy.style.cssText = `position:absolute;margin:0;pointer-events:none;z-index:6;opacity:0;`
       copy.appendChild(content)
       footer.parentElement.appendChild(copy)
-      row.style.opacity = '0'
-      // the real row can't take a hover (the pointer's still there from Send)
-      // while it shows through the fading glass
-      row.style.pointerEvents = 'none'
-      rowEl = row
+      // hidden, and unable to take a hover (the pointer's still there from
+      // Send) while it shows through the fading glass
+      hide(row)
     },
     // The shape it lands as: the row as it looks long-pressed — a fully rounded
     // pill, 8px in from the row at each side and 4px out above and below
-    rect: (row) => {
-      const r = row.getBoundingClientRect()
+    rect: () => {
+      const r = rowRect()
       return { left: r.left + 8, right: r.right - 8, top: r.top - 4, bottom: r.bottom + 4, width: r.width - 16, height: r.height + 8 }
     },
     radius: (row, r) => r.height / 2,
     frame: (row, genie, f) => {
       if (!copy) return
-      place(copy, row.getBoundingClientRect())
+      place(copy, rowRect())
       copy.style.opacity = String(ease((f - 0.3) / 0.7))
     },
-    show: (row) => { row.style.opacity = '' },
+    show: () => { const el = live(); if (el) el.style.opacity = '' },
     // a quarter second in the long-pressed form before the glass goes
     hold: 250,
     // the copy stays over the row until the glass has faded off it
     done: () => {
       copy?.remove(); copy = null
       // hover returns only once the pointer next moves
-      if (rowEl) {
-        const el = rowEl
+      const el = live()
+      if (el) {
         const back = () => { el.style.pointerEvents = ''; window.removeEventListener('pointermove', back, true) }
         window.addEventListener('pointermove', back, true)
         setTimeout(back, 4000)
@@ -691,4 +806,155 @@ function centreInScroller(row) {
   const s = sc.getBoundingClientRect()
   const r = row.getBoundingClientRect()
   sc.scrollTop += (r.top + r.height / 2) - (s.top + s.height / 2)
+}
+
+// ---- Panels: the Easels menu, Move to ----
+// The same morph for a panel opening out of the button (or menu row) that
+// opened it, and closing back into it. The panel itself is laid out in its
+// final place at once; a stand-in for its glass grows from the origin's shape
+// to the panel's, and the panel (its skin hidden) is scaled and clipped to ride
+// inside it while its contents fade in. Closing copies the panel and runs it
+// backwards.
+const originRect = (o) => (o.el && o.el.isConnected ? o.el.getBoundingClientRect() : o.rect)
+const originRadius = (o, r) => (o.el && o.el.isConnected ? cornerOf(o.el, r) : (o.radius || Math.min(r.height / 2, 16)))
+const panels = new WeakMap()
+
+export function morphPanelIn(panel, origin) {
+  if (!panel || !origin || reducedMotion()) return
+  panels.get(panel)?.finish()
+  const parent = panel.parentElement
+  if (!parent) return
+  panel.style.transition = 'none'
+  panel.style.opacity = '1'
+  // (its glass — shadow, stroke, blur — is read before its own skin is hidden)
+  const z = getComputedStyle(panel).zIndex
+  const glass = makeGlass(panel, z === 'auto' ? 0 : z)
+  panel.setAttribute('data-morph-panel', '')
+  panel.before(glass.el)
+  let face = null
+  if (origin.el && origin.el.isConnected) {
+    const r = origin.el.getBoundingClientRect()
+    face = buttonFace(origin.el, r)
+    glass.el.appendChild(face)
+  }
+  const kids = [...panel.children]
+  kids.forEach(k => { k.style.opacity = '0' })
+  const t0 = performance.now()
+  let raf = 0, done = false
+  const frame = (now) => {
+    if (done) return
+    const t = now - t0
+    const from = originRect(origin)
+    const fromR = originRadius(origin, from)
+    // (re-applied every frame: a re-render of the panel can drop its inline
+    // styles, and its own transform transition then lagged the shape behind)
+    panel.style.transition = 'none'
+    panel.style.opacity = '1'
+    panel.style.transform = 'none'
+    panel.style.clipPath = ''
+    const to = panel.getBoundingClientRect()
+    const toR = cornerOf(panel, to)
+    const genie = genieShape(from, fromR, to, toR, t, 'a')
+    const { box, pts } = genie
+    glass.draw(genie)
+    panel.style.transformOrigin = '0 0'
+    panel.style.transform = fit(to, box)
+    panel.style.clipPath = clipFor(inset(pts, box, 2), box, to)
+    const f = t / TOTAL
+    if (face) {
+      face.style.left = (from.left - box.left) + 'px'
+      face.style.top = (from.top - box.top) + 'px'
+      face.style.opacity = String(1 - ease(f / 0.3))
+    }
+    // contents come in early, so they're seen growing with the shape
+    kids.forEach(k => { k.style.opacity = String(ease(f / 0.35)) })
+    if (t >= TOTAL) { finish(); return }
+    raf = requestAnimationFrame(frame)
+  }
+  const finish = () => {
+    if (done) return
+    done = true
+    cancelAnimationFrame(raf)
+    glass.el.remove()
+    panel.removeAttribute('data-morph-panel')
+    panel.style.transform = ''
+    panel.style.transformOrigin = ''
+    panel.style.clipPath = ''
+    panel.style.opacity = ''
+    kids.forEach(k => { k.style.opacity = '' })
+    // its own transitions come back once it's settled
+    requestAnimationFrame(() => { panel.style.transition = '' })
+    panels.delete(panel)
+  }
+  panels.set(panel, { finish })
+  frame(t0)
+}
+
+// Close `panel` back into its origin. Call just before it closes; the real one
+// is hidden at once (`keepClass` is the class that holds it open, kept on the
+// copy). `host` is where the copy lives (it must outlast the panel).
+export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) {
+  if (!panel || !origin || reducedMotion()) return false
+  panels.get(panel)?.finish()
+  const from = panel.getBoundingClientRect()
+  if (!from.width) return false
+  const fromR = cornerOf(panel, from)
+  const home = host || panel.parentElement
+  // moved out to a host, it has to sit over everything the panel sat over
+  const z = host ? 100001 : getComputedStyle(panel).zIndex
+  const glass = makeGlass(panel, z === 'auto' ? 0 : z)
+  const copy = panel.cloneNode(true)
+  if (keepClass) copy.classList.add(keepClass)
+  copy.setAttribute('data-morph-panel', '')
+  copy.setAttribute('aria-hidden', 'true')
+  copy.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'))
+  copy.style.cssText += `;position:absolute;margin:0;transition:none;opacity:1;pointer-events:none;transform-origin:0 0;inset:auto;z-index:${z === 'auto' ? 1 : z};`
+  home.appendChild(glass.el)
+  home.appendChild(copy)
+  place(copy, from)
+  // the real panel goes at once (it closes on its own underneath)
+  panel.style.transition = 'none'
+  panel.style.opacity = '0'
+  const restore = () => { panel.style.opacity = ''; requestAnimationFrame(() => { panel.style.transition = '' }) }
+  let face = null
+  if (origin.el && origin.el.isConnected) {
+    const r = origin.el.getBoundingClientRect()
+    face = buttonFace(origin.el, r)
+    face.style.opacity = '0'
+    glass.el.appendChild(face)
+  }
+  const t0 = performance.now()
+  let raf = 0, done = false
+  const frame = (now) => {
+    if (done) return
+    const t = now - t0
+    const to = originRect(origin)
+    const toR = originRadius(origin, to)
+    const genie = genieShape(from, fromR, to, toR, t, 'b')
+    const { box, pts } = genie
+    glass.draw(genie)
+    copy.style.transform = fit(from, box)
+    copy.style.clipPath = clipFor(inset(pts, box, 2), box, from)
+    const f = t / TOTAL
+    // and stay until late, so they're seen shrinking with it
+    copy.style.opacity = String(1 - ease((f - 0.35) / 0.5))
+    if (face) {
+      face.style.left = (to.left - box.left) + 'px'
+      face.style.top = (to.top - box.top) + 'px'
+      face.style.opacity = String(ease((f - 0.3) / 0.55))
+    }
+    if (t >= TOTAL) { finish(); return }
+    raf = requestAnimationFrame(frame)
+  }
+  const finish = () => {
+    if (done) return
+    done = true
+    cancelAnimationFrame(raf)
+    glass.el.remove()
+    copy.remove()
+    // the real panel is shut by now; let it show again next time it opens
+    setTimeout(restore, 50)
+  }
+  frame(t0)
+  return true
 }

@@ -13,12 +13,12 @@ import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
 import { EaselBadge, easelIconKey } from './easelIcons.jsx'
-import { startAddMorph, startAddMorphClose, startSendToRow, startSendToToast, KB_PREDICT } from './addMorph.js'
+import { startAddMorph, startAddMorphClose, startSendToRow, startSendToToast, recentlyPressed, morphPanelIn, morphPanelOut, KB_PREDICT } from './addMorph.js'
 import { kickBackdrops } from './backdropKick.js'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
 import CalendarPopup from './components/CalendarPopup.jsx'
-import { requestProjectFocus, setOpenInCanvas } from './searchFocus.js'
+import { requestProjectFocus, setOpenInCanvas, setOpenEasel } from './searchFocus.js'
 import { setMoveHandler } from './moveFx.js'
 import { soloItem } from './soloWindow.js'
 import PinnedDetailHost, { CentralMainDetailHost } from './components/PinnedDetailHost.jsx'
@@ -576,6 +576,18 @@ function AppInner() {
 
   // Long-press page menu hanging off the gallery/easel circle
   const [pageMenuOpen, setPageMenuOpen] = useState(false)
+  // The Easels menu grows out of the control bar's easel button, and folds
+  // back into it (see addMorph.js)
+  const pageMenuWasOpen = useRef(false)
+  useLayoutEffect(() => {
+    if (pageMenuOpen === pageMenuWasOpen.current) return
+    pageMenuWasOpen.current = pageMenuOpen
+    const menu = document.querySelector('.card-context-menu.mbar-page-menu')
+    const btn = document.querySelector('.mbar-circle.mbar-gallery')
+    if (!menu || !btn || !btn.getBoundingClientRect().width) return
+    if (pageMenuOpen) morphPanelIn(menu, { el: btn })
+    else morphPanelOut(menu, { el: btn })
+  }, [pageMenuOpen])
   // "Add new easel" row at the foot of the page menu
   const [addEaselOpen, setAddEaselOpen] = useState(false)
   const [addEaselName, setAddEaselName] = useState('')
@@ -1151,6 +1163,11 @@ function AppInner() {
       pendingComposeRef.current = { categoryId: target.categoryId, projectId: target.projectId, onAdd: target.onAdd }
       setComposeOverDetail(!!target.onAdd)
       setToolbarType(target.type)
+      // Add item grows out of the plus that was pressed (and Cancel pours back
+      // into it)
+      const btn = recentlyPressed()
+      const bar = document.querySelector('.add-stack')?.closest('.footer')
+      if (btn && bar && !bar.classList.contains('add-open')) startAddMorph(btn, bar)
       inputRef.current?.focus()
     })
   }, [registerComposeHandler])
@@ -1566,6 +1583,7 @@ function AppInner() {
 
   // Let the gallery's canvas sublabels reuse this navigation
   useEffect(() => setOpenInCanvas(openSearchResult), [openSearchResult])
+  useEffect(() => setOpenEasel((id) => handleTabChange(id)))
 
   // Refs for swipe-to-change-tab gesture (avoids re-registering listeners on every state change)
   const activeTabRef = useRef(activeTab)

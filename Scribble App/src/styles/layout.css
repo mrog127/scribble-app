@@ -14628,3 +14628,64 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   transform: none !important;
   transition: none !important;
 }
+/* Desktop sidebar: the selected Easel's icon at 14px */
+@media (min-width: 1000px) {
+  .tab-indicator .tab-indicator-easel.easel-name-icon { width: 14px !important; height: 14px !important; left: 16px; }  /* centred in the 18px slot */
+}
+
+/* Panels morphing out of / into their button (morphPanelIn / Out in
+   addMorph.js): the stand-in glass carries the skin meanwhile */
+#app [data-morph-panel] {
+  background: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-color: transparent !important;
+}
+#app [data-morph-panel]::before,
+#app [data-morph-panel]::after { display: none !important; }
+
+/* The Easels menu now grows out of the easel button itself, so "Add new easel"
+   no longer stretches out of the circle — it waits in its own place and fades
+   in as the menu forms (and out as it goes) */
+@media (max-width: 999.98px) {
+  .footer .add-row .mbar-easel-wrap .easel-stack {
+    left: var(--ew-rest-left, 0px);
+    width: var(--ew-rest-width, 100%);
+    transition: opacity 200ms ease;
+  }
+  .footer .add-row .mbar-easel-wrap.open .easel-stack {
+    transition: left 280ms cubic-bezier(0.4, 0, 0.2, 1), width 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 300ms ease 100ms;
+  }
+  .footer .add-row .mbar-easel-wrap .easel-placeholder,
+  .footer .add-row .mbar-easel-wrap.open .easel-placeholder { transition: none; }
+}
+
+/* Expanded Gallery: an Easel card's name links to its page, with the same pill
+   behind it on hover as a canvas name in a row */
+.easel-card-title-link { position: relative; cursor: pointer; isolation: isolate; overflow: visible !important; }
+.easel-card-title-link::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  bottom: -1px;
+  left: -8px;
+  right: -8px;
+  border-radius: 999px;
+  background: rgba(var(--accent-base-rgb), 0.16);
+  opacity: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  #app .card .card-title.easel-card-title-link:hover { color: var(--accent-base) !important; }
+  .easel-card-title-link:hover::before { opacity: 1; }
+}
+#app .card .card-title.easel-card-title-link:active { color: var(--accent-base) !important; }
+.easel-card-title-link:active::before { opacity: 1; }
+/* Settings → Easels: each row leads with the Easel's badge (its icon on its
+   colour's disc), as everywhere else */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon { width: var(--easel-badge-size) !important; margin-left: -6px; margin-right: 10px !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon > .easel-badge { display: inline-flex !important; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) :is(#page-menu, .settings-drag-ghost) .cat-row-decoration.has-easel-icon > .easel-badge > svg.easel-name-icon { display: block !important; }

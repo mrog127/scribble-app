@@ -403,11 +403,14 @@ async function amazonPreview(pageUrl: URL): Promise<Response | null> {
     if (!img || img.w < 20 || img.h < 20) { amazonNote += ` | miss ${image.split('/').pop()} ${loadNote}`; continue; }
     return json({
       image, isIcon: false, imageBg: null, cornerDark: cornerIsDark(img),
-      title: null, siteName: 'Amazon', debugCorner: `amazon ${asin} | ${loadNote} | ${cornerNote}`, debugAmazon: amazonNote,
+      title: null, siteName: 'Amazon', favicon: 'https://www.google.com/s2/favicons?sz=64&domain=amazon.com', debugCorner: `amazon ${asin} | ${loadNote} | ${cornerNote}`, debugAmazon: amazonNote,
     });
   }
   return null;
 }
+
+// The site's own small icon, for the destination (not the share link's host)
+const faviconFor = (u: URL) => `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(u.hostname)}`;
 
 // ---- Share links ----
 // A share link (an app's "Share" button: vrbo.onelink.me, bit.ly, a Branch or
@@ -545,7 +548,7 @@ Deno.serve(async (req: Request) => {
       return json({
         image: fallback, isIcon: true, imageBg: bg,
         cornerDark: bg ? luma([1, 3, 5].map((_, i) => parseInt(bg.replace('#', '').slice(i * 2, i * 2 + 2), 16) || 0)) < 150 : false,
-        title: null, siteName: null, debugShare: shareNote,
+        title: null, siteName: null, favicon: faviconFor(pageUrl), finalUrl: pageUrl.href, debugShare: shareNote,
       });
     }
 
@@ -607,7 +610,7 @@ Deno.serve(async (req: Request) => {
     // Temporary: lets us see what the parser actually found if this still misses.
     const debugMetaKeys = Object.keys(meta).slice(0, 60);
 
-    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}`, debugAmazon: amazonNote, debugShare: shareNote });
+    return json({ image, isIcon, imageBg, cornerDark, title, siteName, favicon: faviconFor(pageUrl), finalUrl: pageUrl.href, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}`, debugAmazon: amazonNote, debugShare: shareNote });
   } catch (err) {
     return json({ image: null, isIcon: false, imageBg: null, cornerDark: false, title: null, siteName: null, error: String(err) });
   }

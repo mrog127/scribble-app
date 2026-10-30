@@ -285,7 +285,8 @@ export function AppProvider({ children }) {
             id: l.id, url: l.url, title: l.title, activated: l.activated, scheduledDate: l.scheduled_date, sortOrder: l.sort_order ?? null, createdAt: l.created_at ?? null, homeSortOrder: l.home_sort_order ?? null, catSortOrder: l.cat_sort_order ?? null, archived: l.archived === true,
             imageUrl: l.image_url ?? null, imageFetchedAt: l.image_fetched_at ?? null, siteName: l.site_name ?? null,
             imageIsIcon: l.image_is_icon === true, imageBg: l.image_bg ?? null,
-            imageCornerDark: l.image_corner_dark === true
+            imageCornerDark: l.image_corner_dark === true,
+            faviconUrl: l.favicon_url ?? null
           })),
         }))
     }))
@@ -1306,11 +1307,12 @@ export function AppProvider({ children }) {
   // image_fetched_at is stamped either way so pages without one aren't retried
   // on every load.
   const linkImageInFlight = useRef(new Set())
-  const LINK_ICON_RECHECK_BEFORE = '2026-10-31T12:00:00.000Z'
+  // Links looked up before the site's own favicon was recorded get one more look
+  const LINK_RECHECK_BEFORE = '2026-11-06T12:00:00.000Z'
   const ensureLinkImage = useCallback(async (categoryId, projectId, link) => {
-    // Links that only found a site logo before share links were walked through
-    // to the real page get one more look
-    const recheck = link?.imageIsIcon && link.imageFetchedAt && link.imageFetchedAt < LINK_ICON_RECHECK_BEFORE
+    // Links looked up before share links were walked through to the real page
+    // (and the destination's favicon recorded) get one more look
+    const recheck = link && !link.faviconUrl && link.imageFetchedAt && link.imageFetchedAt < LINK_RECHECK_BEFORE
     if (!link || (link.imageFetchedAt && !recheck) || linkImageInFlight.current.has(link.id)) return
     linkImageInFlight.current.add(link.id)
     let image = null
@@ -1318,6 +1320,7 @@ export function AppProvider({ children }) {
     let isIcon = false            // the image is the site's logo, not a page photo
     let imageBg = null            // colour to sit behind that logo
     let cornerDark = false        // is the badge's patch of the image dark?
+    let faviconUrl = null         // the destination site's own small icon
     let answered = false          // did the function actually respond?
     try {
       const res = await fetch(
@@ -1332,6 +1335,7 @@ export function AppProvider({ children }) {
         if (data && data.isIcon === true) isIcon = true
         if (data && typeof data.imageBg === 'string') imageBg = data.imageBg
         if (data && data.cornerDark === true) cornerDark = true
+        if (data && typeof data.favicon === 'string') faviconUrl = data.favicon
       } else {
         console.warn('[link-preview] HTTP', res.status)
       }
@@ -1349,12 +1353,14 @@ export function AppProvider({ children }) {
     const stamp = new Date().toISOString()
     updateProject(categoryId, projectId, proj => ({
       ...proj,
-      links: proj.links.map(l => l.id !== link.id ? l : { ...l, imageUrl: image, siteName, imageFetchedAt: stamp, imageIsIcon: isIcon, imageBg, imageCornerDark: cornerDark }),
+      links: proj.links.map(l => l.id !== link.id ? l : { ...l, imageUrl: image, siteName, imageFetchedAt: stamp, imageIsIcon: isIcon, imageBg, imageCornerDark: cornerDark, faviconUrl }),
     }))
     db(supabase.from('links').update({
       image_url: image, site_name: siteName, image_fetched_at: stamp,
       image_is_icon: isIcon, image_bg: imageBg, image_corner_dark: cornerDark,
     }).eq('id', link.id))
+    // Its own write, so a database without the column yet doesn't lose the rest
+    if (faviconUrl) db(supabase.from('links').update({ favicon_url: faviconUrl }).eq('id', link.id))
   }, [])
 
   const reorderCategories = useCallback((newOrder) => {

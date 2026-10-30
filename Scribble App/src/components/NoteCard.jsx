@@ -151,7 +151,7 @@ function NoteEmbedBlock({ type, ids, project, categoryId, projectId, editing, on
     <div className="note-embed-links">
       {links.map(l => item(l.id, (
         <div className="note-row note-embed-note note-embed-link" onClick={() => openUrl(l.url)}>
-          <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}><EmbedFavicon url={l.url}/></div>
+          <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}><EmbedFavicon link={l} categoryId={categoryId} projectId={projectId}/></div>
           <div className="item-content">
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <span className="note-text" style={{ display: 'block' }}>{l.title || hostOf(l.url)}</span>
@@ -179,15 +179,20 @@ function NoteEmbedBlock({ type, ids, project, categoryId, projectId, editing, on
   )
 }
 
-// An attached link's icon: the site's favicon, or the link glyph without one
-function EmbedFavicon({ url }) {
+// An attached link's icon: the favicon of the site the link ends up on (a
+// share link is looked up through to its real page), or the link glyph
+function EmbedFavicon({ link, categoryId, projectId }) {
+  const { ensureLinkImage } = useAppContext()
   const [failed, setFailed] = useState(false)
-  const host = isPhoneLink(url) ? '' : hostOf(url)
-  if (!host || failed) return <FeatherLinkIcon size={20} strokeWidth={2} color="#7A7A7A"/>
+  useEffect(() => { ensureLinkImage(categoryId, projectId, link) }, [link.id, link.imageFetchedAt]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setFailed(false) }, [link.faviconUrl])
+  const host = isPhoneLink(link.url) ? '' : hostOf(link.url)
+  const src = link.faviconUrl || (host ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}` : null)
+  if (!src || failed) return <FeatherLinkIcon size={20} strokeWidth={2} color="#7A7A7A"/>
   return (
     <img
       className="note-embed-favicon"
-      src={`https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`}
+      src={src}
       alt=""
       loading="lazy"
       onError={() => setFailed(true)}

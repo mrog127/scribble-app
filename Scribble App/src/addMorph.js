@@ -759,6 +759,10 @@ export function startSendToRow(footer, getRow, seek) {
       cur = row
       const inner = row.cloneNode(true)
       const { content } = buildDragCloneShell(row, inner)
+      // just the row's contents: not the drag copy's own glass outline (it drew
+      // a second, wider pill around the landing one)
+      content.querySelectorAll('.drag-glass-stroke').forEach(n => n.remove())
+      if (content.classList?.contains('drag-glass-stroke')) content.remove()
       const r = row.getBoundingClientRect()
       lastRect = r
       inner.style.marginLeft = '0'

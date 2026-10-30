@@ -335,7 +335,7 @@ export function genieShape(a, ra, b, rb, t, pillAt) {
 }
 // The plain version: every edge leaves at once and lands at once (each moving
 // as fast as its distance needs), over the whole TOTAL — no genie lag
-export function rectShape(a, ra, b, rb, t, total = TOTAL) {
+export function rectShape(a, ra, b, rb, t, total = TOTAL, waist = 0) {
   const p = 1 - Math.pow(1 - clamp01(t / total), 4)
   const box = { left: lerp(a.left, b.left, p), top: lerp(a.top, b.top, p), right: lerp(a.right, b.right, p), bottom: lerp(a.bottom, b.bottom, p) }
   box.width = Math.max(1, box.right - box.left); box.height = Math.max(1, box.bottom - box.top)
@@ -343,10 +343,22 @@ export function rectShape(a, ra, b, rb, t, total = TOTAL) {
   const pts = []
   const N = 8
   const corner = (cx, cy, a0) => { for (let i = 0; i <= N; i++) { const a = a0 + (i / N) * Math.PI / 2; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]) } }
+  // (the straight sides get points along them too, so a waist can bend them)
+  const side = (x, y0, y1) => { for (let i = 1; i < 20; i++) pts.push([x, y0 + (y1 - y0) * (i / 20)]) }
   corner(box.right - r, box.top + r, -Math.PI / 2)
+  side(box.right, box.top + r, box.bottom - r)
   corner(box.right - r, box.bottom - r, 0)
   corner(box.left + r, box.bottom - r, Math.PI / 2)
+  side(box.left, box.bottom - r, box.top + r)
   corner(box.left + r, box.top + r, Math.PI)
+  // A waist: pinched in at its middle by `waist` of its width (an hourglass)
+  if (waist > 0) {
+    const cx = (box.left + box.right) / 2
+    for (const q of pts) {
+      const v = (q[1] - box.top) / box.height
+      q[0] = cx + (q[0] - cx) * (1 - waist * Math.sin(Math.PI * clamp01(v)))
+    }
+  }
   return { box, pts, foot: { left: box.left, right: box.right, bottom: box.bottom } }
 }
 // The outline pulled in by px all round (about its middle) — the contents are
@@ -1098,8 +1110,8 @@ export function morphPageIn(page, row) {
     setClip(page, '')
     const to = page.getBoundingClientRect()
     // 32px corners all the way out (the page is square once it has landed)
-    // …squeezed 20% narrower about its middle halfway through
-    const genie = squish(rectShape(from, fromR, to, 32, t, PAGE_TOTAL), 1 - 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
+    // …pinched 20% in at its middle (an hourglass) halfway through
+    const genie = rectShape(from, fromR, to, 32, t, PAGE_TOTAL, 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
     page.style.transformOrigin = '0 0'
@@ -1190,7 +1202,7 @@ export function morphPageOut(page, row) {
     const t = now - t0
     const to = row.isConnected ? rowPill(row) : null
     if (!to) { finish(); return }
-    const genie = squish(rectShape(from, 32, to, to.height / 2, t, PAGE_TOTAL), 1 - 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
+    const genie = rectShape(from, 32, to, to.height / 2, t, PAGE_TOTAL, 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
     copy.style.transform = fit(from, box)

@@ -81,9 +81,39 @@ function notePreviewOf(html) {
 function NoteEmbedBlock({ type, ids, project, categoryId, projectId, editing, onRemove, onOpenNote, onOpenLink }) {
   const [xFor, setXFor] = useState(null)   // touch: the item whose X is showing
   useEffect(() => { if (!editing) setXFor(null) }, [editing])
+  const selRef = useRef(null)              // the item whose X is showing
+  // With an item selected, Enter starts a new line beneath the attachment
+  useEffect(() => {
+    if (!editing || xFor == null) return
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || e.isComposing) return
+      const block = selRef.current?.closest('.note-para.style-embed')
+      const content = block?.closest('[contenteditable="true"]')
+      if (!block || !content) return
+      e.preventDefault()
+      e.stopPropagation()
+      const line = document.createElement('div')
+      line.className = 'note-para style-body'
+      line.innerHTML = '<br>'
+      block.after(line)
+      setXFor(null)
+      content.focus({ preventScroll: true })
+      const r = document.createRange()
+      r.setStart(line, 0)
+      r.collapse(true)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(r)
+      content.dispatchEvent(new Event('input', { bubbles: true }))
+      requestAnimationFrame(() => line.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [editing, xFor])
   const item = (id, children, extraClass) => (
     <div
       key={id}
+      ref={xFor === id ? selRef : undefined}
       className={`note-embed-item${extraClass ? ' ' + extraClass : ''}${xFor === id ? ' show-x' : ''}`}
       // Editing, a tap shows its X (a second one hides it) and opens nothing
       onClickCapture={e => {

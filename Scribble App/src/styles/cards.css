@@ -788,11 +788,12 @@
   align-items: center;
   justify-content: center;
   padding: 0 32px;
-  background: rgba(0, 0, 0, 0.28);
-  opacity: 0;
-  transition: opacity 160ms ease;
+  /* The dim fades rather than the whole backdrop: opacity on a parent stops
+     the modal's backdrop blur rendering until it reaches 1 */
+  background: transparent;
+  transition: background-color 160ms ease;
 }
-.archive-modal-backdrop.visible { opacity: 1; }
+.archive-modal-backdrop.visible { background-color: rgba(0, 0, 0, 0.28); }
 
 .archive-modal {
   width: 100%;
@@ -802,10 +803,11 @@
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
   padding: 20px;
+  opacity: 0;
   transform: scale(0.94);
-  transition: transform 160ms ease;
+  transition: transform 160ms ease, opacity 160ms ease, -webkit-backdrop-filter 160ms ease, backdrop-filter 160ms ease;
 }
-.archive-modal-backdrop.visible .archive-modal { transform: scale(1); }
+.archive-modal-backdrop.visible .archive-modal { opacity: 1; transform: scale(1); }
 
 .archive-modal-title {
   margin: 0 0 8px;
@@ -1376,7 +1378,7 @@
   opacity: 0;
   transform: scale(0.97);
   transform-origin: center;
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition: opacity 160ms ease, transform 160ms ease, -webkit-backdrop-filter 160ms ease, backdrop-filter 160ms ease;
 }
 .move-to-card.open { opacity: 1; transform: scale(1); }
 

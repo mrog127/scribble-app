@@ -7201,7 +7201,8 @@ body.resizing-detail .phone { transition: none !important; }
 
 /* Light Dots: confirmation modal — a white wash behind it instead of black, the
    sublabel in the body grey, and Cancel as the light Done pill */
-:root[data-theme="light-dots"] .archive-modal-backdrop { background: rgba(255, 255, 255, 0.5); }
+:root[data-theme="light-dots"] .archive-modal-backdrop { background: transparent; }
+:root[data-theme="light-dots"] .archive-modal-backdrop.visible { background-color: rgba(255, 255, 255, 0.5); }
 :root[data-theme="light-dots"] .archive-modal-body { color: #636363; }
 :root[data-theme="light-dots"] .archive-modal-btn:not(.danger) { background: #E3E3E3; color: #292929; }
 
@@ -12452,24 +12453,27 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   bottom: auto;
   z-index: 300;
   overflow: visible;   /* the card's shadow reaches past the box's edges */
-  opacity: 0;
+  opacity: 1;          /* the card fades, not the panel: opacity on a parent
+                          stops the card's backdrop blur rendering until it reaches 1 */
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 160ms ease, visibility 0s linear 160ms;
+  transition: visibility 0s linear 160ms;
 }
 :root #app .save-to-panel.as-overlay.visible {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transition: opacity 160ms ease;
+  transition: none;
 }
 :root #app .save-to-panel.as-overlay .save-to-card.move-to-card {
   position: absolute;
   inset: 0;
   margin: 0;
   transform: none;
-  opacity: 1;
+  opacity: 0;
+  transition: opacity 160ms ease, -webkit-backdrop-filter 160ms ease, backdrop-filter 160ms ease;
 }
+:root #app .save-to-panel.as-overlay.visible .save-to-card.move-to-card { opacity: 1; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-panel.as-overlay .save-to-card.move-to-card { border-radius: 32px; }
 :root #app .footer.keyboard-open.add-open.saveto-open:not(.search-open):not(.easel-open) { opacity: 0; pointer-events: none; }
 /* Paintbrush: the type button is a flat version of its Send square */
@@ -14754,3 +14758,14 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 }
 :root[data-theme="dark-dots"] #app .note-tools .note-attach-menu.card-context-menu { background: #2B2B2B; }
 :root[data-theme="paintbrush"] #app .note-tools .note-attach-menu.card-context-menu { background: #F7F6F3; }
+
+/* Save to / Move to / confirmation modals: the glass's blur grows with the
+   fade and scale instead of snapping on at the end */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .archive-modal-backdrop:not(.visible) .archive-modal,
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .move-to-card:not(.open):not(.save-to-card),
+  :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) #app .save-to-panel.as-overlay:not(.visible) .save-to-card.move-to-card {
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    backdrop-filter: blur(0px) saturate(100%);
+  }
+}

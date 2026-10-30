@@ -13,7 +13,7 @@ import MoveToCard from './MoveToCard.jsx'
 import { useRowMenu, RowActionMenu, isRowMenuOpen } from './RowMenu.jsx'
 import { useTheme } from '../useTheme.js'
 import { FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon } from './FeatherIcons.jsx'
-import { LinkGridCard, NoteRowContent } from './ProjectCard.jsx'
+import { NoteRowContent, openUrl, isPhoneLink, hostOf } from './ProjectCard.jsx'
 import { NoteRowIcon } from './TodoDetailPage.jsx'
 import { TrashMenuIcon, ArchiveMenuIcon, RetrieveMenuIcon, CopyMenuIcon } from './MenuIcons.jsx'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
@@ -118,11 +118,35 @@ function NoteEmbedBlock({ type, ids, project, categoryId, projectId, editing, on
   const links = ids.map(id => project?.links.find(l => String(l.id) === String(id))).filter(Boolean)
   if (!links.length) return null
   return (
-    <div className="link-grid note-embed-links">
+    <div className="note-embed-links">
       {links.map(l => item(l.id, (
-        <LinkGridCard link={l} categoryId={categoryId} projectId={projectId} onOpenPage={() => onOpenLink(l.id)}/>
-      ), 'link-grid-cell'))}
+        <div className="note-row note-embed-note note-embed-link" onClick={() => openUrl(l.url)}>
+          <div className="checkbox-wrap" style={{ pointerEvents: 'none' }}><EmbedFavicon url={l.url}/></div>
+          <div className="item-content">
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              <span className="note-text" style={{ display: 'block' }}>{l.title || hostOf(l.url)}</span>
+              <span className="note-preview-text">{hostOf(l.url)}</span>
+            </div>
+          </div>
+        </div>
+      )))}
     </div>
+  )
+}
+
+// An attached link's icon: the site's favicon, or the link glyph without one
+function EmbedFavicon({ url }) {
+  const [failed, setFailed] = useState(false)
+  const host = isPhoneLink(url) ? '' : hostOf(url)
+  if (!host || failed) return <FeatherLinkIcon size={20} strokeWidth={2} color="#7A7A7A"/>
+  return (
+    <img
+      className="note-embed-favicon"
+      src={`https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
   )
 }
 

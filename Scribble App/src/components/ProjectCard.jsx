@@ -25,7 +25,7 @@ import { moveWithAnimation } from '../moveFx.js'
 import { useCardHostsDetail } from '../detailLock.jsx'
 
 // Open a (possibly scheme-less) URL in a new browser tab
-function openUrl(url) {
+export function openUrl(url) {
   if (!url) return
   let u = url.trim()
   // A phone number in the link field → start a call instead of opening a URL
@@ -39,7 +39,7 @@ function openUrl(url) {
 }
 
 // A phone number typed into the link field (same test openUrl uses)
-function isPhoneLink(url) {
+export function isPhoneLink(url) {
   const u = (url || '').trim()
   const digits = u.replace(/\D/g, '')
   return /^[+()\-.\s\d]+$/.test(u) && digits.length >= 7 && digits.length <= 15
@@ -47,7 +47,7 @@ function isPhoneLink(url) {
 
 // Strip the scheme for a cleaner one-line preview
 // Bare hostname, used when a link has no title of its own.
-function hostOf(url) {
+export function hostOf(url) {
   try {
     const u = /^https?:\/\//i.test(url) ? url : `https://${url}`
     return new URL(u).hostname.replace(/^www\./, '')

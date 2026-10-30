@@ -14811,6 +14811,7 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   content: '';
   position: absolute;
   inset: -16px 0;
+  top: var(--head-pill-top, 8px);
   border-radius: 32px;
   background: var(--title-field-wash);
   pointer-events: none;

@@ -604,6 +604,23 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   const [moveTop, setMoveTop] = useState(null)
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingComment, setEditingComment] = useState(false)
+  // The title + comment field's top edge sits 8px below the Save button
+  // (measured as if the page were scrolled to the top)
+  const headRef = useRef(null)
+  const headEditing = editingTitle || editingComment
+  useLayoutEffect(() => {
+    if (!headEditing) return
+    const place = () => {
+      const head = headRef.current
+      const btn = pageRef.current?.querySelector('.note-detail-done')
+      if (!head || !btn) return
+      const top = head.getBoundingClientRect().top + (scrollRef.current?.scrollTop || 0)
+      head.style.setProperty('--head-pill-top', `${btn.getBoundingClientRect().bottom + 8 - top}px`)
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [headEditing])
   const pendingCommentFocus = useRef(false)
 
   const openMove = useCallback(() => {
@@ -1123,7 +1140,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
 
       <div className="todo-detail-scroll" ref={scrollRef}>
         {/* Title and comment: one grey field while either is being typed in */}
-        <div className={`todo-detail-head${(editingTitle || editingComment) ? ' editing' : ''}`}>
+        <div ref={headRef} className={`todo-detail-head${(editingTitle || editingComment) ? ' editing' : ''}`}>
         <div
           ref={titleRef}
           className="todo-detail-title"

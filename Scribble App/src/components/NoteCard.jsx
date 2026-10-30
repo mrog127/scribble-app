@@ -2556,8 +2556,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
           projectId={projectId}
           editing={editing}
           onRemove={(id) => removeEmbed(e.el, id)}
-          onOpenNote={(id) => setOpenDetail({ type: 'note', id })}
-          onOpenLink={(id) => setOpenDetail({ type: 'link', id })}
+          onOpenNote={(id) => setOpenDetail(prev => ({ type: 'note', id, back: prev }))}
+          onOpenLink={(id) => setOpenDetail(prev => ({ type: 'link', id, back: prev }))}
         />,
         e.el,
         e.key,

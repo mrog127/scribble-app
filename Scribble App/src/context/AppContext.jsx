@@ -95,6 +95,9 @@ export function AppProvider({ children }) {
   const setOpenDetail = useCallback((v) => {
     setOpenDetailRaw(prev => {
       let next = typeof v === 'function' ? v(prev) : v
+      // A page opened from inside another (a note's attachment) closes back to
+      // the page it was opened from
+      if (!next && prev?.back) next = prev.back
       const { pinned, locked } = pinRef.current
       if (next && pinned) {
         if (sameDetail(next, pinned)) return prev

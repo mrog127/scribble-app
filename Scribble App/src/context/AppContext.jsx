@@ -1306,8 +1306,12 @@ export function AppProvider({ children }) {
   // image_fetched_at is stamped either way so pages without one aren't retried
   // on every load.
   const linkImageInFlight = useRef(new Set())
+  const LINK_ICON_RECHECK_BEFORE = '2026-10-31T12:00:00.000Z'
   const ensureLinkImage = useCallback(async (categoryId, projectId, link) => {
-    if (!link || link.imageFetchedAt || linkImageInFlight.current.has(link.id)) return
+    // Links that only found a site logo before share links were walked through
+    // to the real page get one more look
+    const recheck = link?.imageIsIcon && link.imageFetchedAt && link.imageFetchedAt < LINK_ICON_RECHECK_BEFORE
+    if (!link || (link.imageFetchedAt && !recheck) || linkImageInFlight.current.has(link.id)) return
     linkImageInFlight.current.add(link.id)
     let image = null
     let siteName = null

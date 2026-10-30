@@ -409,6 +409,99 @@ async function amazonPreview(pageUrl: URL): Promise<Response | null> {
   return null;
 }
 
+// ---- Share links ----
+// A share link (an app's "Share" button: vrbo.onelink.me, bit.ly, a Branch or
+// AppsFlyer link, a site's own short link...) is a hop on the way to the real
+// page, and the hop itself has no photo. So any link is walked, a hop at a
+// time, until a page that names its own image: HTTP redirects, a
+// <meta http-equiv=refresh>, a script that sends the browser on, or a link in
+// the URL itself (af_web_dp, $fallback_url, url=...). A hop that gives a
+// non-browser nothing is asked once more as Safari, since these services
+// often send bots a bare page but browsers on to the site.
+type Resolved = { url: URL; html: string | null; ok: boolean; note: string };
+
+const SHARE_PARAMS = ['af_web_dp', '$fallback_url', '$desktop_url', '$canonical_url', 'af_r', 'deep_link_value', 'url', 'u', 'link', 'target', 'dest', 'destination', 'redirect', 'redirect_url', 'to'];
+
+function decodeEntities(v: string): string {
+  return v.replace(/&amp;/g, '&').replace(/&#x2F;/gi, '/').replace(/&#47;/g, '/').replace(/\\\//g, '/').replace(/\\u002F/gi, '/').replace(/\\u0026/gi, '&');
+}
+
+function httpUrl(v: string | null | undefined, base: string): string | null {
+  if (!v) return null;
+  try {
+    const u = new URL(decodeEntities(v.trim()), base);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+  } catch { return null; }
+}
+
+// A web address carried in the link's own query string
+function urlFromParams(url: string): string | null {
+  let u: URL;
+  try { u = new URL(url); } catch { return null; }
+  for (const k of SHARE_PARAMS) {
+    const v = u.searchParams.get(k);
+    const next = v && /^https?:\/\//i.test(v) ? httpUrl(v, url) : null;
+    if (next && new URL(next).hostname !== u.hostname) return next;
+  }
+  return null;
+}
+
+// Where a page that isn't the destination sends the browser next
+function nextFromPage(html: string, url: string): string | null {
+  const refresh = html.match(/<meta[^>]+http-equiv=["']?refresh["']?[^>]*content=["'][^"']*?url\s*=\s*['"]?([^"'>\s]+)/i)
+    || html.match(/<meta[^>]+content=["'][^"']*?url\s*=\s*['"]?([^"'>\s]+)[^>]*http-equiv=["']?refresh/i);
+  if (refresh) { const n = httpUrl(refresh[1], url); if (n) return n; }
+  const script = html.match(/(?:window\.|document\.|top\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']/i)
+    || html.match(/location\.(?:replace|assign)\(\s*["']([^"']+)["']/i);
+  if (script) { const n = httpUrl(script[1], url); if (n) return n; }
+  // A link to the real page on a different site (og:url / canonical)
+  const meta = parseMeta(html);
+  const canon = pick(meta, ['og:url', 'twitter:url'])
+    || (html.match(/<link[^>]+rel=["']canonical["'][^>]*href=["']([^"']+)["']/i) || [])[1];
+  const n = httpUrl(canon, url);
+  if (n && new URL(n).hostname !== new URL(url).hostname) return n;
+  return urlFromParams(url);
+}
+
+const hasPageImage = (html: string) => !!pick(parseMeta(html), ['og:image:secure_url', 'og:image:url', 'og:image', 'twitter:image', 'twitter:image:src']);
+
+async function resolveShareLink(start: URL): Promise<Resolved> {
+  let url = start.href;
+  const seen = new Set<string>();
+  const hops: string[] = [];
+  let last: Resolved = { url: start, html: null, ok: false, note: '' };
+  for (let hop = 0; hop < 8 && !seen.has(url); hop++) {
+    seen.add(url);
+    let sent = false;
+    for (const headers of [UA, BROWSER_UA]) {
+      let res: Response;
+      try {
+        res = await fetch(url, { redirect: 'manual', headers, signal: AbortSignal.timeout(6000) });
+      } catch (err) { hops.push(`error ${String(err).slice(0, 60)}`); break; }
+      const loc = res.headers.get('location');
+      if (loc && res.status >= 300 && res.status < 400) {
+        await res.body?.cancel();
+        const n = httpUrl(loc, url);
+        hops.push(`${res.status} ${(n || loc).slice(0, 100)}`);
+        if (n) { url = n; sent = true; }
+        break;
+      }
+      const type = res.headers.get('content-type') || '';
+      const html = /html|xml/i.test(type) || !type ? (await res.text()).slice(0, 300000) : (await res.body?.cancel(), '');
+      last = { url: new URL(url), html, ok: res.ok, note: '' };
+      if (res.ok && hasPageImage(html)) { hops.push(`${res.status} image`); last.note = hops.join(' > '); return last; }
+      const n = nextFromPage(html, url);
+      if (n && !seen.has(n)) { hops.push(`${res.status} page > ${n.slice(0, 100)}`); url = n; sent = true; break; }
+      hops.push(`${res.status} page${headers === UA ? ' (bot)' : ''}`);
+      // nothing to go on as a bot: ask again as a browser
+    }
+    if (!sent) break;
+  }
+  if (last.url.href !== url) last = { url: new URL(url), html: null, ok: false, note: '' };
+  last.note = hops.join(' > ');
+  return last;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
@@ -429,11 +522,22 @@ Deno.serve(async (req: Request) => {
     const amazon = await amazonPreview(pageUrl);
     if (amazon) return amazon;
 
-    const res = await fetch(pageUrl.href, {
-      redirect: 'follow',
-      headers: UA,
-      signal: AbortSignal.timeout(8000),
-    });
+    // Walk a share link through to the page it stands for
+    const resolved = await resolveShareLink(pageUrl);
+    const shareNote = resolved.note;
+    if (resolved.url.href !== pageUrl.href) {
+      pageUrl = resolved.url;
+      const viaAmazon = await amazonPreview(pageUrl);
+      if (viaAmazon) return viaAmazon;
+    }
+
+    const res = resolved.html != null && resolved.ok
+      ? new Response(resolved.html, { status: 200 })
+      : await fetch(pageUrl.href, {
+          redirect: 'follow',
+          headers: UA,
+          signal: AbortSignal.timeout(8000),
+        });
     if (!res.ok) {
       // The page refused us, but its root icons usually don't.
       const fallback = await probeWellKnown(pageUrl) || faviconService(pageUrl);
@@ -441,7 +545,7 @@ Deno.serve(async (req: Request) => {
       return json({
         image: fallback, isIcon: true, imageBg: bg,
         cornerDark: bg ? luma([1, 3, 5].map((_, i) => parseInt(bg.replace('#', '').slice(i * 2, i * 2 + 2), 16) || 0)) < 150 : false,
-        title: null, siteName: null,
+        title: null, siteName: null, debugShare: shareNote,
       });
     }
 
@@ -503,7 +607,7 @@ Deno.serve(async (req: Request) => {
     // Temporary: lets us see what the parser actually found if this still misses.
     const debugMetaKeys = Object.keys(meta).slice(0, 60);
 
-    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}`, debugAmazon: amazonNote });
+    return json({ image, isIcon, imageBg, cornerDark, title, siteName, debugMetaKeys, debugCorner: `${loadNote} | ${cornerNote}`, debugAmazon: amazonNote, debugShare: shareNote });
   } catch (err) {
     return json({ image: null, isIcon: false, imageBg: null, cornerDark: false, title: null, siteName: null, error: String(err) });
   }

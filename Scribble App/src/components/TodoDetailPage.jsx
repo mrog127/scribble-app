@@ -1122,6 +1122,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
       </div>
 
       <div className="todo-detail-scroll" ref={scrollRef}>
+        {/* Title and comment: one grey field while either is being typed in */}
+        <div className={`todo-detail-head${(editingTitle || editingComment) ? ' editing' : ''}`}>
         <div
           ref={titleRef}
           className="todo-detail-title"
@@ -1156,6 +1158,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
             onPaste={handleCommentPaste}
             onBlur={saveComment}
           />
+        </div>
         </div>
 
         {!inInbox && (linksFirst ? [linksSection, notesSection] : [notesSection, linksSection])}

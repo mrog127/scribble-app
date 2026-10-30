@@ -14798,3 +14798,24 @@ html.solo-window #app .note-detail-page { transition: none !important; }
     backdrop-filter: blur(0px) saturate(100%);
   }
 }
+
+/* List item page (Dots themes): while the title or the comment is being typed
+   in, both sit in one grey pill (the comment's prompt included), 16px above
+   the title and below the comment, instead of a pill each */
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head { display: flow-root; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head.editing {
+  position: relative;
+  isolation: isolate;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head.editing::before {
+  content: '';
+  position: absolute;
+  inset: -16px 0;
+  border-radius: 32px;
+  background: var(--title-field-wash);
+  pointer-events: none;
+  z-index: -1;
+}
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head :is(.todo-detail-title, .todo-detail-comment):focus::before { display: none; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head.editing .todo-detail-title { padding-left: 12px; padding-right: 12px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-head.editing .todo-detail-comment { padding-left: 16px; padding-right: 12px; }

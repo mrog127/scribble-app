@@ -143,9 +143,11 @@ function glassEdges(el) {
   return { shadow, stroke: cols && cols.length >= 2 ? [cols[0], cols[cols.length - 1]] : null }
 }
 let gradId = 0
-function makeGlass(sample, z) {
+function makeGlass(sample, z, opts = {}) {
   const { bf, img } = glassOf(sample)
-  const { shadow, stroke } = glassEdges(sample)
+  const edges = glassEdges(sample)
+  const shadow = edges.shadow
+  const stroke = opts.stroke || edges.stroke
   // The whole thing casts the glass's shadow (a filter on the wrapper, so the
   // shadow follows the shape)
   const wrap = document.createElement('div')
@@ -1045,7 +1047,9 @@ function rowFace(row) {
 function pageGlass(page, z) {
   const phone = page.closest('.phone') || document.getElementById('app')
   const sample = phone?.querySelector('.footer') || page
-  const glass = makeGlass(sample, z)
+  // the clear liquid glass's gradient stroke (white fading to a faint dark), as
+  // on the open add-item box and the menus
+  const glass = makeGlass(sample, z, { stroke: ['rgba(255, 255, 255, 0.3)', 'rgba(0, 0, 0, 0.16)'] })
   glass.tintTo(page)
   const behind = phone ? findPage(phone) : null
   if (behind) glass.backdrop(behind)
@@ -1053,7 +1057,7 @@ function pageGlass(page, z) {
   // 0 = all glass, 1 = all page
   const solid = (k) => {
     glass.tintOpacity(k)
-    if (stroke) stroke.style.opacity = String(1 - k)
+    if (stroke) stroke.style.opacity = String(0.7 * (1 - k))
   }
   return { ...glass, solid }
 }
@@ -1085,7 +1089,8 @@ export function morphPageIn(page, row) {
     page.style.transform = 'none'
     setClip(page, '')
     const to = page.getBoundingClientRect()
-    const genie = rectShape(from, fromR, to, 0, t)
+    // 32px corners all the way out (the page is square once it has landed)
+    const genie = rectShape(from, fromR, to, 32, t)
     const { box, pts } = genie
     glass.draw(genie)
     page.style.transformOrigin = '0 0'
@@ -1096,8 +1101,8 @@ export function morphPageIn(page, row) {
     // first third
     face.style.transform = `translate(${faceRect.left - box.left}px, ${faceRect.top - box.top}px)`
     face.style.opacity = String(1 - ease(f * 3))
-    // the page's contents come in over the last third
-    kids.forEach(k => { k.style.opacity = String(ease((f - 2 / 3) * 3)) })
+    // the page's contents come in over the second half
+    kids.forEach(k => { k.style.opacity = String(ease((f - 0.5) * 2)) })
     const k = clamp01((f - 2 / 3) * 3)
     glass.solid(k)
     // a drop shadow under the growing pill, gone by the end
@@ -1168,7 +1173,7 @@ export function morphPageOut(page, row) {
     const t = now - t0
     const to = row.isConnected ? rowPill(row) : null
     if (!to) { finish(); return }
-    const genie = rectShape(from, 0, to, to.height / 2, t)
+    const genie = rectShape(from, 32, to, to.height / 2, t)
     const { box, pts } = genie
     glass.draw(genie)
     copy.style.transform = fit(from, box)
@@ -1181,8 +1186,8 @@ export function morphPageOut(page, row) {
     const k = 1 - clamp01(f * 3)
     glass.solid(k)
     glass.el.style.filter = `drop-shadow(0 6px 24px rgba(0, 0, 0, ${(0.2 * (1 - k)).toFixed(3)}))`
-    // and go over the first third
-    kids.forEach(k => { k.style.opacity = String(1 - ease(f * 3)) })
+    // and go over the first half
+    kids.forEach(k => { k.style.opacity = String(1 - ease(f * 2)) })
     // the row's contents, in place, fade back in over the last third
     face.style.opacity = String(ease((f - 2 / 3) * 3))
     if (t >= TOTAL) { finish(); return }

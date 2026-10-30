@@ -14721,6 +14721,8 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 .note-para.style-embed > .note-embed-links { margin-left: -8px; margin-right: -8px; }
 /* Attached links: note-style rows, stacked, with the site's favicon */
 .note-embed-links { display: flex; flex-direction: column; gap: 8px; }
+/* Attachments one after another sit 8px apart */
+.note-para.style-embed + .note-para.style-embed { margin-top: -8px; }
 .note-embed-favicon { width: 20px; height: 20px; border-radius: 4px; object-fit: contain; display: block; }
 /* The X — the photo's — top-right, on hover (mouse) or after a tap */
 .note-embed-item .note-embed-x { top: 12px; right: 12px; display: none; z-index: 3; }

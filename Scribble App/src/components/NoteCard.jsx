@@ -1026,6 +1026,23 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   const embedSigRef = useRef('')
   const rescanEmbeds = useCallback(() => {
     const content = contentRef.current
+    // Attachments are each their own line: a block holding several links (as
+    // older notes saved them) splits into one block per link
+    content?.querySelectorAll('.note-para.style-embed[data-embed]').forEach(el => {
+      const ids = idsOf(el)
+      if (ids.length < 2) return
+      el.dataset.ids = ids[0]
+      let at = el
+      ids.slice(1).forEach(id => {
+        const b = document.createElement('div')
+        b.className = 'note-para style-embed'
+        b.contentEditable = 'false'
+        b.dataset.embed = el.dataset.embed
+        b.dataset.ids = id
+        at.after(b)
+        at = b
+      })
+    })
     const list = content ? [...content.querySelectorAll('.note-para.style-embed[data-embed]')] : []
     const sig = list.map(el => el.dataset.embed + ':' + el.dataset.ids).join('|')
     // (the same blocks as before — nothing to redraw)
@@ -1056,13 +1073,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     block.dataset.embed = type === 'link' ? 'links' : 'note'
     block.dataset.ids = String(id)
     placeBlock(block)
-    // A link right after (or before) a block of links joins it
-    if (type === 'link') {
-      const prev = block.previousElementSibling
-      const next = block.nextElementSibling
-      if (prev?.dataset?.embed === 'links') { prev.dataset.ids = [...idsOf(prev), String(id)].join(','); block.remove() }
-      else if (next?.dataset?.embed === 'links') { next.dataset.ids = [String(id), ...idsOf(next)].join(','); block.remove() }
-    }
     rescanRef.current()
     flushAutosave()
   }, [placeBlock, flushAutosave])

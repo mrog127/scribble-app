@@ -476,6 +476,7 @@ export function startAddMorph(fromEl, footerEl) {
   if (reducedMotion()) return
 
   const pillEl = fromEl
+  const fromCard = !!fromEl.matches?.('.card')
   const from = pillEl.getBoundingClientRect()
   if (!from.width || !from.height) return
   const fromR = cornerOf(pillEl, from)
@@ -523,7 +524,10 @@ export function startAddMorph(fromEl, footerEl) {
     setClip(footer, '')
     const to = open ? footer.getBoundingClientRect() : from
     const toR = open ? (parseFloat(getComputedStyle(footer).borderTopLeftRadius) || 32) : fromR
-    const genie = riseAbove(genieShape(from, fromR, to, toR, t, 'a'), kbEdge?.(now))
+    let shape = genieShape(from, fromR, to, toR, t, 'a')
+    // Out of a canvas card: narrowed 10% about its middle halfway through
+    if (fromCard) shape = squish(shape, 1 - 0.1 * Math.sin(Math.PI * clamp01(t / TOTAL)))
+    const genie = riseAbove(shape, kbEdge?.(now))
     const { box, pts, foot } = genie
     glass.draw(genie)
     // The box's contents ride inside the shape, at its size, clipped to it
@@ -647,6 +651,7 @@ function morphOut(footer, dest) {
     const toR = target ? dest.radius(target, to) : fromR
     let shape = genieShape(from, fromR, to, toR, t, 'b')
     if (dest.squish && target) shape = squish(shape, squishAt(t / TOTAL))
+    else if (dest.squeeze && target) shape = squish(shape, 1 - dest.squeeze * Math.sin(Math.PI * clamp01(t / TOTAL)))
     const genie = riseAbove(shape, kbEdge?.(now))
     const { box, pts } = genie
     glass.draw(genie)
@@ -726,6 +731,8 @@ export function startAddMorphClose(footer) {
       },
       show: (b) => { b.style.opacity = '' },
       reveal: false,
+      // back into a canvas card: the same 10% squeeze it came out with
+      squeeze: btn.matches?.('.card') ? 0.1 : 0,
     })
     return
   }

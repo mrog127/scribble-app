@@ -1075,6 +1075,15 @@ function pageGlass(page, z) {
   return { ...glass, solid }
 }
 const pageMorphs = new WeakMap()
+// Where the page's contents sit at f: between a and b on a smooth in-out
+// curve (half way at the half), slower to arrive than the shape
+const contentBox = (a, b, f) => {
+  const x = clamp01(f)
+  const q = x * x * (3 - 2 * x)
+  const left = lerp(a.left, b.left, q), top = lerp(a.top, b.top, q)
+  const width = Math.max(1, lerp(a.width, b.width, q)), height = Math.max(1, lerp(a.height, b.height, q))
+  return { left, top, width, height, right: left + width, bottom: top + height }
+}
 // The page morph runs quicker than the others
 const PAGE_TOTAL = 200
 // The page under the item page: the active one
@@ -1115,10 +1124,14 @@ export function morphPageIn(page, row) {
     const genie = rectShape(from, fromR, to, 32, t, PAGE_TOTAL, 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
-    page.style.transformOrigin = '0 0'
-    page.style.transform = fit(to, box)
-    setClip(page, clipFor(inset(pts, box, 2), box, to))
+    // The page itself grows on a gentler curve than the shape, so while its
+    // contents fade in (the second half) they're still visibly growing into
+    // place rather than already full size and just uncovered
     const f = t / PAGE_TOTAL
+    const cbox = contentBox(from, to, f)
+    page.style.transformOrigin = '0 0'
+    page.style.transform = fit(to, cbox)
+    setClip(page, clipFor(inset(pts, box, 2), cbox, to))
     // the row's contents stay where they are (unstretched) and fade over the
     // first third
     face.style.transform = `translate(${faceRect.left - box.left}px, ${faceRect.top - box.top}px)`
@@ -1206,9 +1219,11 @@ export function morphPageOut(page, row) {
     const genie = rectShape(from, 32, to, to.height / 2, t, PAGE_TOTAL, 0.2 * Math.sin(Math.PI * clamp01(t / PAGE_TOTAL)))
     const { box, pts } = genie
     glass.draw(genie)
-    copy.style.transform = fit(from, box)
-    setClip(copy, clipFor(inset(pts, box, 2), box, from))
     const f = t / PAGE_TOTAL
+    // (its contents shrink on the gentler curve, so they're seen going)
+    const cbox = contentBox(from, to, f)
+    copy.style.transform = fit(from, cbox)
+    setClip(copy, clipFor(inset(pts, box, 2), cbox, from))
     const rr = row.getBoundingClientRect()
     face.style.transform = `translate(${rr.left - box.left}px, ${rr.top - box.top}px)`
     // the page's solid background gives way to glass (and its shadow) over the

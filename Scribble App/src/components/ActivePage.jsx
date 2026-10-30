@@ -1231,8 +1231,10 @@ export default function ActivePage({
         {/* Moves and fades with the scroll, as an Easel page's header does */}
         <div className="page-header" style={{ opacity: headerOpacity, transform: `translateY(${headerTranslate}px)` }}>
           <div className="category-header-row">
-            <span className="gallery-desk-icon" aria-hidden="true">
-              <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            {/* The Gallery's icon on a white disc after the title, as an
+                Easel page's badge follows its name */}
+            <p className="active-title has-title-icon" style={{ marginBottom: '0' }}>Gallery<span className="easel-title-icon" aria-hidden="true">{'\u2060'}<span className="easel-badge easel-title-icon-circle gallery-title-badge">
+              <svg className="easel-name-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3,6.8 10,2.6 17,6.8"/>
                 <line x1="5" y1="7.6" x2="5" y2="14"/>
                 <line x1="8.33" y1="7.6" x2="8.33" y2="14"/>
@@ -1241,8 +1243,7 @@ export default function ActivePage({
                 <line x1="3.5" y1="14" x2="16.5" y2="14"/>
                 <line x1="3" y1="17" x2="17" y2="17"/>
               </svg>
-            </span>
-            <p className="active-title" style={{ marginBottom: '0' }}>Gallery</p>
+            </span></span></p>
             <div className="category-header-actions">
               <button
                 className="category-header-btn"

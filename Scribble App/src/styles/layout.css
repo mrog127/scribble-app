@@ -14839,3 +14839,8 @@ html.solo-window #app .note-detail-page { transition: none !important; }
 /* (the desktop sidebar's icons just show — they aren't buttons) */
 .sidebar-date .active-dots .active-dot-btn { cursor: default; }
 .sidebar-date .active-dots .active-dot-btn:active { transform: none; }
+
+/* Desktop Gallery header: the Gallery icon (14px) on a white disc after the
+   title, in the place an Easel page's badge takes */
+.gallery-desk-head .gallery-title-badge { background: #FFFFFF; color: #292929; }
+.gallery-desk-head .gallery-title-badge > svg.easel-name-icon { width: 14px !important; height: 14px !important; }

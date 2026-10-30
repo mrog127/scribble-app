@@ -331,6 +331,22 @@ export function genieShape(a, ra, b, rb, t, pillAt) {
   const bottomRow = edge(1)
   return { box, pts, foot: { left: bottomRow[0], right: bottomRow[1], bottom } }
 }
+// The plain version: every edge leaves at once and lands at once (each moving
+// as fast as its distance needs), over the whole TOTAL — no genie lag
+export function rectShape(a, ra, b, rb, t) {
+  const p = 1 - Math.pow(1 - clamp01(t / TOTAL), 4)
+  const box = { left: lerp(a.left, b.left, p), top: lerp(a.top, b.top, p), right: lerp(a.right, b.right, p), bottom: lerp(a.bottom, b.bottom, p) }
+  box.width = Math.max(1, box.right - box.left); box.height = Math.max(1, box.bottom - box.top)
+  const r = Math.max(0, Math.min(lerp(ra, rb, p), box.width / 2, box.height / 2))
+  const pts = []
+  const N = 8
+  const corner = (cx, cy, a0) => { for (let i = 0; i <= N; i++) { const a = a0 + (i / N) * Math.PI / 2; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]) } }
+  corner(box.right - r, box.top + r, -Math.PI / 2)
+  corner(box.right - r, box.bottom - r, 0)
+  corner(box.left + r, box.bottom - r, Math.PI / 2)
+  corner(box.left + r, box.top + r, Math.PI)
+  return { box, pts, foot: { left: box.left, right: box.right, bottom: box.bottom } }
+}
 // The outline pulled in by px all round (about its middle) — the contents are
 // cut a hair inside the glass, so their cut edge never lies on the glass's
 const inset = (pts, box, px) => {
@@ -1069,7 +1085,7 @@ export function morphPageIn(page, row) {
     page.style.transform = 'none'
     setClip(page, '')
     const to = page.getBoundingClientRect()
-    const genie = genieShape(from, fromR, to, 0, t, 'a')
+    const genie = rectShape(from, fromR, to, 0, t)
     const { box, pts } = genie
     glass.draw(genie)
     page.style.transformOrigin = '0 0'
@@ -1080,7 +1096,8 @@ export function morphPageIn(page, row) {
     const sx = box.width / from.width, sy = box.height / from.height
     face.style.transform = `translate(${(faceRect.left - from.left) * sx}px, ${(faceRect.top - from.top) * sy}px) scale(${sx}, ${sy})`
     face.style.opacity = String(1 - ease(f / 0.35))
-    kids.forEach(k => { k.style.opacity = String(ease(f / 0.4)) })
+    // the page's contents come in over the last third
+    kids.forEach(k => { k.style.opacity = String(ease((f - 2 / 3) * 3)) })
     glass.solid(clamp01((f - 2 / 3) * 3))
     if (t >= TOTAL) { finish(); return }
     raf = requestAnimationFrame(frame)
@@ -1148,7 +1165,7 @@ export function morphPageOut(page, row) {
     const t = now - t0
     const to = row.isConnected ? rowPill(row) : null
     if (!to) { finish(); return }
-    const genie = genieShape(from, 0, to, to.height / 2, t, 'b')
+    const genie = rectShape(from, 0, to, to.height / 2, t)
     const { box, pts } = genie
     glass.draw(genie)
     copy.style.transform = fit(from, box)
@@ -1159,7 +1176,8 @@ export function morphPageOut(page, row) {
     face.style.transform = `translate(${(rr.left - to.left) * sx}px, ${(rr.top - to.top) * sy}px) scale(${sx}, ${sy})`
     // the page's solid background gives way to glass over the first third
     glass.solid(1 - clamp01(f * 3))
-    kids.forEach(k => { k.style.opacity = String(1 - ease((f - 0.3) / 0.45)) })
+    // and go over the first third
+    kids.forEach(k => { k.style.opacity = String(1 - ease(f * 3)) })
     face.style.opacity = String(ease((f - 0.4) / 0.5))
     if (t >= TOTAL) { finish(); return }
     raf = requestAnimationFrame(frame)

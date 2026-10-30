@@ -1591,6 +1591,7 @@ function AppInner() {
   const handleTabChangeRef = useRef(handleTabChange)
   const dragRef = useRef(null)        // live gesture state (shared with the layout effect)
   const dragFrameRef = useRef(null)   // applies a drag frame; set inside the gesture effect
+  const slideToTabRef = useRef(null)  // runs the swipe carousel to a tab without a finger; set inside the gesture effect
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   // Swipe carousel: Home → each project. On mobile the old Menu tab is gone —
   // Settings is a sheet now — so swiping past the last project must not land on it.
@@ -1654,6 +1655,30 @@ function AppInner() {
     }
     // Exposed so the layout effect can position the incoming page before it paints.
     dragFrameRef.current = (dx) => frame(dragRef.current, dx)
+
+    // The same carousel, run by a button instead of a finger: the page slides
+    // away as though `toTab` sat beside it on the `dir` side ('prev' = to the
+    // left). Returns false when it can't run, so the caller falls back.
+    slideToTabRef.current = (toTab, dir) => {
+      if (window.innerWidth >= 1000 || animating || dragRef.current) return false
+      if (toTab === activeTabRef.current) return false
+      const s = { programmatic: true, id: -1, engaged: true, edge: false, dir, toTab, dx: 0, v: 0, lastT: performance.now() }
+      measureStep(s)
+      dragRef.current = s
+      animating = true   // holds off finger gestures until it lands
+      setDragActive(true)
+      setDragIncoming({ tab: toTab })
+      let tries = 0
+      const go = () => {
+        if (dragRef.current !== s) return
+        if (!toPage() && tries++ < 30) { setTimeout(go, 16); return }
+        frame(s, 0)
+        void toPage()?.offsetWidth   // lay the start position down before the slide
+        finalize(true)
+      }
+      setTimeout(go, 16)
+      return true
+    }
 
     const engage = (dx) => {
       const s = dragRef.current
@@ -1855,6 +1880,7 @@ function AppInner() {
     app.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       dragFrameRef.current = null
+      slideToTabRef.current = null
       clearTimeout(wheelEndTimer)
       app.removeEventListener('pointerdown', onDown)
       app.removeEventListener('pointermove', onMove)
@@ -3415,7 +3441,9 @@ function AppInner() {
                   // On the gallery page a tap opens the project list; on a project
                   // page it returns to the gallery (long-press opens the list).
                   if (activeTab === 'star') setPageMenuOpen(true)
-                  else handleTabChange('star')
+                  // Back to the gallery as a swipe would go, the gallery
+                  // sliding in from the left
+                  else if (!slideToTabRef.current?.('star', 'prev')) handleTabChange('star')
                 }}
               >
                 {activeTab === 'star' ? (

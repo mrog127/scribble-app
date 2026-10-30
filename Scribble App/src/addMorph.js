@@ -46,6 +46,26 @@ export const KB_PREDICT = {
   save(h) { try { localStorage.setItem(KB_KEY, String(Math.round(h))) } catch { /* private mode */ } },
 }
 
+// Set (or clear, with '') an element's clip, prefixed too: Safari can keep a
+// stale clip after it's removed (the Easels menu stayed cut to an old, offset
+// shape), so a cleared clip is set to none and then dropped a frame later.
+function setClip(el, v) {
+  if (v) {
+    el.style.clipPath = v
+    el.style.webkitClipPath = v
+    return
+  }
+  el.style.clipPath = 'none'
+  el.style.webkitClipPath = 'none'
+}
+function dropClip(el) {
+  setClip(el, '')
+  void el.offsetWidth
+  const clear = () => { if (el.style.clipPath === 'none') { el.style.clipPath = ''; el.style.webkitClipPath = '' } }
+  requestAnimationFrame(() => requestAnimationFrame(clear))
+  setTimeout(clear, 120)
+}
+
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 // The keyboard's top edge as it comes up or goes down (a phone's keyboard
@@ -182,7 +202,7 @@ function makeGlass(sample, z) {
   let layer = null, layerRect = null
   const draw = ({ box, pts }) => {
     place(wrap, box)
-    el.style.clipPath = clipFor(pts, box)
+    setClip(el, clipFor(pts, box))
     if (outline) outline.setAttribute('points', pts.map(([x, y]) => `${(x - box.left).toFixed(2)},${(y - box.top).toFixed(2)}`).join(' '))
     // one gradient across the whole shape
     tint.style.backgroundSize = `${box.width}px ${box.height}px`
@@ -425,14 +445,17 @@ export function startAddMorph(fromEl, footerEl) {
   let opened = false
   let done = false
 
-  const frame = (now) => {
+  // A frame that throws (or frames that stop coming) must never leave the
+  // panel half-morphed — it finishes instead
+  const frame = (now) => { try { step(now) } catch (err) { console.warn('morph', err); finish() } }
+  const step = (now) => {
     if (done) return
     const t = now - t0
     const open = footer.classList.contains('add-open')
     if (open) opened = true
     // The box's own rect, without the transform laid on it last frame
     footer.style.transform = ''
-    footer.style.clipPath = ''
+    setClip(footer, '')
     const to = open ? footer.getBoundingClientRect() : from
     const toR = open ? (parseFloat(getComputedStyle(footer).borderTopLeftRadius) || 32) : fromR
     const genie = riseAbove(genieShape(from, fromR, to, toR, t, 'a'), kbEdge?.(now))
@@ -442,7 +465,7 @@ export function startAddMorph(fromEl, footerEl) {
     if (open) {
       footer.style.transformOrigin = '0 0'
       footer.style.transform = fit(to, box)
-      footer.style.clipPath = clipFor(inset(pts, box, 2), box, to)
+      setClip(footer, clipFor(inset(pts, box, 2), box, to))
     }
     // The pill's icons stay with the shape's foot, centred
     if (icons && pr) {
@@ -474,11 +497,12 @@ export function startAddMorph(fromEl, footerEl) {
     footer.removeAttribute('data-morph')
     footer.style.transform = ''
     footer.style.transformOrigin = ''
-    footer.style.clipPath = ''
+    dropClip(footer)
     kids.forEach(k => { k.style.opacity = '' })
     running = null
   }
   running = { finish }
+  setTimeout(() => finish(), TOTAL + 600)
   // Place it before the first paint, so it never shows at the box's own size
   frame(t0)
 }
@@ -530,7 +554,10 @@ function morphOut(footer, dest) {
   let page = null
   let landedAt = 0
 
-  const frame = (now) => {
+  // A frame that throws (or frames that stop coming) must never leave the
+  // panel half-morphed — it finishes instead
+  const frame = (now) => { try { step(now) } catch (err) { console.warn('morph', err); finish() } }
+  const step = (now) => {
     if (done) return
     // The page behind, back at full size once the box has closed, fades in
     if (!page && !footer.classList.contains('add-open')) {
@@ -559,7 +586,7 @@ function morphOut(footer, dest) {
     const { box, pts } = genie
     glass.draw(genie)
     content.style.transform = fit(from, box)
-    content.style.clipPath = clipFor(inset(pts, box, 2), box, from)
+    setClip(content, clipFor(inset(pts, box, 2), box, from))
     const f = t / TOTAL
     dest.frame?.(target, genie, f)
 
@@ -597,6 +624,7 @@ function morphOut(footer, dest) {
     running = null
   }
   running = { finish }
+  setTimeout(() => finish(), TOTAL + 2000)
   frame(tStart)
   return { finish }
 }
@@ -841,7 +869,10 @@ export function morphPanelIn(panel, origin) {
   kids.forEach(k => { k.style.opacity = '0' })
   const t0 = performance.now()
   let raf = 0, done = false
-  const frame = (now) => {
+  // A frame that throws (or frames that stop coming) must never leave the
+  // panel half-morphed — it finishes instead
+  const frame = (now) => { try { step(now) } catch (err) { console.warn('morph', err); finish() } }
+  const step = (now) => {
     if (done) return
     const t = now - t0
     const from = originRect(origin)
@@ -851,7 +882,7 @@ export function morphPanelIn(panel, origin) {
     panel.style.transition = 'none'
     panel.style.opacity = '1'
     panel.style.transform = 'none'
-    panel.style.clipPath = ''
+    setClip(panel, '')
     const to = panel.getBoundingClientRect()
     const toR = cornerOf(panel, to)
     const genie = genieShape(from, fromR, to, toR, t, 'a')
@@ -859,7 +890,7 @@ export function morphPanelIn(panel, origin) {
     glass.draw(genie)
     panel.style.transformOrigin = '0 0'
     panel.style.transform = fit(to, box)
-    panel.style.clipPath = clipFor(inset(pts, box, 2), box, to)
+    setClip(panel, clipFor(inset(pts, box, 2), box, to))
     const f = t / TOTAL
     if (face) {
       face.style.left = (from.left - box.left) + 'px'
@@ -879,14 +910,15 @@ export function morphPanelIn(panel, origin) {
     panel.removeAttribute('data-morph-panel')
     panel.style.transform = ''
     panel.style.transformOrigin = ''
-    panel.style.clipPath = ''
+    dropClip(panel)
     panel.style.opacity = ''
     kids.forEach(k => { k.style.opacity = '' })
     // its own transitions come back once it's settled
-    requestAnimationFrame(() => { panel.style.transition = '' })
+    setTimeout(() => { panel.style.transition = '' }, 60)
     panels.delete(panel)
   }
   panels.set(panel, { finish })
+  setTimeout(() => finish(), TOTAL + 600)
   frame(t0)
 }
 
@@ -925,7 +957,10 @@ export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) 
   }
   const t0 = performance.now()
   let raf = 0, done = false
-  const frame = (now) => {
+  // A frame that throws (or frames that stop coming) must never leave the
+  // panel half-morphed — it finishes instead
+  const frame = (now) => { try { step(now) } catch (err) { console.warn('morph', err); finish() } }
+  const step = (now) => {
     if (done) return
     const t = now - t0
     const to = originRect(origin)
@@ -934,7 +969,7 @@ export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) 
     const { box, pts } = genie
     glass.draw(genie)
     copy.style.transform = fit(from, box)
-    copy.style.clipPath = clipFor(inset(pts, box, 2), box, from)
+    setClip(copy, clipFor(inset(pts, box, 2), box, from))
     const f = t / TOTAL
     // and stay until late, so they're seen shrinking with it
     copy.style.opacity = String(1 - ease((f - 0.35) / 0.5))
@@ -955,6 +990,7 @@ export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) 
     // the real panel is shut by now; let it show again next time it opens
     setTimeout(restore, 50)
   }
+  setTimeout(() => finish(), TOTAL + 600)
   frame(t0)
   return true
 }

@@ -7481,7 +7481,7 @@ body.resizing-detail .phone { transition: none !important; }
    (or its comment) to the first attachment card. The title's 8px bottom margin
    moves onto the comment, so title → comment stays 20px. */
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-title { margin-bottom: 0; }
-:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-comment { margin-top: 20px; }
+:root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-detail-comment { margin-top: 12px; }
 :root:is([data-theme="dark-dots"], [data-theme="light-dots"]) .todo-section:not(.todo-section-card + .todo-section-card) { margin-top: 24px; }
 
 /* Dots themes: attachment menus — each item's primary label is Helvetica Neue

@@ -13,7 +13,7 @@ import DeleteConfirmModal from './components/DeleteConfirmModal.jsx'
 import MoveAttachmentsModal from './components/MoveAttachmentsModal.jsx'
 import DestinationPicker, { InboxIcon } from './components/DestinationPicker.jsx'
 import { EaselBadge, easelIconKey } from './easelIcons.jsx'
-import { startAddMorph, startAddMorphClose, startSendToRow, startSendToToast, recentlyPressed, morphPanelIn, morphPanelOut, KB_PREDICT } from './addMorph.js'
+import { startAddMorph, startAddMorphClose, startSendToRow, startSendToToast, recentlyPressed, morphPanelIn, morphPanelOut, morphPageIn, morphPageOut, KB_PREDICT } from './addMorph.js'
 import { kickBackdrops } from './backdropKick.js'
 import { AppProvider, useAppContext } from './context/AppContext.jsx'
 import { useActivatePress, CalendarIcon, formatSchedule } from './components/ScheduleBits.jsx'
@@ -1601,6 +1601,41 @@ function AppInner() {
       : ['star', ...categoryIds, 'menu']
   }, [categoryIds, isMobileView])
   useEffect(() => { handleTabChangeRef.current = handleTabChange }, [handleTabChange])
+
+  // Phone: a list item / note / link page opened by tapping its row grows out
+  // of that row (and shrinks back into it on close) — see morphPageIn
+  useEffect(() => {
+    const app = document.getElementById('app')
+    if (!app) return
+    let pressed = { row: null, at: 0 }
+    const rowOf = new WeakMap()   // page → the row it opened from
+    const onDown = (e) => {
+      const row = e.target instanceof Element ? e.target.closest('.todo-row, .note-row') : null
+      pressed = { row, at: performance.now() }
+    }
+    const mobile = () => window.innerWidth < 1000
+    const mo = new MutationObserver(muts => {
+      muts.forEach(m => {
+        const page = m.target
+        if (!(page instanceof Element) || !page.classList.contains('note-detail-page')) return
+        const wasOpen = /(^|\s)open(\s|$)/.test(m.oldValue || '')
+        const isOpen = page.classList.contains('open')
+        if (isOpen && !wasOpen) {
+          const row = pressed.row
+          if (!mobile() || !row || !row.isConnected || performance.now() - pressed.at > 1500 || page.contains(row)) return
+          pressed = { row: null, at: 0 }
+          if (morphPageIn(page, row)) rowOf.set(page, row)
+        } else if (!isOpen && wasOpen) {
+          const row = rowOf.get(page)
+          rowOf.delete(page)
+          if (row && mobile()) morphPageOut(page, row)
+        }
+      })
+    })
+    mo.observe(app, { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true })
+    window.addEventListener('pointerdown', onDown, true)
+    return () => { mo.disconnect(); window.removeEventListener('pointerdown', onDown, true) }
+  }, [])
 
   // Drag/swipe between tabs — a finger-tracked carousel. The current page's
   // content follows the finger and fades out while the adjacent page's content

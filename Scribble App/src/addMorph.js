@@ -999,3 +999,181 @@ export function morphPanelOut(panel, origin, { keepClass = 'open', host } = {}) 
   frame(t0)
   return true
 }
+
+// ---- Pages: a list item / note / link page opened from its row (mobile) ----
+// The row, as it looks long-pressed (a liquid-glass pill), grows into the
+// full-screen page. The row's contents stretch with the shape and fade out;
+// the page's contents ride inside it and fade in; and over the last third the
+// glass gives way to the page's own solid background, since the page isn't
+// glass. Closing runs it backwards into the row.
+const rowPill = (row) => {
+  const r = row.getBoundingClientRect()
+  return { left: r.left + 8, right: r.right - 8, top: r.top - 4, bottom: r.bottom + 4, width: r.width - 16, height: r.height + 8 }
+}
+// The row's contents, on their own (no card, no glass), laid at the row
+function rowFace(row) {
+  const inner = row.cloneNode(true)
+  const { content } = buildDragCloneShell(row, inner)
+  content.querySelectorAll('.drag-glass-stroke').forEach(n => n.remove())
+  const r = row.getBoundingClientRect()
+  inner.style.marginLeft = '0'
+  inner.style.width = r.width + 'px'
+  inner.style.background = 'transparent'
+  const face = document.createElement('div')
+  face.style.cssText = `position:absolute;left:0;top:0;width:${r.width}px;height:${r.height}px;margin:0;pointer-events:none;z-index:2;transform-origin:0 0;overflow:visible;`
+  face.appendChild(content)
+  return { face, rect: r }
+}
+// The glass the morph wears: the control bar's liquid glass, with the page
+// behind blurred into it, and the page's own background ready to take over
+function pageGlass(page, z) {
+  const phone = page.closest('.phone') || document.getElementById('app')
+  const sample = phone?.querySelector('.footer') || page
+  const glass = makeGlass(sample, z)
+  glass.tintTo(page)
+  const behind = phone ? findPage(phone) : null
+  if (behind) glass.backdrop(behind)
+  const stroke = glass.el.querySelector('svg')
+  // 0 = all glass, 1 = all page
+  const solid = (k) => {
+    glass.tintOpacity(k)
+    if (stroke) stroke.style.opacity = String(1 - k)
+  }
+  return { ...glass, solid }
+}
+const pageMorphs = new WeakMap()
+
+export function morphPageIn(page, row) {
+  if (!page || !row || !row.isConnected || reducedMotion()) return false
+  pageMorphs.get(page)?.finish()
+  const z = getComputedStyle(page).zIndex
+  const glass = pageGlass(page, z === 'auto' ? 0 : z)   // (read before its skin is hidden)
+  page.style.transition = 'none'
+  page.style.opacity = '1'
+  page.setAttribute('data-morph-panel', '')
+  page.before(glass.el)
+  const { face, rect: faceRect } = rowFace(row)
+  glass.el.appendChild(face)
+  const from = rowPill(row)
+  const fromR = from.height / 2
+  const kids = [...page.children]
+  kids.forEach(k => { k.style.opacity = '0' })
+  const t0 = performance.now()
+  let raf = 0, done = false
+  const frame = (now) => { try { step(now) } catch (err) { console.warn('morph', err); finish() } }
+  const step = (now) => {
+    if (done) return
+    const t = now - t0
+    page.style.transition = 'none'
+    page.style.opacity = '1'
+    page.style.transform = 'none'
+    setClip(page, '')
+    const to = page.getBoundingClientRect()
+    const genie = genieShape(from, fromR, to, 0, t, 'a')
+    const { box, pts } = genie
+    glass.draw(genie)
+    page.style.transformOrigin = '0 0'
+    page.style.transform = fit(to, box)
+    setClip(page, clipFor(inset(pts, box, 2), box, to))
+    const f = t / TOTAL
+    // the row's contents stretch with the shape as they go
+    const sx = box.width / from.width, sy = box.height / from.height
+    face.style.transform = `translate(${(faceRect.left - from.left) * sx}px, ${(faceRect.top - from.top) * sy}px) scale(${sx}, ${sy})`
+    face.style.opacity = String(1 - ease(f / 0.35))
+    kids.forEach(k => { k.style.opacity = String(ease(f / 0.4)) })
+    glass.solid(clamp01((f - 2 / 3) * 3))
+    if (t >= TOTAL) { finish(); return }
+    raf = requestAnimationFrame(frame)
+  }
+  const finish = () => {
+    if (done) return
+    done = true
+    cancelAnimationFrame(raf)
+    glass.el.remove()
+    page.removeAttribute('data-morph-panel')
+    page.style.transform = ''
+    page.style.transformOrigin = ''
+    dropClip(page)
+    page.style.opacity = ''
+    kids.forEach(k => { k.style.opacity = '' })
+    setTimeout(() => { page.style.transition = '' }, 60)
+    pageMorphs.delete(page)
+  }
+  pageMorphs.set(page, { finish })
+  setTimeout(() => finish(), TOTAL + 600)
+  frame(t0)
+  return true
+}
+
+// Close: call as the page starts to close (its `open` class just dropped). A
+// copy of it shrinks back into the row; the real one is hidden at once.
+export function morphPageOut(page, row) {
+  if (!page || !row || !row.isConnected || reducedMotion()) return false
+  pageMorphs.get(page)?.finish()
+  page.style.transition = 'none'
+  page.style.transform = 'translateY(0)'
+  const from = page.getBoundingClientRect()
+  page.style.transform = ''
+  if (!from.width || !row.getBoundingClientRect().height) return false
+  const home = page.parentElement
+  const z = getComputedStyle(page).zIndex
+  const copy = page.cloneNode(true)
+  copy.classList.add('open')
+  copy.setAttribute('aria-hidden', 'true')
+  copy.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'))
+  // its editor text and scroll go with it
+  const srcScroll = [...page.querySelectorAll('*')].filter(n => n.scrollTop > 0).map(n => [n, n.scrollTop])
+  const glass = pageGlass(page, z === 'auto' ? 0 : z)
+  copy.setAttribute('data-morph-panel', '')
+  copy.style.cssText += `;position:absolute;margin:0;transition:none;opacity:1;pointer-events:none;transform-origin:0 0;inset:auto;z-index:${z === 'auto' ? 1 : z};`
+  home.appendChild(glass.el)
+  home.appendChild(copy)
+  place(copy, from)
+  const all = page.querySelectorAll('*'), cps = copy.querySelectorAll('*')
+  const index = new Map([...all].map((n, i) => [n, i]))
+  srcScroll.forEach(([n, top]) => { const c = cps[index.get(n)]; if (c) c.scrollTop = top })
+  // the real page goes at once
+  page.style.opacity = '0'
+  // the row stays hidden until its contents land back on it
+  row.style.opacity = '0'
+  const { face } = rowFace(row)
+  face.style.opacity = '0'
+  glass.el.appendChild(face)
+  const kids = [...copy.children]
+  const t0 = performance.now()
+  let raf = 0, done = false
+  const frame = (now) => { try { step(now) } catch (err) { console.warn('morph', err); finish() } }
+  const step = (now) => {
+    if (done) return
+    const t = now - t0
+    const to = row.isConnected ? rowPill(row) : null
+    if (!to) { finish(); return }
+    const genie = genieShape(from, 0, to, to.height / 2, t, 'b')
+    const { box, pts } = genie
+    glass.draw(genie)
+    copy.style.transform = fit(from, box)
+    setClip(copy, clipFor(inset(pts, box, 2), box, from))
+    const f = t / TOTAL
+    const sx = box.width / to.width, sy = box.height / to.height
+    const rr = row.getBoundingClientRect()
+    face.style.transform = `translate(${(rr.left - to.left) * sx}px, ${(rr.top - to.top) * sy}px) scale(${sx}, ${sy})`
+    // the page's solid background gives way to glass over the first third
+    glass.solid(1 - clamp01(f * 3))
+    kids.forEach(k => { k.style.opacity = String(1 - ease((f - 0.3) / 0.45)) })
+    face.style.opacity = String(ease((f - 0.4) / 0.5))
+    if (t >= TOTAL) { finish(); return }
+    raf = requestAnimationFrame(frame)
+  }
+  const finish = () => {
+    if (done) return
+    done = true
+    cancelAnimationFrame(raf)
+    glass.el.remove()
+    copy.remove()
+    row.style.opacity = ''
+    setTimeout(() => { page.style.opacity = ''; page.style.transition = '' }, 50)
+  }
+  setTimeout(() => finish(), TOTAL + 600)
+  frame(t0)
+  return true
+}

@@ -14844,3 +14844,11 @@ html.solo-window #app .note-detail-page { transition: none !important; }
    title, in the place an Easel page's badge takes */
 .gallery-desk-head .gallery-title-badge { background: #FFFFFF; color: #292929; }
 .gallery-desk-head .gallery-title-badge > svg.easel-name-icon { width: 14px !important; height: 14px !important; }
+
+/* Dark Dots desktop: the Gallery header's icon disc in a header button's
+   charcoal with a white icon; and the selected Settings row on the Gallery
+   row's selected fill */
+@media (min-width: 1000px) {
+  :root[data-theme="dark-dots"] .gallery-desk-head .gallery-title-badge { background: #333333; color: #E6E6E6; }
+  :root[data-theme="dark-dots"] .tab-bar.menu-active .icon-tab.tab-pages.selected { background: #292929; }
+}

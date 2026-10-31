@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect, useContext } from 'react'
 import { parseInert } from '../inertHtml.js'
 import { lockRowDrag, unlockRowDrag } from '../rowDragLock.js'
 import { createPortal } from 'react-dom'
@@ -24,7 +24,7 @@ import CalendarPopup from './CalendarPopup.jsx'
 import { useScrollable } from '../useScrollable.js'
 import { buildDragCloneShell, dragLiftShadow } from '../dragClone.js'
 import { fillComment, serializeComment, caretToEnd, commentKeyDown, commentInput, useBulletSwipe } from '../commentParas.js'
-import { useDetailLock, lockPageClass, DetailLockButton } from '../detailLock.jsx'
+import { useDetailLock, lockPageClass, DetailLockButton, DetailSlotContext } from '../detailLock.jsx'
 
 // Strip the scheme for a cleaner one-line preview
 function displayUrl(url) {
@@ -566,7 +566,12 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
     promptDelete,
     deleteProjectTodo,
     isInboxId,
+    pinnedDetail,
   } = useAppContext()
+  // A note opened from this page sits over it; on the main page it can be
+  // locked, and once it is (it becomes the pinned panel) its copy here closes,
+  // leaving this page beside it
+  const parentSlot = useContext(DetailSlotContext)
 
   // An Inbox item's page is a reduced one: no attachments, no Mark as
   // Complete, and no Schedule in the menu — it's waiting to be filed
@@ -923,6 +928,9 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
   ]), [handleUnattach])
 
   const openNote = attachedNotes.find(n => n.id === openNoteId)
+  useEffect(() => {
+    if (openNoteId != null && pinnedDetail?.type === 'note' && String(pinnedDetail.id) === String(openNoteId)) setOpenNoteId(null)
+  }, [pinnedDetail, openNoteId])
 
   // Footer drop shadow only when the content can scroll
   const contentScrollable = useScrollable(scrollRef, [todo, attachedNotes.length, attachedLinks.length])
@@ -1225,6 +1233,7 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
       />
 
       {openNote && createPortal(
+        <DetailSlotContext.Provider value={parentSlot === 'main' ? 'nested' : parentSlot}>
         <NoteDetailPage
           note={{ ...openNote, categoryId }}
           onClose={() => setOpenNoteId(null)}
@@ -1237,7 +1246,8 @@ export default function TodoDetailPage({ todo, categoryId, projectId, projectNot
           categoryId={categoryId}
           projectId={projectId}
           archived={archived || !!openNote.archived}
-        />,
+        />
+        </DetailSlotContext.Provider>,
         document.getElementById('app')
       )}
 

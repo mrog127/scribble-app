@@ -338,7 +338,7 @@ function CardShell({ bare, cardRef, header, children }) {
 
 // ============ Lists (todos) ============
 export function CollapsedTodosCard({ category, bare = false, onlyActivated = false }) {
-  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderCategoryTodos, setProjectTodoScheduled, promptArchiveAttachments, promptDelete } = useAppContext()
+  const { categories, toggleProjectTodo, deleteProjectTodo, toggleProjectTodoActivated, reorderCategoryTodos, setProjectTodoScheduled, promptArchiveAttachments, promptDelete, openDetail, setOpenDetail } = useAppContext()
   const categoryRef = useRef(category)
   categoryRef.current = category
   const [calFor, setCalFor] = useState(null)
@@ -355,7 +355,11 @@ export function CollapsedTodosCard({ category, bare = false, onlyActivated = fal
   const [hideCompleted, setHideCompleted] = useState(() => {
     try { return localStorage.getItem(`hc-cat-${category.id}`) !== 'false' } catch { return true }
   })
-  const [openTodoId, setOpenTodoId] = useState(null)
+  // The open list item page goes through the app's one open-page state (as the
+  // notes and links cards here do), so a locked page and its lock button know
+  // about it — it opens beside a locked page instead of over it
+  const openTodoId = openDetail?.type === 'todo' ? openDetail.id : null
+  const setOpenTodoId = (id) => setOpenDetail(id == null ? null : { type: 'todo', id })
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const cardRef = useRef(null)

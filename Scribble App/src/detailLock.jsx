@@ -8,7 +8,9 @@
 import { createContext, useContext } from 'react'
 import { useAppContext, sameDetail } from './context/AppContext.jsx'
 
-// 'pinned' inside the pinned page (and anything it opens over itself)
+// 'pinned' inside the pinned page (and anything it opens over itself);
+// 'nested' for a page opened over the open page from inside it (a note opened
+// from a list item page's Notes) — the frontmost page, so it can be locked too
 export const DetailSlotContext = createContext('main')
 
 export function useDetailLock(type, id) {
@@ -16,7 +18,7 @@ export function useDetailLock(type, id) {
   const { openDetail, pinnedDetail, pinLocked, setPinLocked, lockDetail } = useAppContext()
   const me = { type, id }
   const isPinned = slot === 'pinned' && sameDetail(pinnedDetail, me)
-  const isMain = slot === 'main' && sameDetail(openDetail, me)
+  const isMain = (slot === 'main' && sameDetail(openDetail, me)) || slot === 'nested'
   return {
     slot,
     isPinned,

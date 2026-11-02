@@ -7,7 +7,8 @@ import {
 } from './CategoryCollapsedView.jsx'
 import { CARD_DRAG_EVENT } from './useCardDragReorder.js'
 import { useTheme } from '../useTheme.js'
-import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon } from './FeatherIcons.jsx'
+import { ListIcon as FeatherListIcon, FileIcon as FeatherFileIcon, LinkIcon as FeatherLinkIcon, PlusIcon as FeatherPlusIcon } from './FeatherIcons.jsx'
+import { useAppContext } from '../context/AppContext.jsx'
 
 // The Gallery canvas: a pinned, read-only-chrome canvas at the top of an Easel
 // that isn't sending its active items to the home screen. It shows only that
@@ -80,6 +81,7 @@ export default function GalleryCanvas({ category, easelCard = false }) {
     try { return localStorage.getItem(collapseKey) === 'true' } catch { return false }
   })
 
+  const { requestCompose } = useAppContext()
   const cardRef = useRef(null)
   const itemsRef = useRef(null)
   const itemsHeightRef = useRef(null)
@@ -444,6 +446,26 @@ export default function GalleryCanvas({ category, easelCard = false }) {
     </div>
   )
 
+  // An Easel card's plus: Add item opens on the Save to menu, showing this
+  // Easel's canvases to pick from first
+  const addBtn = easelCard ? (
+    <button
+      type="button"
+      className="project-add-btn"
+      aria-label={`Add to ${category.name}`}
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); requestCompose({ categoryId: category.id, type: displayType, pickCanvas: true }) }}
+    >
+      {tabsAtBottom ? (
+        <FeatherPlusIcon size={22} color="var(--accent-base)"/>
+      ) : (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M16 8 L16 24 M8 16 L24 16" stroke="#242424" strokeWidth="1" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+        </svg>
+      )}
+    </button>
+  ) : null
+
   return (
     <div className={`card project-card ${easelCard ? 'easel-card' : 'gallery-canvas'} card-intro`} ref={cardRef}>
       {!easelCard && <span className="gallery-canvas-stroke" aria-hidden="true"/>}
@@ -467,6 +489,7 @@ export default function GalleryCanvas({ category, easelCard = false }) {
           </div>
         </div>
         {showTabs && !tabsAtBottom && tabRow}
+        {addBtn && (!tabsAtBottom || collapsed) && <div className="project-header-actions">{addBtn}</div>}
       </div>
 
       <div className="project-items" ref={itemsRef}>
@@ -482,8 +505,11 @@ export default function GalleryCanvas({ category, easelCard = false }) {
       </div>
 
       {/* Dots themes: the type tabs sit at the foot of the card */}
-      {tabsAtBottom && showTabs && !collapsed && (
-        <div className="project-bottom-bar">{tabRow}</div>
+      {tabsAtBottom && (showTabs || addBtn) && !collapsed && (
+        <div className={`project-bottom-bar${showTabs ? '' : ' no-tabs'}`}>
+          {showTabs && tabRow}
+          {addBtn}
+        </div>
       )}
     </div>
   )

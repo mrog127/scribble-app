@@ -385,6 +385,8 @@ function AppInner() {
     }
   }
   const categoryIds = categories.map(c => c.id)
+  const categoriesRef = useRef(categories)
+  categoriesRef.current = categories
   const [activeTab, setActiveTab] = useState(() => {
     // A page opened in its own window: its easel's page sits behind it
     if (soloItem) {
@@ -897,6 +899,12 @@ function AppInner() {
   const [addTitleFocused, setAddTitleFocused] = useState(false)   // the caret is in Add item's title field
   const [saveToProject, setSaveToProject] = useState(null)   // { categoryId, projectId } — the Inbox's ids for the Inbox
   const [saveToTab, setSaveToTab] = useState(null)           // Easel whose canvases show in the Save to card
+  // Add item opened asking for the canvas first (an Easel card's plus, or the
+  // add pill on an Easel page): Save to opens on that Easel's canvases
+  const [pickCanvasMode, setPickCanvasMode] = useState(false)
+  // The canvas picked that way on an Easel page, kept (and gone straight to)
+  // for as long as you stay on that Easel
+  const easelPickRef = useRef(null)                          // { tab, categoryId, projectId }
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
   const pageAddedRef = useRef(null)                          // { tab, categoryId, projectId } last canvas added to while on this page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
@@ -984,7 +992,7 @@ function AppInner() {
 
   // The canvas last added to is remembered only for as long as we stay on the
   // same page; changing pages drops it so the top canvas takes over again.
-  useEffect(() => { pageAddedRef.current = null }, [activeTab])
+  useEffect(() => { pageAddedRef.current = null; easelPickRef.current = null }, [activeTab])
 
   // Reset to star tab if active category tab is deleted
   useEffect(() => {
@@ -1006,6 +1014,10 @@ function AppInner() {
     const browse = onEasel ? activeTab : (categories.find(c => c.projects.some(p => !p.archived))?.id ?? categories[0]?.id ?? null)
     if (onEasel) {
       const cat = categories.find(c => c.id === activeTab)
+      const picked = easelPickRef.current
+      if (picked && picked.tab === activeTab && cat?.projects.some(p => p.id === picked.projectId && !p.archived)) {
+        return { tab: activeTab, target: { categoryId: activeTab, projectId: picked.projectId } }
+      }
       const added = pageAddedRef.current
       if (added && added.tab === activeTab && added.categoryId === activeTab &&
           cat?.projects.some(p => p.id === added.projectId && !p.archived)) {
@@ -1021,12 +1033,14 @@ function AppInner() {
   // compose request (from a project card's "Add" button) wins over the default.
   useEffect(() => {
     if (inputFocused && footerInputMode && !prevInputFocused.current) {
+      let askCat = null   // ask for one of this Easel's canvases first
       if (pendingComposeRef.current) {
-        const { categoryId, projectId, onAdd } = pendingComposeRef.current
+        const { categoryId, projectId, onAdd, pickCanvas } = pendingComposeRef.current
         pendingComposeRef.current = null
         composeAttachRef.current = onAdd ? { categoryId, projectId, onAdd } : null
         setSaveToTab(categoryId)
         setSaveToProject({ categoryId, projectId })
+        if (pickCanvas) askCat = categoryId
       } else {
         composeAttachRef.current = null
         setComposeOverDetail(false)
@@ -1037,6 +1051,18 @@ function AppInner() {
         const { tab, target } = computeSaveDefault()
         setSaveToTab(tab)
         setSaveToProject(target)
+        // On an Easel page, Add item first asks which of its canvases — until
+        // one's been picked on this visit
+        const picked = easelPickRef.current
+        if (categoryIds.includes(activeTab) && !(picked && picked.tab === activeTab)) askCat = activeTab
+      }
+      // (asking only makes sense with more than one canvas to choose from)
+      const liveCanvases = askCat ? (categories.find(c => c.id === askCat)?.projects || []).filter(p => !p.archived).length : 0
+      if (liveCanvases > 1) {
+        setPickCanvasMode(true)
+        setSaveToOpen(true)
+      } else {
+        setPickCanvasMode(false)
       }
       setAddAsActiveFlag(false)     // new items are not displayed unless asked
       setAddScheduleDate(null)
@@ -1055,7 +1081,7 @@ function AppInner() {
       }
     }
     prevInputFocused.current = inputFocused
-  }, [inputFocused, footerInputMode, computeSaveDefault])
+  }, [inputFocused, footerInputMode, computeSaveDefault]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The Add item draft, kept while you type (cleared once it's sent or
   // dismissed) so a reload of the app can bring it back
@@ -1172,7 +1198,11 @@ function AppInner() {
   useEffect(() => {
     registerComposeHandler((target) => {
       if (!target) return
-      pendingComposeRef.current = { categoryId: target.categoryId, projectId: target.projectId, onAdd: target.onAdd }
+      // An Easel card's plus names only the Easel: its first canvas stands in
+      // until one is picked from the Save to menu that opens first
+      const projectId = target.projectId ?? categoriesRef.current.find(c => c.id === target.categoryId)?.projects.find(p => !p.archived)?.id
+      if (projectId == null) return
+      pendingComposeRef.current = { categoryId: target.categoryId, projectId, onAdd: target.onAdd, pickCanvas: !!target.pickCanvas }
       setComposeOverDetail(!!target.onAdd)
       setToolbarType(target.type)
       // Add item grows out of the plus that was pressed (and Cancel pours back
@@ -2922,6 +2952,13 @@ function AppInner() {
     flushSync(() => setSaveToOpen(true))
     saveToSearchRef.current?.focus({ preventScroll: true })
   }, [saveToOpen, saveToProject, isInboxId])
+  // Opened asking for a canvas: once the menu is up, its search field takes
+  // the caret (the keyboard's already up for Add item's title)
+  useEffect(() => {
+    if (!(saveToOpen && pickCanvasMode && inputFocused)) return
+    const t = setTimeout(() => saveToSearchRef.current?.focus({ preventScroll: true }), 30)
+    return () => clearTimeout(t)
+  }, [saveToOpen, pickCanvasMode, inputFocused])
   // Once the Save to menu has closed, rebuild the control bar's glass
   const saveToWasOpenRef = useRef(false)
   useEffect(() => {
@@ -2931,6 +2968,7 @@ function AppInner() {
   }, [saveToOpen, inputFocused])
   // Closing the Save to menu hands the caret back to Add item's title
   const closeSaveTo = useCallback(() => {
+    setPickCanvasMode(false)
     setSaveToOpen(false)
     inputRef.current?.focus({ preventScroll: true })
   }, [])
@@ -2959,9 +2997,14 @@ function AppInner() {
     if (!dest) return
     setSaveToProject(dest)
     if (!isInboxId(dest.categoryId)) setSaveToTab(dest.categoryId)
+    // On an Easel page, a canvas of that Easel is remembered for the visit
+    if (dest.categoryId === activeTab && categoryIds.includes(activeTab)) {
+      easelPickRef.current = { tab: activeTab, categoryId: dest.categoryId, projectId: dest.projectId }
+    }
+    setPickCanvasMode(false)
     setSaveToOpen(false)
     inputRef.current?.focus({ preventScroll: true })
-  }, [isInboxId])
+  }, [isInboxId, activeTab, categoryIds])
 
   // The Save to menu sits exactly over the Add item box
   const [saveToRect, setSaveToRect] = useState(null)
@@ -3303,7 +3346,7 @@ function AppInner() {
                 open={inputFocused && saveToOpen}
                 /* Opens on the destination Easel's canvases — on the list of
                    Easels only from the Gallery page, or with the Inbox chosen */
-                startLevel={activeTab === 'star' || !saveToProject || isInboxId(saveToProject.categoryId) ? 'easels' : 'canvases'}
+                startLevel={pickCanvasMode ? 'canvases' : (activeTab === 'star' || !saveToProject || isInboxId(saveToProject.categoryId) ? 'easels' : 'canvases')}
                 searchRef={saveToSearchRef}
                 onSearchBlur={handleSaveToSearchBlur}
                 onEscape={closeSaveTo}

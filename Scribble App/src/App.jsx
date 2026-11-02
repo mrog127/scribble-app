@@ -905,6 +905,9 @@ function AppInner() {
   // The canvas picked that way on an Easel page, kept (and gone straight to)
   // for as long as you stay on that Easel
   const easelPickRef = useRef(null)                          // { tab, categoryId, projectId }
+  // The Easel card whose plus opened Save to (until a canvas is picked): the
+  // menu grows straight out of it, and Cancel folds it back in, closing Add item
+  const composeCardRef = useRef(null)
   const lastAddedRef = useRef(null)                          // last project saved to (in-memory, until refresh)
   const pageAddedRef = useRef(null)                          // { tab, categoryId, projectId } last canvas added to while on this page
   const pendingComposeRef = useRef(null)                     // { categoryId, projectId } from a project-card "Add" button
@@ -1210,7 +1213,12 @@ function AppInner() {
       // (out of the whole card the plus sits in, not the button)
       const btn = recentlyPressed()
       const bar = document.querySelector('.add-stack')?.closest('.footer')
-      if (btn && bar && !bar.classList.contains('add-open')) startAddMorph(btn.closest('.card') || btn, bar)
+      composeCardRef.current = null
+      if (target.pickCanvas) {
+        // (Save to grows out of the Easel card itself — see the effect below —
+        // so Add item, hidden under it, doesn't also morph)
+        composeCardRef.current = btn?.closest('.card') || null
+      } else if (btn && bar && !bar.classList.contains('add-open')) startAddMorph(btn.closest('.card') || btn, bar)
       inputRef.current?.focus()
     })
   }, [registerComposeHandler])
@@ -2952,6 +2960,13 @@ function AppInner() {
     flushSync(() => setSaveToOpen(true))
     saveToSearchRef.current?.focus({ preventScroll: true })
   }, [saveToOpen, saveToProject, isInboxId])
+  // Out of an Easel card's plus: the Save to card morphs out of the Easel card
+  useLayoutEffect(() => {
+    if (!(saveToOpen && pickCanvasMode && inputFocused)) return
+    const card = composeCardRef.current
+    const menu = document.querySelector('.save-to-panel.as-overlay .save-to-card')
+    if (card && card.isConnected && menu) morphPanelIn(menu, { el: card }, { squeeze: 0.1 })
+  }, [saveToOpen, pickCanvasMode, inputFocused])
   // Opened asking for a canvas: once the menu is up, its search field takes
   // the caret (the keyboard's already up for Add item's title)
   useEffect(() => {
@@ -2968,6 +2983,22 @@ function AppInner() {
   }, [saveToOpen, inputFocused])
   // Closing the Save to menu hands the caret back to Add item's title
   const closeSaveTo = useCallback(() => {
+    // Opened from an Easel card (and Add item not reached yet): Cancel closes
+    // everything, the menu folding back into the card
+    const card = composeCardRef.current
+    if (card) {
+      composeCardRef.current = null
+      const menu = document.querySelector('.save-to-panel.as-overlay .save-to-card')
+      if (card.isConnected && menu) morphPanelOut(menu, { el: card }, { squeeze: 0.1, host: document.getElementById('app') })
+      setPickCanvasMode(false)
+      setSaveToOpen(false)
+      setInputFocused(false)
+      setInputValue('')
+      setLinkUrlValue('')
+      setToolbarType('list')
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur()
+      return
+    }
     setPickCanvasMode(false)
     setSaveToOpen(false)
     inputRef.current?.focus({ preventScroll: true })
@@ -3002,6 +3033,7 @@ function AppInner() {
       easelPickRef.current = { tab: activeTab, categoryId: dest.categoryId, projectId: dest.projectId }
     }
     setPickCanvasMode(false)
+    composeCardRef.current = null   // (Add item's been reached: Cancel's ordinary again)
     setSaveToOpen(false)
     inputRef.current?.focus({ preventScroll: true })
   }, [isInboxId, activeTab, categoryIds])
@@ -3018,7 +3050,12 @@ function AppInner() {
       const base = panel?.offsetParent || document.getElementById('app')
       if (!base || !box) return
       const a = base.getBoundingClientRect()
+      // (the box's own size — not as a morph still running on it has it
+      // squeezed and stretched)
+      const tf = box.style.transform
+      box.style.transform = 'none'
       const b = box.getBoundingClientRect()
+      box.style.transform = tf
       setSaveToRect({ top: b.top - a.top - base.clientTop, left: b.left - a.left - base.clientLeft, width: b.width, height: b.height })
     }
     measure()

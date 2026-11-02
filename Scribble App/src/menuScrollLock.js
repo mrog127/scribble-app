@@ -9,6 +9,8 @@
 // Horizontal drags (the canvas tabs, swiping between easels) and drags in a
 // text field are left alone.
 const MENUS = '.save-to-panel, .move-to-overlay, .cal-overlay, .card-context-menu'
+// Open boxes that hold the whole screen still
+const MODALS = '.footer.add-open, .save-to-panel.as-overlay.visible, .move-to-overlay'
 
 let drag = null
 
@@ -50,7 +52,19 @@ document.addEventListener('touchstart', (e) => {
   const t = e.target instanceof Element ? e.target : null
   if (!t || e.touches.length !== 1) return
   const menu = t.closest(MENUS)
-  if (!menu) return
+  if (!menu) {
+    // While Add item, Save to or Move to is open, nothing behind them scrolls:
+    // a drag anywhere else moves only a scrollable bit of the open box (its
+    // title field), and nothing at all if there's none
+    if (!document.querySelector(MODALS)) return
+    const box = t.closest('.footer.add-open')
+    drag = {
+      x: e.touches[0].clientX, y: e.touches[0].clientY,
+      scroller: box ? scrollerFor(t, box.parentElement) : null,
+      axis: null, manual: null, v: 0, time: e.timeStamp,
+    }
+    return
+  }
   if (t.closest('input, textarea, [contenteditable="true"]')) return
   drag = {
     x: e.touches[0].clientX, y: e.touches[0].clientY,

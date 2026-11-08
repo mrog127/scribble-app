@@ -1147,6 +1147,45 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   pasteLinkRef.current = pasteLink
   const insertImageRef = useRef(insertImage)
   insertImageRef.current = insertImage
+  // A picture Safari pasted straight into the note (not one of the note's own
+  // photo blocks): read it, take it out, and put it in as a photo where it was
+  const adoptPastedImages = useCallback(() => {
+    const content = contentRef.current
+    if (!content) return
+    const stray = [...content.querySelectorAll('img')].filter(i => !i.closest('.style-image, .style-embed') && !i.dataset.adopting)
+    stray.forEach(img => {
+      img.dataset.adopting = '1'
+      const at = document.createRange()
+      at.setStartBefore(img)
+      at.collapse(true)
+      const wrap = img.parentElement
+      const take = (blob) => {
+        img.remove()
+        // an empty wrapper Safari made for it goes too
+        if (wrap && wrap !== content && !wrap.classList.contains('note-para') && !wrap.textContent.trim() && !wrap.querySelector('img')) wrap.remove()
+        if (!blob) return
+        if (at.startContainer.isConnected) mediaRangeRef.current = at
+        insertImageRef.current?.(new File([blob], 'pasted', { type: blob.type || 'image/png' }))
+      }
+      const src = img.currentSrc || img.src || ''
+      fetch(src).then(r => (r.ok ? r.blob() : null)).then(blob => {
+        if (blob && blob.size && (blob.type.startsWith('image/') || !blob.type)) return take(blob)
+        throw new Error('unreadable')
+      }).catch(async () => {
+        // A picture the page can't read (Safari's private paste address):
+        // ask the clipboard for it instead
+        try {
+          for (const item of (await navigator.clipboard?.read?.()) || []) {
+            const type = item.types.find(t => t.startsWith('image/'))
+            if (type) return take(await item.getType(type))
+          }
+        } catch (err) { console.warn('[note paste] clipboard read failed', err) }
+        take(null)
+      })
+    })
+  }, [])
+  const adoptPastedImagesRef = useRef(adoptPastedImages)
+  adoptPastedImagesRef.current = adoptPastedImages
 
   // The attach menu: Photo, Link, Note — Link / Note turn it into the list of
   // this canvas's links / other notes to pick from
@@ -2232,7 +2271,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     if (!editingRef.current) return
     const dt = e.clipboardData
     if (!dt) return
-    e.preventDefault()
     // A photo on the clipboard goes in as a photo, just as one added from the
     // attachment button (each one, in order, if there are several)
     const images = [...(dt.files || [])].filter(f => f.type.startsWith('image/'))
@@ -2244,47 +2282,30 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         }
       }
     }
-    const putImages = (files) => {
+    if (images.length) {
+      e.preventDefault()
       // (at the caret where the paste happened — the first photo; any more
       // follow it — and the editor keeps the caret so the next paste works)
       const sel = window.getSelection()
       const content = contentRef.current
       if (sel && sel.rangeCount && content?.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
-      files.forEach(f => insertImageRef.current?.(f))
+      images.forEach(f => insertImageRef.current?.(f))
       if (content && document.activeElement !== content) content.focus({ preventScroll: true })
-    }
-    if (images.length) { putImages(images); return }
-    const html = dt.getData('text/html')
-    const plain = dt.getData('text/plain') || ''
-    // A whole photo copied on an iPhone (from Photos or a web page) doesn't
-    // reach the paste as a file the way a cut-out subject does — iOS hands over
-    // nothing, or a picture in HTML it won't let the page read. When the paste
-    // has no words, the photo's fetched instead: from the HTML picture when it
-    // can be read, otherwise straight off the clipboard
-    const htmlText = html ? (new DOMParser().parseFromString(html, 'text/html').body.textContent || '').trim() : ''
-    if (!plain.trim() && !htmlText) {
-      const imgSrc = html ? (new DOMParser().parseFromString(html, 'text/html').querySelector('img')?.getAttribute('src') || '') : ''
-      const sel = window.getSelection()
-      const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
-      const fromHtml = /^(data:image\/|blob:|https?:)/i.test(imgSrc)
-        ? fetch(imgSrc).then(r => r.ok ? r.blob() : null).catch(() => null)
-        : Promise.resolve(null)
-      fromHtml.then(async (blob) => {
-        let files = blob && blob.type.startsWith('image/') ? [new File([blob], 'pasted', { type: blob.type })] : []
-        if (!files.length && navigator.clipboard?.read) {
-          try {
-            for (const item of await navigator.clipboard.read()) {
-              const type = item.types.find(t => t.startsWith('image/'))
-              if (type) files.push(new File([await item.getType(type)], 'pasted', { type }))
-            }
-          } catch (err) { console.warn('[note paste] clipboard read failed', err) }
-        }
-        if (!files.length) return
-        if (saved) { const s2 = window.getSelection(); s2.removeAllRanges(); s2.addRange(saved) }
-        putImages(files)
-      })
       return
     }
+    const html = dt.getData('text/html')
+    const plain = dt.getData('text/plain') || ''
+    // A whole photo copied on an iPhone (from Photos or a web page) often
+    // doesn't reach the paste as a file — iOS fills the clipboard in lazily and
+    // the page sees nothing. So a paste with no words isn't stopped: Safari
+    // puts the picture into the note itself, and that picture is then taken
+    // and turned into a proper photo, right where it landed
+    const htmlText = html ? (new DOMParser().parseFromString(html, 'text/html').body.textContent || '').trim() : ''
+    if (!plain.trim() && !htmlText) {
+      ;[0, 60, 250, 800].forEach(ms => setTimeout(() => adoptPastedImagesRef.current?.(), ms))
+      return
+    }
+    e.preventDefault()
     // Just a link: it goes in as a link tile on its own line
     const only = plain.trim()
     if (/^(https?:\/\/|www\.)[^\s]+$/i.test(only) && pasteLinkRef.current?.(only)) return

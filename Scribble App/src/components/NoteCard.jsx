@@ -2244,18 +2244,47 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
         }
       }
     }
-    if (images.length) {
+    const putImages = (files) => {
       // (at the caret where the paste happened — the first photo; any more
       // follow it — and the editor keeps the caret so the next paste works)
       const sel = window.getSelection()
       const content = contentRef.current
       if (sel && sel.rangeCount && content?.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
-      images.forEach(f => insertImageRef.current?.(f))
+      files.forEach(f => insertImageRef.current?.(f))
       if (content && document.activeElement !== content) content.focus({ preventScroll: true })
-      return
     }
+    if (images.length) { putImages(images); return }
     const html = dt.getData('text/html')
     const plain = dt.getData('text/plain') || ''
+    // A whole photo copied on an iPhone (from Photos or a web page) doesn't
+    // reach the paste as a file the way a cut-out subject does — iOS hands over
+    // nothing, or a picture in HTML it won't let the page read. When the paste
+    // has no words, the photo's fetched instead: from the HTML picture when it
+    // can be read, otherwise straight off the clipboard
+    const htmlText = html ? (new DOMParser().parseFromString(html, 'text/html').body.textContent || '').trim() : ''
+    if (!plain.trim() && !htmlText) {
+      const imgSrc = html ? (new DOMParser().parseFromString(html, 'text/html').querySelector('img')?.getAttribute('src') || '') : ''
+      const sel = window.getSelection()
+      const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
+      const fromHtml = /^(data:image\/|blob:|https?:)/i.test(imgSrc)
+        ? fetch(imgSrc).then(r => r.ok ? r.blob() : null).catch(() => null)
+        : Promise.resolve(null)
+      fromHtml.then(async (blob) => {
+        let files = blob && blob.type.startsWith('image/') ? [new File([blob], 'pasted', { type: blob.type })] : []
+        if (!files.length && navigator.clipboard?.read) {
+          try {
+            for (const item of await navigator.clipboard.read()) {
+              const type = item.types.find(t => t.startsWith('image/'))
+              if (type) files.push(new File([await item.getType(type)], 'pasted', { type }))
+            }
+          } catch (err) { console.warn('[note paste] clipboard read failed', err) }
+        }
+        if (!files.length) return
+        if (saved) { const s2 = window.getSelection(); s2.removeAllRanges(); s2.addRange(saved) }
+        putImages(files)
+      })
+      return
+    }
     // Just a link: it goes in as a link tile on its own line
     const only = plain.trim()
     if (/^(https?:\/\/|www\.)[^\s]+$/i.test(only) && pasteLinkRef.current?.(only)) return

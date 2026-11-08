@@ -1166,45 +1166,6 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   pasteLinkRef.current = pasteLink
   const insertImageRef = useRef(insertImage)
   insertImageRef.current = insertImage
-  // A picture Safari pasted straight into the note (not one of the note's own
-  // photo blocks): read it, take it out, and put it in as a photo where it was
-  const adoptPastedImages = useCallback(() => {
-    const content = contentRef.current
-    if (!content) return
-    const stray = [...content.querySelectorAll('img')].filter(i => !i.closest('.style-image, .style-embed') && !i.dataset.adopting)
-    stray.forEach(img => {
-      img.dataset.adopting = '1'
-      const at = document.createRange()
-      at.setStartBefore(img)
-      at.collapse(true)
-      const wrap = img.parentElement
-      const take = (blob) => {
-        img.remove()
-        // an empty wrapper Safari made for it goes too
-        if (wrap && wrap !== content && !wrap.classList.contains('note-para') && !wrap.textContent.trim() && !wrap.querySelector('img')) wrap.remove()
-        if (!blob) return
-        if (at.startContainer.isConnected) mediaRangeRef.current = at
-        insertImageRef.current?.(new File([blob], 'pasted', { type: blob.type || 'image/png' }))
-      }
-      const src = img.currentSrc || img.src || ''
-      fetch(src).then(r => (r.ok ? r.blob() : null)).then(blob => {
-        if (blob && blob.size && (blob.type.startsWith('image/') || !blob.type)) return take(blob)
-        throw new Error('unreadable')
-      }).catch(async () => {
-        // A picture the page can't read (Safari's private paste address):
-        // ask the clipboard for it instead
-        try {
-          for (const item of (await navigator.clipboard?.read?.()) || []) {
-            const type = item.types.find(t => t.startsWith('image/'))
-            if (type) return take(await item.getType(type))
-          }
-        } catch (err) { console.warn('[note paste] clipboard read failed', err) }
-        take(null)
-      })
-    })
-  }, [])
-  const adoptPastedImagesRef = useRef(adoptPastedImages)
-  adoptPastedImagesRef.current = adoptPastedImages
   const insertImageFromUrlRef = useRef(insertImageFromUrl)
   insertImageFromUrlRef.current = insertImageFromUrl
 
@@ -2358,14 +2319,29 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       })()
       return
     }
-    // A whole photo copied on an iPhone (from Photos or a web page) often
-    // doesn't reach the paste as a file — iOS fills the clipboard in lazily and
-    // the page sees nothing. So a paste with no words isn't stopped: Safari
-    // puts the picture into the note itself, and that picture is then taken
-    // and turned into a proper photo, right where it landed
+    // A paste with no words (a whole photo iOS didn't hand over as a file):
+    // the photo is asked for off the clipboard. The paste itself is always
+    // stopped — letting Safari paste into the note itself could rework the
+    // note's own photos and lose them
     const htmlText = html ? (new DOMParser().parseFromString(html, 'text/html').body.textContent || '').trim() : ''
     if (!plain.trim() && !htmlText) {
-      ;[0, 60, 250, 800].forEach(ms => setTimeout(() => adoptPastedImagesRef.current?.(), ms))
+      e.preventDefault()
+      const sel = window.getSelection()
+      const content = contentRef.current
+      const saved = sel && sel.rangeCount && content?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null
+      ;(async () => {
+        try {
+          for (const item of (await navigator.clipboard?.read?.()) || []) {
+            const type = item.types.find(t => t.startsWith('image/'))
+            if (type) {
+              const blob = await item.getType(type)
+              if (saved) mediaRangeRef.current = saved
+              insertImageRef.current?.(new File([blob], 'pasted', { type }))
+              return
+            }
+          }
+        } catch (err) { console.warn('[note paste] clipboard read failed', err) }
+      })()
       return
     }
     e.preventDefault()

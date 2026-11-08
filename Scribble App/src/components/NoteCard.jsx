@@ -1145,6 +1145,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
 
   const pasteLinkRef = useRef(pasteLink)
   pasteLinkRef.current = pasteLink
+  const insertImageRef = useRef(insertImage)
+  insertImageRef.current = insertImage
 
   // The attach menu: Photo, Link, Note — Link / Note turn it into the list of
   // this canvas's links / other notes to pick from
@@ -2231,6 +2233,21 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     const dt = e.clipboardData
     if (!dt) return
     e.preventDefault()
+    // A photo on the clipboard goes in as a photo, just as one added from the
+    // attachment button (each one, in order, if there are several)
+    const images = [...(dt.files || [])].filter(f => f.type.startsWith('image/'))
+    if (!images.length) {
+      for (const item of dt.items || []) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const f = item.getAsFile()
+          if (f) images.push(f)
+        }
+      }
+    }
+    if (images.length) {
+      images.forEach(f => insertImageRef.current?.(f))
+      return
+    }
     const html = dt.getData('text/html')
     const plain = dt.getData('text/plain') || ''
     // Just a link: it goes in as a link tile on its own line

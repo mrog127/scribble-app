@@ -1035,6 +1035,25 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     })
   }, [flushAutosave, placeBlock])
 
+  // A photo straight from a web address (a picture copied out of a web page or
+  // image search that the page isn't allowed to download a copy of): shown from
+  // there, as a photo like any other
+  const insertImageFromUrl = useCallback((url) => {
+    const content = contentRef.current
+    if (!content || !url) return
+    const photo = document.createElement('div')
+    photo.className = 'note-para style-image'
+    photo.contentEditable = 'false'
+    const img = document.createElement('img')
+    img.alt = ''
+    img.decoding = 'async'
+    img.loading = 'lazy'
+    img.src = url
+    photo.appendChild(img)
+    placeBlock(photo)
+    flushAutosave()
+  }, [flushAutosave, placeBlock])
+
   // ---- Attachments: a note or a link from this note's canvas, put in like a
   // photo. Links put in one after another (no line between) share one block,
   // laid out in columns as in a canvas card. ----
@@ -1186,6 +1205,8 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
   }, [])
   const adoptPastedImagesRef = useRef(adoptPastedImages)
   adoptPastedImagesRef.current = adoptPastedImages
+  const insertImageFromUrlRef = useRef(insertImageFromUrl)
+  insertImageFromUrlRef.current = insertImageFromUrl
 
   // The attach menu: Photo, Link, Note — Link / Note turn it into the list of
   // this canvas's links / other notes to pick from
@@ -2295,6 +2316,48 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
     }
     const html = dt.getData('text/html')
     const plain = dt.getData('text/plain') || ''
+    // A picture copied from a web page or image search often comes with its
+    // web address as the text. When the clipboard says it holds a picture, or
+    // the copy is a picture in HTML, or the text is just the address of an
+    // image, it goes in as a photo, not a link
+    const htmlImg = html ? (new DOMParser().parseFromString(html, 'text/html').querySelector('img')?.getAttribute('src') || '') : ''
+    const onlyText = plain.trim()
+    const looksImageUrl = /^https?:\/\/\S+$/i.test(onlyText) &&
+      (/\.(jpe?g|png|gif|webp|heic|avif|bmp)(\?|#|$)/i.test(onlyText) || /gstatic\.com\/images|googleusercontent\.com|\/images\?q=/i.test(onlyText))
+    const saysImage = [...(dt.types || [])].some(t => /^image\//i.test(t))
+    // (a Google Images result link carries the picture's own address in it)
+    let imgres = ''
+    try { if (/^https?:\/\/\S+$/i.test(onlyText)) imgres = new URL(onlyText).searchParams.get('imgurl') || '' } catch { /* not an address */ }
+    const imageUrl = /^https?:/i.test(htmlImg) ? htmlImg : (looksImageUrl ? onlyText : (/^https?:/i.test(imgres) ? imgres : ''))
+    if (saysImage || imageUrl) {
+      e.preventDefault()
+      const sel = window.getSelection()
+      const content = contentRef.current
+      const saved = sel && sel.rangeCount && content?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null
+      const put = (fn) => { if (saved) mediaRangeRef.current = saved; fn(); if (content && document.activeElement !== content) content.focus({ preventScroll: true }) }
+      ;(async () => {
+        // 1. the picture itself, off the clipboard
+        try {
+          for (const item of (await navigator.clipboard?.read?.()) || []) {
+            const type = item.types.find(t => t.startsWith('image/'))
+            if (type) {
+              const blob = await item.getType(type)
+              return put(() => insertImageRef.current?.(new File([blob], 'pasted', { type })))
+            }
+          }
+        } catch (err) { console.warn('[note paste] clipboard read failed', err) }
+        if (!imageUrl) return
+        // 2. a copy downloaded from its address (uploaded like any photo)…
+        try {
+          const r = await fetch(imageUrl, { mode: 'cors' })
+          const blob = r.ok ? await r.blob() : null
+          if (blob && blob.type.startsWith('image/')) return put(() => insertImageRef.current?.(new File([blob], 'pasted', { type: blob.type })))
+        } catch { /* the site won't share it */ }
+        // 3. …or, when the site won't share it, shown straight from there
+        put(() => insertImageFromUrlRef.current?.(imageUrl))
+      })()
+      return
+    }
     // A whole photo copied on an iPhone (from Photos or a web page) often
     // doesn't reach the paste as a file — iOS fills the clipboard in lazily and
     // the page sees nothing. So a paste with no words isn't stopped: Safari

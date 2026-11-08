@@ -2245,7 +2245,13 @@ function NoteDetailPage({ note, onClose, onSave, activated, onToggleActive, onSc
       }
     }
     if (images.length) {
+      // (at the caret where the paste happened — the first photo; any more
+      // follow it — and the editor keeps the caret so the next paste works)
+      const sel = window.getSelection()
+      const content = contentRef.current
+      if (sel && sel.rangeCount && content?.contains(sel.anchorNode)) mediaRangeRef.current = sel.getRangeAt(0).cloneRange()
       images.forEach(f => insertImageRef.current?.(f))
+      if (content && document.activeElement !== content) content.focus({ preventScroll: true })
       return
     }
     const html = dt.getData('text/html')

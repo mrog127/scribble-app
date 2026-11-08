@@ -14852,3 +14852,8 @@ html.solo-window #app .note-detail-page { transition: none !important; }
   :root[data-theme="dark-dots"] .gallery-desk-head .gallery-title-badge { background: #333333; color: #E6E6E6; }
   :root[data-theme="dark-dots"] .tab-bar.menu-active .icon-tab.tab-pages.selected { background: #292929; }
 }
+
+/* Dark Dots: the track behind a card's bottom content tabs (canvas and Easel
+   cards, the pinned Gallery canvas too) is the page's own background */
+:root[data-theme="dark-dots"] .project-card > .project-bottom-bar .project-tab-bar,
+:root[data-theme="dark-dots"] :is(.project-card.pinned-gallery, .card.gallery-canvas, .card.easel-card) > .project-bottom-bar .project-tab-bar { background: #212121; }

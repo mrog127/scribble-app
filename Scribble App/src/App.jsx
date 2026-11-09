@@ -1037,6 +1037,7 @@ function AppInner() {
   useEffect(() => {
     if (inputFocused && footerInputMode && !prevInputFocused.current) {
       let askCat = null   // ask for one of this Easel's canvases first
+      let displayed = false   // new items are not displayed unless asked…
       if (pendingComposeRef.current) {
         const { categoryId, projectId, onAdd, pickCanvas } = pendingComposeRef.current
         pendingComposeRef.current = null
@@ -1044,6 +1045,8 @@ function AppInner() {
         setSaveToTab(categoryId)
         setSaveToProject({ categoryId, projectId })
         if (pickCanvas) askCat = categoryId
+        // …except from an Easel card's plus on the Gallery, where they're Displayed
+        if (pickCanvas && activeTab === 'star') displayed = true
       } else {
         composeAttachRef.current = null
         setComposeOverDetail(false)
@@ -1067,7 +1070,7 @@ function AppInner() {
       } else {
         setPickCanvasMode(false)
       }
-      setAddAsActiveFlag(false)     // new items are not displayed unless asked
+      setAddAsActiveFlag(displayed)
       setAddScheduleDate(null)
       setAddCalOpen(false)
       scrollSelPendingRef.current = true   // scroll the list to the selected canvas
